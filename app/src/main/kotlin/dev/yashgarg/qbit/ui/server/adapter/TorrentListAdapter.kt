@@ -98,7 +98,8 @@ class TorrentListAdapter @Inject constructor() :
                 }
 
                 when (torrent.state) {
-                    Torrent.State.PAUSED_DL -> {
+                    Torrent.State.PAUSED_DL,
+                    Torrent.State.STOPPED_DL -> {
                         peers.text = context.getString(CommonR.string.paused)
                         peers.setTextColor(context.getColor(R.color.yellow))
                         speed.visibility = View.GONE
@@ -130,25 +131,30 @@ class TorrentListAdapter @Inject constructor() :
                         speed.visibility = View.GONE
                         eta.visibility = View.GONE
                     }
-                    Torrent.State.PAUSED_UP -> {
+                    Torrent.State.PAUSED_UP,
+                    Torrent.State.STOPPED_UP -> {
                         peers.text = context.getString(CommonR.string.completed)
                         peers.setTextColor(context.getColor(R.color.md_theme_dark_seed))
                         speed.visibility = View.GONE
                         eta.visibility = View.GONE
                     }
-                    // TODO: Add remaining changes to left-out branches
-                    Torrent.State.ERROR -> {}
-                    Torrent.State.MISSING_FILES -> {}
-                    Torrent.State.QUEUED_UP -> {}
-                    Torrent.State.CHECKING_UP -> {}
-                    Torrent.State.ALLOCATING -> {}
-                    Torrent.State.META_DL -> {}
-                    Torrent.State.CHECKING_DL -> {}
-                    Torrent.State.CHECKING_RESUME_DATA -> {}
-                    Torrent.State.MOVING -> {}
-                    Torrent.State.UNKNOWN -> {}
-                    Torrent.State.QUEUED_DL -> {}
-                    else -> throw IllegalArgumentException("Invalid torrent state received")
+                    Torrent.State.META_DL,
+                    Torrent.State.FORCED_META_DL,
+                    Torrent.State.ALLOCATING,
+                    Torrent.State.MOVING,
+                    Torrent.State.CHECKING_DL,
+                    Torrent.State.CHECKING_UP,
+                    Torrent.State.CHECKING_RESUME_DATA,
+                    Torrent.State.QUEUED_DL,
+                    Torrent.State.QUEUED_UP,
+                    Torrent.State.ERROR,
+                    Torrent.State.MISSING_FILES,
+                    Torrent.State.UNKNOWN -> {
+                        peers.text = torrent.state.name.lowercase().replace('_', ' ')
+                        peers.setTextColor(context.getColor(R.color.yellow))
+                        speed.visibility = View.GONE
+                        eta.visibility = View.GONE
+                    }
                 }
             }
         }
