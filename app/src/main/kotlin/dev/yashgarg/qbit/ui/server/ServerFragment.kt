@@ -19,6 +19,7 @@ import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.selection.Selection
+import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.transition.MaterialSharedAxis
 import dagger.hilt.android.AndroidEntryPoint
@@ -47,6 +48,10 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
     private var lastSortOption = SortOption.NAME
     private var lastSortDir = SortDirection.ASC
     private var lastSearchQuery = ""
+    private var lastCategory: String? = null
+    private var lastFilter = StateFilter.ALL
+    private var lastTracker: String? = null
+    private var lastTags: Set<String> = emptySet()
     private var pendingScrollToTop = false
     private var pendingListReset = false
 
@@ -235,9 +240,8 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                         }
                         true
                     }
-                    R.id.category -> {
-                        Toast.makeText(requireContext(), "Not implemented", Toast.LENGTH_SHORT)
-                            .show()
+                    R.id.filters -> {
+                        showFilterTypePicker()
                         true
                     }
                     R.id.sort_list -> {
@@ -307,6 +311,94 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
             .launchIn(viewLifecycleOwner.lifecycleScope)
     }
 
+    private fun showFilterTypePicker() {
+        val state = viewModel.uiState.value
+        val items = buildList {
+            add("State" + if (state.selectedFilter != StateFilter.ALL) " (${state.selectedFilter.label})" else "")
+            add("Category" + if (state.selectedCategory != null) " (${state.selectedCategory})" else "")
+            add("Tracker" + if (state.selectedTracker != null) " (${state.selectedTracker})" else "")
+            add("Tags" + if (state.selectedTags.isNotEmpty()) " (${state.selectedTags.size})" else "")
+        }
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Filter by")
+            .setItems(items.toTypedArray()) { _, which ->
+                when (which) {
+                    0 -> showStateFilterPicker()
+                    1 -> showCategoryPicker()
+                    2 -> showTrackerPicker()
+                    3 -> showTagsPicker()
+                }
+            }
+            .setNeutralButton("Clear all") { _, _ -> viewModel.clearFilters() }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showStateFilterPicker() {
+        val state = viewModel.uiState.value
+        val options = StateFilter.entries
+        val labels = options.map { it.label }.toTypedArray()
+        val checked = options.indexOf(state.selectedFilter)
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Filter by state")
+            .setSingleChoiceItems(labels, checked) { dialog, which ->
+                viewModel.setFilter(options[which])
+                dialog.dismiss()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showCategoryPicker() {
+        val state = viewModel.uiState.value
+        val options = listOf(null) + state.availableCategories
+        val labels = options.map { it ?: "All categories" }.toTypedArray()
+        val checked = options.indexOf(state.selectedCategory)
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Filter by category")
+            .setSingleChoiceItems(labels, checked) { dialog, which ->
+                viewModel.setCategory(options[which])
+                dialog.dismiss()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showTrackerPicker() {
+        val state = viewModel.uiState.value
+        val options = listOf(null) + state.availableTrackers
+        val labels = options.map { it ?: "All trackers" }.toTypedArray()
+        val checked = options.indexOf(state.selectedTracker)
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Filter by tracker")
+            .setSingleChoiceItems(labels, checked) { dialog, which ->
+                viewModel.setTracker(options[which])
+                dialog.dismiss()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showTagsPicker() {
+        val state = viewModel.uiState.value
+        if (state.availableTags.isEmpty()) {
+            Toast.makeText(requireContext(), "No tags available", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val tags = state.availableTags
+        val checked = BooleanArray(tags.size) { state.selectedTags.contains(tags[it]) }
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Filter by tags")
+            .setMultiChoiceItems(tags.toTypedArray(), checked) { _, which, isChecked ->
+                if (isChecked != state.selectedTags.contains(tags[which])) {
+                    viewModel.toggleTag(tags[which])
+                }
+            }
+            .setPositiveButton("OK", null)
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
     private fun showSortPicker() {
         val state = viewModel.uiState.value
         val options = SortOption.entries
@@ -341,16 +433,37 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                     255
                 else 128
 
+            val filterIcon = bottomBar.menu.findItem(R.id.filters)
+            val hasActiveFilters =
+                state.selectedFilter != StateFilter.ALL ||
+                    state.selectedCategory != null ||
+                    state.selectedTracker != null ||
+                    state.selectedTags.isNotEmpty()
+            filterIcon?.icon?.alpha = if (hasActiveFilters) 255 else 128
+
             val sortChanged =
                 state.sortOption != lastSortOption || state.sortDirection != lastSortDir
             val searchChanged = state.searchQuery != lastSearchQuery
-            if ((sortChanged || searchChanged) && !state.dataLoading && !state.hasError) {
+            val filterChanged =
+                state.selectedCategory != lastCategory ||
+                    state.selectedFilter != lastFilter ||
+                    state.selectedTracker != lastTracker ||
+                    state.selectedTags != lastTags
+            if ((sortChanged || searchChanged || filterChanged) &&
+                !state.dataLoading &&
+                !state.hasError) {
                 pendingScrollToTop = true
                 pendingListReset = true
             }
             lastSortOption = state.sortOption
             lastSortDir = state.sortDirection
             lastSearchQuery = state.searchQuery
+            lastCategory = state.selectedCategory
+            lastFilter = state.selectedFilter
+            lastTracker = state.selectedTracker
+            lastTags = state.selectedTags
+
+            updateFilterChips(state)
 
             if (state.hasError) {
                 listLoader.visibility = View.GONE
@@ -377,6 +490,38 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
 
                 refreshLayout.isRefreshing = false
             }
+        }
+    }
+
+    private fun updateFilterChips(state: ServerState) {
+        with(binding) {
+            filterChipGroup.removeAllViews()
+
+            fun addChip(label: String, onClose: () -> Unit) {
+                val chip =
+                    Chip(requireContext()).apply {
+                        text = label
+                        isCloseIconVisible = true
+                        setOnCloseIconClickListener { onClose() }
+                    }
+                filterChipGroup.addView(chip)
+            }
+
+            if (state.selectedFilter != StateFilter.ALL) {
+                addChip(state.selectedFilter.label) { viewModel.setFilter(StateFilter.ALL) }
+            }
+            if (state.selectedCategory != null) {
+                addChip(state.selectedCategory) { viewModel.setCategory(null) }
+            }
+            if (state.selectedTracker != null) {
+                addChip(state.selectedTracker) { viewModel.setTracker(null) }
+            }
+            state.selectedTags.forEach { tag ->
+                addChip("#$tag") { viewModel.toggleTag(tag) }
+            }
+
+            val hasChips = filterChipGroup.childCount > 0
+            filterScroll.visibility = if (hasChips) View.VISIBLE else View.GONE
         }
     }
 }

@@ -20,7 +20,6 @@ class ServerViewModel @Inject constructor(private val repository: QbitRepository
     private val _uiState = MutableStateFlow(ServerState())
     val uiState = _uiState.asStateFlow()
 
-    // Filtering and sorting computed off the main thread; null means "not ready"
     val sortedTorrents: StateFlow<List<Torrent>?> =
         _uiState
             .map { state ->
@@ -28,8 +27,27 @@ class ServerViewModel @Inject constructor(private val repository: QbitRepository
                 else
                     state.data.torrents.values
                         .filter { torrent ->
-                            state.searchQuery.isBlank() ||
-                                torrent.name.contains(state.searchQuery, ignoreCase = true)
+                            val matchesSearch =
+                                state.searchQuery.isBlank() ||
+                                    torrent.name.contains(state.searchQuery, ignoreCase = true)
+                            val matchesFilter = torrent.matchesFilter(state.selectedFilter)
+                            val matchesCategory =
+                                state.selectedCategory == null ||
+                                    torrent.category == state.selectedCategory
+                            val matchesTracker =
+                                state.selectedTracker == null ||
+                                    torrent.tracker.contains(
+                                        state.selectedTracker,
+                                        ignoreCase = true,
+                                    )
+                            val matchesTags =
+                                state.selectedTags.isEmpty() ||
+                                    state.selectedTags.any { tag -> torrent.tags.contains(tag) }
+                            matchesSearch &&
+                                matchesFilter &&
+                                matchesCategory &&
+                                matchesTracker &&
+                                matchesTags
                         }
                         .sortedWith(state.sortOption, state.sortDirection)
             }
@@ -107,16 +125,47 @@ class ServerViewModel @Inject constructor(private val repository: QbitRepository
         }
     }
 
-    fun setSearchQuery(query: String) {
-        _uiState.update { state -> state.copy(searchQuery = query) }
-    }
-
     fun toggleSortDirection() {
         _uiState.update { state ->
             state.copy(
                 sortDirection =
                     if (state.sortDirection == SortDirection.ASC) SortDirection.DESC
                     else SortDirection.ASC
+            )
+        }
+    }
+
+    fun setSearchQuery(query: String) {
+        _uiState.update { state -> state.copy(searchQuery = query) }
+    }
+
+    fun setCategory(category: String?) {
+        _uiState.update { state -> state.copy(selectedCategory = category) }
+    }
+
+    fun setFilter(filter: StateFilter) {
+        _uiState.update { state -> state.copy(selectedFilter = filter) }
+    }
+
+    fun setTracker(tracker: String?) {
+        _uiState.update { state -> state.copy(selectedTracker = tracker) }
+    }
+
+    fun toggleTag(tag: String) {
+        _uiState.update { state ->
+            val tags = state.selectedTags.toMutableSet()
+            if (tags.contains(tag)) tags.remove(tag) else tags.add(tag)
+            state.copy(selectedTags = tags)
+        }
+    }
+
+    fun clearFilters() {
+        _uiState.update { state ->
+            state.copy(
+                selectedCategory = null,
+                selectedFilter = StateFilter.ALL,
+                selectedTracker = null,
+                selectedTags = emptySet(),
             )
         }
     }
@@ -158,12 +207,22 @@ class ServerViewModel @Inject constructor(private val repository: QbitRepository
                     }
                 }
                 .collectLatest { mainData ->
+                    val categories = mainData.categories.keys.sorted()
+                    val trackers =
+                        mainData.torrents.values
+                            .mapNotNull { t -> t.tracker.takeIf { it.isNotBlank() } }
+                            .distinct()
+                            .sorted()
+                    val tags = mainData.tags.sorted()
                     _uiState.update { state ->
                         state.copy(
                             dataLoading = false,
                             data = mainData,
                             hasError = false,
                             error = null,
+                            availableCategories = categories,
+                            availableTrackers = trackers,
+                            availableTags = tags,
                         )
                     }
                     _intent.emit(Unit)

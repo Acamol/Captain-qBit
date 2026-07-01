@@ -9,9 +9,9 @@
         android:title="Search"
         app:showAsAction="always" />
     <item
-        android:id="@+id/category"
-        android:icon="@drawable/outline_category_24"
-        android:title="@string/category"
+        android:id="@+id/filters"
+        android:icon="@drawable/outline_filter_alt_24"
+        android:title="Filter"
         app:showAsAction="always" />
     <item
         android:id="@+id/sort_list"
