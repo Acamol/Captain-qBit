@@ -13,6 +13,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavOptions
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
 import com.github.michaelbull.result.Err
@@ -23,6 +24,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import dev.yashgarg.qbit.R as AppR
 import dev.yashgarg.qbit.common.R
 import dev.yashgarg.qbit.data.manager.ClientManager
+import dev.yashgarg.qbit.data.models.ServerConfig
 import dev.yashgarg.qbit.databinding.ConfigFragmentBinding
 import dev.yashgarg.qbit.utils.viewBinding
 import kotlinx.coroutines.flow.launchIn
@@ -33,6 +35,7 @@ import kotlinx.coroutines.launch
 class ConfigFragment : Fragment(AppR.layout.config_fragment) {
     private val binding by viewBinding(ConfigFragmentBinding::bind)
     private val viewModel by viewModels<ConfigViewModel>()
+    private var fieldsPopulated = false
 
     private val connectionTypes = arrayOf("HTTP", "HTTPS")
 
@@ -100,6 +103,37 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
             .flowWithLifecycle(viewLifecycleOwner.lifecycle)
             .onEach(::handleEvent)
             .launchIn(viewLifecycleOwner.lifecycleScope)
+
+        viewModel.existingConfig
+            .flowWithLifecycle(viewLifecycleOwner.lifecycle)
+            .onEach { config ->
+                if (config != null && !fieldsPopulated) {
+                    fieldsPopulated = true
+                    populateFields(config)
+                }
+            }
+            .launchIn(viewLifecycleOwner.lifecycleScope)
+    }
+
+    private fun populateFields(config: ServerConfig) {
+        with(binding) {
+            serverNameTiet.setText(config.serverName)
+            serverHostTiet.setText(config.baseUrl)
+            config.port?.let { serverPortTiet.setText(it.toString()) }
+            serverPathTiet.setText(config.path?.removePrefix("/") ?: "")
+            serverUsernameTiet.setText(config.username)
+            serverPasswordTiet.setText(config.password)
+            typeTextview.setText(config.connectionType.name, false)
+            trustCert.isChecked = config.trustSelfSigned
+            if (!config.basicAuthUsername.isNullOrEmpty()) {
+                useBasicAuth.isChecked = true
+                basicAuthUsernameTil.isVisible = true
+                basicAuthPasswordTil.isVisible = true
+                basicAuthUsernameTiet.setText(config.basicAuthUsername)
+                basicAuthPasswordTiet.setText(config.basicAuthPassword ?: "")
+            }
+            toolbar.title = getString(R.string.edit_server)
+        }
     }
 
     private fun watchTextFields() {
@@ -208,8 +242,21 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
                                     if (useBasicAuth.isChecked) basicAuthPass else null,
                                 )
 
-                                findNavController()
-                                    .navigate(AppR.id.action_configFragment_to_serverFragment)
+                                val isEdit =
+                                    findNavController().previousBackStackEntry?.destination?.id ==
+                                        AppR.id.serverFragment
+                                if (isEdit) {
+                                    // Pop old ServerFragment + ConfigFragment, push fresh one
+                                    val navOptions =
+                                        NavOptions.Builder()
+                                            .setPopUpTo(AppR.id.serverFragment, true)
+                                            .build()
+                                    findNavController()
+                                        .navigate(AppR.id.serverFragment, null, navOptions)
+                                } else {
+                                    findNavController()
+                                        .navigate(AppR.id.action_configFragment_to_serverFragment)
+                                }
                             }
                             is Err -> {
                                 Log.e(ClientManager.tag, connectionResponse.error.toString())

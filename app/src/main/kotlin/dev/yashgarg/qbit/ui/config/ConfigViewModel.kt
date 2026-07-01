@@ -32,6 +32,15 @@ class ConfigViewModel @Inject constructor(private val configDao: ConfigDao) : Vi
     private val _uiState = MutableStateFlow(ConfigState())
     val uiState = _uiState.asStateFlow()
 
+    private val _existingConfig = MutableStateFlow<ServerConfig?>(null)
+    val existingConfig = _existingConfig.asStateFlow()
+
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            _existingConfig.value = configDao.getConfigAtIndex()
+        }
+    }
+
     private val validationEventChannel = Channel<ValidationEvent>()
     val validationEvents = validationEventChannel.receiveAsFlow()
 

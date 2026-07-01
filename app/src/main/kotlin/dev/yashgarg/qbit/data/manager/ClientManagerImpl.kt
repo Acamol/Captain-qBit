@@ -33,6 +33,7 @@ constructor(
     private suspend fun checkIfConfigsExist() {
         withContext(Dispatchers.IO) {
             configDao.getConfigs().collect { configs ->
+                client = null // force re-create with the latest config
                 if (configs.isNotEmpty()) {
                     _configStatus.emit(ConfigStatus.EXISTS)
                     checkAndGetClient()
@@ -63,13 +64,21 @@ constructor(
                 val port = if (config.port != null) ":${config.port}" else ""
                 val path = config.path ?: ""
 
+                val basicAuth =
+                    if (
+                        !config.basicAuthUsername.isNullOrEmpty() &&
+                            !config.basicAuthPassword.isNullOrEmpty()
+                    ) {
+                        config.basicAuthUsername to config.basicAuthPassword
+                    } else null
+
                 client =
                     QBittorrentClient(
                         "${config.connectionType.toString().lowercase()}://${config.baseUrl}$port$path",
                         config.username,
                         config.password,
                         syncInterval = ClientManager.syncInterval,
-                        httpClient = ClientManager.httpClient(config.trustSelfSigned),
+                        httpClient = ClientManager.httpClient(config.trustSelfSigned, basicAuth),
                         dispatcher = Dispatchers.Default,
                     )
             }

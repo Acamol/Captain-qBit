@@ -14,10 +14,14 @@
         android:title="@string/sort"
         app:showAsAction="always" />
     <item
+        android:id="@+id/edit_server"
+        android:title="@string/edit_server"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/speed_toggle"
         android:icon="@drawable/twotone_speed_24"
         android:title="@string/toggle_limits"
-        app:showAsAction="always" />
+        app:showAsAction="never" />
     <item
         android:id="@+id/delete_selection"
         android:icon="@drawable/outline_delete_24"

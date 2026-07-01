@@ -84,7 +84,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                     viewModel.removeTorrents(it, deleteFiles)
                     torrentListAdapter.notifyDataSetChanged()
                 }
-                binding.bottomBar.menu.getItem(3).isVisible = false
+                binding.bottomBar.menu.findItem(R.id.delete_selection).isVisible = false
             }
 
             setFragmentResultListener(AddTorrentDialog.ADD_TORRENT_KEY, viewLifecycleOwner) {
@@ -143,7 +143,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                 selectedItems = selection
 
                 bottomBar.menu.apply {
-                    getItem(3).apply {
+                    findItem(R.id.delete_selection).apply {
                         isVisible = selection.size() > 0
                         setOnMenuItemClickListener {
                             RemoveTorrentDialog.newInstance()
@@ -152,7 +152,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                         }
                     }
 
-                    getItem(4).apply {
+                    findItem(R.id.pause_selection).apply {
                         isVisible = selection.size() > 0
                         setOnMenuItemClickListener {
                             selectedItems?.toList()?.let { hashes ->
@@ -163,7 +163,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                         }
                     }
 
-                    getItem(5).apply {
+                    findItem(R.id.resume_selection).apply {
                         isVisible = selection.size() > 0
                         setOnMenuItemClickListener {
                             selectedItems?.toList()?.let { hashes ->
@@ -192,6 +192,11 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                     }
                     R.id.speed_toggle -> {
                         viewLifecycleOwner.lifecycleScope.launch { viewModel.toggleSpeedLimits() }
+                        true
+                    }
+                    R.id.edit_server -> {
+                        findNavController()
+                            .navigate(R.id.action_serverFragment_to_configFragment)
                         true
                     }
                     else -> false
