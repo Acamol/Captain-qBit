@@ -8,5 +8,7 @@ data class ServerState(
     val speedLimitMode: Int = 0,
     val serverName: String? = null,
     val hasError: Boolean = false,
-    val error: Throwable? = null
+    val error: Throwable? = null,
+    val sortOption: SortOption = SortOption.NAME,
+    val sortDirection: SortDirection = SortDirection.ASC,
 )

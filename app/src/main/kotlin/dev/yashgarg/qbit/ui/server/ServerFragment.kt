@@ -15,6 +15,7 @@ import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.selection.Selection
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.transition.MaterialSharedAxis
 import dagger.hilt.android.AndroidEntryPoint
 import dev.yashgarg.qbit.MainActivity
@@ -38,6 +39,11 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
     private val viewModel by viewModels<ServerViewModel>()
     private val linkValidator by lazy { LinkValidator() }
     private var selectedItems: Selection<String>? = null
+
+    private var lastSortOption = SortOption.NAME
+    private var lastSortDir = SortDirection.ASC
+    private var pendingScrollToTop = false
+    private var pendingListReset = false // double-submit to avoid O(N²) DiffUtil moves on sort
 
     @Inject lateinit var torrentListAdapter: TorrentListAdapter
 
@@ -138,6 +144,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                 findNavController().navigate(action)
             }
 
+            torrentRv.itemAnimator = null
             torrentRv.adapter = torrentListAdapter
 
             torrentListAdapter.makeSelectable(torrentRv) { selection ->
@@ -185,10 +192,13 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
 
             bottomBar.setOnMenuItemClickListener { menuItem ->
                 when (menuItem.itemId) {
-                    R.id.category,
-                    R.id.sort_list -> {
+                    R.id.category -> {
                         Toast.makeText(requireContext(), "Not implemented", Toast.LENGTH_SHORT)
                             .show()
+                        true
+                    }
+                    R.id.sort_list -> {
+                        showSortPicker()
                         true
                     }
                     R.id.speed_toggle -> {
@@ -212,6 +222,37 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
             .onEach(::render)
             .launchIn(viewLifecycleOwner.lifecycleScope)
 
+        viewModel.sortedTorrents
+            .flowWithLifecycle(viewLifecycleOwner.lifecycle)
+            .onEach { torrents ->
+                if (torrents == null) return@onEach
+                with(binding) {
+                    if (torrents.isEmpty()) {
+                        emptyTv.visibility = View.VISIBLE
+                        torrentRv.visibility = View.GONE
+                    } else {
+                        emptyTv.visibility = View.GONE
+                        torrentRv.visibility = View.VISIBLE
+                        val scroll = pendingScrollToTop
+                        val reset = pendingListReset
+                        pendingScrollToTop = false
+                        pendingListReset = false
+                        if (reset) {
+                            torrentListAdapter.submitList(emptyList()) {
+                                torrentListAdapter.submitList(torrents) {
+                                    if (scroll) torrentRv.scrollToPosition(0)
+                                }
+                            }
+                        } else {
+                            torrentListAdapter.submitList(torrents) {
+                                if (scroll) torrentRv.scrollToPosition(0)
+                            }
+                        }
+                    }
+                }
+            }
+            .launchIn(viewLifecycleOwner.lifecycleScope)
+
         viewModel.status
             .flowWithLifecycle(viewLifecycleOwner.lifecycle)
             .onEach { Toast.makeText(requireContext(), it, Toast.LENGTH_SHORT).show() }
@@ -223,8 +264,49 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
             .launchIn(viewLifecycleOwner.lifecycleScope)
     }
 
+    private fun showSortPicker() {
+        val state = viewModel.uiState.value
+        val options = SortOption.entries
+        val labels =
+            options.map { option ->
+                when {
+                    option != state.sortOption -> option.label
+                    state.sortDirection == SortDirection.ASC -> "↑ ${option.label}"
+                    else -> "↓ ${option.label}"
+                }
+            }
+        val checkedIndex = options.indexOf(state.sortOption)
+
+        val dirLabel =
+            if (state.sortDirection == SortDirection.ASC) "↑ Ascending" else "↓ Descending"
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Sort by")
+            .setSingleChoiceItems(labels.toTypedArray(), checkedIndex) { dialog, which ->
+                viewModel.setSort(options[which])
+                dialog.dismiss()
+            }
+            .setNeutralButton(dirLabel) { _, _ -> viewModel.toggleSortDirection() }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
     private fun render(state: ServerState) {
         with(binding) {
+            val sortIcon = bottomBar.menu.findItem(R.id.sort_list)
+            sortIcon?.icon?.alpha =
+                if (state.sortOption != SortOption.NAME || state.sortDirection != SortDirection.ASC)
+                    255
+                else 128
+
+            val sortChanged =
+                state.sortOption != lastSortOption || state.sortDirection != lastSortDir
+            if (sortChanged && !state.dataLoading && !state.hasError) {
+                pendingScrollToTop = true
+                pendingListReset = true
+            }
+            lastSortOption = state.sortOption
+            lastSortDir = state.sortDirection
+
             if (state.hasError) {
                 listLoader.visibility = View.GONE
                 speedTv.visibility = View.GONE
@@ -248,20 +330,6 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                     speedTv.visibility = View.GONE
                 }
 
-                if (state.data?.torrents.isNullOrEmpty()) {
-                    emptyTv.visibility = View.VISIBLE
-                    torrentRv.visibility = View.GONE
-                } else {
-                    emptyTv.visibility = View.GONE
-                    torrentRv.apply {
-                        visibility = View.VISIBLE
-                        activity?.runOnUiThread {
-                            torrentListAdapter.submitList(
-                                requireNotNull(state.data).torrents.values.toList()
-                            )
-                        }
-                    }
-                }
                 refreshLayout.isRefreshing = false
             }
         }

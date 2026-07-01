@@ -9,14 +9,29 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.yashgarg.qbit.data.QbitRepository
 import dev.yashgarg.qbit.utils.ExceptionHandler
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import qbittorrent.models.Torrent
 
 @HiltViewModel
 class ServerViewModel @Inject constructor(private val repository: QbitRepository) : ViewModel() {
     private val _uiState = MutableStateFlow(ServerState())
     val uiState = _uiState.asStateFlow()
+
+    // Filtering and sorting computed off the main thread; null means "not ready"
+    val sortedTorrents: StateFlow<List<Torrent>?> =
+        _uiState
+            .map { state ->
+                if (state.dataLoading || state.hasError || state.data == null) null
+                else
+                    state.data.torrents.values
+                        .filter { true }
+                        .sortedWith(state.sortOption, state.sortDirection)
+            }
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     private val _status = MutableSharedFlow<String>()
     val status = _status.asSharedFlow()
@@ -73,6 +88,29 @@ class ServerViewModel @Inject constructor(private val repository: QbitRepository
                             ?: "Failed to ${if (pause) "pause" else "resume"} ${hashes.size} torrent(s)"
                     )
             }
+        }
+    }
+
+    fun setSort(option: SortOption) {
+        _uiState.update { state ->
+            val newDirection =
+                if (state.sortOption == option) {
+                    if (state.sortDirection == SortDirection.ASC) SortDirection.DESC
+                    else SortDirection.ASC
+                } else {
+                    SortDirection.ASC
+                }
+            state.copy(sortOption = option, sortDirection = newDirection)
+        }
+    }
+
+    fun toggleSortDirection() {
+        _uiState.update { state ->
+            state.copy(
+                sortDirection =
+                    if (state.sortDirection == SortDirection.ASC) SortDirection.DESC
+                    else SortDirection.ASC
+            )
         }
     }
 
