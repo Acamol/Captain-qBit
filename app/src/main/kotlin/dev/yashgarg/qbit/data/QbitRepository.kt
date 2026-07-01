@@ -4,9 +4,12 @@ import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.runCatching
 import dev.yashgarg.qbit.data.manager.ClientManager
 import javax.inject.Inject
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import qbittorrent.QBittorrentClient
 import qbittorrent.models.MainData
@@ -19,87 +22,98 @@ import qbittorrent.models.TorrentTracker
 class QbitRepository
 @Inject
 constructor(dispatcher: CoroutineDispatcher, private val clientManager: ClientManager) {
-    private lateinit var client: QBittorrentClient
+    private val clientDeferred = CompletableDeferred<QBittorrentClient>()
     private val scope by lazy { CoroutineScope(dispatcher) }
 
     init {
-        scope.launch { client = clientManager.checkAndGetClient() ?: return@launch }
+        scope.launch {
+            val c = clientManager.checkAndGetClient()
+            if (c != null) {
+                clientDeferred.complete(c)
+            } else {
+                clientDeferred.completeExceptionally(
+                    IllegalStateException("Failed to initialize client")
+                )
+            }
+        }
     }
 
+    private suspend fun client(): QBittorrentClient = clientDeferred.await()
+
     fun observeMainData(): Flow<MainData> {
-        return client.observeMainData()
+        return flow { emitAll(client().observeMainData()) }
     }
 
     fun observeTorrent(hash: String, waitIfMissing: Boolean): Flow<Torrent> {
-        return client.observeTorrent(hash, waitIfMissing)
+        return flow { emitAll(client().observeTorrent(hash, waitIfMissing)) }
     }
 
     fun observeTorrentPeers(hash: String): Flow<TorrentPeers> {
-        return client.observeTorrentPeers(hash)
+        return flow { emitAll(client().observeTorrentPeers(hash)) }
     }
 
     suspend fun getApiVersion(): Result<String, Throwable> {
-        return runCatching { client.getApiVersion() }
+        return runCatching { client().getApiVersion() }
     }
 
     suspend fun getVersion(): Result<String, Throwable> {
-        return runCatching { client.getVersion() }
+        return runCatching { client().getVersion() }
     }
 
     suspend fun addTorrentUrl(url: String): Result<Unit, Throwable> {
-        return runCatching { client.addTorrent { urls.add(url) } }
+        return runCatching { client().addTorrent { urls.add(url) } }
     }
 
     suspend fun addTorrentFile(bytes: ByteArray): Result<Unit, Throwable> {
-        return runCatching { client.addTorrent { rawTorrents["torrent_file"] = bytes } }
+        return runCatching { client().addTorrent { rawTorrents["torrent_file"] = bytes } }
     }
 
     suspend fun removeTorrents(
         hashes: List<String>,
         deleteFiles: Boolean = false
     ): Result<Unit, Throwable> {
-        return runCatching { client.deleteTorrents(hashes, deleteFiles) }
+        return runCatching { client().deleteTorrents(hashes, deleteFiles) }
     }
 
     suspend fun toggleTorrentsState(hashes: List<String>, pause: Boolean): Result<Unit, Throwable> {
         return runCatching {
-            if (pause) client.pauseTorrents(hashes) else client.resumeTorrents(hashes)
+            if (pause) client().pauseTorrents(hashes) else client().resumeTorrents(hashes)
         }
     }
 
     suspend fun getSpeedLimitMode(): Result<Int, Throwable> {
-        return runCatching { client.getSpeedLimitsMode() }
+        return runCatching { client().getSpeedLimitsMode() }
     }
 
     suspend fun toggleSpeedLimitsMode(): Result<Unit, Throwable> {
-        return runCatching { client.toggleSpeedLimitsMode() }
+        return runCatching { client().toggleSpeedLimitsMode() }
     }
 
     suspend fun recheckTorrents(hashes: List<String>): Result<Unit, Throwable> {
-        return runCatching { client.recheckTorrents(hashes) }
+        return runCatching { client().recheckTorrents(hashes) }
     }
 
     suspend fun reannounceTorrents(hashes: List<String>): Result<Unit, Throwable> {
-        return runCatching { client.reannounceTorrents(hashes) }
+        return runCatching { client().reannounceTorrents(hashes) }
     }
 
     suspend fun renameTorrent(hash: String, name: String): Result<Unit, Throwable> {
-        return runCatching { client.setTorrentName(hash, name) }
+        return runCatching { client().setTorrentName(hash, name) }
     }
 
     suspend fun banPeers(peers: List<String>): Result<Unit, Throwable> {
-        return runCatching { client.banPeers(peers) }
+        return runCatching { client().banPeers(peers) }
     }
 
     suspend fun getTorrentProperties(hash: String): Result<TorrentProperties, Throwable> {
-        return runCatching { client.getTorrentProperties(hash) }
+        return runCatching { client().getTorrentProperties(hash) }
     }
 
     suspend fun getTorrentTrackers(hash: String): Result<List<TorrentTracker>, Throwable> {
-        return runCatching { client.getTrackers(hash) ?: emptyList() }
+        return runCatching { client().getTrackers(hash) ?: emptyList() }
     }
 
     suspend fun getTorrentFiles(hash: String): Result<List<TorrentFile>, Throwable> {
-        return runCatching { client.getTorrentFiles(hash) }
+        return runCatching { client().getTorrentFiles(hash) }
     }
 }
