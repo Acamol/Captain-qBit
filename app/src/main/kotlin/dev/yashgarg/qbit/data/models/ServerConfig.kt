@@ -16,5 +16,7 @@ data class ServerConfig(
     val username: String,
     val password: String,
     val connectionType: ConnectionType,
-    @ColumnInfo(defaultValue = "0") val trustSelfSigned: Boolean
+    @ColumnInfo(defaultValue = "0") val trustSelfSigned: Boolean,
+    val basicAuthUsername: String? = null,
+    val basicAuthPassword: String? = null,
 )

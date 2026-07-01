@@ -201,10 +201,68 @@
                 android:layout_marginHorizontal="15dp"
                 android:layout_weight="1"
                 android:text="@string/trust_certificates"
-                app:layout_constraintBottom_toTopOf="@id/save_button"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/server_password_til" />
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/use_basic_auth"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="15dp"
+                android:layout_marginTop="4dp"
+                android:layout_weight="1"
+                android:text="@string/use_basic_auth"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/trust_cert" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/basic_auth_username_til"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="15dp"
+                android:layout_marginVertical="5dp"
+                android:hint="@string/basic_auth_username"
+                android:visibility="gone"
+                app:errorEnabled="true"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/use_basic_auth">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/basic_auth_username_tiet"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:inputType="text"
+                    android:maxLines="1" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/basic_auth_password_til"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="15dp"
+                android:layout_marginVertical="5dp"
+                android:hint="@string/basic_auth_password"
+                android:visibility="gone"
+                app:endIconMode="password_toggle"
+                app:errorEnabled="true"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/basic_auth_username_til">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/basic_auth_password_tiet"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:inputType="textPassword"
+                    android:maxLines="1" />
+
+            </com.google.android.material.textfield.TextInputLayout>
 
             <Button
                 android:id="@+id/save_button"
@@ -219,7 +277,7 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/trust_cert" />
+                app:layout_constraintTop_toBottomOf="@id/basic_auth_password_til" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </ScrollView>

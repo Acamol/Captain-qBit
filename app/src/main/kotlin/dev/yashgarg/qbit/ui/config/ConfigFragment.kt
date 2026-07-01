@@ -7,6 +7,7 @@ import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -53,6 +54,12 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
         with(binding) {
             (typeDropdown.editText as? AutoCompleteTextView)?.setAdapter(adapter)
 
+            useBasicAuth.setOnCheckedChangeListener { _, isChecked ->
+                viewModel.toggleBasicAuth(isChecked)
+                basicAuthUsernameTil.isVisible = isChecked
+                basicAuthPasswordTil.isVisible = isChecked
+            }
+
             saveButton.setOnClickListener {
                 viewModel.validateForm(
                     serverNameTil.editText?.text.toString(),
@@ -61,6 +68,9 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
                     typeDropdown.editText?.text.toString(),
                     serverUsernameTil.editText?.text.toString(),
                     serverPasswordTil.editText?.text.toString(),
+                    useBasicAuth.isChecked,
+                    basicAuthUsernameTil.editText?.text.toString(),
+                    basicAuthPasswordTil.editText?.text.toString(),
                 )
             }
         }
@@ -111,6 +121,14 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
             serverPasswordTiet.doAfterTextChanged { text ->
                 viewModel.validatePassword(text.toString())
             }
+
+            basicAuthUsernameTiet.doAfterTextChanged { text ->
+                viewModel.validateBasicAuthUsername(text.toString())
+            }
+
+            basicAuthPasswordTiet.doAfterTextChanged { text ->
+                viewModel.validateBasicAuthPassword(text.toString())
+            }
         }
     }
 
@@ -123,6 +141,9 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
                 typeDropdown.isEnabled = this
                 serverUsernameTiet.isEnabled = this
                 serverPasswordTiet.isEnabled = this
+                useBasicAuth.isEnabled = this
+                basicAuthUsernameTiet.isEnabled = this
+                basicAuthPasswordTiet.isEnabled = this
                 saveButton.isEnabled = this
             }
         }
@@ -148,6 +169,10 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
                         val password = serverPasswordTil.editText?.text.toString()
                         val path = serverPathTil.editText?.text.toString()
                         val port = serverPortTil.editText?.text
+                        val basicAuthUser =
+                            basicAuthUsernameTil.editText?.text?.toString()?.ifEmpty { null }
+                        val basicAuthPass =
+                            basicAuthPasswordTil.editText?.text?.toString()?.ifEmpty { null }
 
                         val connectionResponse =
                             viewModel.testConfig(
@@ -155,7 +180,9 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
                                     if (path.isNotEmpty()) "/$path" else "",
                                 username,
                                 password,
-                                trustCert.isChecked
+                                trustCert.isChecked,
+                                if (useBasicAuth.isChecked) basicAuthUser else null,
+                                if (useBasicAuth.isChecked) basicAuthPass else null,
                             )
 
                         when (connectionResponse) {
@@ -176,10 +203,13 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
                                     connectionType,
                                     username,
                                     password,
-                                    trustCert.isChecked
+                                    trustCert.isChecked,
+                                    if (useBasicAuth.isChecked) basicAuthUser else null,
+                                    if (useBasicAuth.isChecked) basicAuthPass else null,
                                 )
 
-                                findNavController().navigateUp()
+                                findNavController()
+                                    .navigate(AppR.id.action_configFragment_to_serverFragment)
                             }
                             is Err -> {
                                 Log.e(ClientManager.tag, connectionResponse.error.toString())
@@ -234,6 +264,18 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
                 serverPasswordTil.error = getString(R.string.invalid_password)
             } else {
                 serverPasswordTil.error = null
+            }
+
+            if (state.showBasicAuthUsernameError) {
+                basicAuthUsernameTil.error = getString(R.string.invalid_username)
+            } else {
+                basicAuthUsernameTil.error = null
+            }
+
+            if (state.showBasicAuthPasswordError) {
+                basicAuthPasswordTil.error = getString(R.string.invalid_password)
+            } else {
+                basicAuthPasswordTil.error = null
             }
         }
     }

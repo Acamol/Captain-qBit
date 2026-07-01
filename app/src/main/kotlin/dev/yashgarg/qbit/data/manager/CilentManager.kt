@@ -1,13 +1,17 @@
 package dev.yashgarg.qbit.data.manager
 
+import android.util.Base64
 import android.util.Log
 import dev.yashgarg.qbit.data.models.ConfigStatus
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
+import io.ktor.client.request.header
+import io.ktor.http.HttpHeaders
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.flow.SharedFlow
 import qbittorrent.QBittorrentClient
@@ -21,7 +25,10 @@ interface ClientManager {
         const val tag = "ClientManager"
         val syncInterval = 1.seconds
 
-        fun httpClient(trustAllCerts: Boolean): HttpClient {
+        fun httpClient(
+            trustAllCerts: Boolean,
+            basicAuthCredentials: Pair<String, String>? = null
+        ): HttpClient {
             return HttpClient(OkHttp) {
                 install(HttpTimeout) { connectTimeoutMillis = 3000 }
                 install(Logging) {
@@ -32,6 +39,15 @@ interface ClientManager {
                             }
                         }
                     level = LogLevel.NONE
+                }
+                if (basicAuthCredentials != null) {
+                    val encoded =
+                        Base64.encodeToString(
+                            "${basicAuthCredentials.first}:${basicAuthCredentials.second}"
+                                .toByteArray(),
+                            Base64.NO_WRAP,
+                        )
+                    defaultRequest { header(HttpHeaders.Authorization, "Basic $encoded") }
                 }
                 engine {
                     if (trustAllCerts) {

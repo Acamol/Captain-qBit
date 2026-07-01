@@ -13,5 +13,10 @@ data class ConfigState(
     val showUsernameError: Boolean = false,
     val showPasswordError: Boolean = false,
     val showConnectionTypeError: Boolean = false,
-    val isTrustSelfSignedChecked: Boolean = false
+    val isTrustSelfSignedChecked: Boolean = false,
+    val useBasicAuth: Boolean = false,
+    val isBasicAuthUsernameValid: Boolean = false,
+    val isBasicAuthPasswordValid: Boolean = false,
+    val showBasicAuthUsernameError: Boolean = false,
+    val showBasicAuthPasswordError: Boolean = false,
 )

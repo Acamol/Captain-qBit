@@ -10,7 +10,7 @@ import dev.yashgarg.qbit.data.models.ServerConfig
 
 @Database(
     entities = [ServerConfig::class],
-    version = 3,
+    version = 4,
     autoMigrations = [AutoMigration(from = 2, to = 3)],
     exportSchema = true
 )
@@ -21,6 +21,14 @@ abstract class AppDatabase : RoomDatabase() {
         const val DB_NAME = "qbit-db"
     }
 }
+
+val MIGRATION_3_4 =
+    object : Migration(3, 4) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE configs ADD COLUMN basicAuthUsername TEXT DEFAULT NULL")
+            database.execSQL("ALTER TABLE configs ADD COLUMN basicAuthPassword TEXT DEFAULT NULL")
+        }
+    }
 
 val MIGRATION_1_2 =
     object : Migration(1, 2) {

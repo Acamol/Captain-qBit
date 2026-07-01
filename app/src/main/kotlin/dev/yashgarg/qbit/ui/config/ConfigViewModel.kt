@@ -101,6 +101,36 @@ class ConfigViewModel @Inject constructor(private val configDao: ConfigDao) : Vi
         }
     }
 
+    fun toggleBasicAuth(enabled: Boolean) {
+        _uiState.update { state -> state.copy(useBasicAuth = enabled) }
+    }
+
+    fun validateBasicAuthUsername(user: String) {
+        if (user.isEmpty()) {
+            _uiState.update { state ->
+                state.copy(isBasicAuthUsernameValid = false, showBasicAuthUsernameError = false)
+            }
+            return
+        }
+        val isValid = textValidator.isValid(user)
+        _uiState.update { state ->
+            state.copy(isBasicAuthUsernameValid = isValid, showBasicAuthUsernameError = !isValid)
+        }
+    }
+
+    fun validateBasicAuthPassword(text: String) {
+        if (text.isEmpty()) {
+            _uiState.update { state ->
+                state.copy(isBasicAuthPasswordValid = false, showBasicAuthPasswordError = false)
+            }
+            return
+        }
+        val isValid = textValidator.isValid(text)
+        _uiState.update { state ->
+            state.copy(isBasicAuthPasswordValid = isValid, showBasicAuthPasswordError = !isValid)
+        }
+    }
+
     fun validateConnectionType(type: String) {
         if (type.isEmpty()) {
             _uiState.update { state ->
@@ -121,7 +151,10 @@ class ConfigViewModel @Inject constructor(private val configDao: ConfigDao) : Vi
         port: String,
         connectionType: String,
         username: String,
-        password: String
+        password: String,
+        useBasicAuth: Boolean,
+        basicAuthUsername: String,
+        basicAuthPassword: String,
     ) {
         val serverNameValid = textValidator.isValid(serverName)
         val serverHostValid = hostValidator.isValid(serverHost)
@@ -129,6 +162,8 @@ class ConfigViewModel @Inject constructor(private val configDao: ConfigDao) : Vi
         val usernameValid = textValidator.isValid(username)
         val passwordValid = textValidator.isValid(password)
         val connectionTypeValid = textValidator.isValid(connectionType)
+        val basicAuthUsernameValid = !useBasicAuth || textValidator.isValid(basicAuthUsername)
+        val basicAuthPasswordValid = !useBasicAuth || textValidator.isValid(basicAuthPassword)
 
         val hasError =
             listOf(
@@ -138,6 +173,8 @@ class ConfigViewModel @Inject constructor(private val configDao: ConfigDao) : Vi
                     usernameValid,
                     passwordValid,
                     connectionTypeValid,
+                    basicAuthUsernameValid,
+                    basicAuthPasswordValid,
                 )
                 .any { !it }
 
@@ -156,6 +193,8 @@ class ConfigViewModel @Inject constructor(private val configDao: ConfigDao) : Vi
                     showPortError = !portValid,
                     showUrlError = !serverHostValid,
                     showConnectionTypeError = !connectionTypeValid,
+                    showBasicAuthUsernameError = !basicAuthUsernameValid,
+                    showBasicAuthPasswordError = !basicAuthPasswordValid,
                 )
             }
         } else {
@@ -171,7 +210,9 @@ class ConfigViewModel @Inject constructor(private val configDao: ConfigDao) : Vi
         connectionType: String,
         username: String,
         password: String,
-        trustSelfSigned: Boolean
+        trustSelfSigned: Boolean,
+        basicAuthUsername: String?,
+        basicAuthPassword: String?,
     ) {
         val config =
             ServerConfig(
@@ -185,7 +226,9 @@ class ConfigViewModel @Inject constructor(private val configDao: ConfigDao) : Vi
                 connectionType =
                     if (connectionType.trim() == "http") ConnectionType.HTTP
                     else ConnectionType.HTTPS,
-                trustSelfSigned = trustSelfSigned
+                trustSelfSigned = trustSelfSigned,
+                basicAuthUsername = basicAuthUsername?.trim()?.ifEmpty { null },
+                basicAuthPassword = basicAuthPassword?.trim()?.ifEmpty { null },
             )
 
         viewModelScope.launch { withContext(Dispatchers.IO) { configDao.addConfig(config) } }
@@ -195,15 +238,21 @@ class ConfigViewModel @Inject constructor(private val configDao: ConfigDao) : Vi
         baseUrl: String,
         username: String,
         password: String,
-        trustSelfSigned: Boolean
+        trustSelfSigned: Boolean,
+        basicAuthUsername: String?,
+        basicAuthPassword: String?,
     ): Result<String, Throwable> {
         return runCatching {
+            val basicAuth =
+                if (!basicAuthUsername.isNullOrEmpty() && !basicAuthPassword.isNullOrEmpty()) {
+                    basicAuthUsername to basicAuthPassword
+                } else null
             val client =
                 QBittorrentClient(
                     baseUrl,
                     username,
                     password,
-                    httpClient = ClientManager.httpClient(trustSelfSigned),
+                    httpClient = ClientManager.httpClient(trustSelfSigned, basicAuth),
                     dispatcher = Dispatchers.Default
                 )
             client.getVersion()
