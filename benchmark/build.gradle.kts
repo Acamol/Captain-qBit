@@ -7,11 +7,11 @@ plugins {
 
 android {
     namespace = "dev.yashgarg.benchmark"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 33
-        targetSdk = 34
+        targetSdk = 35
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         missingDimensionStrategy("app", "nonFree", "free")
@@ -21,8 +21,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
-    kotlinOptions { jvmTarget = JavaVersion.VERSION_17.toString() }
 
     buildTypes {
         // This benchmark buildType is used for benchmarking, and should function like your

@@ -1,4 +1,4 @@
-@file:Suppress("UnstableApiUsage", "DSL_SCOPE_VIOLATION", "KaptUsageInsteadOfKsp")
+@file:Suppress("UnstableApiUsage", "DSL_SCOPE_VIOLATION")
 
 val commitHash: String by lazy {
     providers
@@ -12,8 +12,9 @@ val commitHash: String by lazy {
 plugins {
     alias(libs.plugins.android.application)
     id("dev.yashgarg.qbit.kotlin-android")
-    alias(libs.plugins.kotlin.kapt)
+    alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
     alias(libs.plugins.navigation.safeargs)
     alias(libs.plugins.sentry)
@@ -21,28 +22,25 @@ plugins {
 
 android {
     namespace = "dev.yashgarg.qbit"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         // Distinct from upstream (namespace stays dev.yashgarg.qbit) so this fork can be
         // installed alongside the original app.
         applicationId = "dev.acamol.qbit"
         minSdk = 28
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 17
         versionName = "v0.2.5-$commitHash"
 
         multiDexEnabled = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        setProperty("archivesBaseName", "${defaultConfig.applicationId}-$versionName")
     }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
-    kotlinOptions { jvmTarget = JavaVersion.VERSION_17.toString() }
 
     val isGithubCi = System.getenv("GITHUB_CI") != null
     if (isGithubCi) {
@@ -116,11 +114,6 @@ android {
         buildConfig = true
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion =
-            libs.compose.compiler.get().versionConstraint.requiredVersion
-    }
-
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -133,10 +126,9 @@ android {
     }
 }
 
-kapt {
-    correctErrorTypes = true
-    arguments { arg("room.schemaLocation", "$projectDir/schemas") }
-}
+base.archivesName.set("dev.yashgarg.qbit-v0.2.5-$commitHash")
+
+ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 
 dependencies {
     implementation(libs.androidx.appcompat)
@@ -152,16 +144,16 @@ dependencies {
     implementation(libs.androidx.recyclerview.selection)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
-    kapt(libs.androidx.room.compiler)
+    ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.work.ktx)
     implementation(libs.androidx.hilt.work)
-    kapt(libs.androidx.hilt.compiler)
+    ksp(libs.androidx.hilt.compiler)
 
     implementation(libs.bundles.compose)
 
     implementation(libs.google.material)
     implementation(libs.google.dagger.hilt)
-    kapt(libs.google.dagger.hilt.compiler)
+    ksp(libs.google.dagger.hilt.compiler)
 
     implementation(libs.ktor.client.okhttp)
     implementation(libs.ktor.client.logging)

@@ -3,27 +3,19 @@
 plugins {
     id("dev.yashgarg.qbit.kotlin-android")
     alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.compose)
 }
 
 android {
     namespace = "dev.yashgarg.qbit.ui.compose"
-    compileSdk = 34
+    compileSdk = 35
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions { jvmTarget = JavaVersion.VERSION_17.toString() }
-
-    buildFeatures {
-        compose = true
-        composeOptions {
-            useLiveLiterals = false
-            kotlinCompilerExtensionVersion =
-                libs.compose.compiler.get().versionConstraint.requiredVersion
-        }
-    }
+    buildFeatures { compose = true }
 
     lint { baseline = file("lint-baseline.xml") }
 }

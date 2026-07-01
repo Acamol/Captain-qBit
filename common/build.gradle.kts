@@ -7,14 +7,12 @@ plugins {
 
 android {
     namespace = "dev.yashgarg.qbit.common"
-    compileSdk = 34
+    compileSdk = 35
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
-    kotlinOptions { jvmTarget = JavaVersion.VERSION_17.toString() }
 
     lint { baseline = file("lint-baseline.xml") }
 }
