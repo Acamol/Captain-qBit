@@ -23,6 +23,7 @@ import dev.yashgarg.qbit.databinding.ServerFragmentBinding
 import dev.yashgarg.qbit.ui.dialogs.AddTorrentDialog
 import dev.yashgarg.qbit.ui.dialogs.RemoveTorrentDialog
 import dev.yashgarg.qbit.ui.server.adapter.TorrentListAdapter
+import dev.yashgarg.qbit.utils.toHumanReadable
 import dev.yashgarg.qbit.utils.viewBinding
 import dev.yashgarg.qbit.validation.LinkValidator
 import java.util.ArrayList
@@ -226,6 +227,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
         with(binding) {
             if (state.hasError) {
                 listLoader.visibility = View.GONE
+                speedTv.visibility = View.GONE
                 errorTv.text =
                     state.error?.message
                         ?: requireContext().getString(dev.yashgarg.qbit.common.R.string.error)
@@ -236,6 +238,16 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
             } else if (!state.dataLoading) {
                 errorTv.visibility = View.GONE
                 listLoader.visibility = View.GONE
+
+                val serverState = state.data?.serverState
+                if (serverState != null) {
+                    speedTv.visibility = View.VISIBLE
+                    speedTv.text =
+                        "↓ ${serverState.dlInfoSpeed.toHumanReadable()}/s  ↑ ${serverState.upInfoSpeed.toHumanReadable()}/s"
+                } else {
+                    speedTv.visibility = View.GONE
+                }
+
                 if (state.data?.torrents.isNullOrEmpty()) {
                     emptyTv.visibility = View.VISIBLE
                     torrentRv.visibility = View.GONE
