@@ -11,4 +11,5 @@ data class ServerState(
     val error: Throwable? = null,
     val sortOption: SortOption = SortOption.NAME,
     val sortDirection: SortDirection = SortDirection.ASC,
+    val searchQuery: String = "",
 )

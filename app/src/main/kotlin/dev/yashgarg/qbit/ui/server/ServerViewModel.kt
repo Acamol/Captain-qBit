@@ -27,7 +27,10 @@ class ServerViewModel @Inject constructor(private val repository: QbitRepository
                 if (state.dataLoading || state.hasError || state.data == null) null
                 else
                     state.data.torrents.values
-                        .filter { true }
+                        .filter { torrent ->
+                            state.searchQuery.isBlank() ||
+                                torrent.name.contains(state.searchQuery, ignoreCase = true)
+                        }
                         .sortedWith(state.sortOption, state.sortDirection)
             }
             .flowOn(Dispatchers.Default)
@@ -102,6 +105,10 @@ class ServerViewModel @Inject constructor(private val repository: QbitRepository
                 }
             state.copy(sortOption = option, sortDirection = newDirection)
         }
+    }
+
+    fun setSearchQuery(query: String) {
+        _uiState.update { state -> state.copy(searchQuery = query) }
     }
 
     fun toggleSortDirection() {

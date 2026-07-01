@@ -4,9 +4,13 @@ import android.annotation.SuppressLint
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Log
 import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
+import androidx.core.content.getSystemService
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.setFragmentResultListener
@@ -42,8 +46,9 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
 
     private var lastSortOption = SortOption.NAME
     private var lastSortDir = SortDirection.ASC
+    private var lastSearchQuery = ""
     private var pendingScrollToTop = false
-    private var pendingListReset = false // double-submit to avoid O(N²) DiffUtil moves on sort
+    private var pendingListReset = false
 
     @Inject lateinit var torrentListAdapter: TorrentListAdapter
 
@@ -147,6 +152,28 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
             torrentRv.itemAnimator = null
             torrentRv.adapter = torrentListAdapter
 
+            searchEt.addTextChangedListener(
+                object : TextWatcher {
+                    override fun beforeTextChanged(
+                        s: CharSequence?,
+                        start: Int,
+                        count: Int,
+                        after: Int,
+                    ) = Unit
+
+                    override fun onTextChanged(
+                        s: CharSequence?,
+                        start: Int,
+                        before: Int,
+                        count: Int,
+                    ) = Unit
+
+                    override fun afterTextChanged(s: Editable?) {
+                        viewModel.setSearchQuery(s?.toString() ?: "")
+                    }
+                }
+            )
+
             torrentListAdapter.makeSelectable(torrentRv) { selection ->
                 selectedItems = selection
 
@@ -192,6 +219,22 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
 
             bottomBar.setOnMenuItemClickListener { menuItem ->
                 when (menuItem.itemId) {
+                    R.id.search -> {
+                        val visible = searchLayout.visibility == View.VISIBLE
+                        if (visible) {
+                            searchEt.setText("")
+                            viewModel.setSearchQuery("")
+                            searchLayout.visibility = View.GONE
+                            val imm = requireContext().getSystemService<InputMethodManager>()
+                            imm?.hideSoftInputFromWindow(searchEt.windowToken, 0)
+                        } else {
+                            searchLayout.visibility = View.VISIBLE
+                            searchEt.requestFocus()
+                            val imm = requireContext().getSystemService<InputMethodManager>()
+                            imm?.showSoftInput(searchEt, InputMethodManager.SHOW_IMPLICIT)
+                        }
+                        true
+                    }
                     R.id.category -> {
                         Toast.makeText(requireContext(), "Not implemented", Toast.LENGTH_SHORT)
                             .show()
@@ -300,12 +343,14 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
 
             val sortChanged =
                 state.sortOption != lastSortOption || state.sortDirection != lastSortDir
-            if (sortChanged && !state.dataLoading && !state.hasError) {
+            val searchChanged = state.searchQuery != lastSearchQuery
+            if ((sortChanged || searchChanged) && !state.dataLoading && !state.hasError) {
                 pendingScrollToTop = true
                 pendingListReset = true
             }
             lastSortOption = state.sortOption
             lastSortDir = state.sortDirection
+            lastSearchQuery = state.searchQuery
 
             if (state.hasError) {
                 listLoader.visibility = View.GONE
