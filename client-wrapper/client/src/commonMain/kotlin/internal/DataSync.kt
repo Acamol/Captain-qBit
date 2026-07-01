@@ -89,9 +89,10 @@ internal abstract class DataSync<T>(
 
                 delay(config.syncInterval)
             }
-        } catch (e: QBittorrentException) {
+        } catch (e: Exception) {
             // Failed to fetch patch, keep current MainData and add the error
-            state.update { (mainData, _) -> mainData to e }
+            val qbEx = if (e is QBittorrentException) e else QBittorrentException(e)
+            state.update { (mainData, _) -> mainData to qbEx }
             yield()
             // Active state subscribers have seen the error, clear it
             state.update { (mainData, _) -> mainData to null }
