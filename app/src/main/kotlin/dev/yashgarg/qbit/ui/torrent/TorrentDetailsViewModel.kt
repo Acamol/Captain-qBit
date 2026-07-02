@@ -32,6 +32,7 @@ constructor(private val repository: QbitRepository, state: SavedStateHandle) : V
         viewModelScope.launch {
             launch { syncTorrentFlow() }
             launch { syncPeers() }
+            launch { syncAvailableFilters() }
         }
     }
 
@@ -85,6 +86,25 @@ constructor(private val repository: QbitRepository, state: SavedStateHandle) : V
         }
     }
 
+    fun setCategory(category: String) {
+        viewModelScope.launch {
+            val hash = requireNotNull(hash)
+            when (val result = repository.setTorrentCategory(hash, category)) {
+                is Ok -> _status.emit("Category set to \"$category\"")
+                is Err -> _status.emit(result.error.message ?: "Failed to set category")
+            }
+        }
+    }
+
+    fun setTags(toAdd: List<String>, toRemove: List<String>) {
+        viewModelScope.launch {
+            val hash = requireNotNull(hash)
+            if (toAdd.isNotEmpty()) repository.addTorrentTags(hash, toAdd)
+            if (toRemove.isNotEmpty()) repository.removeTorrentTags(hash, toRemove)
+            _status.emit("Tags updated")
+        }
+    }
+
     fun banPeer(peer: TorrentPeer) {
         val peerAddr = "${peer.ip}:${peer.port}"
 
@@ -94,6 +114,17 @@ constructor(private val repository: QbitRepository, state: SavedStateHandle) : V
                 is Err -> _status.emit(result.error.message ?: "Failed to ban peer")
             }
         }
+    }
+
+    private suspend fun syncAvailableFilters() {
+        repository
+            .observeMainData()
+            .catch { /* non-fatal, ignore */}
+            .collectLatest { mainData ->
+                val categories = mainData.categories.keys.sorted()
+                val tags = mainData.tags.sorted()
+                _uiState.update { it.copy(availableCategories = categories, availableTags = tags) }
+            }
     }
 
     private suspend fun syncTorrentFlow() {

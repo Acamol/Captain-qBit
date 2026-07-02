@@ -10,6 +10,7 @@ import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayoutMediator
 import com.google.android.material.transition.MaterialElevationScale
 import dagger.hilt.android.AndroidEntryPoint
@@ -125,6 +126,18 @@ class TorrentDetailsFragment : Fragment(R.layout.torrent_details_fragment) {
                         dialog.show(childFragmentManager, RenameTorrentDialog.TAG)
                         true
                     }
+                add("Set category")
+                    .setIcon(R.drawable.outline_category_24)
+                    .setOnMenuItemClickListener {
+                        showCategoryPicker(torrent)
+                        true
+                    }
+                add("Manage tags")
+                    .setIcon(R.drawable.outline_filter_list_24)
+                    .setOnMenuItemClickListener {
+                        showTagsPicker(torrent)
+                        true
+                    }
             }
             popupMenu.show()
         }
@@ -153,6 +166,47 @@ class TorrentDetailsFragment : Fragment(R.layout.torrent_details_fragment) {
                 viewModel.renameTorrent(requireNotNull(torrentName), torrent.hash)
             }
         }
+    }
+
+    private fun showCategoryPicker(torrent: Torrent) {
+        val state = viewModel.uiState.value
+        val options = listOf("") + state.availableCategories
+        val labels = options.map { it.ifBlank { "None" } }.toTypedArray()
+        val checked = options.indexOf(torrent.category).coerceAtLeast(0)
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Set category")
+            .setSingleChoiceItems(labels, checked) { dialog, which ->
+                viewModel.setCategory(options[which])
+                dialog.dismiss()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showTagsPicker(torrent: Torrent) {
+        val state = viewModel.uiState.value
+        if (state.availableTags.isEmpty()) {
+            Toast.makeText(requireContext(), "No tags available", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val tags = state.availableTags
+        val initialChecked = BooleanArray(tags.size) { torrent.tags.contains(tags[it]) }
+        val currentChecked = initialChecked.copyOf()
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Manage tags")
+            .setMultiChoiceItems(tags.toTypedArray(), currentChecked) { _, which, isChecked ->
+                currentChecked[which] = isChecked
+            }
+            .setPositiveButton("OK") { _, _ ->
+                val toAdd = tags.filterIndexed { i, _ -> currentChecked[i] && !initialChecked[i] }
+                val toRemove =
+                    tags.filterIndexed { i, _ -> !currentChecked[i] && initialChecked[i] }
+                if (toAdd.isNotEmpty() || toRemove.isNotEmpty()) {
+                    viewModel.setTags(toAdd, toRemove)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun observeFlows() {
