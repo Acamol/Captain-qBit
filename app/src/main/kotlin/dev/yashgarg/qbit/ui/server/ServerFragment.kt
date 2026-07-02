@@ -156,15 +156,27 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
     private fun handleAddIntent(bundle: Bundle?) {
         val uri: String? = (bundle ?: arguments)?.getString(MainActivity.TORRENT_INTENT_KEY)
         (bundle ?: arguments)?.clear()
-        if (!uri.isNullOrEmpty()) {
-            when {
-                linkValidator.isValid(uri) -> viewModel.addTorrentUrl(uri)
-                uri.startsWith("content://") || uri.startsWith("file://") -> {
-                    requireContext().contentResolver.openInputStream(Uri.parse(uri)).use { stream ->
-                        viewModel.addTorrentFile(requireNotNull(stream).readBytes())
-                    }
-                }
-            }
+        if (uri.isNullOrEmpty()) return
+        if (childFragmentManager.findFragmentByTag(AddTorrentDialog.TAG) != null) return
+        val prefs = viewModel.addTorrentPrefs.value
+        val categories = viewModel.uiState.value.availableCategories
+        when {
+            linkValidator.isValid(uri) ->
+                AddTorrentDialog.newInstance(
+                        availableCategories = categories,
+                        defaultAutoTmm = prefs.addTorrentAutoTmm,
+                        defaultPaused = prefs.addTorrentPaused,
+                        prefillUrl = uri,
+                    )
+                    .show(childFragmentManager, AddTorrentDialog.TAG)
+            uri.startsWith("content://") || uri.startsWith("file://") ->
+                AddTorrentDialog.newInstance(
+                        availableCategories = categories,
+                        defaultAutoTmm = prefs.addTorrentAutoTmm,
+                        defaultPaused = prefs.addTorrentPaused,
+                        prefillFileUri = uri,
+                    )
+                    .show(childFragmentManager, AddTorrentDialog.TAG)
         }
     }
 
