@@ -8,8 +8,6 @@ import qbittorrent.QBittorrentException
 
 class ClientConnectionError : Throwable("Failed to connect to server")
 
-class TorrentRemovedError : Exception("Torrent has been removed")
-
 fun Throwable.friendlyMessage(fallback: String = "Unknown error"): String =
     ExceptionHandler.mapException(this).message?.substringBefore(" [")?.trim() ?: fallback
 

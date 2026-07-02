@@ -33,7 +33,5 @@
     <color name="md_theme_dark_inverseOnSurface">#262C3A</color>
     <color name="md_theme_dark_inverseSurface">#FFFFFF</color>
     <color name="md_theme_dark_inversePrimary">#00687C</color>
-    <color name="md_theme_dark_shadow">#000000</color>
     <color name="md_theme_dark_surfaceTint">#5CD4EF</color>
-    <color name="md_theme_dark_surfaceTintColor">#5CD4EF</color>
 </resources>

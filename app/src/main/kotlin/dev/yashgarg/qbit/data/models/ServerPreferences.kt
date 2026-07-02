@@ -6,7 +6,6 @@ import kotlinx.serialization.Serializable
 @Keep
 @Serializable
 data class ServerPreferences(
-    val showNotification: Boolean = true,
     val addTorrentAutoTmm: Boolean = false,
     val addTorrentPaused: Boolean = false,
     val sortOptionName: String = "NAME",

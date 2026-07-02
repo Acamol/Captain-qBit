@@ -44,20 +44,9 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    val isGithubCi = System.getenv("GITHUB_CI") != null
+    // Release signing via a gitignored keystore.properties (never committed).
     val keystorePropsFile = rootProject.file("keystore.properties")
-    if (isGithubCi) {
-        signingConfigs {
-            register("release") {
-                storeFile = file("keystore/qbit-key.jks")
-                storePassword = System.getenv("SIGNING_STORE_PASSWORD")
-                keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
-                keyAlias = System.getenv("SIGNING_KEY_ALIAS")
-            }
-        }
-        buildTypes.getByName("release") { signingConfig = signingConfigs.getByName("release") }
-    } else if (keystorePropsFile.exists()) {
-        // Local release signing via a gitignored keystore.properties (never committed).
+    if (keystorePropsFile.exists()) {
         val keystoreProps = Properties().apply { keystorePropsFile.inputStream().use { load(it) } }
         signingConfigs {
             register("release") {
@@ -183,7 +172,7 @@ dependencies {
     implementation(libs.tools.kotlin.result)
     implementation(libs.tools.cascade)
     implementation(libs.tools.lottie)
-    implementation(libs.tools.whatthestack)
+    debugImplementation(libs.tools.whatthestack)
 
     testImplementation(libs.bundles.testing)
 }
