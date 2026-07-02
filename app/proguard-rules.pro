@@ -52,3 +52,12 @@
 # If there is no `java.lang.ClassValue` (for example, in Android), then R8/ProGuard will print a warning.
 # However, since in this case they will not be used, we can disable these warnings
 -dontwarn kotlinx.serialization.internal.ClassValueReferences
+
+# Room instantiates its generated `<Database>_Impl` class by reflection from the class name,
+# so keep RoomDatabase subclasses (unrenamed) and their no-arg constructors. Without this, R8
+# full mode strips the constructor and startup crashes with NoSuchMethodException on `_Impl`.
+-keep class * extends androidx.room.RoomDatabase { <init>(); }
+
+# WorkManager instantiates its InputMerger by reflection; R8 full mode strips the no-arg
+# constructor, logging "Could not create Input Merger" when a worker runs.
+-keep class * extends androidx.work.InputMerger { <init>(); }
