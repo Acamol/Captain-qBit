@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import androidx.core.os.bundleOf
+import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.flowWithLifecycle
@@ -12,6 +13,8 @@ import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayoutMediator
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import com.google.android.material.transition.MaterialElevationScale
 import dagger.hilt.android.AndroidEntryPoint
 import dev.yashgarg.qbit.R
@@ -24,6 +27,7 @@ import dev.yashgarg.qbit.utils.viewBinding
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import me.saket.cascade.CascadePopupMenu
+import me.saket.cascade.MenuItemViewHolder
 import qbittorrent.models.Torrent
 
 @AndroidEntryPoint
@@ -63,7 +67,16 @@ class TorrentDetailsFragment : Fragment(R.layout.torrent_details_fragment) {
     private fun setupMenu(torrent: Torrent) {
         setupDialogListeners(torrent)
         binding.toolbar.findViewById<View>(R.id.overflow_menu).setOnClickListener { view ->
-            val popupMenu = CascadePopupMenu(requireContext(), view)
+            val density = resources.displayMetrics.density
+            val desiredWidth = (280 * density).toInt()
+            val maxWidth = resources.displayMetrics.widthPixels - (32 * density).toInt()
+            val popupMenu =
+                CascadePopupMenu(
+                    requireContext(),
+                    view,
+                    styler = CascadePopupMenu.Styler(menuItem = ::showFullTitleOnLongPress),
+                    fixedWidth = minOf(desiredWidth, maxWidth),
+                )
             popupMenu.menu.apply {
                 add("Pause").setIcon(R.drawable.twotone_pause_24).setOnMenuItemClickListener {
                     viewModel.toggleTorrent(true, torrent.hash)
@@ -138,8 +151,38 @@ class TorrentDetailsFragment : Fragment(R.layout.torrent_details_fragment) {
                         showTagsPicker(torrent)
                         true
                     }
+                add("Automatic Torrent Management")
+                    .setIcon(R.drawable.twotone_sync_24)
+                    .setCheckable(true)
+                    .setChecked(torrent.autoTmm)
+                    .setOnMenuItemClickListener {
+                        viewModel.setAutoManagement(!torrent.autoTmm)
+                        true
+                    }
+                add("Set save path…")
+                    .setIcon(R.drawable.twotone_folder_24)
+                    .setOnMenuItemClickListener {
+                        showSavePathDialog(torrent)
+                        true
+                    }
             }
             popupMenu.show()
+        }
+    }
+
+    // Menu rows use a fixed width and ellipsize long labels. Let a long-press reveal
+    // the full text via a toast, but only when the label is actually truncated.
+    private fun showFullTitleOnLongPress(holder: MenuItemViewHolder) {
+        holder.itemView.setOnLongClickListener {
+            val layout = holder.titleView.layout
+            val truncated =
+                layout != null && (0 until layout.lineCount).any { layout.getEllipsisCount(it) > 0 }
+            if (truncated) {
+                Toast.makeText(requireContext(), holder.titleView.text, Toast.LENGTH_SHORT).show()
+                true
+            } else {
+                false
+            }
         }
     }
 
@@ -207,6 +250,37 @@ class TorrentDetailsFragment : Fragment(R.layout.torrent_details_fragment) {
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    private fun showSavePathDialog(torrent: Torrent) {
+        val view = layoutInflater.inflate(R.layout.dialog_text_input, null, false)
+        val til = view.findViewById<TextInputLayout>(R.id.text_input_layout)
+        val tiet = view.findViewById<TextInputEditText>(R.id.text_input_edit)
+        til?.hint = "Save path"
+        tiet?.setText(torrent.savePath)
+        tiet?.setSelection(tiet.text?.length ?: 0)
+
+        val dialog =
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Set save path")
+                .setView(view)
+                .setPositiveButton("Save", null)
+                .setNegativeButton("Cancel", null)
+                .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val path = tiet?.text?.toString()?.trim()
+                if (!path.isNullOrBlank()) {
+                    viewModel.setSavePath(path)
+                    dialog.dismiss()
+                } else {
+                    til?.error = "Path cannot be empty"
+                }
+            }
+            tiet?.doAfterTextChanged { til?.error = null }
+        }
+        dialog.show()
     }
 
     private fun observeFlows() {

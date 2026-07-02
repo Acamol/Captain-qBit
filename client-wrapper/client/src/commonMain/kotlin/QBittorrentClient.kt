@@ -820,7 +820,7 @@ class QBittorrentClient(
                 formParameters =
                     Parameters.build {
                         append("hashes", hashes.joinToString("|"))
-                        append("enabled", enabled.toString())
+                        append("enable", enabled.toString())
                     }
             )
             .orThrow()

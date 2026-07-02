@@ -100,6 +100,14 @@ constructor(dispatcher: CoroutineDispatcher, private val clientManager: ClientMa
         return runCatching { client().setTorrentCategory(listOf(hash), category) }
     }
 
+    suspend fun setTorrentLocation(hash: String, path: String): Result<Unit, Throwable> {
+        return runCatching { client().setTorrentLocation(listOf(hash), path) }
+    }
+
+    suspend fun setAutoTorrentManagement(hash: String, enabled: Boolean): Result<Unit, Throwable> {
+        return runCatching { client().setAutoTorrentManagement(listOf(hash), enabled) }
+    }
+
     suspend fun addTorrentTags(hash: String, tags: List<String>): Result<Unit, Throwable> {
         return runCatching { client().addTorrentTags(listOf(hash), tags) }
     }

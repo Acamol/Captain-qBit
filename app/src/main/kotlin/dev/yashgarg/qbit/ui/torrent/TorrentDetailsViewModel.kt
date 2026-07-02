@@ -97,6 +97,27 @@ constructor(private val repository: QbitRepository, state: SavedStateHandle) : V
         }
     }
 
+    fun setSavePath(path: String) {
+        viewModelScope.launch {
+            val hash = requireNotNull(hash)
+            repository.setAutoTorrentManagement(hash, false)
+            when (val result = repository.setTorrentLocation(hash, path)) {
+                is Ok -> _status.emit("Save path updated")
+                is Err -> _status.emit(result.error.message ?: "Failed to set save path")
+            }
+        }
+    }
+
+    fun setAutoManagement(enabled: Boolean) {
+        viewModelScope.launch {
+            val hash = requireNotNull(hash)
+            when (val result = repository.setAutoTorrentManagement(hash, enabled)) {
+                is Ok -> _status.emit("Auto management ${if (enabled) "enabled" else "disabled"}")
+                is Err -> _status.emit(result.error.message ?: "Failed to update auto management")
+            }
+        }
+    }
+
     fun setTags(toAdd: List<String>, toRemove: List<String>) {
         viewModelScope.launch {
             val hash = requireNotNull(hash)
