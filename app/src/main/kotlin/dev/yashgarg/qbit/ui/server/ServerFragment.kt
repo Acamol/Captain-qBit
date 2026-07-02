@@ -31,13 +31,16 @@ import dev.yashgarg.qbit.databinding.ServerFragmentBinding
 import dev.yashgarg.qbit.ui.dialogs.AddTorrentDialog
 import dev.yashgarg.qbit.ui.dialogs.RemoveTorrentDialog
 import dev.yashgarg.qbit.ui.server.adapter.TorrentListAdapter
+import dev.yashgarg.qbit.utils.TorrentHashUtil
 import dev.yashgarg.qbit.utils.toHumanReadable
 import dev.yashgarg.qbit.utils.viewBinding
 import dev.yashgarg.qbit.validation.LinkValidator
 import java.util.ArrayList
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @AndroidEntryPoint
 class ServerFragment : Fragment(R.layout.server_fragment) {
@@ -180,25 +183,54 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
         (bundle ?: arguments)?.clear()
         if (uri.isNullOrEmpty()) return
         if (childFragmentManager.findFragmentByTag(AddTorrentDialog.TAG) != null) return
-        val prefs = viewModel.addTorrentPrefs.value
-        val categories = viewModel.uiState.value.availableCategories
-        when {
-            linkValidator.isValid(uri) ->
-                AddTorrentDialog.newInstance(
+
+        val isLink = linkValidator.isValid(uri)
+        val isFile = uri.startsWith("content://") || uri.startsWith("file://")
+        if (!isLink && !isFile) return
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            // Skip the dialog entirely if the torrent is already in the client.
+            val incomingHash =
+                if (isLink) {
+                    TorrentHashUtil.infoHashFromMagnet(uri)
+                } else {
+                    withContext(Dispatchers.IO) {
+                        runCatching {
+                                requireContext()
+                                    .contentResolver
+                                    .openInputStream(Uri.parse(uri))
+                                    ?.use { it.readBytes() }
+                            }
+                            .getOrNull()
+                            ?.let(TorrentHashUtil::infoHashFromTorrent)
+                    }
+                }
+            val existing = viewModel.uiState.value.data?.torrents?.keys.orEmpty()
+            if (incomingHash != null && existing.contains(incomingHash)) {
+                Toast.makeText(requireContext(), "Torrent already exists", Toast.LENGTH_SHORT)
+                    .show()
+                return@launch
+            }
+
+            val prefs = viewModel.addTorrentPrefs.value
+            val categories = viewModel.uiState.value.availableCategories
+            val dialog =
+                if (isLink) {
+                    AddTorrentDialog.newInstance(
                         availableCategories = categories,
                         defaultAutoTmm = prefs.addTorrentAutoTmm,
                         defaultPaused = prefs.addTorrentPaused,
                         prefillUrl = uri,
                     )
-                    .show(childFragmentManager, AddTorrentDialog.TAG)
-            uri.startsWith("content://") || uri.startsWith("file://") ->
-                AddTorrentDialog.newInstance(
+                } else {
+                    AddTorrentDialog.newInstance(
                         availableCategories = categories,
                         defaultAutoTmm = prefs.addTorrentAutoTmm,
                         defaultPaused = prefs.addTorrentPaused,
                         prefillFileUri = uri,
                     )
-                    .show(childFragmentManager, AddTorrentDialog.TAG)
+                }
+            dialog.show(childFragmentManager, AddTorrentDialog.TAG)
         }
     }
 

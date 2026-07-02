@@ -23,9 +23,13 @@ object ExceptionHandler {
             is UnknownHostException -> Exception("Server not found — check the hostname")
             is SSLException -> Exception("SSL/TLS error — check server certificate")
             is QBittorrentException ->
-                when (ex.cause) {
-                    is ConnectTimeoutException -> ClientConnectionError()
-                    is SocketTimeoutException -> Exception("Connection timed out")
+                when {
+                    // qBittorrent returns 409 Conflict when the torrent is already in the list.
+                    ex.response?.status?.value == 409 ||
+                        ex.message.contains("conflict", ignoreCase = true) ->
+                        Exception("Torrent already exists")
+                    ex.cause is ConnectTimeoutException -> ClientConnectionError()
+                    ex.cause is SocketTimeoutException -> Exception("Connection timed out")
                     else -> ex
                 }
             else -> ex
