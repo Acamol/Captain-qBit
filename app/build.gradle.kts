@@ -24,7 +24,9 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "dev.yashgarg.qbit"
+        // Distinct from upstream (namespace stays dev.yashgarg.qbit) so this fork can be
+        // installed alongside the original app.
+        applicationId = "dev.acamol.qbit"
         minSdk = 28
         targetSdk = 34
         versionCode = 17
