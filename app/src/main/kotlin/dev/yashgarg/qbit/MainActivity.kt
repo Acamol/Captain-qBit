@@ -16,6 +16,7 @@ import androidx.lifecycle.whenResumed
 import androidx.navigation.Navigation.findNavController
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
 import dagger.hilt.android.AndroidEntryPoint
 import dev.yashgarg.qbit.data.manager.ClientManager
@@ -52,6 +53,7 @@ class MainActivity : AppCompatActivity() {
                 clientManager.configStatus.collect { status ->
                     when (status) {
                         ConfigStatus.EXISTS -> {
+                            launchWorkManager(true)
                             val bundle = bundleOf(TORRENT_INTENT_KEY to intent?.data.toString())
                             val navController =
                                 findNavController(this@MainActivity, R.id.nav_host_fragment)
@@ -73,8 +75,12 @@ class MainActivity : AppCompatActivity() {
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun checkPermissions(context: Context) {
         val permissionLauncher =
-            registerForActivityResult(ActivityResultContracts.RequestPermission()) {
-                Log.i(AppNotificationManager.javaClass.simpleName, "Notification permission: $it")
+            registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+                Log.i(
+                    AppNotificationManager.javaClass.simpleName,
+                    "Notification permission: $granted"
+                )
+                if (granted) launchWorkManager(true)
             }
 
         AppNotificationManager.requestPermission(context, permissionLauncher)
@@ -88,6 +94,7 @@ class MainActivity : AppCompatActivity() {
                 workTag,
                 ExistingWorkPolicy.REPLACE,
                 OneTimeWorkRequestBuilder<StatusWorker>()
+                    .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                     .setConstraints(StatusWorker.constraints)
                     .build()
             )
