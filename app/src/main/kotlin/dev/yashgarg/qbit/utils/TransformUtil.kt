@@ -20,6 +20,7 @@ object TransformUtil {
                         ContentTreeItem(
                             id = item.index,
                             name = item.name.substring(start + folder.length + 1),
+                            path = item.name,
                             item,
                             size = item.size,
                             progress = item.progress.toLong(),
@@ -35,6 +36,7 @@ object TransformUtil {
                     ContentTreeItem(
                         id = files.size + folderIndex++,
                         name = folder,
+                        path = values.first().name.substring(0, start + folder.length),
                         children = subTree,
                         size = subTree.sumOf { it.size },
                         progress = subTree.sumOf { it.progress } / subTree.size
@@ -48,6 +50,7 @@ object TransformUtil {
                     ContentTreeItem(
                         id = item.index,
                         name = item.name.substring(start),
+                        path = item.name,
                         item,
                         size = item.size,
                         progress = item.progress.toLong()

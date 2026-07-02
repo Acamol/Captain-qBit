@@ -24,14 +24,18 @@ import dev.yashgarg.qbit.data.models.ContentTreeItem
 import dev.yashgarg.qbit.ui.compose.theme.SpaceGrotesk
 
 @Composable
-fun TorrentContentTreeView(modifier: Modifier = Modifier, nodes: List<ContentTreeItem>) {
+fun TorrentContentTreeView(
+    modifier: Modifier = Modifier,
+    nodes: List<ContentTreeItem>,
+    onNodeLongClick: (ContentTreeItem) -> Unit = {},
+) {
     val tree = Tree<ContentTreeItem> { ContentTree(nodes) }
 
     Bonsai(
         tree,
         style = torrentContentStyle(),
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp).then(modifier),
-        onLongClick = null,
+        onLongClick = { node -> onNodeLongClick(node.content) },
     )
 }
 
@@ -63,8 +67,8 @@ private fun TreeScope.ContentTree(nodes: List<ContentTreeItem>) {
 private fun TreeScope.ContentNode(node: ContentTreeItem) {
     // If [node.item] is null, therefore it is a directory
     if (node.item == null) {
-        Branch(node.name) { node.children?.let { ContentTree(it) } }
+        Branch(content = node, name = node.name) { node.children?.let { ContentTree(it) } }
     } else {
-        Leaf(node.name)
+        Leaf(content = node, name = node.name)
     }
 }
