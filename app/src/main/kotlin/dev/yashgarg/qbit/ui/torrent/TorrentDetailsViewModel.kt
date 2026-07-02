@@ -33,6 +33,7 @@ constructor(private val repository: QbitRepository, state: SavedStateHandle) : V
             launch { syncTorrentFlow() }
             launch { syncPeers() }
             launch { syncAvailableFilters() }
+            launch { getContent() }
         }
     }
 
@@ -151,7 +152,6 @@ constructor(private val repository: QbitRepository, state: SavedStateHandle) : V
                             }
                     )
                 }
-                getContent()
             }
         }
 

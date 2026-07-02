@@ -23,7 +23,7 @@ interface ClientManager {
 
     companion object {
         const val tag = "ClientManager"
-        val syncInterval = 1.seconds
+        val syncInterval = 3.seconds
 
         fun httpClient(
             trustAllCerts: Boolean,
