@@ -60,12 +60,52 @@ constructor(dispatcher: CoroutineDispatcher, private val clientManager: ClientMa
         return runCatching { client().getVersion() }
     }
 
-    suspend fun addTorrentUrl(url: String): Result<Unit, Throwable> {
-        return runCatching { client().addTorrent { urls.add(url) } }
+    suspend fun addTorrentUrl(
+        url: String,
+        category: String? = null,
+        savePath: String? = null,
+        paused: Boolean? = null,
+        autoTmm: Boolean? = null,
+    ): Result<Unit, Throwable> {
+        return runCatching {
+            client().addTorrent {
+                urls.add(url)
+                this.category = category
+                this.savepath = savePath
+                this.paused = paused
+                this.autoTMM = autoTmm
+            }
+        }
     }
 
-    suspend fun addTorrentFile(bytes: ByteArray): Result<Unit, Throwable> {
-        return runCatching { client().addTorrent { rawTorrents["torrent_file"] = bytes } }
+    suspend fun addTorrentFile(
+        bytes: ByteArray,
+        category: String? = null,
+        savePath: String? = null,
+        paused: Boolean? = null,
+        autoTmm: Boolean? = null,
+    ): Result<Unit, Throwable> {
+        return runCatching {
+            client().addTorrent {
+                rawTorrents["torrent_file"] = bytes
+                this.category = category
+                this.savepath = savePath
+                this.paused = paused
+                this.autoTMM = autoTmm
+            }
+        }
+    }
+
+    suspend fun setTorrentCategory(hash: String, category: String): Result<Unit, Throwable> {
+        return runCatching { client().setTorrentCategory(listOf(hash), category) }
+    }
+
+    suspend fun addTorrentTags(hash: String, tags: List<String>): Result<Unit, Throwable> {
+        return runCatching { client().addTorrentTags(listOf(hash), tags) }
+    }
+
+    suspend fun removeTorrentTags(hash: String, tags: List<String>): Result<Unit, Throwable> {
+        return runCatching { client().removeTorrentTags(listOf(hash), tags) }
     }
 
     suspend fun removeTorrents(

@@ -71,18 +71,32 @@ class ServerViewModel @Inject constructor(private val repository: QbitRepository
         syncJob = viewModelScope.launch { syncData() }
     }
 
-    fun addTorrentUrl(url: String) {
+    fun addTorrentUrl(
+        url: String,
+        category: String? = null,
+        savePath: String? = null,
+        paused: Boolean? = null,
+        autoTmm: Boolean? = null,
+    ) {
         viewModelScope.launch {
-            when (val result = repository.addTorrentUrl(url)) {
+            when (val result = repository.addTorrentUrl(url, category, savePath, paused, autoTmm)) {
                 is Ok -> _status.emit("Successfully added torrent")
                 is Err -> _status.emit(result.error.message ?: "Failed to add torrent url")
             }
         }
     }
 
-    fun addTorrentFile(bytes: ByteArray) {
+    fun addTorrentFile(
+        bytes: ByteArray,
+        category: String? = null,
+        savePath: String? = null,
+        paused: Boolean? = null,
+        autoTmm: Boolean? = null,
+    ) {
         viewModelScope.launch {
-            when (val result = repository.addTorrentFile(bytes)) {
+            when (
+                val result = repository.addTorrentFile(bytes, category, savePath, paused, autoTmm)
+            ) {
                 is Ok -> _status.emit("Successfully added file")
                 is Err -> _status.emit(result.error.message ?: "Failed to add file")
             }

@@ -108,7 +108,17 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                 _,
                 bundle ->
                 val url = bundle.getString(AddTorrentDialog.TORRENT_KEY)
-                viewModel.addTorrentUrl(requireNotNull(url))
+                val category = bundle.getString(AddTorrentDialog.CATEGORY_KEY)
+                val savePath = bundle.getString(AddTorrentDialog.SAVE_PATH_KEY)
+                val paused = bundle.getBoolean(AddTorrentDialog.PAUSED_KEY, false)
+                val autoTmm = bundle.getBoolean(AddTorrentDialog.AUTO_TMM_KEY, false)
+                viewModel.addTorrentUrl(
+                    requireNotNull(url),
+                    category,
+                    savePath,
+                    paused.takeIf { it },
+                    autoTmm.takeIf { it },
+                )
             }
 
             @Suppress("UNCHECKED_CAST")
@@ -121,10 +131,20 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                     } else {
                         bundle.getStringArrayList(AddTorrentDialog.TORRENT_KEY) as ArrayList<Uri>
                     }
+                val category = bundle.getString(AddTorrentDialog.CATEGORY_KEY)
+                val savePath = bundle.getString(AddTorrentDialog.SAVE_PATH_KEY)
+                val paused = bundle.getBoolean(AddTorrentDialog.PAUSED_KEY, false)
+                val autoTmm = bundle.getBoolean(AddTorrentDialog.AUTO_TMM_KEY, false)
 
                 uris?.forEach { uri ->
                     requireContext().contentResolver.openInputStream(uri).use { stream ->
-                        viewModel.addTorrentFile(requireNotNull(stream).readBytes())
+                        viewModel.addTorrentFile(
+                            requireNotNull(stream).readBytes(),
+                            category,
+                            savePath,
+                            paused.takeIf { it },
+                            autoTmm.takeIf { it },
+                        )
                     }
                 }
             }
@@ -219,7 +239,8 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
             refreshLayout.setOnRefreshListener { viewModel.refresh() }
 
             addTorrentFab.setOnClickListener {
-                AddTorrentDialog.newInstance().show(childFragmentManager, AddTorrentDialog.TAG)
+                AddTorrentDialog.newInstance(viewModel.uiState.value.availableCategories)
+                    .show(childFragmentManager, AddTorrentDialog.TAG)
             }
 
             bottomBar.setOnMenuItemClickListener { menuItem ->
@@ -253,8 +274,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                         true
                     }
                     R.id.edit_server -> {
-                        findNavController()
-                            .navigate(R.id.action_serverFragment_to_configFragment)
+                        findNavController().navigate(R.id.action_serverFragment_to_configFragment)
                         true
                     }
                     else -> false
@@ -314,10 +334,22 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
     private fun showFilterTypePicker() {
         val state = viewModel.uiState.value
         val items = buildList {
-            add("State" + if (state.selectedFilter != StateFilter.ALL) " (${state.selectedFilter.label})" else "")
-            add("Category" + if (state.selectedCategory != null) " (${state.selectedCategory})" else "")
-            add("Tracker" + if (state.selectedTracker != null) " (${state.selectedTracker})" else "")
-            add("Tags" + if (state.selectedTags.isNotEmpty()) " (${state.selectedTags.size})" else "")
+            add(
+                "State" +
+                    if (state.selectedFilter != StateFilter.ALL) " (${state.selectedFilter.label})"
+                    else ""
+            )
+            add(
+                "Category" +
+                    if (state.selectedCategory != null) " (${state.selectedCategory})" else ""
+            )
+            add(
+                "Tracker" + if (state.selectedTracker != null) " (${state.selectedTracker})" else ""
+            )
+            add(
+                "Tags" +
+                    if (state.selectedTags.isNotEmpty()) " (${state.selectedTags.size})" else ""
+            )
         }
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Filter by")
@@ -449,9 +481,11 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                     state.selectedFilter != lastFilter ||
                     state.selectedTracker != lastTracker ||
                     state.selectedTags != lastTags
-            if ((sortChanged || searchChanged || filterChanged) &&
-                !state.dataLoading &&
-                !state.hasError) {
+            if (
+                (sortChanged || searchChanged || filterChanged) &&
+                    !state.dataLoading &&
+                    !state.hasError
+            ) {
                 pendingScrollToTop = true
                 pendingListReset = true
             }
@@ -516,9 +550,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
             if (state.selectedTracker != null) {
                 addChip(state.selectedTracker) { viewModel.setTracker(null) }
             }
-            state.selectedTags.forEach { tag ->
-                addChip("#$tag") { viewModel.toggleTag(tag) }
-            }
+            state.selectedTags.forEach { tag -> addChip("#$tag") { viewModel.toggleTag(tag) } }
 
             val hasChips = filterChipGroup.childCount > 0
             filterScroll.visibility = if (hasChips) View.VISIBLE else View.GONE
