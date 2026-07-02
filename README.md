@@ -1,45 +1,47 @@
-# qBittorrent-Manager (SLOW DEVELOPMENT) 🚧
+# qBittorrent Manager
 
-[![Android CI](https://github.com/Yash-Garg/qBittorrent-Manager/actions/workflows/develop_ci.yml/badge.svg?branch=develop)](https://github.com/Yash-Garg/qBittorrent-Manager/actions/workflows/develop_ci.yml)
+An Android app for managing [qBittorrent](http://www.qbittorrent.org/) remotely, written in Kotlin.
 
-This is the repository for **_qBittorrent Manager_**, an Android app for managing [qBittorrent](http://www.qbittorrent.org/) remotely, written in Kotlin.
+> **Fork of [Yash-Garg/qBittorrent-Manager](https://github.com/Yash-Garg/qBittorrent-Manager)** — see below for what's new in this fork.
 
-**I mostly work on this project in my free time, so the development may be slow.**
+## What's new in this fork
 
-<p>
- Maintenance of this project is made possible by all the <a href="https://github.com/Yash-Garg/qBittorrent-Manager/graphs/contributors">contributors</a> and <a href="https://github.com/sponsors/Yash-Garg">sponsors</a>. If you'd like to sponsor this project and have your avatar or company logo appear below <a href="https://github.com/sponsors/Yash-Garg">click here</a>. 💖
-</p>
+### Torrent list
 
-<p>
-<a href="https://github.com/DrewCarlson"><img src="https://github.com/DrewCarlson.png" width="50px" alt="DrewCarlson" /></a>&nbsp;&nbsp;
-</p>
+- **Sort** — sort the torrent list by name, size, progress, speed, ETA, ratio, or date added; tap again to reverse direction
+- **Search** — filter torrents by name in real time via a collapsible search bar
+- **Filter** — filter by state (downloading, seeding, stopped, etc.), category, tracker, or tags; active filters shown as dismissible chips
+- **Speed display** — global download/upload speeds shown at the top of the torrent list
 
+### Adding & managing torrents
 
-## Download
+- **Add-torrent options** — set category, save path, start-paused, and Automatic Torrent Management when adding a torrent
+- **Open files & links externally** — opening a `.torrent` file or magnet link shows the add dialog prefilled, instead of adding silently
+- **Detail-screen actions** — set category, manage tags, toggle Automatic Torrent Management, or change the save path from a torrent's detail screen
+- **Full file paths** — long-press a file or folder in the Files tab to view and copy its full path
+- **Remembered settings** — last-used sort option/direction and the add-torrent toggles persist between sessions
 
-<a href="https://f-droid.org/packages/dev.yashgarg.qbit">
-    <img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
-      alt="Get it on F-Droid"
-      height="80">
-</a>
+### Connection & reliability
 
-<a href="https://play.google.com/store/apps/details?id=dev.yashgarg.qbit">
-  <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png"
-    alt="Get it on Google Play"
-    height="80" />
-</a>
+- **HTTP Basic Auth** — optional username/password support for servers behind a reverse proxy
+- **Edit server** — modify an existing server configuration without re-adding it
+- **Friendlier errors** — network errors surface short, readable messages instead of raw stack traces
+- **Throttled polling** — reduced request rate to avoid HTTP 429 (Too Many Requests)
+- **qBittorrent 5.x compatibility** — added missing torrent states (`stoppedDL`, `stoppedUP`, `forcedMetaDL`)
 
-## Previews
+### Under the hood
 
-<p align="center">
-  <img width="48%" src="art/screen-1.png">
-  <img width="48%" src="art/screen-2.png">
-  <img width="48%" src="art/screen-3.png">
-  <img width="48%" src="art/screen-4.png">
-  <img width="48%" src="art/screen-5.png">
-  <img width="48%" src="art/screen-6.png">
-</p>
+- **Build toolchain** — updated to AGP 9.2, Gradle 9.4, Kotlin 2.1; migrated from kapt to KSP
+
+## Roadmap
+
+- **Multiple servers** — managing more than one qBittorrent server
+- **Settings screen** — in-app preferences to configure behaviours such as the persistent status notification
 
 ## License
 
-See [LICENSE](LICENSE.txt)
+Licensed under the [GNU General Public License v3.0](LICENSE.txt), the same license as the
+upstream project — this fork and any derivatives stay GPL-3.0.
+
+- Original work © [Yash Garg](https://github.com/Yash-Garg) and contributors
+- Modifications in this fork © 2026 Aviad Gafni
