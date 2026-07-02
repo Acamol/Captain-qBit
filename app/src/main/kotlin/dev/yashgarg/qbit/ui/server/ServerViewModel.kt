@@ -1,5 +1,6 @@
 package dev.yashgarg.qbit.ui.server
 
+import androidx.datastore.core.DataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.Err
@@ -7,6 +8,7 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.runCatching
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.yashgarg.qbit.data.QbitRepository
+import dev.yashgarg.qbit.data.models.ServerPreferences
 import dev.yashgarg.qbit.utils.ExceptionHandler
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -16,9 +18,29 @@ import kotlinx.coroutines.launch
 import qbittorrent.models.Torrent
 
 @HiltViewModel
-class ServerViewModel @Inject constructor(private val repository: QbitRepository) : ViewModel() {
+class ServerViewModel
+@Inject
+constructor(
+    private val repository: QbitRepository,
+    private val prefsStore: DataStore<ServerPreferences>,
+) : ViewModel() {
     private val _uiState = MutableStateFlow(ServerState())
     val uiState = _uiState.asStateFlow()
+
+    val addTorrentPrefs: StateFlow<ServerPreferences> =
+        prefsStore.data.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            ServerPreferences()
+        )
+
+    fun saveAddTorrentPrefs(autoTmm: Boolean, paused: Boolean) {
+        viewModelScope.launch {
+            prefsStore.updateData {
+                it.copy(addTorrentAutoTmm = autoTmm, addTorrentPaused = paused)
+            }
+        }
+    }
 
     val sortedTorrents: StateFlow<List<Torrent>?> =
         _uiState
@@ -63,7 +85,31 @@ class ServerViewModel @Inject constructor(private val repository: QbitRepository
     private var syncJob: Job? = null
 
     init {
-        syncJob = viewModelScope.launch { syncData() }
+        syncJob =
+            viewModelScope.launch {
+                val prefs = prefsStore.data.first()
+                val option =
+                    try {
+                        SortOption.valueOf(prefs.sortOptionName)
+                    } catch (e: Exception) {
+                        SortOption.NAME
+                    }
+                val direction =
+                    if (prefs.sortDirectionAsc) SortDirection.ASC else SortDirection.DESC
+                _uiState.update { it.copy(sortOption = option, sortDirection = direction) }
+                syncData()
+            }
+    }
+
+    private fun saveSortPrefs(option: SortOption, direction: SortDirection) {
+        viewModelScope.launch {
+            prefsStore.updateData {
+                it.copy(
+                    sortOptionName = option.name,
+                    sortDirectionAsc = direction == SortDirection.ASC
+                )
+            }
+        }
     }
 
     fun refresh() {
@@ -127,26 +173,30 @@ class ServerViewModel @Inject constructor(private val repository: QbitRepository
     }
 
     fun setSort(option: SortOption) {
-        _uiState.update { state ->
-            val newDirection =
-                if (state.sortOption == option) {
-                    if (state.sortDirection == SortDirection.ASC) SortDirection.DESC
-                    else SortDirection.ASC
-                } else {
-                    SortDirection.ASC
-                }
-            state.copy(sortOption = option, sortDirection = newDirection)
-        }
+        val newState =
+            _uiState.updateAndGet { state ->
+                val newDirection =
+                    if (state.sortOption == option) {
+                        if (state.sortDirection == SortDirection.ASC) SortDirection.DESC
+                        else SortDirection.ASC
+                    } else {
+                        SortDirection.ASC
+                    }
+                state.copy(sortOption = option, sortDirection = newDirection)
+            }
+        saveSortPrefs(newState.sortOption, newState.sortDirection)
     }
 
     fun toggleSortDirection() {
-        _uiState.update { state ->
-            state.copy(
-                sortDirection =
-                    if (state.sortDirection == SortDirection.ASC) SortDirection.DESC
-                    else SortDirection.ASC
-            )
-        }
+        val newState =
+            _uiState.updateAndGet { state ->
+                state.copy(
+                    sortDirection =
+                        if (state.sortDirection == SortDirection.ASC) SortDirection.DESC
+                        else SortDirection.ASC
+                )
+            }
+        saveSortPrefs(newState.sortOption, newState.sortDirection)
     }
 
     fun setSearchQuery(query: String) {

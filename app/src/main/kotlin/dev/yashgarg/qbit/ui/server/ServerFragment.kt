@@ -112,6 +112,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                 val savePath = bundle.getString(AddTorrentDialog.SAVE_PATH_KEY)
                 val paused = bundle.getBoolean(AddTorrentDialog.PAUSED_KEY, false)
                 val autoTmm = bundle.getBoolean(AddTorrentDialog.AUTO_TMM_KEY, false)
+                viewModel.saveAddTorrentPrefs(autoTmm, paused)
                 viewModel.addTorrentUrl(
                     requireNotNull(url),
                     category,
@@ -135,6 +136,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                 val savePath = bundle.getString(AddTorrentDialog.SAVE_PATH_KEY)
                 val paused = bundle.getBoolean(AddTorrentDialog.PAUSED_KEY, false)
                 val autoTmm = bundle.getBoolean(AddTorrentDialog.AUTO_TMM_KEY, false)
+                viewModel.saveAddTorrentPrefs(autoTmm, paused)
 
                 uris?.forEach { uri ->
                     requireContext().contentResolver.openInputStream(uri).use { stream ->
@@ -239,7 +241,12 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
             refreshLayout.setOnRefreshListener { viewModel.refresh() }
 
             addTorrentFab.setOnClickListener {
-                AddTorrentDialog.newInstance(viewModel.uiState.value.availableCategories)
+                val prefs = viewModel.addTorrentPrefs.value
+                AddTorrentDialog.newInstance(
+                        viewModel.uiState.value.availableCategories,
+                        defaultAutoTmm = prefs.addTorrentAutoTmm,
+                        defaultPaused = prefs.addTorrentPaused,
+                    )
                     .show(childFragmentManager, AddTorrentDialog.TAG)
             }
 

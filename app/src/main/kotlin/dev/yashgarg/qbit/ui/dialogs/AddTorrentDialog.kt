@@ -29,6 +29,12 @@ class AddTorrentDialog : DialogFragment() {
     private val availableCategories: List<String>
         get() = arguments?.getStringArrayList(ARG_CATEGORIES) ?: emptyList()
 
+    private val defaultAutoTmm: Boolean
+        get() = arguments?.getBoolean(ARG_DEFAULT_AUTO_TMM, false) ?: false
+
+    private val defaultPaused: Boolean
+        get() = arguments?.getBoolean(ARG_DEFAULT_PAUSED, false) ?: false
+
     private val filePickerLauncher =
         registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
             if (!uris.isNullOrEmpty()) {
@@ -101,10 +107,13 @@ class AddTorrentDialog : DialogFragment() {
             categoryActv?.setAdapter(adapter)
 
             val autoTmmSwitch = dialog.findViewById<MaterialSwitch>(R.id.auto_tmm_switch)
+            val pausedSwitch = dialog.findViewById<MaterialSwitch>(R.id.paused_switch)
             val savePathTil = dialog.findViewById<TextInputLayout>(R.id.save_path_til)
             autoTmmSwitch?.setOnCheckedChangeListener { _, isChecked ->
                 savePathTil?.visibility = if (isChecked) View.GONE else View.VISIBLE
             }
+            autoTmmSwitch?.isChecked = defaultAutoTmm
+            pausedSwitch?.isChecked = defaultPaused
 
             magnetTil?.setEndIconOnClickListener {
                 val clipText = ClipboardUtil.getClipboardText(requireContext())
@@ -156,9 +165,18 @@ class AddTorrentDialog : DialogFragment() {
     }
 
     companion object {
-        fun newInstance(availableCategories: List<String> = emptyList()): AddTorrentDialog =
+        fun newInstance(
+            availableCategories: List<String> = emptyList(),
+            defaultAutoTmm: Boolean = false,
+            defaultPaused: Boolean = false,
+        ): AddTorrentDialog =
             AddTorrentDialog().apply {
-                arguments = bundleOf(ARG_CATEGORIES to ArrayList(availableCategories))
+                arguments =
+                    bundleOf(
+                        ARG_CATEGORIES to ArrayList(availableCategories),
+                        ARG_DEFAULT_AUTO_TMM to defaultAutoTmm,
+                        ARG_DEFAULT_PAUSED to defaultPaused,
+                    )
             }
 
         const val TAG = "AddTorrentDialogFragment"
@@ -170,6 +188,8 @@ class AddTorrentDialog : DialogFragment() {
         const val PAUSED_KEY = "paused"
         const val AUTO_TMM_KEY = "auto_tmm"
         private const val ARG_CATEGORIES = "arg_categories"
+        private const val ARG_DEFAULT_AUTO_TMM = "arg_default_auto_tmm"
+        private const val ARG_DEFAULT_PAUSED = "arg_default_paused"
         const val TORRENT_MIMETYPE = "application/x-bittorrent"
     }
 }
