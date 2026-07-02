@@ -1,23 +1,33 @@
 package dev.yashgarg.qbit.utils
 
 import io.ktor.client.network.sockets.*
+import java.net.ConnectException
+import java.net.UnknownHostException
+import javax.net.ssl.SSLException
 import qbittorrent.QBittorrentException
 
-class ClientConnectionError : Throwable("Failed to connect client")
+class ClientConnectionError : Throwable("Failed to connect to server")
 
 class TorrentRemovedError : Exception("Torrent has been removed")
 
+fun Throwable.friendlyMessage(fallback: String = "Unknown error"): String =
+    ExceptionHandler.mapException(this).message?.substringBefore(" [")?.trim() ?: fallback
+
 object ExceptionHandler {
-    fun mapException(ex: Throwable): Throwable {
-        return when (ex) {
+    fun mapException(ex: Throwable): Throwable =
+        when (ex) {
             is UninitializedPropertyAccessException -> ClientConnectionError()
-            is QBittorrentException -> {
-                return when (ex.cause) {
+            is SocketTimeoutException -> Exception("Connection timed out")
+            is ConnectTimeoutException -> ClientConnectionError()
+            is ConnectException -> Exception("Could not reach server — check address and port")
+            is UnknownHostException -> Exception("Server not found — check the hostname")
+            is SSLException -> Exception("SSL/TLS error — check server certificate")
+            is QBittorrentException ->
+                when (ex.cause) {
                     is ConnectTimeoutException -> ClientConnectionError()
+                    is SocketTimeoutException -> Exception("Connection timed out")
                     else -> ex
                 }
-            }
             else -> ex
         }
-    }
 }

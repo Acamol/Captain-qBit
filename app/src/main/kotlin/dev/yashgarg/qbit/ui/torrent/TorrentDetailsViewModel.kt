@@ -10,6 +10,7 @@ import com.github.michaelbull.result.runCatching
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.yashgarg.qbit.data.QbitRepository
 import dev.yashgarg.qbit.utils.TransformUtil
+import dev.yashgarg.qbit.utils.friendlyMessage
 import javax.inject.Inject
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -44,8 +45,9 @@ constructor(private val repository: QbitRepository, state: SavedStateHandle) : V
                 is Ok -> _status.emit("${if (pause) "Paused" else "Resumed"} $hash")
                 is Err ->
                     _status.emit(
-                        result.error.message
-                            ?: "Failed to ${if (pause) "pause" else "resume"} $hash"
+                        result.error.friendlyMessage(
+                            "Failed to ${if (pause) "pause" else "resume"} $hash"
+                        )
                     )
             }
         }
@@ -55,7 +57,7 @@ constructor(private val repository: QbitRepository, state: SavedStateHandle) : V
         viewModelScope.launch {
             when (val result = repository.removeTorrents(listOf(hash), deleteFiles)) {
                 is Ok -> return@launch
-                is Err -> _status.emit(result.error.message ?: "Failed to remove $hash")
+                is Err -> _status.emit(result.error.friendlyMessage("Failed to remove torrent"))
             }
         }
     }
@@ -64,7 +66,7 @@ constructor(private val repository: QbitRepository, state: SavedStateHandle) : V
         viewModelScope.launch {
             when (val result = repository.recheckTorrents(listOf(hash))) {
                 is Ok -> _status.emit("Rechecking $hash")
-                is Err -> _status.emit(result.error.message ?: "Failed to recheck torrent")
+                is Err -> _status.emit(result.error.friendlyMessage("Failed to recheck torrent"))
             }
         }
     }
@@ -73,7 +75,7 @@ constructor(private val repository: QbitRepository, state: SavedStateHandle) : V
         viewModelScope.launch {
             when (val result = repository.reannounceTorrents(listOf(hash))) {
                 is Ok -> _status.emit("Reannouncing $hash")
-                is Err -> _status.emit(result.error.message ?: "Failed to reannounce torrent")
+                is Err -> _status.emit(result.error.friendlyMessage("Failed to reannounce torrent"))
             }
         }
     }
@@ -82,7 +84,7 @@ constructor(private val repository: QbitRepository, state: SavedStateHandle) : V
         viewModelScope.launch {
             when (val result = repository.renameTorrent(torrentHash, torrentName)) {
                 is Ok -> _status.emit("Successfully renamed $torrentHash")
-                is Err -> _status.emit(result.error.message ?: "Failed to rename torrent")
+                is Err -> _status.emit(result.error.friendlyMessage("Failed to rename torrent"))
             }
         }
     }
@@ -92,7 +94,7 @@ constructor(private val repository: QbitRepository, state: SavedStateHandle) : V
             val hash = requireNotNull(hash)
             when (val result = repository.setTorrentCategory(hash, category)) {
                 is Ok -> _status.emit("Category set to \"$category\"")
-                is Err -> _status.emit(result.error.message ?: "Failed to set category")
+                is Err -> _status.emit(result.error.friendlyMessage("Failed to set category"))
             }
         }
     }
@@ -103,7 +105,7 @@ constructor(private val repository: QbitRepository, state: SavedStateHandle) : V
             repository.setAutoTorrentManagement(hash, false)
             when (val result = repository.setTorrentLocation(hash, path)) {
                 is Ok -> _status.emit("Save path updated")
-                is Err -> _status.emit(result.error.message ?: "Failed to set save path")
+                is Err -> _status.emit(result.error.friendlyMessage("Failed to set save path"))
             }
         }
     }
@@ -113,7 +115,8 @@ constructor(private val repository: QbitRepository, state: SavedStateHandle) : V
             val hash = requireNotNull(hash)
             when (val result = repository.setAutoTorrentManagement(hash, enabled)) {
                 is Ok -> _status.emit("Auto management ${if (enabled) "enabled" else "disabled"}")
-                is Err -> _status.emit(result.error.message ?: "Failed to update auto management")
+                is Err ->
+                    _status.emit(result.error.friendlyMessage("Failed to update auto management"))
             }
         }
     }
@@ -133,7 +136,7 @@ constructor(private val repository: QbitRepository, state: SavedStateHandle) : V
         viewModelScope.launch {
             when (val result = repository.banPeers(listOf(peerAddr))) {
                 is Ok -> _status.emit("Successfully banned $peerAddr")
-                is Err -> _status.emit(result.error.message ?: "Failed to ban peer")
+                is Err -> _status.emit(result.error.friendlyMessage("Failed to ban peer"))
             }
         }
     }
@@ -180,7 +183,7 @@ constructor(private val repository: QbitRepository, state: SavedStateHandle) : V
             is Ok -> Unit
             is Err -> {
                 _uiState.update { state ->
-                    state.copy(loading = false, error = Exception(result.error.message))
+                    state.copy(loading = false, error = Exception(result.error.friendlyMessage()))
                 }
             }
         }
@@ -209,7 +212,7 @@ constructor(private val repository: QbitRepository, state: SavedStateHandle) : V
                 .observeTorrentPeers(requireNotNull(hash))
                 .catch {
                     _uiState.update { state ->
-                        state.copy(peersLoading = false, error = Exception(it.message))
+                        state.copy(peersLoading = false, error = Exception(it.friendlyMessage()))
                     }
                 }
                 .collectLatest { peers ->
@@ -226,7 +229,10 @@ constructor(private val repository: QbitRepository, state: SavedStateHandle) : V
             is Ok -> Unit
             is Err ->
                 _uiState.update { state ->
-                    state.copy(peersLoading = false, error = Exception(result.error.message))
+                    state.copy(
+                        peersLoading = false,
+                        error = Exception(result.error.friendlyMessage())
+                    )
                 }
         }
     }

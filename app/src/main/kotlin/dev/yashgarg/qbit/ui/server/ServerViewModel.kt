@@ -10,6 +10,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.yashgarg.qbit.data.QbitRepository
 import dev.yashgarg.qbit.data.models.ServerPreferences
 import dev.yashgarg.qbit.utils.ExceptionHandler
+import dev.yashgarg.qbit.utils.friendlyMessage
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -127,7 +128,7 @@ constructor(
         viewModelScope.launch {
             when (val result = repository.addTorrentUrl(url, category, savePath, paused, autoTmm)) {
                 is Ok -> _status.emit("Successfully added torrent")
-                is Err -> _status.emit(result.error.message ?: "Failed to add torrent url")
+                is Err -> _status.emit(result.error.friendlyMessage("Failed to add torrent"))
             }
         }
     }
@@ -144,7 +145,7 @@ constructor(
                 val result = repository.addTorrentFile(bytes, category, savePath, paused, autoTmm)
             ) {
                 is Ok -> _status.emit("Successfully added file")
-                is Err -> _status.emit(result.error.message ?: "Failed to add file")
+                is Err -> _status.emit(result.error.friendlyMessage("Failed to add file"))
             }
         }
     }
@@ -153,7 +154,7 @@ constructor(
         viewModelScope.launch {
             when (val result = repository.removeTorrents(hashes, deleteFiles)) {
                 is Ok -> _status.emit("Successfully deleted ${hashes.size} file(s)")
-                is Err -> _status.emit(result.error.message ?: "Failed to remove")
+                is Err -> _status.emit(result.error.friendlyMessage("Failed to remove"))
             }
         }
     }
@@ -165,8 +166,9 @@ constructor(
                     _status.emit("${if (pause) "Paused" else "Resumed"} ${hashes.size} torrent(s)")
                 is Err ->
                     _status.emit(
-                        result.error.message
-                            ?: "Failed to ${if (pause) "pause" else "resume"} ${hashes.size} torrent(s)"
+                        result.error.friendlyMessage(
+                            "Failed to ${if (pause) "pause" else "resume"} ${hashes.size} torrent(s)"
+                        )
                     )
             }
         }
@@ -238,7 +240,8 @@ constructor(
         viewModelScope.launch {
             when (val result = repository.toggleSpeedLimitsMode()) {
                 is Ok -> getSpeedLimitMode(true)
-                is Err -> _status.emit(result.error.message ?: "Failed to toggle speed limits")
+                is Err ->
+                    _status.emit(result.error.friendlyMessage("Failed to toggle speed limits"))
             }
         }
     }
@@ -254,7 +257,8 @@ constructor(
                         )
                     }
                 }
-                is Err -> _status.emit(result.error.message ?: "Failed to get speed limit mode")
+                is Err ->
+                    _status.emit(result.error.friendlyMessage("Failed to get speed limit mode"))
             }
         }
     }
