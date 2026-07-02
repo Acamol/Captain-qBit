@@ -1,6 +1,7 @@
 package dev.yashgarg.qbit.ui.server
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -12,6 +13,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.core.content.getSystemService
 import androidx.core.os.bundleOf
+import androidx.core.util.Consumer
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.setFragmentResultListener
 import androidx.fragment.app.viewModels
@@ -33,7 +35,6 @@ import dev.yashgarg.qbit.utils.toHumanReadable
 import dev.yashgarg.qbit.utils.viewBinding
 import dev.yashgarg.qbit.validation.LinkValidator
 import java.util.ArrayList
-import javax.inject.Inject
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -55,7 +56,16 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
     private var pendingScrollToTop = false
     private var pendingListReset = false
 
-    @Inject lateinit var torrentListAdapter: TorrentListAdapter
+    // View-scoped: created in onViewCreated, released in onDestroyView. The adapter binds a
+    // SelectionTracker (which registers a non-removable adapter observer), so keeping it alive
+    // across view recreations would retain the destroyed view. Recreating it per view avoids that.
+    private var torrentListAdapter: TorrentListAdapter? = null
+
+    private val onNewIntentListener =
+        Consumer<Intent> { intent ->
+            val bundle = bundleOf(MainActivity.TORRENT_INTENT_KEY to intent?.data.toString())
+            handleAddIntent(bundle)
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -63,18 +73,30 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
         exitTransition = MaterialSharedAxis(MaterialSharedAxis.Z, true)
         reenterTransition = MaterialSharedAxis(MaterialSharedAxis.Z, false)
 
-        activity?.addOnNewIntentListener {
-            val bundle = bundleOf(MainActivity.TORRENT_INTENT_KEY to it?.data.toString())
-            handleAddIntent(bundle)
-        }
+        activity?.addOnNewIntentListener(onNewIntentListener)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        torrentListAdapter = TorrentListAdapter()
         setupHandlers()
         observeFlows()
         setupDialogResultListener()
+    }
+
+    override fun onDestroyView() {
+        // Drop the adapter (and its SelectionTracker) so this view isn't retained. Don't touch
+        // `binding` here: with the exit transition, onDestroyView runs after the view lifecycle
+        // is already DESTROYED (binding cleared). onStop() already detached the adapter from the
+        // RV.
+        torrentListAdapter = null
+        super.onDestroyView()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        activity?.removeOnNewIntentListener(onNewIntentListener)
     }
 
     override fun onStop() {
@@ -99,7 +121,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                 Log.d(this.javaClass.simpleName, "Selection: ${selectedItems?.toList()}")
                 selectedItems?.toList()?.let {
                     viewModel.removeTorrents(it, deleteFiles)
-                    torrentListAdapter.notifyDataSetChanged()
+                    torrentListAdapter?.notifyDataSetChanged()
                 }
                 binding.bottomBar.menu.findItem(R.id.delete_selection).isVisible = false
             }
@@ -182,7 +204,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
 
     private fun setupHandlers() {
         with(binding) {
-            torrentListAdapter.onItemClick = { hash ->
+            torrentListAdapter?.onItemClick = { hash ->
                 val action =
                     ServerFragmentDirections.actionServerFragmentToTorrentInfoFragment(hash)
                 findNavController().navigate(action)
@@ -213,7 +235,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                 }
             )
 
-            torrentListAdapter.makeSelectable(torrentRv) { selection ->
+            torrentListAdapter?.makeSelectable(torrentRv) { selection ->
                 selectedItems = selection
 
                 bottomBar.menu.apply {
@@ -324,13 +346,13 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                         pendingScrollToTop = false
                         pendingListReset = false
                         if (reset) {
-                            torrentListAdapter.submitList(emptyList()) {
-                                torrentListAdapter.submitList(torrents) {
+                            torrentListAdapter?.submitList(emptyList()) {
+                                torrentListAdapter?.submitList(torrents) {
                                     if (scroll) torrentRv.scrollToPosition(0)
                                 }
                             }
                         } else {
-                            torrentListAdapter.submitList(torrents) {
+                            torrentListAdapter?.submitList(torrents) {
                                 if (scroll) torrentRv.scrollToPosition(0)
                             }
                         }
