@@ -1,5 +1,7 @@
 @file:Suppress("UnstableApiUsage", "DSL_SCOPE_VIOLATION")
 
+import java.util.Properties
+
 val commitHash: String by lazy {
     providers
         .exec { commandLine("git").args("rev-parse", "--short", "HEAD").workingDir(projectDir) }
@@ -43,6 +45,7 @@ android {
     }
 
     val isGithubCi = System.getenv("GITHUB_CI") != null
+    val keystorePropsFile = rootProject.file("keystore.properties")
     if (isGithubCi) {
         signingConfigs {
             register("release") {
@@ -50,6 +53,18 @@ android {
                 storePassword = System.getenv("SIGNING_STORE_PASSWORD")
                 keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
                 keyAlias = System.getenv("SIGNING_KEY_ALIAS")
+            }
+        }
+        buildTypes.getByName("release") { signingConfig = signingConfigs.getByName("release") }
+    } else if (keystorePropsFile.exists()) {
+        // Local release signing via a gitignored keystore.properties (never committed).
+        val keystoreProps = Properties().apply { keystorePropsFile.inputStream().use { load(it) } }
+        signingConfigs {
+            register("release") {
+                storeFile = rootProject.file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
             }
         }
         buildTypes.getByName("release") { signingConfig = signingConfigs.getByName("release") }
