@@ -1,4 +1,4 @@
-# qBittorrent Manager
+# Captain qBit
 
 An Android app for managing [qBittorrent](http://www.qbittorrent.org/) remotely, written in Kotlin.
 
