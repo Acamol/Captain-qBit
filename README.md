@@ -37,6 +37,7 @@ An Android app for managing [qBittorrent](http://www.qbittorrent.org/) remotely,
 
 - **Multiple servers** — managing more than one qBittorrent server
 - **Settings screen** — in-app preferences to configure behaviours such as the persistent status notification
+- **Export/import config** — back up and restore server configurations and settings to a file
 
 ## License
 
