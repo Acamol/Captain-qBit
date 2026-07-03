@@ -10,4 +10,8 @@ data class ServerPreferences(
     val addTorrentPaused: Boolean = false,
     val sortOptionName: String = "NAME",
     val sortDirectionAsc: Boolean = true,
+    val filterStateName: String = "ALL",
+    val filterCategory: String? = null,
+    val filterTracker: String? = null,
+    val filterTags: Set<String> = emptySet(),
 )

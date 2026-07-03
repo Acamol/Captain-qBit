@@ -97,7 +97,22 @@ constructor(
                     }
                 val direction =
                     if (prefs.sortDirectionAsc) SortDirection.ASC else SortDirection.DESC
-                _uiState.update { it.copy(sortOption = option, sortDirection = direction) }
+                val filter =
+                    try {
+                        StateFilter.valueOf(prefs.filterStateName)
+                    } catch (e: Exception) {
+                        StateFilter.ALL
+                    }
+                _uiState.update {
+                    it.copy(
+                        sortOption = option,
+                        sortDirection = direction,
+                        selectedFilter = filter,
+                        selectedCategory = prefs.filterCategory,
+                        selectedTracker = prefs.filterTracker,
+                        selectedTags = prefs.filterTags,
+                    )
+                }
                 syncData()
             }
     }
@@ -108,6 +123,20 @@ constructor(
                 it.copy(
                     sortOptionName = option.name,
                     sortDirectionAsc = direction == SortDirection.ASC
+                )
+            }
+        }
+    }
+
+    private fun saveFilterPrefs() {
+        val state = _uiState.value
+        viewModelScope.launch {
+            prefsStore.updateData {
+                it.copy(
+                    filterStateName = state.selectedFilter.name,
+                    filterCategory = state.selectedCategory,
+                    filterTracker = state.selectedTracker,
+                    filterTags = state.selectedTags,
                 )
             }
         }
@@ -207,14 +236,17 @@ constructor(
 
     fun setCategory(category: String?) {
         _uiState.update { state -> state.copy(selectedCategory = category) }
+        saveFilterPrefs()
     }
 
     fun setFilter(filter: StateFilter) {
         _uiState.update { state -> state.copy(selectedFilter = filter) }
+        saveFilterPrefs()
     }
 
     fun setTracker(tracker: String?) {
         _uiState.update { state -> state.copy(selectedTracker = tracker) }
+        saveFilterPrefs()
     }
 
     fun toggleTag(tag: String) {
@@ -223,6 +255,7 @@ constructor(
             if (tags.contains(tag)) tags.remove(tag) else tags.add(tag)
             state.copy(selectedTags = tags)
         }
+        saveFilterPrefs()
     }
 
     fun clearFilters() {
@@ -234,6 +267,7 @@ constructor(
                 selectedTags = emptySet(),
             )
         }
+        saveFilterPrefs()
     }
 
     fun toggleSpeedLimits() {
