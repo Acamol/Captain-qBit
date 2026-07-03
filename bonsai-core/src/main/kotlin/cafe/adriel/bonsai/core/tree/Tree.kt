@@ -3,6 +3,7 @@ package cafe.adriel.bonsai.core.tree
 import android.annotation.SuppressLint
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Composition
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
@@ -38,5 +39,8 @@ fun <T> Tree(content: @Composable TreeScope.() -> Unit): Tree<T> {
     val composition =
         remember(applier, compositionContext) { Composition(applier, compositionContext) }
     composition.setContent { TreeScope(depth = 0).content() }
+    // This is a manually created composition, so it must be disposed explicitly; otherwise it
+    // stays registered in the parent Recomposer's known compositions and leaks the ComposeView.
+    DisposableEffect(composition) { onDispose { composition.dispose() } }
     return remember(applier) { Tree(applier.children) }
 }

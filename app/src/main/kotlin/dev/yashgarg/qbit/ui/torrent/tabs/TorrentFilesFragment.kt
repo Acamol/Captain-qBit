@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.platform.rememberNestedScrollInteropConnection
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -31,10 +32,18 @@ class TorrentFilesFragment : Fragment() {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View {
-        val composeView = ComposeView(requireContext())
+    ): View = ComposeView(requireContext())
 
-        composeView.apply {
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        (view as ComposeView).apply {
+            // Dispose the composition when this fragment's view lifecycle is destroyed so it
+            // unregisters its snapshot apply-observer. Binding to viewLifecycleOwner explicitly
+            // is required here: inside a ViewPager2 the view-tree strategy resolves to a
+            // longer-lived owner and the ComposeView leaks.
+            setViewCompositionStrategy(
+                ViewCompositionStrategy.DisposeOnLifecycleDestroyed(viewLifecycleOwner)
+            )
             setContent {
                 val state by viewModel.uiState.collectAsState()
                 val scrollState = rememberNestedScrollInteropConnection()
@@ -50,8 +59,6 @@ class TorrentFilesFragment : Fragment() {
                 }
             }
         }
-
-        return composeView
     }
 
     private fun showPathDialog(item: ContentTreeItem, savePath: String?) {

@@ -14,6 +14,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -47,6 +48,9 @@ class VersionFragment : Fragment(R.layout.version_fragment) {
 
         with(binding) {
             toolbar.setNavigationOnClickListener { it.findNavController().navigateUp() }
+            composeView.setViewCompositionStrategy(
+                ViewCompositionStrategy.DisposeOnLifecycleDestroyed(viewLifecycleOwner)
+            )
             composeView.setContent {
                 val state by viewModel.uiState.collectAsState()
 
