@@ -48,11 +48,11 @@ jobs:
       - name: Rename APK to a clean asset name
         run: |
           version="${GITHUB_REF_NAME#v}"
-          cp app/build/outputs/apk/free/release/*.apk "qBittorrent-Manager-${version}.apk"
+          cp app/build/outputs/apk/free/release/*.apk "Captain-qBit-${version}.apk"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: qBittorrent-Manager-*.apk
+          files: Captain-qBit-*.apk
           generate_release_notes: true
           fail_on_unmatched_files: true
