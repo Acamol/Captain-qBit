@@ -13,6 +13,8 @@ data class TorrentDetailsState(
     val trackers: List<TorrentTracker> = emptyList(),
     val torrentProperties: TorrentProperties? = null,
     val error: Exception? = null,
+    /** Human-readable reason when [torrent] is in an error/missing-files state, if known. */
+    val errorReason: String? = null,
     val availableCategories: List<String> = emptyList(),
     val availableTags: List<String> = emptyList(),
 )

@@ -192,14 +192,10 @@ class TorrentDetailsFragment : Fragment(R.layout.torrent_details_fragment) {
                 _,
                 bundle ->
                 val deleteFiles = bundle.getBoolean(RemoveTorrentDialog.TORRENT_KEY)
+                // Navigation + the success toast happen only once the removal actually
+                // succeeds (see viewModel.removed / viewModel.status in observeFlows). On
+                // failure the status flow surfaces the real error and we stay on screen.
                 viewModel.removeTorrent(torrent.hash, deleteFiles)
-                Toast.makeText(
-                        requireContext(),
-                        "Successfully removed ${torrent.hash}",
-                        Toast.LENGTH_SHORT
-                    )
-                    .show()
-                findNavController().navigateUp()
             }
 
             setFragmentResultListener(RenameTorrentDialog.RENAME_TORRENT_KEY, viewLifecycleOwner) {
@@ -222,8 +218,41 @@ class TorrentDetailsFragment : Fragment(R.layout.torrent_details_fragment) {
                 viewModel.setCategory(options[which])
                 dialog.dismiss()
             }
+            .setNeutralButton("New…") { _, _ -> showCreateCategoryDialog() }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    private fun showCreateCategoryDialog() {
+        val view = layoutInflater.inflate(R.layout.dialog_text_input, null, false)
+        val til = view.findViewById<TextInputLayout>(R.id.text_input_layout)
+        val tiet = view.findViewById<TextInputEditText>(R.id.text_input_edit)
+        til?.hint = "Category name"
+
+        val dialog =
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("New category")
+                .setView(view)
+                .setPositiveButton("Create", null)
+                .setNegativeButton("Cancel", null)
+                .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val name = tiet?.text?.toString()?.trim()
+                when {
+                    name.isNullOrBlank() -> til?.error = "Name cannot be empty"
+                    viewModel.uiState.value.availableCategories.contains(name) ->
+                        til?.error = "Category already exists"
+                    else -> {
+                        viewModel.createCategory(name)
+                        dialog.dismiss()
+                    }
+                }
+            }
+            tiet?.doAfterTextChanged { til?.error = null }
+        }
+        dialog.show()
     }
 
     private fun showTagsPicker(torrent: Torrent) {
@@ -293,10 +322,19 @@ class TorrentDetailsFragment : Fragment(R.layout.torrent_details_fragment) {
             .flowWithLifecycle(viewLifecycleOwner.lifecycle)
             .onEach { Toast.makeText(requireContext(), it, Toast.LENGTH_SHORT).show() }
             .launchIn(viewLifecycleOwner.lifecycleScope)
+
+        viewModel.removed
+            .flowWithLifecycle(viewLifecycleOwner.lifecycle)
+            .onEach { findNavController().navigateUp() }
+            .launchIn(viewLifecycleOwner.lifecycleScope)
     }
 
     private fun render(state: TorrentDetailsState) {
         with(binding) {
+            errorBanner.apply {
+                text = state.errorReason
+                visibility = if (state.errorReason != null) View.VISIBLE else View.GONE
+            }
             if (!state.loading && state.error == null) {
                 val torrent = requireNotNull(state.torrent)
                 torrent.name.apply {

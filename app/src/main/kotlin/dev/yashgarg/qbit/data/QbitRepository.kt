@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import qbittorrent.QBittorrentClient
+import qbittorrent.models.LogEntry
 import qbittorrent.models.MainData
 import qbittorrent.models.Torrent
 import qbittorrent.models.TorrentFile
@@ -100,6 +101,10 @@ constructor(dispatcher: CoroutineDispatcher, private val clientManager: ClientMa
         return runCatching { client().setTorrentCategory(listOf(hash), category) }
     }
 
+    suspend fun createCategory(name: String, savePath: String = ""): Result<Unit, Throwable> {
+        return runCatching { client().createCategory(name, savePath) }
+    }
+
     suspend fun setTorrentLocation(hash: String, path: String): Result<Unit, Throwable> {
         return runCatching { client().setTorrentLocation(listOf(hash), path) }
     }
@@ -121,6 +126,10 @@ constructor(dispatcher: CoroutineDispatcher, private val clientManager: ClientMa
         deleteFiles: Boolean = false
     ): Result<Unit, Throwable> {
         return runCatching { client().deleteTorrents(hashes, deleteFiles) }
+    }
+
+    suspend fun getLogs(): Result<List<LogEntry>, Throwable> {
+        return runCatching { client().getLogs() }
     }
 
     suspend fun toggleTorrentsState(hashes: List<String>, pause: Boolean): Result<Unit, Throwable> {

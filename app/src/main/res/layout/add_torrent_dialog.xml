@@ -37,13 +37,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:hint="Category (optional)">
+            android:hint="Category (pick or type a new one)">
 
             <AutoCompleteTextView
                 android:id="@+id/category_actv"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="none" />
+                android:inputType="text"
+                android:maxLines="1" />
 
         </com.google.android.material.textfield.TextInputLayout>
 
