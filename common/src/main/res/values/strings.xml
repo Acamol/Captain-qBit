@@ -22,7 +22,6 @@
     <string name="no_queue">Nothing in queue</string>
     <string name="error">Something went wrong</string>
     <string name="enter_url">Magnet Url</string>
-    <string name="trust_certificates">Trust self-signed certificates</string>
     <string name="use_basic_auth">Use HTTP Basic Auth</string>
     <string name="basic_auth_username">Basic Auth Username</string>
     <string name="basic_auth_password">Basic Auth Password</string>

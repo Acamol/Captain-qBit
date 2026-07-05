@@ -25,10 +25,7 @@ interface ClientManager {
         const val tag = "ClientManager"
         val syncInterval = 3.seconds
 
-        fun httpClient(
-            trustAllCerts: Boolean,
-            basicAuthCredentials: Pair<String, String>? = null
-        ): HttpClient {
+        fun httpClient(basicAuthCredentials: Pair<String, String>? = null): HttpClient {
             return HttpClient(OkHttp) {
                 install(HttpTimeout) { connectTimeoutMillis = 3000 }
                 install(Logging) {
@@ -48,17 +45,6 @@ interface ClientManager {
                             Base64.NO_WRAP,
                         )
                     defaultRequest { header(HttpHeaders.Authorization, "Basic $encoded") }
-                }
-                engine {
-                    if (trustAllCerts) {
-                        config {
-                            sslSocketFactory(
-                                SslSettings.getSslContext()!!.socketFactory,
-                                SslSettings.getTrustManager()
-                            )
-                            hostnameVerifier { _, _ -> true }
-                        }
-                    }
                 }
             }
         }

@@ -28,10 +28,15 @@ over its Web API — control your self-hosted server from your phone. Written in
 
 ### Connection & reliability
 - Works with qBittorrent 4.x and 5.x
-- Optional HTTP Basic Auth for servers behind a reverse proxy, and support for self-signed certificates
+- Optional HTTP Basic Auth for servers behind a reverse proxy
 - Edit a saved server without re-adding it
 - Short, readable messages for network errors
 - A persistent status notification showing connection state and current speeds
+
+> **Self-signed HTTPS:** certificates are validated properly (no blanket "trust everything"
+> option). To use a self-signed cert, install it on your device via **Settings → Security →
+> Install a certificate** — the app then trusts it with full validation. Plain HTTP on a LAN and
+> normally-signed HTTPS work without any setup.
 
 ## Roadmap
 - **Multiple servers** — manage more than one qBittorrent server

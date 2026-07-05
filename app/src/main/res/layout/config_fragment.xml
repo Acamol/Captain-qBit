@@ -195,17 +195,6 @@
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.materialswitch.MaterialSwitch
-                android:id="@+id/trust_cert"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="15dp"
-                android:layout_weight="1"
-                android:text="@string/trust_certificates"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/server_password_til" />
-
-            <com.google.android.material.materialswitch.MaterialSwitch
                 android:id="@+id/use_basic_auth"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -215,7 +204,7 @@
                 android:text="@string/use_basic_auth"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/trust_cert" />
+                app:layout_constraintTop_toBottomOf="@id/server_password_til" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/basic_auth_username_til"

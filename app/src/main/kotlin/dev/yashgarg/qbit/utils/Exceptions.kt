@@ -19,7 +19,10 @@ object ExceptionHandler {
             is ConnectTimeoutException -> ClientConnectionError()
             is ConnectException -> Exception("Could not reach server — check address and port")
             is UnknownHostException -> Exception("Server not found — check the hostname")
-            is SSLException -> Exception("SSL/TLS error — check server certificate")
+            is SSLException ->
+                Exception(
+                    "SSL error — for a self-signed certificate, install it in Android settings"
+                )
             is QBittorrentException ->
                 when {
                     // qBittorrent returns 409 Conflict when the torrent is already in the list.

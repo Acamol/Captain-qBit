@@ -1,6 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config xmlns:tools="http://schemas.android.com/tools">
+    <!--
+      Cleartext is permitted for self-hosted servers reached over plain HTTP on a LAN.
+      HTTPS is validated normally against the system CAs plus any certificate the user has
+      installed (so a self-signed server cert can be trusted securely, with full validation).
+    -->
     <base-config
         cleartextTrafficPermitted="true"
-        tools:ignore="InsecureBaseConfiguration" />
+        tools:ignore="InsecureBaseConfiguration">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
 </network-security-config>

@@ -24,6 +24,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import dev.yashgarg.qbit.R as AppR
 import dev.yashgarg.qbit.common.R
 import dev.yashgarg.qbit.data.manager.ClientManager
+import dev.yashgarg.qbit.data.manager.CryptoManager
 import dev.yashgarg.qbit.data.models.ServerConfig
 import dev.yashgarg.qbit.databinding.ConfigFragmentBinding
 import dev.yashgarg.qbit.utils.viewBinding
@@ -122,15 +123,14 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
             config.port?.let { serverPortTiet.setText(it.toString()) }
             serverPathTiet.setText(config.path?.removePrefix("/") ?: "")
             serverUsernameTiet.setText(config.username)
-            serverPasswordTiet.setText(config.password)
+            serverPasswordTiet.setText(CryptoManager.decrypt(config.password))
             typeTextview.setText(config.connectionType.name, false)
-            trustCert.isChecked = config.trustSelfSigned
             if (!config.basicAuthUsername.isNullOrEmpty()) {
                 useBasicAuth.isChecked = true
                 basicAuthUsernameTil.isVisible = true
                 basicAuthPasswordTil.isVisible = true
                 basicAuthUsernameTiet.setText(config.basicAuthUsername)
-                basicAuthPasswordTiet.setText(config.basicAuthPassword ?: "")
+                basicAuthPasswordTiet.setText(CryptoManager.decrypt(config.basicAuthPassword) ?: "")
             }
             toolbar.title = getString(R.string.edit_server)
         }
@@ -214,7 +214,6 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
                                     if (path.isNotEmpty()) "/$path" else "",
                                 username,
                                 password,
-                                trustCert.isChecked,
                                 if (useBasicAuth.isChecked) basicAuthUser else null,
                                 if (useBasicAuth.isChecked) basicAuthPass else null,
                             )
@@ -237,7 +236,6 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
                                     connectionType,
                                     username,
                                     password,
-                                    trustCert.isChecked,
                                     if (useBasicAuth.isChecked) basicAuthUser else null,
                                     if (useBasicAuth.isChecked) basicAuthPass else null,
                                 )
