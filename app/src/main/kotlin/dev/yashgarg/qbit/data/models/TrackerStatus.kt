@@ -18,7 +18,9 @@ enum class TrackerStatus {
                 2 -> CONTACTED_WORKING
                 3 -> UPDATING
                 4 -> CONTACTED_NOT_WORKING
-                else -> throw IllegalArgumentException("Invalid status code")
+                // Never crash on an unexpected/out-of-spec status from the server — treat it as a
+                // neutral "disabled" entry (this is what qBittorrent uses for special rows too).
+                else -> DISABLED
             }
         }
     }
