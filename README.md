@@ -1,48 +1,50 @@
 # Captain qBit
 
-An Android app for managing [qBittorrent](http://www.qbittorrent.org/) remotely, written in Kotlin.
+A modern Android app for managing a [qBittorrent](https://www.qbittorrent.org/) instance remotely
+over its Web API — control your self-hosted server from your phone. Written in Kotlin.
 
-> **Fork of [Yash-Garg/qBittorrent-Manager](https://github.com/Yash-Garg/qBittorrent-Manager)** — see below for what's new in this fork.
-
-## What's new in this fork
+## Features
 
 ### Torrent list
+- Live global and per-torrent download/upload speeds, progress, and ETA
+- Sort by name, size, progress, speed, ETA, ratio, date added, and more — tap again to reverse
+- Search torrents by name from a collapsible search bar
+- Filter by status, category, tracker, or tags, with active filters shown as dismissible chips
+- Colour-coded status matching the qBittorrent Web UI (downloading, seeding, paused, errored…)
 
-- **Sort** — sort the torrent list by name, size, progress, speed, ETA, ratio, or date added; tap again to reverse direction
-- **Search** — filter torrents by name in real time via a collapsible search bar
-- **Filter** — filter by state (downloading, seeding, stopped, etc.), category, tracker, or tags; active filters shown as dismissible chips
-- **Speed display** — global download/upload speeds shown at the top of the torrent list
+### Adding torrents
+- Add via magnet links or `.torrent` files, or open them from other apps
+- Choose a category (pick an existing one or create a new one on the spot), set a save path,
+  start paused, or enable Automatic Torrent Management
+- Detects duplicates before adding, so you don't re-add a torrent you already have
 
-### Adding & managing torrents
-
-- **Add-torrent options** — set category, save path, start-paused, and Automatic Torrent Management when adding a torrent
-- **Open files & links externally** — opening a `.torrent` file or magnet link shows the add dialog prefilled, instead of adding silently
-- **Detail-screen actions** — set category, manage tags, toggle Automatic Torrent Management, or change the save path from a torrent's detail screen
-- **Full file paths** — long-press a file or folder in the Files tab to view and copy its full path
-- **Remembered settings** — last-used sort option/direction and the add-torrent toggles persist between sessions
+### Managing torrents
+- Pause/resume, delete (optionally with data), force recheck, reannounce, and rename
+- Set or create categories, manage tags, toggle Automatic Torrent Management, or change the save path
+- Detail view with Info, Files, Trackers, and Peers tabs — browse the file tree and copy full paths
+- Surfaces the actual failure reason when a torrent errors, instead of a bare "error"
 
 ### Connection & reliability
-
-- **HTTP Basic Auth** — optional username/password support for servers behind a reverse proxy
-- **Edit server** — modify an existing server configuration without re-adding it
-- **Friendlier errors** — network errors surface short, readable messages instead of raw stack traces
-- **Throttled polling** — reduced request rate to avoid HTTP 429 (Too Many Requests)
-- **qBittorrent 5.x compatibility** — added missing torrent states (`stoppedDL`, `stoppedUP`, `forcedMetaDL`)
-
-### Under the hood
-
-- **Build toolchain** — updated to AGP 9.2, Gradle 9.4, Kotlin 2.1; migrated from kapt to KSP
+- Works with qBittorrent 4.x and 5.x
+- Optional HTTP Basic Auth for servers behind a reverse proxy, and support for self-signed certificates
+- Edit a saved server without re-adding it
+- Short, readable messages for network errors
+- A persistent status notification showing connection state and current speeds
 
 ## Roadmap
-
-- **Multiple servers** — managing more than one qBittorrent server
-- **Settings screen** — in-app preferences to configure behaviours such as the persistent status notification
+- **Multiple servers** — manage more than one qBittorrent server
+- **Settings screen** — in-app preferences to configure behaviours such as the status notification
 - **Export/import config** — back up and restore server configurations and settings to a file
+
+## Credits
+
+Captain qBit began as a fork of [Yash-Garg/qBittorrent-Manager](https://github.com/Yash-Garg/qBittorrent-Manager)
+and builds on that foundation. Thanks to the original author and contributors for their work.
 
 ## License
 
-Licensed under the [GNU General Public License v3.0](LICENSE.txt), the same license as the
-upstream project — this fork and any derivatives stay GPL-3.0.
+Licensed under the [GNU General Public License v3.0](LICENSE.txt) — the same license as the
+upstream project, so this app and any derivatives stay GPL-3.0.
 
 - Original work © [Yash Garg](https://github.com/Yash-Garg) and contributors
-- Modifications in this fork © 2026 Aviad Gafni
+- Modifications © 2026 Aviad Gafni
