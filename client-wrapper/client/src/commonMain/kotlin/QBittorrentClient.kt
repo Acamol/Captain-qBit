@@ -36,6 +36,7 @@ private const val PARAM_CATEGORY = "category"
 private const val PARAM_TAGS = "tags"
 private const val PARAM_SKIP_CHECKING = "skip_checking"
 private const val PARAM_PAUSED = "paused"
+private const val PARAM_STOPPED = "stopped"
 private const val PARAM_ROOT_FOLDER = "root_folder"
 private const val PARAM_RENAME = "rename"
 private const val PARAM_UP_LIMIT = "upLimit"
@@ -247,7 +248,10 @@ class QBittorrentClient(
                         body.tags.joinToString(",").takeUnless(String::isBlank)
                     )
                     appendUnlessNull(PARAM_SKIP_CHECKING, body.skipChecking)
+                    // qBittorrent 5.x renamed the add "paused" field to "stopped"; send both so
+                    // the torrent starts paused on 4.x and 5.x alike (unknown fields are ignored).
                     appendUnlessNull(PARAM_PAUSED, body.paused)
+                    appendUnlessNull(PARAM_STOPPED, body.paused)
                     appendUnlessNull(PARAM_ROOT_FOLDER, body.rootFolder)
                     appendUnlessNull(PARAM_RENAME, body.rename)
                     appendUnlessNull(PARAM_UP_LIMIT, body.upLimit)
@@ -366,12 +370,7 @@ class QBittorrentClient(
      */
     @Throws(QBittorrentException::class, CancellationException::class)
     suspend fun pauseTorrents(hashes: List<String> = allList) {
-        http
-            .submitForm(
-                "${config.baseUrl}/api/v2/torrents/pause",
-                formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) }
-            )
-            .orThrow()
+        stopOrStartTorrents(hashes, primaryAction = "stop", legacyAction = "pause")
     }
 
     /**
@@ -381,12 +380,35 @@ class QBittorrentClient(
      */
     @Throws(QBittorrentException::class, CancellationException::class)
     suspend fun resumeTorrents(hashes: List<String> = allList) {
-        http
-            .submitForm(
-                "${config.baseUrl}/api/v2/torrents/resume",
-                formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) }
+        stopOrStartTorrents(hashes, primaryAction = "start", legacyAction = "resume")
+    }
+
+    /**
+     * qBittorrent 5.0 renamed the pause/resume endpoints to stop/start and dropped the old names in
+     * later releases. Call the modern endpoint first and fall back to the legacy name on a 404, so
+     * this works against both 4.x and 5.x servers.
+     */
+    private suspend fun stopOrStartTorrents(
+        hashes: List<String>,
+        primaryAction: String,
+        legacyAction: String,
+    ) {
+        val params = Parameters.build { append("hashes", hashes.joinToString("|")) }
+        val response =
+            http.submitForm(
+                "${config.baseUrl}/api/v2/torrents/$primaryAction",
+                formParameters = params
             )
-            .orThrow()
+        if (response.status == HttpStatusCode.NotFound) {
+            http
+                .submitForm(
+                    "${config.baseUrl}/api/v2/torrents/$legacyAction",
+                    formParameters = params
+                )
+                .orThrow()
+        } else {
+            response.orThrow()
+        }
     }
 
     /**
