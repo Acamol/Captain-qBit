@@ -408,7 +408,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
         val state = viewModel.uiState.value
         val items = buildList {
             add(
-                "State" +
+                "Status" +
                     if (state.selectedFilter != StateFilter.ALL) " (${state.selectedFilter.label})"
                     else ""
             )
@@ -445,7 +445,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
         val labels = options.map { it.label }.toTypedArray()
         val checked = options.indexOf(state.selectedFilter)
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Filter by state")
+            .setTitle("Filter by status")
             .setSingleChoiceItems(labels, checked) { dialog, which ->
                 viewModel.setFilter(options[which])
                 dialog.dismiss()
