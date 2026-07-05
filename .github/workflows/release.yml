@@ -45,12 +45,12 @@ jobs:
           } > keystore.properties
 
       - name: Build signed release APK
-        run: ./gradlew assembleFreeRelease
+        run: ./gradlew assembleRelease
 
       - name: Rename APK to a clean asset name
         run: |
           version="${GITHUB_REF_NAME#v}"
-          cp app/build/outputs/apk/free/release/*.apk "Captain-qBit-${version}.apk"
+          cp app/build/outputs/apk/release/*.apk "Captain-qBit-${version}.apk"
 
       # Use the annotated tag's message as the changelog. Create releases with
       # `git tag -a vX.Y.Z -m "- change one\n- change two"`.

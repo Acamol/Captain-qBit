@@ -14,7 +14,6 @@ android {
         targetSdk = 35
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        missingDimensionStrategy("app", "nonFree", "free")
     }
 
     compileOptions {

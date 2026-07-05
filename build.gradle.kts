@@ -15,7 +15,6 @@ plugins {
     alias(libs.plugins.navigation.safeargs) apply false
     alias(libs.plugins.multiplatform) apply false
     alias(libs.plugins.binaryCompat) apply false
-    alias(libs.plugins.sentry) apply false
 
     alias(libs.plugins.custom.githooks)
     alias(libs.plugins.custom.spotless)
