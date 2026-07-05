@@ -1,4 +1,6 @@
-# Captain qBit
+<p align="center">
+  <img src="docs/banner.png" alt="Captain qBit" width="100%" />
+</p>
 
 A modern Android app for managing a [qBittorrent](https://www.qbittorrent.org/) instance remotely
 over its Web API — control your self-hosted server from your phone. Written in Kotlin.
