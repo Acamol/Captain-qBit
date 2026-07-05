@@ -106,7 +106,10 @@ class TorrentListAdapter @Inject constructor() :
                         eta.visibility = View.GONE
                     }
                     Torrent.State.UPLOADING,
-                    Torrent.State.FORCED_UP -> {
+                    Torrent.State.FORCED_UP,
+                    // A completed torrent with no active peers is still seeding — qBittorrent
+                    // labels stalledUP "Seeding", not "Stalled".
+                    Torrent.State.STALLED_UP -> {
                         peers.text = context.getString(CommonR.string.seeding)
                         peers.setTextColor(context.getColor(R.color.green))
                         speed.visibility = View.VISIBLE
@@ -124,8 +127,7 @@ class TorrentListAdapter @Inject constructor() :
                         speed.visibility = View.VISIBLE
                         eta.visibility = View.VISIBLE
                     }
-                    Torrent.State.STALLED_DL,
-                    Torrent.State.STALLED_UP -> {
+                    Torrent.State.STALLED_DL -> {
                         peers.text = context.getString(CommonR.string.stalled)
                         peers.setTextColor(context.getColor(R.color.red))
                         speed.visibility = View.GONE
