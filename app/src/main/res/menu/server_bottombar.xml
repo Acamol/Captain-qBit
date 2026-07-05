@@ -28,6 +28,10 @@
         android:title="@string/toggle_limits"
         app:showAsAction="never" />
     <item
+        android:id="@+id/about"
+        android:title="@string/about"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/delete_selection"
         android:icon="@drawable/outline_delete_24"
         android:title="Delete"

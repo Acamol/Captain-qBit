@@ -350,6 +350,10 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                         findNavController().navigate(R.id.action_serverFragment_to_configFragment)
                         true
                     }
+                    R.id.about -> {
+                        findNavController().navigate(R.id.action_serverFragment_to_versionFragment)
+                        true
+                    }
                     else -> false
                 }
             }

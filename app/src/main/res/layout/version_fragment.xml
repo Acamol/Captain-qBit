@@ -19,7 +19,7 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             app:navigationIcon="?attr/homeAsUpIndicator"
-            app:title="@string/server_info"
+            app:title="@string/about"
             app:titleTextAppearance="@style/TitleMedium" />
 
     </com.google.android.material.appbar.AppBarLayout>
@@ -27,6 +27,10 @@
     <androidx.compose.ui.platform.ComposeView
         android:id="@+id/composeView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/appbar_layout" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

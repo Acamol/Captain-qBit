@@ -32,7 +32,7 @@ class VersionViewModel @Inject constructor(private val clientManager: ClientMana
         _uiState.update { state ->
             state.copy(
                 apiVersion = client.getApiVersion(),
-                appVersion = client.getVersion(),
+                serverVersion = client.getVersion(),
                 loading = false,
             )
         }
