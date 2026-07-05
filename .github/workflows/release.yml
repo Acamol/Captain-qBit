@@ -52,11 +52,12 @@ jobs:
           version="${GITHUB_REF_NAME#v}"
           cp app/build/outputs/apk/release/*.apk "Captain-qBit-${version}.apk"
 
-      # Use the annotated tag's message as the changelog. Create releases with
-      # `git tag -a vX.Y.Z -m "- change one\n- change two"`.
       - name: Build release notes from tag message
         id: notes
         run: |
+          # checkout leaves a lightweight tag on the runner; re-fetch the annotated tag
+          # so its message (not the commit message) is used as the release notes.
+          git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
           {
             echo 'body<<__NOTES_EOF__'
             git tag -l --format='%(contents)' "$GITHUB_REF_NAME"
