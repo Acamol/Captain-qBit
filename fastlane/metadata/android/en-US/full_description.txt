@@ -1,15 +1,18 @@
-🚧 APP IS CURRENTLY IN ALPHA STAGE 🚧
+Captain qBit is a modern Android app for managing a qBittorrent instance remotely over its Web API. It's a client for your self-hosted qBittorrent server — not a standalone downloader.
 
-This app aims to provide a modern and easy approach to handle your qBittorrent WebUI provided by self-hosted servers (not a standalone downloader).
+Features:
 
-Features supported:
-✅ Viewing all the files on the server
-✅ Performing various actions (rename, recheck, etc.) on a specific torrent
-✅ Uploading of torrents using files and links
-✅ Persistent notification for connection status of server
+* Live torrent list with global and per-torrent speeds, progress, and ETA
+* Sort by name, size, progress, speed, ratio, date added, and more
+* Search torrents by name, and filter by status, category, tracker, or tags
+* Add torrents via magnet links or .torrent files, with category, save path, start-paused, and Automatic Torrent Management options
+* Create categories on the fly, manage tags, recheck, reannounce, rename, and change save paths
+* Detailed view with Info, Files, Trackers, and Peers tabs, including a browsable file tree
+* Clear failure reasons when a torrent errors, instead of a bare "error"
+* Optional HTTP Basic Auth for servers behind a reverse proxy, plus self-signed certificate support
+* A persistent status notification showing connection state and current speeds
+* Works with qBittorrent 4.x and 5.x
 
-Additional features like sorting, searching, server statistics coming soon....
+Captain qBit began as a fork of qBittorrent Manager by Yash Garg and builds on that foundation. It is free and open source under the GPL-3.0 license.
 
-Note: In order to ensure the best user experience, please try to upgrade qBittorrent to 4.3.x or higher.
-
-qBittorrent Manager is completely open sourced at https://github.com/Yash-Garg/qBittorrent-Manager, and any issues can be reported at https://github.com/Yash-Garg/qBittorrent-Manager/issues
+Source code and issue tracker: https://github.com/Acamol/Captain-qBit

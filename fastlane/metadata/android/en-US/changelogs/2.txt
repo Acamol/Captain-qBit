@@ -1,0 +1,8 @@
+First release of Captain qBit.
+
+- Remotely view, add, pause/resume, and delete torrents on your qBittorrent server
+- Sort, search, and filter by status, category, tracker, or tags
+- Add magnets or .torrent files with category, save path, and start-paused options
+- Per-torrent details with a browsable file tree, trackers, and peers
+- Works with qBittorrent 4.x and 5.x
+- Persistent status notification with live speeds
