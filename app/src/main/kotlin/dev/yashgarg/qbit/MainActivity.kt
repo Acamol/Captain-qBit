@@ -11,8 +11,9 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.bundleOf
 import androidx.core.view.WindowCompat
 import androidx.datastore.core.DataStore
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.whenResumed
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.Navigation.findNavController
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -49,7 +50,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
-            whenResumed {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 clientManager.configStatus.collect { status ->
                     when (status) {
                         ConfigStatus.EXISTS -> {

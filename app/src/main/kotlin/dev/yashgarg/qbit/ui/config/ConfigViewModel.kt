@@ -7,6 +7,7 @@ import com.github.michaelbull.result.runCatching
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.yashgarg.qbit.data.daos.ConfigDao
 import dev.yashgarg.qbit.data.manager.ClientManager
+import dev.yashgarg.qbit.data.manager.CryptoManager
 import dev.yashgarg.qbit.data.models.ConnectionType
 import dev.yashgarg.qbit.data.models.ServerConfig
 import dev.yashgarg.qbit.validation.HostValidator
@@ -219,7 +220,6 @@ class ConfigViewModel @Inject constructor(private val configDao: ConfigDao) : Vi
         connectionType: String,
         username: String,
         password: String,
-        trustSelfSigned: Boolean,
         basicAuthUsername: String?,
         basicAuthPassword: String?,
     ) {
@@ -231,13 +231,14 @@ class ConfigViewModel @Inject constructor(private val configDao: ConfigDao) : Vi
                 port = if (port.isEmpty()) null else port.trim().toInt(),
                 path = if (path.isEmpty()) null else "/$path",
                 username = username.trim(),
-                password = password.trim(),
+                password = CryptoManager.encrypt(password.trim()) ?: password.trim(),
                 connectionType =
                     if (connectionType.trim() == "http") ConnectionType.HTTP
                     else ConnectionType.HTTPS,
-                trustSelfSigned = trustSelfSigned,
+                trustSelfSigned = false,
                 basicAuthUsername = basicAuthUsername?.trim()?.ifEmpty { null },
-                basicAuthPassword = basicAuthPassword?.trim()?.ifEmpty { null },
+                basicAuthPassword =
+                    CryptoManager.encrypt(basicAuthPassword?.trim()?.ifEmpty { null }),
             )
 
         viewModelScope.launch { withContext(Dispatchers.IO) { configDao.addConfig(config) } }
@@ -247,7 +248,6 @@ class ConfigViewModel @Inject constructor(private val configDao: ConfigDao) : Vi
         baseUrl: String,
         username: String,
         password: String,
-        trustSelfSigned: Boolean,
         basicAuthUsername: String?,
         basicAuthPassword: String?,
     ): Result<String, Throwable> {
@@ -261,7 +261,7 @@ class ConfigViewModel @Inject constructor(private val configDao: ConfigDao) : Vi
                     baseUrl,
                     username,
                     password,
-                    httpClient = ClientManager.httpClient(trustSelfSigned, basicAuth),
+                    httpClient = ClientManager.httpClient(basicAuth),
                     dispatcher = Dispatchers.Default
                 )
             client.getVersion()

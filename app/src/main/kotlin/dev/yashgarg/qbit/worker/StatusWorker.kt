@@ -20,6 +20,8 @@ import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.utils.toHumanReadable
+import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.delay
 
 @HiltWorker
 class StatusWorker
@@ -44,16 +46,27 @@ constructor(
         return Result.success()
     }
 
+    // The notification only needs global speeds, so poll the lightweight transfer-info endpoint on
+    // its own interval instead of subscribing to the maindata sync. That uses smaller payloads and
+    // lets the fast sync stop entirely when no screen is open. A user-configurable interval is
+    // planned for the Settings screen.
     private suspend fun getStatus() {
-        val client = clientManager.checkAndGetClient()
-        client?.observeMainData()?.collect { data ->
-            val state = data.serverState
-            setForeground(
-                createForegroundInfo(
-                    "Server State • Connected",
-                    "DL: ${state.dlInfoSpeed.toHumanReadable()}/s | UL: ${state.upInfoSpeed.toHumanReadable()}/s",
+        val client = clientManager.checkAndGetClient() ?: return
+        while (true) {
+            try {
+                val info = client.getGlobalTransferInfo()
+                setForeground(
+                    createForegroundInfo(
+                        "Server State • Connected",
+                        "DL: ${info.dlInfoSpeed.toHumanReadable()}/s | UL: ${info.upInfoSpeed.toHumanReadable()}/s",
+                    )
                 )
-            )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Transient error — keep the last notification and retry on the next tick.
+            }
+            delay(REFRESH_INTERVAL_MS)
         }
     }
 
@@ -84,6 +97,8 @@ constructor(
     }
 
     companion object {
+        private const val REFRESH_INTERVAL_MS = 5_000L
+
         val constraints =
             Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
     }

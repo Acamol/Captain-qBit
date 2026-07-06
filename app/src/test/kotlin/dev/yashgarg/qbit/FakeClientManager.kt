@@ -37,7 +37,7 @@ class FakeClientManager : ClientManager {
             config.username,
             config.password,
             syncInterval = ClientManager.syncInterval,
-            httpClient = ClientManager.httpClient(config.trustSelfSigned),
+            httpClient = ClientManager.httpClient(),
             dispatcher = Dispatchers.Default,
         )
 }

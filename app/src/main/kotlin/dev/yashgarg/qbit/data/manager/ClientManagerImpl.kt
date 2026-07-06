@@ -69,16 +69,18 @@ constructor(
                         !config.basicAuthUsername.isNullOrEmpty() &&
                             !config.basicAuthPassword.isNullOrEmpty()
                     ) {
-                        config.basicAuthUsername to config.basicAuthPassword
+                        config.basicAuthUsername to
+                            (CryptoManager.decrypt(config.basicAuthPassword)
+                                ?: config.basicAuthPassword)
                     } else null
 
                 client =
                     QBittorrentClient(
                         "${config.connectionType.toString().lowercase()}://${config.baseUrl}$port$path",
                         config.username,
-                        config.password,
+                        CryptoManager.decrypt(config.password) ?: config.password,
                         syncInterval = ClientManager.syncInterval,
-                        httpClient = ClientManager.httpClient(config.trustSelfSigned, basicAuth),
+                        httpClient = ClientManager.httpClient(basicAuth),
                         dispatcher = Dispatchers.Default,
                     )
             }

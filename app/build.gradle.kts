@@ -31,8 +31,8 @@ android {
         applicationId = "dev.acamol.qbit"
         minSdk = 28
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.3.0"
+        versionCode = 4
+        versionName = "0.4.0"
 
         multiDexEnabled = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -109,7 +109,7 @@ android {
     }
 }
 
-base.archivesName.set("dev.acamol.qbit-0.3.0-$commitHash")
+base.archivesName.set("dev.acamol.qbit-0.4.0-$commitHash")
 
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 

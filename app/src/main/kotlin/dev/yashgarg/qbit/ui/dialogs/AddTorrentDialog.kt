@@ -1,6 +1,5 @@
 package dev.yashgarg.qbit.ui.dialogs
 
-import android.Manifest
 import android.app.AlertDialog
 import android.app.Dialog
 import android.net.Uri
@@ -21,7 +20,6 @@ import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.utils.ClipboardUtil
-import dev.yashgarg.qbit.utils.PermissionUtil
 import dev.yashgarg.qbit.validation.LinkValidator
 
 class AddTorrentDialog : DialogFragment() {
@@ -76,13 +74,6 @@ class AddTorrentDialog : DialogFragment() {
                 dismiss()
             } else {
                 Toast.makeText(requireContext(), "No file selected", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-    private val requestPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            if (!isGranted) {
-                Toast.makeText(requireContext(), "Permission denied!", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -201,13 +192,9 @@ class AddTorrentDialog : DialogFragment() {
             if (prefillFileUri != null) {
                 uploadButton.visibility = View.GONE
             } else {
-                uploadButton.setOnClickListener {
-                    if (PermissionUtil.canReadStorage(requireContext())) {
-                        filePickerLauncher.launch(TORRENT_MIMETYPE)
-                    } else {
-                        requestPermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
-                    }
-                }
+                // The Storage Access Framework picker grants read access to the chosen file, so
+                // no storage permission is needed.
+                uploadButton.setOnClickListener { filePickerLauncher.launch(TORRENT_MIMETYPE) }
             }
         }
 
