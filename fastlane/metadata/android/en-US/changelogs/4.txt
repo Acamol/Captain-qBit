@@ -1,0 +1,5 @@
+- Proper TLS validation — self-signed certs are trusted via Android's certificate store instead of blindly
+- Server passwords are now encrypted at rest, and backups are disabled
+- Fewer permissions — removed storage and phone-state access
+- Lower background battery use from the status notification
+- Various fixes and build cleanups
