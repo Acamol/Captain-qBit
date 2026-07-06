@@ -28,18 +28,23 @@ constructor(
     private val _uiState = MutableStateFlow(ServerState())
     val uiState = _uiState.asStateFlow()
 
+    // Eagerly so the DataStore-backed flow starts collecting as soon as the ViewModel is created;
+    // the add-torrent dialog reads .value directly (no long-lived collector), and WhileSubscribed
+    // would leave it stuck on the default until something subscribed.
     val addTorrentPrefs: StateFlow<ServerPreferences> =
-        prefsStore.data.stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5000),
-            ServerPreferences()
-        )
+        prefsStore.data.stateIn(viewModelScope, SharingStarted.Eagerly, ServerPreferences())
 
     fun saveAddTorrentPrefs(autoTmm: Boolean, paused: Boolean) {
         viewModelScope.launch {
             prefsStore.updateData {
                 it.copy(addTorrentAutoTmm = autoTmm, addTorrentPaused = paused)
             }
+        }
+    }
+
+    fun saveDefaultCategory(category: String?) {
+        viewModelScope.launch {
+            prefsStore.updateData { it.copy(addTorrentCategory = category.orEmpty()) }
         }
     }
 

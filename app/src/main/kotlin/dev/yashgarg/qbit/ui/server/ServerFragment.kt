@@ -138,6 +138,9 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                 val paused = bundle.getBoolean(AddTorrentDialog.PAUSED_KEY, false)
                 val autoTmm = bundle.getBoolean(AddTorrentDialog.AUTO_TMM_KEY, false)
                 viewModel.saveAddTorrentPrefs(autoTmm, paused)
+                if (bundle.getBoolean(AddTorrentDialog.SAVE_CATEGORY_DEFAULT_KEY, false)) {
+                    viewModel.saveDefaultCategory(category)
+                }
                 viewModel.addTorrentUrl(
                     requireNotNull(url),
                     category,
@@ -162,6 +165,9 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                 val paused = bundle.getBoolean(AddTorrentDialog.PAUSED_KEY, false)
                 val autoTmm = bundle.getBoolean(AddTorrentDialog.AUTO_TMM_KEY, false)
                 viewModel.saveAddTorrentPrefs(autoTmm, paused)
+                if (bundle.getBoolean(AddTorrentDialog.SAVE_CATEGORY_DEFAULT_KEY, false)) {
+                    viewModel.saveDefaultCategory(category)
+                }
 
                 uris?.forEach { uri ->
                     requireContext().contentResolver.openInputStream(uri).use { stream ->
@@ -220,6 +226,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                         availableCategories = categories,
                         defaultAutoTmm = prefs.addTorrentAutoTmm,
                         defaultPaused = prefs.addTorrentPaused,
+                        defaultCategory = prefs.addTorrentCategory,
                         prefillUrl = uri,
                     )
                 } else {
@@ -227,6 +234,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                         availableCategories = categories,
                         defaultAutoTmm = prefs.addTorrentAutoTmm,
                         defaultPaused = prefs.addTorrentPaused,
+                        defaultCategory = prefs.addTorrentCategory,
                         prefillFileUri = uri,
                     )
                 }
@@ -312,6 +320,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                         viewModel.uiState.value.availableCategories,
                         defaultAutoTmm = prefs.addTorrentAutoTmm,
                         defaultPaused = prefs.addTorrentPaused,
+                        defaultCategory = prefs.addTorrentCategory,
                     )
                     .show(childFragmentManager, AddTorrentDialog.TAG)
             }

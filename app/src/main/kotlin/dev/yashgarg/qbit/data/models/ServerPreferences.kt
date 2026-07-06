@@ -8,6 +8,7 @@ import kotlinx.serialization.Serializable
 data class ServerPreferences(
     val addTorrentAutoTmm: Boolean = false,
     val addTorrentPaused: Boolean = false,
+    val addTorrentCategory: String = "",
     val sortOptionName: String = "NAME",
     val sortDirectionAsc: Boolean = true,
     val filterStateName: String = "ALL",
