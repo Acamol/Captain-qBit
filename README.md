@@ -41,7 +41,7 @@ over its Web API — control your self-hosted server from your phone. Written in
 ## Roadmap
 - **Multiple servers** — manage more than one qBittorrent server
 - **Tags** — create new tags and assign them when adding a torrent
-- **Settings screen** — in-app preferences to configure behaviours such as the status notification
+- **Settings screen** — in-app preferences to configure behaviours such as the status notification and the refresh/polling interval
 - **Export/import config** — back up and restore server configurations and settings to a file
 
 ## Credits

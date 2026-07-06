@@ -23,7 +23,7 @@ interface ClientManager {
 
     companion object {
         const val tag = "ClientManager"
-        val syncInterval = 3.seconds
+        val syncInterval = 5.seconds
 
         fun httpClient(basicAuthCredentials: Pair<String, String>? = null): HttpClient {
             return HttpClient(OkHttp) {
