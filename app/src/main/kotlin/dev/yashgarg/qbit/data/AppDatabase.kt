@@ -24,16 +24,16 @@ abstract class AppDatabase : RoomDatabase() {
 
 val MIGRATION_3_4 =
     object : Migration(3, 4) {
-        override fun migrate(database: SupportSQLiteDatabase) {
-            database.execSQL("ALTER TABLE configs ADD COLUMN basicAuthUsername TEXT DEFAULT NULL")
-            database.execSQL("ALTER TABLE configs ADD COLUMN basicAuthPassword TEXT DEFAULT NULL")
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE configs ADD COLUMN basicAuthUsername TEXT DEFAULT NULL")
+            db.execSQL("ALTER TABLE configs ADD COLUMN basicAuthPassword TEXT DEFAULT NULL")
         }
     }
 
 val MIGRATION_1_2 =
     object : Migration(1, 2) {
-        override fun migrate(database: SupportSQLiteDatabase) {
-            with(database) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            with(db) {
                 execSQL(
                     "CREATE TABLE IF NOT EXISTS configsTmp (config_id INTEGER NOT NULL, serverName TEXT NOT NULL, " +
                         "baseUrl TEXT NOT NULL, port INTEGER, username TEXT NOT NULL, password TEXT NOT NULL, connectionType TEXT NOT NULL, " +

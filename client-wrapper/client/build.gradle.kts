@@ -6,6 +6,10 @@ plugins {
 }
 
 kotlin {
+    // These models use expect/actual classes, still marked Beta in Kotlin; opt in to silence the
+    // warning.
+    compilerOptions { freeCompilerArgs.add("-Xexpect-actual-classes") }
+
     jvm {
         compilations.all {
             compileTaskProvider.configure {
