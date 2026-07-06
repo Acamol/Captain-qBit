@@ -1,6 +1,4 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
-@file:Suppress("DSL_SCOPE_VIOLATION")
-
 import com.android.build.gradle.internal.tasks.factory.dependsOn
 
 plugins {

@@ -1,4 +1,4 @@
-@file:Suppress("UnstableApiUsage", "DSL_SCOPE_VIOLATION")
+@file:Suppress("UnstableApiUsage")
 
 import java.util.Properties
 
