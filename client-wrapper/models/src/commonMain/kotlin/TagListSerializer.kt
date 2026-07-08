@@ -13,7 +13,7 @@ internal object TagListSerializer : KSerializer<List<String>> {
         PrimitiveSerialDescriptor("Tag", PrimitiveKind.STRING)
 
     override fun deserialize(decoder: Decoder): List<String> {
-        return decoder.decodeString().split(",")
+        return decoder.decodeString().split(",").map { it.trim() }.filter { it.isNotEmpty() }
     }
 
     override fun serialize(encoder: Encoder, value: List<String>) {
