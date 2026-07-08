@@ -1,5 +1,7 @@
 <resources>
     <dimen name="fab_margin">24dp</dimen>
+    <dimen name="status_dot_size">18dp</dimen>
+    <dimen name="status_dot_margin">6dp</dimen>
     <dimen name="sm_margin">8dp</dimen>
     <dimen name="med_text">12sp</dimen>
     <dimen name="lg_heading">20sp</dimen>

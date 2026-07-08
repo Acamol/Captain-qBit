@@ -11,7 +11,8 @@ over its Web API — control your self-hosted server from your phone. Written in
 - Live global and per-torrent download/upload speeds, progress, and ETA
 - Sort by name, size, progress, speed, ETA, ratio, date added, and more — tap again to reverse
 - Search torrents by name from a collapsible search bar
-- Filter by status, category, tracker, or tags, with active filters shown as dismissible chips
+- Filter by status, categories, tags, or trackers from a slide-in sidebar matching the qBittorrent desktop layout — active filters shown as dismissible chips
+- Select multiple torrents to bulk-set category or tags, pause/resume, or delete them in one action
 - Colour-coded status matching the qBittorrent Web UI (downloading, seeding, paused, errored…)
 
 ### Adding torrents

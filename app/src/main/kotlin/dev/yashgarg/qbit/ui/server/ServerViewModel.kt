@@ -69,8 +69,12 @@ constructor(
                                         ignoreCase = true,
                                     )
                             val matchesTags =
-                                state.selectedTags.isEmpty() ||
-                                    state.selectedTags.any { tag -> torrent.tags.contains(tag) }
+                                when {
+                                    state.filterUntagged -> torrent.tags.isEmpty()
+                                    state.selectedTags.isEmpty() -> true
+                                    else ->
+                                        state.selectedTags.any { tag -> torrent.tags.contains(tag) }
+                                }
                             matchesSearch &&
                                 matchesFilter &&
                                 matchesCategory &&
@@ -116,6 +120,7 @@ constructor(
                         selectedCategory = prefs.filterCategory,
                         selectedTracker = prefs.filterTracker,
                         selectedTags = prefs.filterTags,
+                        filterUntagged = prefs.filterUntagged,
                     )
                 }
                 syncData()
@@ -142,6 +147,7 @@ constructor(
                     filterCategory = state.selectedCategory,
                     filterTracker = state.selectedTracker,
                     filterTags = state.selectedTags,
+                    filterUntagged = state.filterUntagged,
                 )
             }
         }
@@ -180,6 +186,73 @@ constructor(
             ) {
                 is Ok -> _status.emit("Successfully added file")
                 is Err -> _status.emit(result.error.friendlyMessage("Failed to add file"))
+            }
+        }
+    }
+
+    fun bulkSetCategory(hashes: List<String>, category: String) {
+        viewModelScope.launch {
+            when (val result = repository.setTorrentCategory(hashes, category)) {
+                is Ok -> _status.emit("Category set on ${hashes.size} torrent(s)")
+                is Err -> _status.emit(result.error.friendlyMessage("Failed to set category"))
+            }
+        }
+    }
+
+    fun bulkAddTags(hashes: List<String>, tags: List<String>) {
+        viewModelScope.launch {
+            when (val result = repository.addTorrentTags(hashes, tags)) {
+                is Ok -> _status.emit("Tags updated on ${hashes.size} torrent(s)")
+                is Err -> _status.emit(result.error.friendlyMessage("Failed to update tags"))
+            }
+        }
+    }
+
+    fun bulkRemoveTags(hashes: List<String>, tags: List<String>) {
+        viewModelScope.launch {
+            when (val result = repository.removeTorrentTags(hashes, tags)) {
+                is Ok -> _status.emit("Tags updated on ${hashes.size} torrent(s)")
+                is Err -> _status.emit(result.error.friendlyMessage("Failed to update tags"))
+            }
+        }
+    }
+
+    fun createTag(name: String) {
+        viewModelScope.launch {
+            when (val result = repository.createTags(listOf(name))) {
+                is Ok -> _status.emit("Tag \"$name\" created")
+                is Err -> _status.emit(result.error.friendlyMessage("Failed to create tag"))
+            }
+        }
+    }
+
+    fun deleteTags(tags: List<String>) {
+        viewModelScope.launch {
+            when (val result = repository.deleteTags(tags)) {
+                is Ok -> {
+                    _uiState.update { it.copy(selectedTags = it.selectedTags - tags.toSet()) }
+                    saveFilterPrefs()
+                    _status.emit("Deleted ${tags.size} tag(s)")
+                }
+                is Err -> _status.emit(result.error.friendlyMessage("Failed to delete tags"))
+            }
+        }
+    }
+
+    fun createCategory(name: String) {
+        viewModelScope.launch {
+            when (val result = repository.createCategory(name)) {
+                is Ok -> _status.emit("Category \"$name\" created")
+                is Err -> _status.emit(result.error.friendlyMessage("Failed to create category"))
+            }
+        }
+    }
+
+    fun deleteCategories(names: List<String>) {
+        viewModelScope.launch {
+            when (val result = repository.deleteCategories(names)) {
+                is Ok -> _status.emit("Deleted ${names.size} category(ies)")
+                is Err -> _status.emit(result.error.friendlyMessage("Failed to delete categories"))
             }
         }
     }
@@ -258,8 +331,13 @@ constructor(
         _uiState.update { state ->
             val tags = state.selectedTags.toMutableSet()
             if (tags.contains(tag)) tags.remove(tag) else tags.add(tag)
-            state.copy(selectedTags = tags)
+            state.copy(selectedTags = tags, filterUntagged = false)
         }
+        saveFilterPrefs()
+    }
+
+    fun setFilterUntagged(untagged: Boolean) {
+        _uiState.update { it.copy(filterUntagged = untagged, selectedTags = emptySet()) }
         saveFilterPrefs()
     }
 
@@ -270,6 +348,7 @@ constructor(
                 selectedFilter = StateFilter.ALL,
                 selectedTracker = null,
                 selectedTags = emptySet(),
+                filterUntagged = false,
             )
         }
         saveFilterPrefs()
@@ -320,7 +399,11 @@ constructor(
                             .mapNotNull { t -> t.tracker.takeIf { it.isNotBlank() } }
                             .distinct()
                             .sorted()
-                    val tags = mainData.tags.sorted()
+                    val tags =
+                        (mainData.tags + mainData.torrents.values.flatMap { it.tags })
+                            .filter { it.isNotBlank() }
+                            .distinct()
+                            .sorted()
                     _uiState.update { state ->
                         state.copy(
                             dataLoading = false,

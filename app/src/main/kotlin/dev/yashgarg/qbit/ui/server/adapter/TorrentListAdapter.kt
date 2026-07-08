@@ -1,5 +1,6 @@
 package dev.yashgarg.qbit.ui.server.adapter
 
+import android.content.res.ColorStateList
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
@@ -28,6 +29,10 @@ class TorrentListAdapter @Inject constructor() :
 
     private var selectionTracker: SelectionTracker<String>? = null
     var onItemClick: ((String) -> Unit)? = null
+
+    fun clearSelection() {
+        selectionTracker?.clearSelection()
+    }
 
     fun makeSelectable(recyclerView: RecyclerView, onSelection: (Selection<String>) -> Unit) {
         selectionTracker =
@@ -97,6 +102,7 @@ class TorrentListAdapter @Inject constructor() :
                     }
                 }
 
+                val progressColor: Int
                 when (torrent.state) {
                     Torrent.State.PAUSED_DL,
                     Torrent.State.STOPPED_DL -> {
@@ -104,6 +110,7 @@ class TorrentListAdapter @Inject constructor() :
                         peers.setTextColor(context.getColor(R.color.yellow))
                         speed.visibility = View.GONE
                         eta.visibility = View.GONE
+                        progressColor = context.getColor(R.color.yellow)
                     }
                     Torrent.State.UPLOADING,
                     Torrent.State.FORCED_UP,
@@ -114,6 +121,7 @@ class TorrentListAdapter @Inject constructor() :
                         peers.setTextColor(context.getColor(R.color.green))
                         speed.visibility = View.VISIBLE
                         eta.visibility = View.GONE
+                        progressColor = context.getColor(R.color.green)
                     }
                     Torrent.State.DOWNLOADING,
                     Torrent.State.FORCED_DL -> {
@@ -126,12 +134,14 @@ class TorrentListAdapter @Inject constructor() :
                         peers.setTextColor(context.getColor(R.color.md_theme_dark_seed))
                         speed.visibility = View.VISIBLE
                         eta.visibility = View.VISIBLE
+                        progressColor = context.getColor(R.color.md_theme_dark_seed)
                     }
                     Torrent.State.STALLED_DL -> {
                         peers.text = context.getString(CommonR.string.stalled)
                         peers.setTextColor(context.getColor(R.color.red))
                         speed.visibility = View.GONE
                         eta.visibility = View.GONE
+                        progressColor = context.getColor(R.color.red)
                     }
                     Torrent.State.PAUSED_UP,
                     Torrent.State.STOPPED_UP -> {
@@ -139,6 +149,7 @@ class TorrentListAdapter @Inject constructor() :
                         peers.setTextColor(context.getColor(R.color.md_theme_dark_seed))
                         speed.visibility = View.GONE
                         eta.visibility = View.GONE
+                        progressColor = context.getColor(R.color.md_theme_dark_seed)
                     }
                     Torrent.State.META_DL,
                     Torrent.State.FORCED_META_DL,
@@ -156,8 +167,10 @@ class TorrentListAdapter @Inject constructor() :
                         peers.setTextColor(context.getColor(R.color.yellow))
                         speed.visibility = View.GONE
                         eta.visibility = View.GONE
+                        progressColor = context.getColor(R.color.yellow)
                     }
                 }
+                progressBar.progressTintList = ColorStateList.valueOf(progressColor)
             }
         }
     }

@@ -15,4 +15,5 @@ data class ServerPreferences(
     val filterCategory: String? = null,
     val filterTracker: String? = null,
     val filterTags: Set<String> = emptySet(),
+    val filterUntagged: Boolean = false,
 )
