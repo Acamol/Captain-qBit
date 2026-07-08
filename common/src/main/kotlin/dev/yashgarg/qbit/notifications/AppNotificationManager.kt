@@ -28,7 +28,7 @@ object AppNotificationManager {
                 NotificationChannel(
                     context.getString(R.string.status_channel_id),
                     context.getString(R.string.status_updates),
-                    NotificationManager.IMPORTANCE_DEFAULT
+                    NotificationManager.IMPORTANCE_LOW
                 )
 
             val notificationManager =
