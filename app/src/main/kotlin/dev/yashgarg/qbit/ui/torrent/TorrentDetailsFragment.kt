@@ -145,7 +145,7 @@ class TorrentDetailsFragment : Fragment(R.layout.torrent_details_fragment) {
                         showCategoryPicker(torrent)
                         true
                     }
-                add("Manage tags")
+                add("Set tags")
                     .setIcon(R.drawable.outline_filter_list_24)
                     .setOnMenuItemClickListener {
                         showTagsPicker(torrent)
@@ -257,11 +257,11 @@ class TorrentDetailsFragment : Fragment(R.layout.torrent_details_fragment) {
 
     private fun showTagsPicker(torrent: Torrent) {
         val state = viewModel.uiState.value
-        if (state.availableTags.isEmpty()) {
-            Toast.makeText(requireContext(), "No tags available", Toast.LENGTH_SHORT).show()
+        val tags = state.availableTags
+        if (tags.isEmpty()) {
+            showCreateTagDialog()
             return
         }
-        val tags = state.availableTags
         val initialChecked = BooleanArray(tags.size) { torrent.tags.contains(tags[it]) }
         val currentChecked = initialChecked.copyOf()
         MaterialAlertDialogBuilder(requireContext())
@@ -277,8 +277,41 @@ class TorrentDetailsFragment : Fragment(R.layout.torrent_details_fragment) {
                     viewModel.setTags(toAdd, toRemove)
                 }
             }
+            .setNeutralButton("New tag…") { _, _ -> showCreateTagDialog() }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    private fun showCreateTagDialog() {
+        val view = layoutInflater.inflate(R.layout.dialog_text_input, null, false)
+        val til = view.findViewById<TextInputLayout>(R.id.text_input_layout)
+        val tiet = view.findViewById<TextInputEditText>(R.id.text_input_edit)
+        til?.hint = "Tag name"
+
+        val dialog =
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("New tag")
+                .setView(view)
+                .setPositiveButton("Create", null)
+                .setNegativeButton("Cancel", null)
+                .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val name = tiet?.text?.toString()?.trim()
+                when {
+                    name.isNullOrBlank() -> til?.error = "Name cannot be empty"
+                    viewModel.uiState.value.availableTags.contains(name) ->
+                        til?.error = "Tag already exists"
+                    else -> {
+                        viewModel.setTags(listOf(name), emptyList())
+                        dialog.dismiss()
+                    }
+                }
+            }
+            tiet?.doAfterTextChanged { til?.error = null }
+        }
+        dialog.show()
     }
 
     private fun showSavePathDialog(torrent: Torrent) {

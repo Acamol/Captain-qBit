@@ -101,7 +101,7 @@ constructor(private val repository: QbitRepository, state: SavedStateHandle) : V
     fun setCategory(category: String) {
         viewModelScope.launch {
             val hash = requireNotNull(hash)
-            when (val result = repository.setTorrentCategory(hash, category)) {
+            when (val result = repository.setTorrentCategory(listOf(hash), category)) {
                 is Ok -> _status.emit("Category set to \"$category\"")
                 is Err -> _status.emit(result.error.friendlyMessage("Failed to set category"))
             }
@@ -114,7 +114,7 @@ constructor(private val repository: QbitRepository, state: SavedStateHandle) : V
             val hash = requireNotNull(hash)
             when (val created = repository.createCategory(name, savePath)) {
                 is Ok ->
-                    when (val set = repository.setTorrentCategory(hash, name)) {
+                    when (val set = repository.setTorrentCategory(listOf(hash), name)) {
                         is Ok -> _status.emit("Category set to \"$name\"")
                         is Err ->
                             _status.emit(
@@ -153,8 +153,8 @@ constructor(private val repository: QbitRepository, state: SavedStateHandle) : V
     fun setTags(toAdd: List<String>, toRemove: List<String>) {
         viewModelScope.launch {
             val hash = requireNotNull(hash)
-            if (toAdd.isNotEmpty()) repository.addTorrentTags(hash, toAdd)
-            if (toRemove.isNotEmpty()) repository.removeTorrentTags(hash, toRemove)
+            if (toAdd.isNotEmpty()) repository.addTorrentTags(listOf(hash), toAdd)
+            if (toRemove.isNotEmpty()) repository.removeTorrentTags(listOf(hash), toRemove)
             _status.emit("Tags updated")
         }
     }
