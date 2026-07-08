@@ -97,8 +97,11 @@ constructor(dispatcher: CoroutineDispatcher, private val clientManager: ClientMa
         }
     }
 
-    suspend fun setTorrentCategory(hash: String, category: String): Result<Unit, Throwable> {
-        return runCatching { client().setTorrentCategory(listOf(hash), category) }
+    suspend fun setTorrentCategory(
+        hashes: List<String>,
+        category: String
+    ): Result<Unit, Throwable> {
+        return runCatching { client().setTorrentCategory(hashes, category) }
     }
 
     suspend fun createCategory(name: String, savePath: String = ""): Result<Unit, Throwable> {
@@ -113,12 +116,27 @@ constructor(dispatcher: CoroutineDispatcher, private val clientManager: ClientMa
         return runCatching { client().setAutoTorrentManagement(listOf(hash), enabled) }
     }
 
-    suspend fun addTorrentTags(hash: String, tags: List<String>): Result<Unit, Throwable> {
-        return runCatching { client().addTorrentTags(listOf(hash), tags) }
+    suspend fun addTorrentTags(hashes: List<String>, tags: List<String>): Result<Unit, Throwable> {
+        return runCatching { client().addTorrentTags(hashes, tags) }
     }
 
-    suspend fun removeTorrentTags(hash: String, tags: List<String>): Result<Unit, Throwable> {
-        return runCatching { client().removeTorrentTags(listOf(hash), tags) }
+    suspend fun removeTorrentTags(
+        hashes: List<String>,
+        tags: List<String>
+    ): Result<Unit, Throwable> {
+        return runCatching { client().removeTorrentTags(hashes, tags) }
+    }
+
+    suspend fun createTags(tags: List<String>): Result<Unit, Throwable> {
+        return runCatching { client().createTags(tags) }
+    }
+
+    suspend fun deleteTags(tags: List<String>): Result<Unit, Throwable> {
+        return runCatching { client().deleteTags(tags) }
+    }
+
+    suspend fun deleteCategories(names: List<String>): Result<Unit, Throwable> {
+        return runCatching { client().removeCategories(names) }
     }
 
     suspend fun removeTorrents(
