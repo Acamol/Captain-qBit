@@ -776,8 +776,8 @@ class QBittorrentClient(
     suspend fun removeCategories(names: List<String>) {
         http
             .submitForm(
-                "${config.baseUrl}/api/v2/torrents/removeCategory",
-                formParameters = Parameters.build { appendAll("category", names) }
+                "${config.baseUrl}/api/v2/torrents/removeCategories",
+                formParameters = Parameters.build { append("categories", names.joinToString("\n")) }
             )
             .orThrow()
     }
