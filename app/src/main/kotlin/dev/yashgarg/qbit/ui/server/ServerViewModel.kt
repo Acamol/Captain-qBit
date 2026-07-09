@@ -61,7 +61,8 @@ constructor(
                             val matchesFilter = torrent.matchesFilter(state.selectedFilter)
                             val matchesCategory =
                                 state.selectedCategory == null ||
-                                    torrent.category == state.selectedCategory
+                                    torrent.category == state.selectedCategory ||
+                                    torrent.category.startsWith("${state.selectedCategory}/")
                             val matchesTracker =
                                 state.selectedTracker == null ||
                                     torrent.tracker.contains(
