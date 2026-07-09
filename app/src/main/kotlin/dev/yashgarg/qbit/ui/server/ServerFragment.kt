@@ -99,6 +99,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                 onCategoryLongPress = { name -> actionDialogs?.showCategoryLongPressDialog(name) },
                 onTagLongPress = { name -> actionDialogs?.showTagLongPressDialog(name) },
             )
+        binding.drawerStatsButton.setOnClickListener { actionDialogs?.showStatisticsDialog() }
         clearSelectionCallback =
             object : OnBackPressedCallback(false) {
                 override fun handleOnBackPressed() {
