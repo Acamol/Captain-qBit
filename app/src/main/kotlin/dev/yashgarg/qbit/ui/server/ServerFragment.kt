@@ -311,7 +311,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
 
     private var lastDrawerTrackers: List<String?> = emptyList()
     private var lastDrawerTags: List<String> = emptyList()
-    private var lastDrawerState: ServerState? = null
+    private var lastDrawerState: ServerScreenState? = null
     private var lastFilterUntagged = false
     private val collapsedCategoryPaths = mutableSetOf<String>()
 
@@ -574,7 +574,8 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
         get() = (this * resources.displayMetrics.density).toInt()
 
     // Clicking an already-selected exclusive filter reverts to `default`. Always reads the live
-    // selection from the ViewModel rather than a closure-captured ServerState: the tracker drawer
+    // selection from the ViewModel rather than a closure-captured ServerScreenState: the tracker
+    // drawer
     // section only recolors existing rows on selection change instead of rebuilding them, which
     // would otherwise leave click listeners capturing a stale selection.
     private fun <T> toggleSelection(clicked: T, default: T, current: () -> T): T =
@@ -694,7 +695,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
         }
     }
 
-    private fun updateDrawerContent(state: ServerState) {
+    private fun updateDrawerContent(state: ServerScreenState) {
         with(binding) {
             val trackers = listOf<String?>(null) + state.availableTrackers
             val tags = state.availableTags
@@ -1026,7 +1027,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
             .show()
     }
 
-    private fun render(state: ServerState) {
+    private fun render(state: ServerScreenState) {
         with(binding) {
             val sortIcon = bottomBar.menu.findItem(R.id.sort_list)
             sortIcon?.icon?.alpha =
@@ -1091,7 +1092,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
         }
     }
 
-    private fun updateFilterChips(state: ServerState) {
+    private fun updateFilterChips(state: ServerScreenState) {
         with(binding) {
             filterChipGroup.removeAllViews()
 

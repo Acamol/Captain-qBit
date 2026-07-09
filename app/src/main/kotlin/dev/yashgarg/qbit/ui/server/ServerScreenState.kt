@@ -2,7 +2,7 @@ package dev.yashgarg.qbit.ui.server
 
 import qbittorrent.models.MainData
 
-data class ServerState(
+data class ServerScreenState(
     val dataLoading: Boolean = true,
     val data: MainData? = null,
     val speedLimitMode: Int = 0,

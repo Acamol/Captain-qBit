@@ -26,7 +26,7 @@ constructor(
     private val repository: QbitRepository,
     private val prefsStore: DataStore<ServerPreferences>,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(ServerState())
+    private val _uiState = MutableStateFlow(ServerScreenState())
     val uiState = _uiState.asStateFlow()
 
     // Eagerly so the DataStore-backed flow starts collecting as soon as the ViewModel is created;
