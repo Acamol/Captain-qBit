@@ -139,6 +139,14 @@ constructor(dispatcher: CoroutineDispatcher, private val clientManager: ClientMa
         return runCatching { client().removeCategories(names) }
     }
 
+    /**
+     * Edits an existing category's save path - the officially supported operation; qBittorrent has
+     * no endpoint to rename a category's identifier.
+     */
+    suspend fun editCategory(name: String, savePath: String): Result<Unit, Throwable> {
+        return runCatching { client().editCategory(name, savePath) }
+    }
+
     suspend fun removeTorrents(
         hashes: List<String>,
         deleteFiles: Boolean = false

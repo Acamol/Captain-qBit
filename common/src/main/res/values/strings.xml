@@ -99,6 +99,10 @@
     <string name="selected_file">Selected file</string>
     <string name="torrent_file_fallback_name">torrent file</string>
     <string name="invalid_magnet_link">Please enter a valid link!</string>
+    <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
+    <string name="edit_category_title">Edit category</string>
+    <string name="save_path_hint">Save path</string>
 
     <!-- ViewModel status messages -->
     <string name="status_add_torrent_url_success">Successfully added torrent</string>
@@ -153,4 +157,6 @@
     <string name="status_tags_updated">Tags updated</string>
     <string name="status_peer_banned">Successfully banned %1$s</string>
     <string name="status_ban_peer_failure">Failed to ban peer</string>
+    <string name="status_category_edited">Category \"%1$s\" updated</string>
+    <string name="status_edit_category_failure">Failed to edit category</string>
 </resources>

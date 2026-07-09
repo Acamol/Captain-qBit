@@ -257,6 +257,15 @@ constructor(
         }
     }
 
+    fun editCategorySavePath(name: String, savePath: String) {
+        launchStatus(
+            successMessage = getString(CommonR.string.status_category_edited, name),
+            failureMessage = getString(CommonR.string.status_edit_category_failure),
+        ) {
+            repository.editCategory(name, savePath)
+        }
+    }
+
     fun removeTorrents(hashes: List<String>, deleteFiles: Boolean = false) {
         launchStatus(
             successMessage = getString(CommonR.string.status_torrents_removed, hashes.size),

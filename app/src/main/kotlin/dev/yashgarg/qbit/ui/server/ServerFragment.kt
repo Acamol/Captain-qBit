@@ -90,8 +90,15 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
         super.onViewCreated(view, savedInstanceState)
 
         torrentListAdapter = TorrentListAdapter()
-        drawerController = ServerDrawerController(this, binding, viewModel)
         actionDialogs = ServerActionDialogs(this, viewModel)
+        drawerController =
+            ServerDrawerController(
+                fragment = this,
+                binding = binding,
+                viewModel = viewModel,
+                onCategoryLongPress = { name -> actionDialogs?.showCategoryLongPressDialog(name) },
+                onTagLongPress = { name -> actionDialogs?.showTagLongPressDialog(name) },
+            )
         clearSelectionCallback =
             object : OnBackPressedCallback(false) {
                 override fun handleOnBackPressed() {

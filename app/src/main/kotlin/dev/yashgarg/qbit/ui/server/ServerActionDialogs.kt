@@ -8,6 +8,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import dev.yashgarg.qbit.R
+import dev.yashgarg.qbit.common.R as CommonR
 
 /** Bulk-action pickers and tag/category/sort management dialogs shown from [ServerFragment]. */
 class ServerActionDialogs(private val fragment: Fragment, private val viewModel: ServerViewModel) {
@@ -185,6 +186,68 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
         }
         dialog.show()
     }
+
+    /**
+     * Shown on long-press of a category row in the drawer. Only offers officially-supported
+     * qBittorrent operations: editing the category's save path (there's no rename endpoint - the
+     * name is the identifier) and deleting it.
+     */
+    fun showCategoryLongPressDialog(name: String) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(name)
+            .setPositiveButton(getString(CommonR.string.edit)) { _, _ ->
+                showEditCategorySavePathDialog(name)
+            }
+            .setNeutralButton(getString(CommonR.string.delete)) { _, _ ->
+                viewModel.deleteCategories(listOf(name))
+            }
+            .setNegativeButton(getString(CommonR.string.cancel), null)
+            .show()
+    }
+
+    private fun showEditCategorySavePathDialog(name: String) {
+        val currentSavePath =
+            viewModel.uiState.value.data?.categories?.get(name)?.savePath.orEmpty()
+        val view = fragment.layoutInflater.inflate(R.layout.dialog_text_input, null, false)
+        val til = view.findViewById<TextInputLayout>(R.id.text_input_layout)
+        val tiet = view.findViewById<TextInputEditText>(R.id.text_input_edit)
+        til?.hint = getString(CommonR.string.save_path_hint)
+        tiet?.setText(currentSavePath)
+
+        val dialog =
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle(getString(CommonR.string.edit_category_title))
+                .setView(view)
+                .setPositiveButton(getString(CommonR.string.edit), null)
+                .setNegativeButton(getString(CommonR.string.cancel), null)
+                .create()
+
+        dialog.setOnShowListener {
+            tiet?.setSelection(tiet.text?.length ?: 0)
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val savePath = tiet?.text?.toString()?.trim().orEmpty()
+                viewModel.editCategorySavePath(name, savePath)
+                dialog.dismiss()
+            }
+        }
+        dialog.show()
+    }
+
+    /**
+     * Shown on long-press of a tag row in the drawer. Delete only - qBittorrent has no endpoint to
+     * edit or rename an existing tag.
+     */
+    fun showTagLongPressDialog(name: String) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(name)
+            .setPositiveButton(getString(CommonR.string.delete)) { _, _ ->
+                viewModel.deleteTags(listOf(name))
+            }
+            .setNegativeButton(getString(CommonR.string.cancel), null)
+            .show()
+    }
+
+    private fun getString(resId: Int) = fragment.getString(resId)
 
     fun showSortPicker() {
         val state = viewModel.uiState.value

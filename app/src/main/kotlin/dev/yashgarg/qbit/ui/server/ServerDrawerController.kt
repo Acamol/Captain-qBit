@@ -23,6 +23,8 @@ class ServerDrawerController(
     private val fragment: Fragment,
     private val binding: ServerFragmentBinding,
     private val viewModel: ServerViewModel,
+    private val onCategoryLongPress: (String) -> Unit,
+    private val onTagLongPress: (String) -> Unit,
 ) {
     private var lastDrawerTrackers: List<String?> = emptyList()
     private var lastDrawerTags: List<String> = emptyList()
@@ -83,7 +85,12 @@ class ServerDrawerController(
     private val Int.dpPx
         get() = (this * fragment.resources.displayMetrics.density).toInt()
 
-    private fun sidebarItem(text: String, selected: Boolean, onClick: () -> Unit): View {
+    private fun sidebarItem(
+        text: String,
+        selected: Boolean,
+        onLongClick: (() -> Unit)? = null,
+        onClick: () -> Unit,
+    ): View {
         val ctx = fragment.requireContext()
         val density = fragment.resources.displayMetrics.density
         val indicatorW = (3 * density).toInt()
@@ -97,6 +104,12 @@ class ServerDrawerController(
             isClickable = true
             isFocusable = true
             setOnClickListener { onClick() }
+            if (onLongClick != null) {
+                setOnLongClickListener {
+                    onLongClick()
+                    true
+                }
+            }
 
             addView(
                 View(ctx).apply {
@@ -126,6 +139,7 @@ class ServerDrawerController(
         collapsed: Boolean,
         onClick: () -> Unit,
         onToggleCollapse: () -> Unit,
+        onLongClick: (() -> Unit)? = null,
     ): View {
         val ctx = fragment.requireContext()
         val density = fragment.resources.displayMetrics.density
@@ -143,6 +157,12 @@ class ServerDrawerController(
             isClickable = true
             isFocusable = true
             setOnClickListener { onClick() }
+            if (onLongClick != null) {
+                setOnLongClickListener {
+                    onLongClick()
+                    true
+                }
+            }
 
             addView(
                 View(ctx).apply {
@@ -246,6 +266,12 @@ class ServerDrawerController(
                             }
                             update(viewModel.uiState.value)
                         },
+                        // Only real categories can be renamed/deleted - a "/" path segment can be
+                        // a synthetic, non-existent parent node purely for tree grouping.
+                        onLongClick =
+                            if (node.path in state.availableCategories) {
+                                { onCategoryLongPress(node.path) }
+                            } else null,
                     )
                 )
             }
@@ -301,7 +327,11 @@ class ServerDrawerController(
                 )
                 tags.forEach { tag ->
                     tagsContainer.addView(
-                        sidebarItem(tag, state.selectedTags.contains(tag)) {
+                        sidebarItem(
+                            tag,
+                            state.selectedTags.contains(tag),
+                            onLongClick = { onTagLongPress(tag) },
+                        ) {
                             viewModel.toggleTag(tag)
                         }
                     )
