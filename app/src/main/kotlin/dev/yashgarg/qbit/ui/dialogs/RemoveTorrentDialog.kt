@@ -30,7 +30,7 @@ class RemoveTorrentDialog : DialogFragment() {
             val deleteFilesCheckBox = dialog.findViewById<CheckBox>(R.id.deleteFiles_box)
 
             deleteFilesLL?.setOnClickListener {
-                deleteFilesCheckBox?.isChecked = !deleteFilesCheckBox!!.isChecked
+                deleteFilesCheckBox?.let { it.isChecked = !it.isChecked }
             }
 
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
