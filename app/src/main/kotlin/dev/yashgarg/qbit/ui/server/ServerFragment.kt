@@ -376,9 +376,6 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                 clearSelectionCallback?.isEnabled = hasSelection
 
                 bottomBar.menu.apply {
-                    findItem(R.id.manage_tags).isVisible = !hasSelection
-                    findItem(R.id.manage_categories).isVisible = !hasSelection
-
                     findItem(R.id.category_selection).apply {
                         isVisible = hasSelection
                         setOnMenuItemClickListener {
@@ -455,28 +452,25 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                         actionDialogs?.showSortPicker()
                         true
                     }
-                    R.id.speed_toggle -> {
-                        viewLifecycleOwner.lifecycleScope.launch { viewModel.toggleSpeedLimits() }
-                        true
-                    }
-                    R.id.edit_server -> {
-                        findNavController().navigate(R.id.action_serverFragment_to_configFragment)
-                        true
-                    }
-                    R.id.manage_tags -> {
-                        actionDialogs?.showManageTagsDialog()
-                        true
-                    }
-                    R.id.manage_categories -> {
-                        actionDialogs?.showManageCategoriesDialog()
-                        true
-                    }
-                    R.id.about -> {
-                        findNavController().navigate(R.id.action_serverFragment_to_versionFragment)
-                        true
-                    }
                     else -> false
                 }
+            }
+
+            // Secondary actions moved off the bottom bar into the drawer footer.
+            drawerSpeedLimitSwitch.setOnClickListener { viewModel.toggleSpeedLimits() }
+            drawerManageCategories.setOnClickListener {
+                drawerLayout.closeDrawer(Gravity.START)
+                actionDialogs?.showManageCategoriesDialog()
+            }
+            drawerManageTags.setOnClickListener {
+                drawerLayout.closeDrawer(Gravity.START)
+                actionDialogs?.showManageTagsDialog()
+            }
+            drawerEditServer.setOnClickListener {
+                findNavController().navigate(R.id.action_serverFragment_to_configFragment)
+            }
+            drawerAbout.setOnClickListener {
+                findNavController().navigate(R.id.action_serverFragment_to_versionFragment)
             }
         }
     }
@@ -555,6 +549,10 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
 
             drawerController?.update(state)
             updateFilterChips(state)
+
+            // Reflect current alt-speed-limits state on the drawer toggle. Safe to set directly:
+            // the row uses a click listener (user-initiated), so this won't re-trigger a toggle.
+            drawerSpeedLimitSwitch.isChecked = state.speedLimitMode != 0
 
             if (state.hasError) {
                 listLoader.visibility = View.GONE

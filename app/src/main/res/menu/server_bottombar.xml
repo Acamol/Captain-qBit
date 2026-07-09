@@ -14,27 +14,6 @@
         android:title="@string/sort"
         app:showAsAction="always" />
     <item
-        android:id="@+id/edit_server"
-        android:title="@string/edit_server"
-        app:showAsAction="never" />
-    <item
-        android:id="@+id/manage_tags"
-        android:title="Manage tags"
-        app:showAsAction="never" />
-    <item
-        android:id="@+id/manage_categories"
-        android:title="Manage categories"
-        app:showAsAction="never" />
-    <item
-        android:id="@+id/speed_toggle"
-        android:icon="@drawable/twotone_speed_24"
-        android:title="@string/toggle_limits"
-        app:showAsAction="never" />
-    <item
-        android:id="@+id/about"
-        android:title="@string/about"
-        app:showAsAction="never" />
-    <item
         android:id="@+id/category_selection"
         android:icon="@drawable/outline_category_24"
         android:title="Category"

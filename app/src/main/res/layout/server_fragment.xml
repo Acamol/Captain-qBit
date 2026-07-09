@@ -211,17 +211,38 @@
                 android:background="@color/md_theme_dark_outline" />
 
             <!-- Category -->
-            <TextView
+            <LinearLayout
                 android:id="@+id/drawer_category_header"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingHorizontal="16dp"
-                android:paddingBottom="4dp"
-                android:text="Categories"
-                android:textColor="@color/md_theme_dark_seed_light"
-                android:textSize="11sp"
-                android:textAllCaps="true"
-                android:visibility="gone" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="16dp"
+                android:paddingEnd="8dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:paddingBottom="4dp"
+                    android:text="Categories"
+                    android:textAllCaps="true"
+                    android:textColor="@color/md_theme_dark_seed_light"
+                    android:textSize="11sp" />
+
+                <ImageButton
+                    android:id="@+id/drawer_manage_categories"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Manage categories"
+                    android:padding="6dp"
+                    android:src="@drawable/outline_edit_24"
+                    android:tooltipText="Manage categories"
+                    app:tint="@color/md_theme_dark_seed_light" />
+
+            </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/category_items_container"
@@ -239,17 +260,38 @@
                 android:visibility="gone" />
 
             <!-- Tags -->
-            <TextView
+            <LinearLayout
                 android:id="@+id/drawer_tags_header"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingHorizontal="16dp"
-                android:paddingBottom="4dp"
-                android:text="Tags"
-                android:textColor="@color/md_theme_dark_seed_light"
-                android:textSize="11sp"
-                android:textAllCaps="true"
-                android:visibility="gone" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="16dp"
+                android:paddingEnd="8dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:paddingBottom="4dp"
+                    android:text="Tags"
+                    android:textAllCaps="true"
+                    android:textColor="@color/md_theme_dark_seed_light"
+                    android:textSize="11sp" />
+
+                <ImageButton
+                    android:id="@+id/drawer_manage_tags"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Manage tags"
+                    android:padding="6dp"
+                    android:src="@drawable/outline_edit_24"
+                    android:tooltipText="Manage tags"
+                    app:tint="@color/md_theme_dark_seed_light" />
+
+            </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/tags_container"
@@ -293,6 +335,49 @@
                 android:layout_marginHorizontal="16dp"
                 android:layout_marginTop="8dp"
                 android:text="Clear all" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginVertical="8dp"
+                android:background="@color/md_theme_dark_outline" />
+
+            <!-- Server actions -->
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/drawer_speed_limit_switch"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="Alternate speed limits"
+                android:textColor="@color/white"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/drawer_edit_server"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:gravity="center_vertical"
+                android:minHeight="48dp"
+                android:paddingHorizontal="16dp"
+                android:text="@string/edit_server"
+                android:textColor="@color/white"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/drawer_about"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:gravity="center_vertical"
+                android:minHeight="48dp"
+                android:paddingHorizontal="16dp"
+                android:text="@string/about"
+                android:textColor="@color/white"
+                android:textSize="14sp" />
 
         </LinearLayout>
 

@@ -238,10 +238,11 @@ class ServerDrawerController(
             }
 
             // Category — grouped into a tree by "/"; always rebuilt (small list, and collapse
-            // state or selection can change the set of visible rows on any redraw).
-            val hasCategories = state.availableCategories.isNotEmpty()
-            drawerCategoryHeader.visibility = if (hasCategories) View.VISIBLE else View.GONE
-            drawerCategoryDivider.visibility = if (hasCategories) View.VISIBLE else View.GONE
+            // state or selection can change the set of visible rows on any redraw). Header and
+            // divider stay visible even with no categories so the manage (pencil) button - the
+            // only way to create the first category - remains reachable.
+            drawerCategoryHeader.visibility = View.VISIBLE
+            drawerCategoryDivider.visibility = View.VISIBLE
             categoryItemsContainer.removeAllViews()
             categoryItemsContainer.addView(
                 sidebarItem("All", state.selectedCategory == null) { viewModel.setCategory(null) }
