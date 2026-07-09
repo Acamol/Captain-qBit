@@ -91,6 +91,7 @@ internal abstract class DataSync<T>(
             }
         } catch (e: Exception) {
             // Failed to fetch patch, keep current MainData and add the error
+            println("DataSync: sync failed for $endpointUrl: ${e.message}")
             val qbEx = if (e is QBittorrentException) e else QBittorrentException(e)
             state.update { (mainData, _) -> mainData to qbEx }
             yield()
