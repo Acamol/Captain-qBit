@@ -2,8 +2,6 @@ package dev.yashgarg.qbit.ui.server
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.graphics.Color
-import android.graphics.Typeface
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -12,17 +10,12 @@ import android.text.TextWatcher
 import android.util.Log
 import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup.LayoutParams.MATCH_PARENT
-import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.view.inputmethod.InputMethodManager
-import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.core.content.getSystemService
 import androidx.core.os.bundleOf
 import androidx.core.util.Consumer
-import androidx.core.widget.doAfterTextChanged
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.setFragmentResultListener
@@ -31,9 +24,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.selection.Selection
 import com.google.android.material.chip.Chip
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.textfield.TextInputEditText
-import com.google.android.material.textfield.TextInputLayout
 import com.google.android.material.transition.MaterialSharedAxis
 import dagger.hilt.android.AndroidEntryPoint
 import dev.yashgarg.qbit.MainActivity
@@ -77,6 +67,10 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
     // across view recreations would retain the destroyed view. Recreating it per view avoids that.
     private var torrentListAdapter: TorrentListAdapter? = null
 
+    // View-scoped for the same reason: both hold the current binding/cached drawer-render state.
+    private var drawerController: ServerDrawerController? = null
+    private var actionDialogs: ServerActionDialogs? = null
+
     private val onNewIntentListener =
         Consumer<Intent> { intent ->
             val bundle = bundleOf(MainActivity.TORRENT_INTENT_KEY to intent?.data.toString())
@@ -96,6 +90,8 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
         super.onViewCreated(view, savedInstanceState)
 
         torrentListAdapter = TorrentListAdapter()
+        drawerController = ServerDrawerController(this, binding, viewModel)
+        actionDialogs = ServerActionDialogs(this, viewModel)
         clearSelectionCallback =
             object : OnBackPressedCallback(false) {
                 override fun handleOnBackPressed() {
@@ -153,12 +149,10 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
         // `binding` here: with the exit transition, onDestroyView runs after the view lifecycle
         // is already DESTROYED (binding cleared). onStop() already detached the adapter from the
         // RV.
-        lastDrawerTrackers = emptyList()
-        lastDrawerTags = emptyList()
-        lastDrawerState = null
         lastFilterUntagged = false
-        collapsedCategoryPaths.clear()
         torrentListAdapter = null
+        drawerController = null
+        actionDialogs = null
         super.onDestroyView()
     }
 
@@ -307,11 +301,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
         }
     }
 
-    private var lastDrawerTrackers: List<String?> = emptyList()
-    private var lastDrawerTags: List<String> = emptyList()
-    private var lastDrawerState: ServerScreenState? = null
     private var lastFilterUntagged = false
-    private val collapsedCategoryPaths = mutableSetOf<String>()
 
     private fun openSearch() {
         with(binding) {
@@ -384,7 +374,9 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                     findItem(R.id.category_selection).apply {
                         isVisible = hasSelection
                         setOnMenuItemClickListener {
-                            showBulkCategoryPicker()
+                            selectedItems?.toList()?.let { hashes ->
+                                actionDialogs?.showBulkCategoryPicker(hashes)
+                            }
                             true
                         }
                     }
@@ -392,7 +384,9 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                     findItem(R.id.tags_selection).apply {
                         isVisible = hasSelection
                         setOnMenuItemClickListener {
-                            showBulkTagsPicker()
+                            selectedItems?.toList()?.let { hashes ->
+                                actionDialogs?.showBulkTagsPicker(hashes)
+                            }
                             true
                         }
                     }
@@ -450,7 +444,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                         true
                     }
                     R.id.sort_list -> {
-                        showSortPicker()
+                        actionDialogs?.showSortPicker()
                         true
                     }
                     R.id.speed_toggle -> {
@@ -462,11 +456,11 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                         true
                     }
                     R.id.manage_tags -> {
-                        showManageTagsDialog()
+                        actionDialogs?.showManageTagsDialog()
                         true
                     }
                     R.id.manage_categories -> {
-                        showManageCategoriesDialog()
+                        actionDialogs?.showManageCategoriesDialog()
                         true
                     }
                     R.id.about -> {
@@ -517,504 +511,6 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
         viewModel.intent.collectWithLifecycle(this) { handleAddIntent(null) }
     }
 
-    private fun sidebarItem(
-        text: String,
-        selected: Boolean,
-        onClick: () -> Unit,
-    ): View {
-        val ctx = requireContext()
-        val density = resources.displayMetrics.density
-        val indicatorW = (3 * density).toInt()
-        val itemPadV = (10 * density).toInt()
-        val gapH = (12 * density).toInt()
-        val seedColor = ctx.getColor(R.color.md_theme_dark_seed)
-
-        return LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
-            isClickable = true
-            isFocusable = true
-            setOnClickListener { onClick() }
-
-            addView(
-                View(ctx).apply {
-                    layoutParams =
-                        LinearLayout.LayoutParams(indicatorW, MATCH_PARENT).also {
-                            it.marginEnd = gapH
-                        }
-                    setBackgroundColor(if (selected) seedColor else Color.TRANSPARENT)
-                }
-            )
-            addView(
-                TextView(ctx).apply {
-                    this.text = text
-                    layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
-                    setPadding(0, itemPadV, 16.dpPx, itemPadV)
-                    textSize = 14f
-                    setTextColor(if (selected) Color.WHITE else 0x80FFFFFF.toInt())
-                    if (selected) setTypeface(typeface, Typeface.BOLD)
-                }
-            )
-        }
-    }
-
-    private val Int.dpPx
-        get() = (this * resources.displayMetrics.density).toInt()
-
-    // Clicking an already-selected exclusive filter reverts to `default`. Always reads the live
-    // selection from the ViewModel rather than a closure-captured ServerScreenState: the tracker
-    // drawer
-    // section only recolors existing rows on selection change instead of rebuilding them, which
-    // would otherwise leave click listeners capturing a stale selection.
-    private fun <T> toggleSelection(clicked: T, default: T, current: () -> T): T =
-        if (clicked == current()) default else clicked
-
-    // Categories with "/" in their name (e.g. "books/audiobooks") are grouped into a directory-
-    // like tree. A path segment that never appears as an actual category (e.g. "books" when only
-    // "books/audiobooks" exists) still becomes a synthetic, clickable parent node — selecting it
-    // filters to that whole subtree (see matchesCategory in ServerViewModel).
-    private class CategoryTreeNode(val path: String, val name: String, val depth: Int) {
-        val children = mutableListOf<CategoryTreeNode>()
-    }
-
-    private fun buildCategoryTree(categories: List<String>): List<CategoryTreeNode> {
-        val nodesByPath = LinkedHashMap<String, CategoryTreeNode>()
-        for (category in categories) {
-            if (category.isBlank()) continue
-            var path = ""
-            category.split("/").forEachIndexed { depth, segment ->
-                val parentPath = path
-                path = if (path.isEmpty()) segment else "$path/$segment"
-                nodesByPath.getOrPut(path) {
-                    CategoryTreeNode(path, segment, depth).also { node ->
-                        if (parentPath.isNotEmpty()) {
-                            nodesByPath.getValue(parentPath).children.add(node)
-                        }
-                    }
-                }
-            }
-        }
-        for (node in nodesByPath.values) {
-            node.children.sortBy { it.name.lowercase() }
-        }
-        return nodesByPath.values.filter { it.depth == 0 }.sortedBy { it.name.lowercase() }
-    }
-
-    private fun flattenCategoryTree(
-        roots: List<CategoryTreeNode>,
-        collapsedPaths: Set<String>,
-    ): List<CategoryTreeNode> {
-        val out = mutableListOf<CategoryTreeNode>()
-        fun visit(nodes: List<CategoryTreeNode>) {
-            for (node in nodes) {
-                out.add(node)
-                if (node.children.isNotEmpty() && node.path !in collapsedPaths) {
-                    visit(node.children)
-                }
-            }
-        }
-        visit(roots)
-        return out
-    }
-
-    private fun categoryTreeItem(
-        node: CategoryTreeNode,
-        selected: Boolean,
-        collapsed: Boolean,
-        onClick: () -> Unit,
-        onToggleCollapse: () -> Unit,
-    ): View {
-        val ctx = requireContext()
-        val density = resources.displayMetrics.density
-        val indicatorW = (3 * density).toInt()
-        val itemPadV = (10 * density).toInt()
-        val gapH = (12 * density).toInt()
-        val indentPerDepth = (16 * density).toInt()
-        val chevronW = (20 * density).toInt()
-        val seedColor = ctx.getColor(R.color.md_theme_dark_seed)
-        val hasChildren = node.children.isNotEmpty()
-
-        return LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
-            isClickable = true
-            isFocusable = true
-            setOnClickListener { onClick() }
-
-            addView(
-                View(ctx).apply {
-                    layoutParams =
-                        LinearLayout.LayoutParams(indicatorW, MATCH_PARENT).also {
-                            it.marginEnd = gapH
-                        }
-                    setBackgroundColor(if (selected) seedColor else Color.TRANSPARENT)
-                }
-            )
-            addView(
-                View(ctx).apply {
-                    layoutParams =
-                        LinearLayout.LayoutParams(node.depth * indentPerDepth, MATCH_PARENT)
-                }
-            )
-            addView(
-                TextView(ctx).apply {
-                    text = if (hasChildren) (if (collapsed) "▸" else "▾") else ""
-                    layoutParams = LinearLayout.LayoutParams(chevronW, MATCH_PARENT)
-                    gravity = Gravity.CENTER
-                    textSize = 12f
-                    setTextColor(0x80FFFFFF.toInt())
-                    if (hasChildren) {
-                        isClickable = true
-                        isFocusable = true
-                        setOnClickListener { onToggleCollapse() }
-                    }
-                }
-            )
-            addView(
-                TextView(ctx).apply {
-                    text = node.name
-                    layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
-                    setPadding(0, itemPadV, 16.dpPx, itemPadV)
-                    textSize = 14f
-                    setTextColor(if (selected) Color.WHITE else 0x80FFFFFF.toInt())
-                    if (selected) setTypeface(typeface, Typeface.BOLD)
-                }
-            )
-        }
-    }
-
-    private fun updateDrawerContent(state: ServerScreenState) {
-        with(binding) {
-            val trackers = listOf<String?>(null) + state.availableTrackers
-            val tags = state.availableTags
-
-            // Status — always rebuilt when selection changes (small fixed list)
-            statusItemsContainer.removeAllViews()
-            StateFilter.entries.forEach { filter ->
-                statusItemsContainer.addView(
-                    sidebarItem(filter.label, filter == state.selectedFilter) {
-                        val next =
-                            toggleSelection(filter, StateFilter.ALL) {
-                                viewModel.uiState.value.selectedFilter
-                            }
-                        viewModel.setFilter(next)
-                    }
-                )
-            }
-
-            // Category — grouped into a tree by "/"; always rebuilt (small list, and collapse
-            // state or selection can change the set of visible rows on any redraw).
-            val hasCategories = state.availableCategories.isNotEmpty()
-            drawerCategoryHeader.visibility = if (hasCategories) View.VISIBLE else View.GONE
-            drawerCategoryDivider.visibility = if (hasCategories) View.VISIBLE else View.GONE
-            categoryItemsContainer.removeAllViews()
-            categoryItemsContainer.addView(
-                sidebarItem("All", state.selectedCategory == null) { viewModel.setCategory(null) }
-            )
-            val categoryTree = buildCategoryTree(state.availableCategories)
-            flattenCategoryTree(categoryTree, collapsedCategoryPaths).forEach { node ->
-                categoryItemsContainer.addView(
-                    categoryTreeItem(
-                        node = node,
-                        selected = node.path == state.selectedCategory,
-                        collapsed = node.path in collapsedCategoryPaths,
-                        onClick = {
-                            val next =
-                                toggleSelection(node.path, null) {
-                                    viewModel.uiState.value.selectedCategory
-                                }
-                            viewModel.setCategory(next)
-                        },
-                        onToggleCollapse = {
-                            if (!collapsedCategoryPaths.add(node.path)) {
-                                collapsedCategoryPaths.remove(node.path)
-                            }
-                            updateDrawerContent(viewModel.uiState.value)
-                        },
-                    )
-                )
-            }
-
-            // Tracker
-            if (trackers != lastDrawerTrackers) {
-                lastDrawerTrackers = trackers
-                val hasTrackers = state.availableTrackers.isNotEmpty()
-                drawerTrackerHeader.visibility = if (hasTrackers) View.VISIBLE else View.GONE
-                drawerTagsDivider.visibility = if (hasTrackers) View.VISIBLE else View.GONE
-                trackerItemsContainer.removeAllViews()
-                trackers.forEach { tracker ->
-                    val label = tracker ?: "All"
-                    trackerItemsContainer.addView(
-                        sidebarItem(label, tracker == state.selectedTracker) {
-                            val next =
-                                toggleSelection(tracker, null) {
-                                    viewModel.uiState.value.selectedTracker
-                                }
-                            viewModel.setTracker(next)
-                        }
-                    )
-                }
-            } else if (state.selectedTracker != lastDrawerState?.selectedTracker) {
-                for (i in 0 until trackerItemsContainer.childCount) {
-                    rebuildSidebarItemSelection(
-                        trackerItemsContainer.getChildAt(i),
-                        trackers.getOrNull(i),
-                        state.selectedTracker,
-                    )
-                }
-            }
-
-            // Tags — always visible; "All" and "Untagged" are permanent entries
-            val tagsStateChanged =
-                tags != lastDrawerTags ||
-                    state.selectedTags != lastDrawerState?.selectedTags ||
-                    state.filterUntagged != lastDrawerState?.filterUntagged
-            if (tagsStateChanged) {
-                lastDrawerTags = tags
-                drawerTagsHeader.visibility = View.VISIBLE
-                tagsContainer.removeAllViews()
-                val noneSelected = !state.filterUntagged && state.selectedTags.isEmpty()
-                tagsContainer.addView(
-                    sidebarItem("All", noneSelected) { viewModel.setFilterUntagged(false) }
-                )
-                tagsContainer.addView(
-                    sidebarItem("Untagged", state.filterUntagged) {
-                        val next =
-                            toggleSelection(true, false) { viewModel.uiState.value.filterUntagged }
-                        viewModel.setFilterUntagged(next)
-                    }
-                )
-                tags.forEach { tag ->
-                    tagsContainer.addView(
-                        sidebarItem(tag, state.selectedTags.contains(tag)) {
-                            viewModel.toggleTag(tag)
-                        }
-                    )
-                }
-            }
-
-            lastDrawerState = state
-        }
-    }
-
-    private fun rebuildSidebarItemSelection(
-        itemView: View,
-        itemValue: Any?,
-        selectedValue: Any?,
-    ) {
-        val selected = itemValue == selectedValue
-        val seedColor = requireContext().getColor(R.color.md_theme_dark_seed)
-        (itemView as? LinearLayout)?.let { row ->
-            row.getChildAt(0)?.setBackgroundColor(if (selected) seedColor else Color.TRANSPARENT)
-            (row.getChildAt(1) as? TextView)?.apply {
-                setTextColor(if (selected) Color.WHITE else 0x80FFFFFF.toInt())
-                setTypeface(typeface, if (selected) Typeface.BOLD else Typeface.NORMAL)
-            }
-        }
-    }
-
-    private fun showBulkCategoryPicker() {
-        val state = viewModel.uiState.value
-        val options = listOf("") + state.availableCategories
-        val labels = options.map { it.ifBlank { "None" } }.toTypedArray()
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Set category")
-            .setSingleChoiceItems(labels, -1) { dialog, which ->
-                selectedItems?.toList()?.let { hashes ->
-                    viewModel.bulkSetCategory(hashes, options[which])
-                }
-                dialog.dismiss()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun showBulkTagsPicker() {
-        val hashes = selectedItems?.toList()?.takeIf { it.isNotEmpty() } ?: return
-        val state = viewModel.uiState.value
-        val tags = state.availableTags
-        if (tags.isEmpty()) {
-            showCreateTagForSelectionDialog(hashes)
-            return
-        }
-        val torrentTags =
-            hashes.mapNotNull { state.data?.torrents?.get(it) }.flatMap { it.tags }.toSet()
-        val initialChecked = BooleanArray(tags.size) { torrentTags.contains(tags[it]) }
-        val checked = initialChecked.copyOf()
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Set tags")
-            .setMultiChoiceItems(tags.toTypedArray(), checked) { _, which, isChecked ->
-                checked[which] = isChecked
-            }
-            .setPositiveButton("Apply") { _, _ ->
-                val toAdd = tags.filterIndexed { i, _ -> checked[i] && !initialChecked[i] }
-                val toRemove = tags.filterIndexed { i, _ -> !checked[i] && initialChecked[i] }
-                if (toAdd.isNotEmpty()) viewModel.bulkAddTags(hashes, toAdd)
-                if (toRemove.isNotEmpty()) viewModel.bulkRemoveTags(hashes, toRemove)
-            }
-            .setNeutralButton("New tag…") { _, _ -> showCreateTagForSelectionDialog(hashes) }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun showCreateTagForSelectionDialog(hashes: List<String>) {
-        val view = layoutInflater.inflate(R.layout.dialog_text_input, null, false)
-        val til = view.findViewById<TextInputLayout>(R.id.text_input_layout)
-        val tiet = view.findViewById<TextInputEditText>(R.id.text_input_edit)
-        til?.hint = "Tag name"
-
-        val dialog =
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("New tag")
-                .setView(view)
-                .setPositiveButton("Create", null)
-                .setNegativeButton("Cancel", null)
-                .create()
-
-        dialog.setOnShowListener {
-            dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val name = tiet?.text?.toString()?.trim()
-                when {
-                    name.isNullOrBlank() -> til?.error = "Name cannot be empty"
-                    viewModel.uiState.value.availableTags.contains(name) ->
-                        til?.error = "Tag already exists"
-                    else -> {
-                        viewModel.bulkAddTags(hashes, listOf(name))
-                        dialog.dismiss()
-                    }
-                }
-            }
-            tiet?.doAfterTextChanged { til?.error = null }
-        }
-        dialog.show()
-    }
-
-    private fun showManageTagsDialog() {
-        val tags = viewModel.uiState.value.availableTags
-        val marked = BooleanArray(tags.size) { false }
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Manage tags")
-            .setMultiChoiceItems(tags.toTypedArray(), marked) { _, which, isChecked ->
-                marked[which] = isChecked
-            }
-            .setPositiveButton("Delete") { _, _ ->
-                val toDelete = tags.filterIndexed { i, _ -> marked[i] }
-                if (toDelete.isNotEmpty()) viewModel.deleteTags(toDelete)
-                else Toast.makeText(requireContext(), "Nothing selected", Toast.LENGTH_SHORT).show()
-            }
-            .setNeutralButton("New tag…") { _, _ -> showCreateNewTagDialog() }
-            .setNegativeButton("Close", null)
-            .show()
-    }
-
-    private fun showCreateNewTagDialog() {
-        val view = layoutInflater.inflate(R.layout.dialog_text_input, null, false)
-        val til = view.findViewById<TextInputLayout>(R.id.text_input_layout)
-        val tiet = view.findViewById<TextInputEditText>(R.id.text_input_edit)
-        til?.hint = "Tag name"
-
-        val dialog =
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("New tag")
-                .setView(view)
-                .setPositiveButton("Create", null)
-                .setNegativeButton("Cancel", null)
-                .create()
-
-        dialog.setOnShowListener {
-            dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val name = tiet?.text?.toString()?.trim()
-                when {
-                    name.isNullOrBlank() -> til?.error = "Name cannot be empty"
-                    viewModel.uiState.value.availableTags.contains(name) ->
-                        til?.error = "Tag already exists"
-                    else -> {
-                        viewModel.createTag(name)
-                        dialog.dismiss()
-                    }
-                }
-            }
-            tiet?.doAfterTextChanged { til?.error = null }
-        }
-        dialog.show()
-    }
-
-    private fun showManageCategoriesDialog() {
-        val categories = viewModel.uiState.value.availableCategories
-        val marked = BooleanArray(categories.size) { false }
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Manage categories")
-            .setMultiChoiceItems(categories.toTypedArray(), marked) { _, which, isChecked ->
-                marked[which] = isChecked
-            }
-            .setPositiveButton("Delete") { _, _ ->
-                val toDelete = categories.filterIndexed { i, _ -> marked[i] }
-                if (toDelete.isNotEmpty()) viewModel.deleteCategories(toDelete)
-                else Toast.makeText(requireContext(), "Nothing selected", Toast.LENGTH_SHORT).show()
-            }
-            .setNeutralButton("New category…") { _, _ -> showCreateNewCategoryDialog() }
-            .setNegativeButton("Close", null)
-            .show()
-    }
-
-    private fun showCreateNewCategoryDialog() {
-        val view = layoutInflater.inflate(R.layout.dialog_text_input, null, false)
-        val til = view.findViewById<TextInputLayout>(R.id.text_input_layout)
-        val tiet = view.findViewById<TextInputEditText>(R.id.text_input_edit)
-        til?.hint = "Category name"
-
-        val dialog =
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("New category")
-                .setView(view)
-                .setPositiveButton("Create", null)
-                .setNegativeButton("Cancel", null)
-                .create()
-
-        dialog.setOnShowListener {
-            dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val name = tiet?.text?.toString()?.trim()
-                when {
-                    name.isNullOrBlank() -> til?.error = "Name cannot be empty"
-                    viewModel.uiState.value.availableCategories.contains(name) ->
-                        til?.error = "Category already exists"
-                    else -> {
-                        viewModel.createCategory(name)
-                        dialog.dismiss()
-                    }
-                }
-            }
-            tiet?.doAfterTextChanged { til?.error = null }
-        }
-        dialog.show()
-    }
-
-    private fun showSortPicker() {
-        val state = viewModel.uiState.value
-        val options = SortOption.entries
-        val labels =
-            options.map { option ->
-                when {
-                    option != state.sortOption -> option.label
-                    state.sortDirection == SortDirection.ASC -> "↑ ${option.label}"
-                    else -> "↓ ${option.label}"
-                }
-            }
-        val checkedIndex = options.indexOf(state.sortOption)
-
-        val dirLabel =
-            if (state.sortDirection == SortDirection.ASC) "↑ Ascending" else "↓ Descending"
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Sort by")
-            .setSingleChoiceItems(labels.toTypedArray(), checkedIndex) { dialog, which ->
-                viewModel.setSort(options[which])
-                dialog.dismiss()
-            }
-            .setNeutralButton(dirLabel) { _, _ -> viewModel.toggleSortDirection() }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
     private fun render(state: ServerScreenState) {
         with(binding) {
             val sortIcon = bottomBar.menu.findItem(R.id.sort_list)
@@ -1049,7 +545,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
             lastTags = state.selectedTags
             lastFilterUntagged = state.filterUntagged
 
-            updateDrawerContent(state)
+            drawerController?.update(state)
             updateFilterChips(state)
 
             if (state.hasError) {
