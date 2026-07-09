@@ -52,6 +52,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 @AndroidEntryPoint
 class ServerFragment : Fragment(R.layout.server_fragment) {
@@ -529,17 +530,45 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
     private fun trackerBaseDomain(url: String): String {
         return try {
             val host = Uri.parse(url).host ?: return url
-            val parts = host.split(".")
-            if (parts.size >= 2) parts.takeLast(2).joinToString(".") else host
+            "https://$host/".toHttpUrlOrNull()?.topPrivateDomain() ?: host
         } catch (_: Exception) {
             url
         }
     }
 
+    // Clicking an already-selected exclusive filter reverts to `default`. Always reads the live
+    // selection from the ViewModel rather than a closure-captured ServerState: some drawer
+    // sections (category, tracker) only recolor existing rows on selection change instead of
+    // rebuilding them, which would otherwise leave click listeners capturing a stale selection.
+    private fun <T> toggleSelection(clicked: T, default: T, current: () -> T): T =
+        if (clicked == current()) default else clicked
+
+    // Same base domain can appear more than once (e.g. http and https announce URLs for the
+    // same tracker) — those stay as distinct entries but need distinguishable labels.
+    private fun sortedTrackersWithLabels(trackers: List<String>): List<Pair<String, String>> {
+        val baseDomains = trackers.associateWith { trackerBaseDomain(it) }
+        val domainCounts = baseDomains.values.groupingBy { it }.eachCount()
+        return trackers
+            .map { tracker ->
+                val baseDomain = baseDomains.getValue(tracker)
+                val scheme = Uri.parse(tracker).scheme
+                val label =
+                    if (domainCounts.getValue(baseDomain) > 1 && scheme != null) {
+                        "$baseDomain ($scheme)"
+                    } else {
+                        baseDomain
+                    }
+                tracker to label
+            }
+            .sortedWith(compareBy({ it.second }, { it.first }))
+    }
+
     private fun updateDrawerContent(state: ServerState) {
         with(binding) {
             val categories = listOf(null) + state.availableCategories
-            val trackers = listOf(null) + state.availableTrackers
+            val trackerEntries = sortedTrackersWithLabels(state.availableTrackers)
+            val trackers = listOf<String?>(null) + trackerEntries.map { it.first }
+            val trackerLabels = trackerEntries.toMap()
             val tags = state.availableTags
 
             // Status — always rebuilt when selection changes (small fixed list)
@@ -547,7 +576,11 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
             StateFilter.entries.forEach { filter ->
                 statusItemsContainer.addView(
                     sidebarItem(filter.label, filter == state.selectedFilter) {
-                        viewModel.setFilter(filter)
+                        val next =
+                            toggleSelection(filter, StateFilter.ALL) {
+                                viewModel.uiState.value.selectedFilter
+                            }
+                        viewModel.setFilter(next)
                     }
                 )
             }
@@ -562,7 +595,11 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                 categories.forEach { category ->
                     categoryItemsContainer.addView(
                         sidebarItem(category ?: "All", category == state.selectedCategory) {
-                            viewModel.setCategory(category)
+                            val next =
+                                toggleSelection(category, null) {
+                                    viewModel.uiState.value.selectedCategory
+                                }
+                            viewModel.setCategory(next)
                         }
                     )
                 }
@@ -584,10 +621,14 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                 drawerTagsDivider.visibility = if (hasTrackers) View.VISIBLE else View.GONE
                 trackerItemsContainer.removeAllViews()
                 trackers.forEach { tracker ->
-                    val label = if (tracker != null) trackerBaseDomain(tracker) else "All"
+                    val label = if (tracker != null) trackerLabels.getValue(tracker) else "All"
                     trackerItemsContainer.addView(
                         sidebarItem(label, tracker == state.selectedTracker) {
-                            viewModel.setTracker(tracker)
+                            val next =
+                                toggleSelection(tracker, null) {
+                                    viewModel.uiState.value.selectedTracker
+                                }
+                            viewModel.setTracker(next)
                         }
                     )
                 }
@@ -616,7 +657,9 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                 )
                 tagsContainer.addView(
                     sidebarItem("Untagged", state.filterUntagged) {
-                        viewModel.setFilterUntagged(true)
+                        val next =
+                            toggleSelection(true, false) { viewModel.uiState.value.filterUntagged }
+                        viewModel.setFilterUntagged(next)
                     }
                 )
                 tags.forEach { tag ->
@@ -936,7 +979,10 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                 addChip(state.selectedCategory) { viewModel.setCategory(null) }
             }
             if (state.selectedTracker != null) {
-                addChip(state.selectedTracker) { viewModel.setTracker(null) }
+                val label =
+                    sortedTrackersWithLabels(state.availableTrackers).toMap()[state.selectedTracker]
+                        ?: state.selectedTracker
+                addChip(label) { viewModel.setTracker(null) }
             }
             if (state.filterUntagged) {
                 addChip("Untagged") { viewModel.setFilterUntagged(false) }
