@@ -27,7 +27,6 @@ import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.setFragmentResultListener
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.selection.Selection
@@ -44,13 +43,12 @@ import dev.yashgarg.qbit.ui.dialogs.AddTorrentDialog
 import dev.yashgarg.qbit.ui.dialogs.RemoveTorrentDialog
 import dev.yashgarg.qbit.ui.server.adapter.TorrentListAdapter
 import dev.yashgarg.qbit.utils.TorrentHashUtil
+import dev.yashgarg.qbit.utils.collectWithLifecycle
 import dev.yashgarg.qbit.utils.toHumanReadable
 import dev.yashgarg.qbit.utils.viewBinding
 import dev.yashgarg.qbit.validation.LinkValidator
 import java.util.ArrayList
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -482,51 +480,41 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
     }
 
     private fun observeFlows() {
-        viewModel.uiState
-            .flowWithLifecycle(viewLifecycleOwner.lifecycle)
-            .onEach(::render)
-            .launchIn(viewLifecycleOwner.lifecycleScope)
+        viewModel.uiState.collectWithLifecycle(this, ::render)
 
-        viewModel.sortedTorrents
-            .flowWithLifecycle(viewLifecycleOwner.lifecycle)
-            .onEach { torrents ->
-                if (torrents == null) return@onEach
-                with(binding) {
-                    if (torrents.isEmpty()) {
-                        emptyTv.visibility = View.VISIBLE
-                        torrentRv.visibility = View.GONE
-                    } else {
-                        emptyTv.visibility = View.GONE
-                        torrentRv.visibility = View.VISIBLE
-                        val scroll = pendingScrollToTop
-                        val reset = pendingListReset
-                        pendingScrollToTop = false
-                        pendingListReset = false
-                        if (reset) {
-                            torrentListAdapter?.submitList(emptyList()) {
-                                torrentListAdapter?.submitList(torrents) {
-                                    if (scroll) torrentRv.scrollToPosition(0)
-                                }
-                            }
-                        } else {
+        viewModel.sortedTorrents.collectWithLifecycle(this) { torrents ->
+            if (torrents == null) return@collectWithLifecycle
+            with(binding) {
+                if (torrents.isEmpty()) {
+                    emptyTv.visibility = View.VISIBLE
+                    torrentRv.visibility = View.GONE
+                } else {
+                    emptyTv.visibility = View.GONE
+                    torrentRv.visibility = View.VISIBLE
+                    val scroll = pendingScrollToTop
+                    val reset = pendingListReset
+                    pendingScrollToTop = false
+                    pendingListReset = false
+                    if (reset) {
+                        torrentListAdapter?.submitList(emptyList()) {
                             torrentListAdapter?.submitList(torrents) {
                                 if (scroll) torrentRv.scrollToPosition(0)
                             }
                         }
+                    } else {
+                        torrentListAdapter?.submitList(torrents) {
+                            if (scroll) torrentRv.scrollToPosition(0)
+                        }
                     }
                 }
             }
-            .launchIn(viewLifecycleOwner.lifecycleScope)
+        }
 
-        viewModel.status
-            .flowWithLifecycle(viewLifecycleOwner.lifecycle)
-            .onEach { Toast.makeText(requireContext(), it, Toast.LENGTH_SHORT).show() }
-            .launchIn(viewLifecycleOwner.lifecycleScope)
+        viewModel.status.collectWithLifecycle(this) {
+            Toast.makeText(requireContext(), it, Toast.LENGTH_SHORT).show()
+        }
 
-        viewModel.intent
-            .flowWithLifecycle(viewLifecycleOwner.lifecycle)
-            .onEach { handleAddIntent(null) }
-            .launchIn(viewLifecycleOwner.lifecycleScope)
+        viewModel.intent.collectWithLifecycle(this) { handleAddIntent(null) }
     }
 
     private fun sidebarItem(
