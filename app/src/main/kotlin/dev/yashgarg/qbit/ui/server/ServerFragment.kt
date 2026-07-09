@@ -23,6 +23,7 @@ import androidx.core.content.getSystemService
 import androidx.core.os.bundleOf
 import androidx.core.util.Consumer
 import androidx.core.widget.doAfterTextChanged
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.setFragmentResultListener
 import androidx.fragment.app.viewModels
@@ -52,7 +53,6 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 @AndroidEntryPoint
 class ServerFragment : Fragment(R.layout.server_fragment) {
@@ -61,6 +61,8 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
     private val linkValidator by lazy { LinkValidator() }
     private var selectedItems: Selection<String>? = null
     private var clearSelectionCallback: OnBackPressedCallback? = null
+    private var searchBackCallback: OnBackPressedCallback? = null
+    private var drawerBackCallback: OnBackPressedCallback? = null
 
     private var lastSortOption = SortOption.NAME
     private var lastSortDir = SortDirection.ASC
@@ -108,6 +110,41 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                 viewLifecycleOwner,
                 requireNotNull(clearSelectionCallback),
             )
+        searchBackCallback =
+            object : OnBackPressedCallback(false) {
+                override fun handleOnBackPressed() {
+                    closeSearch()
+                }
+            }
+        requireActivity()
+            .onBackPressedDispatcher
+            .addCallback(
+                viewLifecycleOwner,
+                requireNotNull(searchBackCallback),
+            )
+        drawerBackCallback =
+            object : OnBackPressedCallback(false) {
+                override fun handleOnBackPressed() {
+                    binding.drawerLayout.closeDrawer(Gravity.START)
+                }
+            }
+        requireActivity()
+            .onBackPressedDispatcher
+            .addCallback(
+                viewLifecycleOwner,
+                requireNotNull(drawerBackCallback),
+            )
+        binding.drawerLayout.addDrawerListener(
+            object : DrawerLayout.SimpleDrawerListener() {
+                override fun onDrawerOpened(drawerView: View) {
+                    drawerBackCallback?.isEnabled = true
+                }
+
+                override fun onDrawerClosed(drawerView: View) {
+                    drawerBackCallback?.isEnabled = false
+                }
+            }
+        )
         setupHandlers()
         observeFlows()
         setupDialogResultListener()
@@ -278,6 +315,27 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
     private var lastFilterUntagged = false
     private val collapsedCategoryPaths = mutableSetOf<String>()
 
+    private fun openSearch() {
+        with(binding) {
+            searchLayout.visibility = View.VISIBLE
+            searchEt.requestFocus()
+            val imm = requireContext().getSystemService<InputMethodManager>()
+            imm?.showSoftInput(searchEt, InputMethodManager.SHOW_IMPLICIT)
+        }
+        searchBackCallback?.isEnabled = true
+    }
+
+    private fun closeSearch() {
+        with(binding) {
+            searchEt.setText("")
+            viewModel.setSearchQuery("")
+            searchLayout.visibility = View.GONE
+            val imm = requireContext().getSystemService<InputMethodManager>()
+            imm?.hideSoftInputFromWindow(searchEt.windowToken, 0)
+        }
+        searchBackCallback?.isEnabled = false
+    }
+
     private fun setupHandlers() {
         with(binding) {
             bottomBar.setNavigationOnClickListener { drawerLayout.openDrawer(Gravity.START) }
@@ -390,19 +448,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
             bottomBar.setOnMenuItemClickListener { menuItem ->
                 when (menuItem.itemId) {
                     R.id.search -> {
-                        val visible = searchLayout.visibility == View.VISIBLE
-                        if (visible) {
-                            searchEt.setText("")
-                            viewModel.setSearchQuery("")
-                            searchLayout.visibility = View.GONE
-                            val imm = requireContext().getSystemService<InputMethodManager>()
-                            imm?.hideSoftInputFromWindow(searchEt.windowToken, 0)
-                        } else {
-                            searchLayout.visibility = View.VISIBLE
-                            searchEt.requestFocus()
-                            val imm = requireContext().getSystemService<InputMethodManager>()
-                            imm?.showSoftInput(searchEt, InputMethodManager.SHOW_IMPLICIT)
-                        }
+                        if (searchLayout.visibility == View.VISIBLE) closeSearch() else openSearch()
                         true
                     }
                     R.id.sort_list -> {
@@ -527,15 +573,6 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
     private val Int.dpPx
         get() = (this * resources.displayMetrics.density).toInt()
 
-    private fun trackerBaseDomain(url: String): String {
-        return try {
-            val host = Uri.parse(url).host ?: return url
-            "https://$host/".toHttpUrlOrNull()?.topPrivateDomain() ?: host
-        } catch (_: Exception) {
-            url
-        }
-    }
-
     // Clicking an already-selected exclusive filter reverts to `default`. Always reads the live
     // selection from the ViewModel rather than a closure-captured ServerState: the tracker drawer
     // section only recolors existing rows on selection change instead of rebuilding them, which
@@ -657,31 +694,9 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
         }
     }
 
-    // Same base domain can appear more than once (e.g. http and https announce URLs for the
-    // same tracker) — those stay as distinct entries but need distinguishable labels.
-    private fun sortedTrackersWithLabels(trackers: List<String>): List<Pair<String, String>> {
-        val baseDomains = trackers.associateWith { trackerBaseDomain(it) }
-        val domainCounts = baseDomains.values.groupingBy { it }.eachCount()
-        return trackers
-            .map { tracker ->
-                val baseDomain = baseDomains.getValue(tracker)
-                val scheme = Uri.parse(tracker).scheme
-                val label =
-                    if (domainCounts.getValue(baseDomain) > 1 && scheme != null) {
-                        "$baseDomain ($scheme)"
-                    } else {
-                        baseDomain
-                    }
-                tracker to label
-            }
-            .sortedWith(compareBy({ it.second }, { it.first }))
-    }
-
     private fun updateDrawerContent(state: ServerState) {
         with(binding) {
-            val trackerEntries = sortedTrackersWithLabels(state.availableTrackers)
-            val trackers = listOf<String?>(null) + trackerEntries.map { it.first }
-            val trackerLabels = trackerEntries.toMap()
+            val trackers = listOf<String?>(null) + state.availableTrackers
             val tags = state.availableTags
 
             // Status — always rebuilt when selection changes (small fixed list)
@@ -739,7 +754,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                 drawerTagsDivider.visibility = if (hasTrackers) View.VISIBLE else View.GONE
                 trackerItemsContainer.removeAllViews()
                 trackers.forEach { tracker ->
-                    val label = if (tracker != null) trackerLabels.getValue(tracker) else "All"
+                    val label = tracker ?: "All"
                     trackerItemsContainer.addView(
                         sidebarItem(label, tracker == state.selectedTracker) {
                             val next =
@@ -1097,10 +1112,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                 addChip(state.selectedCategory) { viewModel.setCategory(null) }
             }
             if (state.selectedTracker != null) {
-                val label =
-                    sortedTrackersWithLabels(state.availableTrackers).toMap()[state.selectedTracker]
-                        ?: state.selectedTracker
-                addChip(label) { viewModel.setTracker(null) }
+                addChip(state.selectedTracker) { viewModel.setTracker(null) }
             }
             if (state.filterUntagged) {
                 addChip("Untagged") { viewModel.setFilterUntagged(false) }

@@ -1,5 +1,6 @@
 package dev.yashgarg.qbit.ui.server
 
+import android.net.Uri
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -65,10 +66,9 @@ constructor(
                                     torrent.category.startsWith("${state.selectedCategory}/")
                             val matchesTracker =
                                 state.selectedTracker == null ||
-                                    torrent.tracker.contains(
-                                        state.selectedTracker,
-                                        ignoreCase = true,
-                                    )
+                                    Uri.parse(torrent.tracker)
+                                        .host
+                                        .equals(state.selectedTracker, ignoreCase = true)
                             val matchesTags =
                                 when {
                                     state.filterUntagged -> torrent.tags.isEmpty()
@@ -398,6 +398,7 @@ constructor(
                     val trackers =
                         mainData.torrents.values
                             .mapNotNull { t -> t.tracker.takeIf { it.isNotBlank() } }
+                            .mapNotNull { url -> Uri.parse(url).host?.takeIf { it.isNotBlank() } }
                             .distinct()
                             .sorted()
                     val tags =

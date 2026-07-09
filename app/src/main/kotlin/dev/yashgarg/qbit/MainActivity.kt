@@ -4,6 +4,8 @@ import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
@@ -36,6 +38,8 @@ class MainActivity : AppCompatActivity() {
     @Inject lateinit var clientManager: ClientManager
     @Inject lateinit var serverPrefsStore: DataStore<ServerPreferences>
 
+    private var lastBackPressTime = 0L
+
     override fun onCreate(savedInstanceState: Bundle?) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
@@ -44,6 +48,28 @@ class MainActivity : AppCompatActivity() {
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Only reached once nothing else (in-app navigation, search bar, multi-select) has
+        // consumed the back press first — i.e. we're at the root screen with nowhere left to go.
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    val now = System.currentTimeMillis()
+                    if (now - lastBackPressTime < EXIT_CONFIRMATION_WINDOW_MS) {
+                        finish()
+                    } else {
+                        lastBackPressTime = now
+                        Toast.makeText(
+                                this@MainActivity,
+                                "Press back again to exit",
+                                Toast.LENGTH_SHORT,
+                            )
+                            .show()
+                    }
+                }
+            },
+        )
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             checkPermissions(applicationContext)
@@ -106,5 +132,6 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val TORRENT_INTENT_KEY = "torrent_intent"
+        private const val EXIT_CONFIRMATION_WINDOW_MS = 2000L
     }
 }
