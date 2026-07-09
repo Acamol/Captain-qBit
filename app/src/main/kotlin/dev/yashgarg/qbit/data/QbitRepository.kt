@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
-import qbittorrent.QBittorrentClient
+import qbittorrent.*
 import qbittorrent.models.LogEntry
 import qbittorrent.models.MainData
 import qbittorrent.models.Torrent
