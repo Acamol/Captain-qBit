@@ -1,14 +1,17 @@
 package dev.yashgarg.qbit.ui.torrent
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.runCatching
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.QbitRepository
+import dev.yashgarg.qbit.ui.common.StatusViewModel
 import dev.yashgarg.qbit.utils.TransformUtil
 import dev.yashgarg.qbit.utils.friendlyMessage
 import javax.inject.Inject
@@ -21,12 +24,13 @@ import qbittorrent.models.TorrentPeer
 @HiltViewModel
 class TorrentDetailsViewModel
 @Inject
-constructor(private val repository: QbitRepository, state: SavedStateHandle) : ViewModel() {
+constructor(
+    private val repository: QbitRepository,
+    state: SavedStateHandle,
+    @ApplicationContext context: Context,
+) : StatusViewModel(context) {
     private val _uiState = MutableStateFlow(TorrentDetailsState())
     val uiState = _uiState.asStateFlow()
-
-    private val _status = MutableSharedFlow<String>()
-    val status = _status.asSharedFlow()
 
     // Emitted only after a torrent is actually removed, so the UI can navigate away.
     private val _removed = MutableSharedFlow<Unit>()
@@ -46,65 +50,61 @@ constructor(private val repository: QbitRepository, state: SavedStateHandle) : V
 
     fun toggleTorrent(pause: Boolean, hash: String) {
         val hashes = listOf(hash)
-        viewModelScope.launch {
-            when (val result = repository.toggleTorrentsState(hashes, pause)) {
-                is Ok -> _status.emit(if (pause) "Torrent paused" else "Torrent resumed")
-                is Err ->
-                    _status.emit(
-                        result.error.friendlyMessage(
-                            "Failed to ${if (pause) "pause" else "resume"} torrent"
-                        )
-                    )
-            }
+        launchStatus(
+            successMessage =
+                if (pause) getString(CommonR.string.status_torrent_paused)
+                else getString(CommonR.string.status_torrent_resumed),
+            failureMessage =
+                if (pause) getString(CommonR.string.status_pause_torrent_failure)
+                else getString(CommonR.string.status_resume_torrent_failure),
+        ) {
+            repository.toggleTorrentsState(hashes, pause)
         }
     }
 
     fun removeTorrent(hash: String, deleteFiles: Boolean = false) {
-        viewModelScope.launch {
-            when (val result = repository.removeTorrents(listOf(hash), deleteFiles)) {
-                is Ok -> {
-                    _status.emit("Torrent removed")
-                    _removed.emit(Unit)
-                }
-                is Err -> _status.emit(result.error.friendlyMessage("Failed to remove torrent"))
-            }
+        launchStatus(
+            successMessage = getString(CommonR.string.status_torrent_removed),
+            failureMessage = getString(CommonR.string.status_remove_torrent_failure),
+            onSuccess = { _removed.emit(Unit) },
+        ) {
+            repository.removeTorrents(listOf(hash), deleteFiles)
         }
     }
 
     fun forceRecheck(hash: String) {
-        viewModelScope.launch {
-            when (val result = repository.recheckTorrents(listOf(hash))) {
-                is Ok -> _status.emit("Rechecking torrent")
-                is Err -> _status.emit(result.error.friendlyMessage("Failed to recheck torrent"))
-            }
+        launchStatus(
+            successMessage = getString(CommonR.string.status_rechecking_torrent),
+            failureMessage = getString(CommonR.string.status_recheck_torrent_failure),
+        ) {
+            repository.recheckTorrents(listOf(hash))
         }
     }
 
     fun forceReannounce(hash: String) {
-        viewModelScope.launch {
-            when (val result = repository.reannounceTorrents(listOf(hash))) {
-                is Ok -> _status.emit("Reannouncing torrent")
-                is Err -> _status.emit(result.error.friendlyMessage("Failed to reannounce torrent"))
-            }
+        launchStatus(
+            successMessage = getString(CommonR.string.status_reannouncing_torrent),
+            failureMessage = getString(CommonR.string.status_reannounce_torrent_failure),
+        ) {
+            repository.reannounceTorrents(listOf(hash))
         }
     }
 
     fun renameTorrent(torrentName: String, torrentHash: String) {
-        viewModelScope.launch {
-            when (val result = repository.renameTorrent(torrentHash, torrentName)) {
-                is Ok -> _status.emit("Torrent renamed")
-                is Err -> _status.emit(result.error.friendlyMessage("Failed to rename torrent"))
-            }
+        launchStatus(
+            successMessage = getString(CommonR.string.status_torrent_renamed),
+            failureMessage = getString(CommonR.string.status_rename_torrent_failure),
+        ) {
+            repository.renameTorrent(torrentHash, torrentName)
         }
     }
 
     fun setCategory(category: String) {
-        viewModelScope.launch {
-            val hash = requireNotNull(hash)
-            when (val result = repository.setTorrentCategory(listOf(hash), category)) {
-                is Ok -> _status.emit("Category set to \"$category\"")
-                is Err -> _status.emit(result.error.friendlyMessage("Failed to set category"))
-            }
+        launchStatus(
+            successMessage = getString(CommonR.string.status_category_set_to, category),
+            failureMessage = getString(CommonR.string.status_set_category_failure),
+        ) {
+            repository.setTorrentCategory(listOf(requireNotNull(hash)), category)
         }
     }
 
@@ -115,38 +115,43 @@ constructor(private val repository: QbitRepository, state: SavedStateHandle) : V
             when (val created = repository.createCategory(name, savePath)) {
                 is Ok ->
                     when (val set = repository.setTorrentCategory(listOf(hash), name)) {
-                        is Ok -> _status.emit("Category set to \"$name\"")
+                        is Ok -> emitStatus(getString(CommonR.string.status_category_set_to, name))
                         is Err ->
-                            _status.emit(
+                            emitStatus(
                                 set.error.friendlyMessage(
-                                    "Category created, but couldn't assign it"
+                                    getString(CommonR.string.status_category_created_not_assigned)
                                 )
                             )
                     }
-                is Err -> _status.emit(created.error.friendlyMessage("Failed to create category"))
+                is Err ->
+                    emitStatus(
+                        created.error.friendlyMessage(
+                            getString(CommonR.string.status_create_category_failure)
+                        )
+                    )
             }
         }
     }
 
     fun setSavePath(path: String) {
-        viewModelScope.launch {
-            val hash = requireNotNull(hash)
+        val hash = requireNotNull(hash)
+        launchStatus(
+            successMessage = getString(CommonR.string.status_save_path_updated),
+            failureMessage = getString(CommonR.string.status_set_save_path_failure),
+        ) {
             repository.setAutoTorrentManagement(hash, false)
-            when (val result = repository.setTorrentLocation(hash, path)) {
-                is Ok -> _status.emit("Save path updated")
-                is Err -> _status.emit(result.error.friendlyMessage("Failed to set save path"))
-            }
+            repository.setTorrentLocation(hash, path)
         }
     }
 
     fun setAutoManagement(enabled: Boolean) {
-        viewModelScope.launch {
-            val hash = requireNotNull(hash)
-            when (val result = repository.setAutoTorrentManagement(hash, enabled)) {
-                is Ok -> _status.emit("Auto management ${if (enabled) "enabled" else "disabled"}")
-                is Err ->
-                    _status.emit(result.error.friendlyMessage("Failed to update auto management"))
-            }
+        launchStatus(
+            successMessage =
+                if (enabled) getString(CommonR.string.status_auto_management_enabled)
+                else getString(CommonR.string.status_auto_management_disabled),
+            failureMessage = getString(CommonR.string.status_update_auto_management_failure),
+        ) {
+            repository.setAutoTorrentManagement(requireNotNull(hash), enabled)
         }
     }
 
@@ -155,18 +160,17 @@ constructor(private val repository: QbitRepository, state: SavedStateHandle) : V
             val hash = requireNotNull(hash)
             if (toAdd.isNotEmpty()) repository.addTorrentTags(listOf(hash), toAdd)
             if (toRemove.isNotEmpty()) repository.removeTorrentTags(listOf(hash), toRemove)
-            _status.emit("Tags updated")
+            emitStatus(getString(CommonR.string.status_tags_updated))
         }
     }
 
     fun banPeer(peer: TorrentPeer) {
         val peerAddr = "${peer.ip}:${peer.port}"
-
-        viewModelScope.launch {
-            when (val result = repository.banPeers(listOf(peerAddr))) {
-                is Ok -> _status.emit("Successfully banned $peerAddr")
-                is Err -> _status.emit(result.error.friendlyMessage("Failed to ban peer"))
-            }
+        launchStatus(
+            successMessage = getString(CommonR.string.status_peer_banned, peerAddr),
+            failureMessage = getString(CommonR.string.status_ban_peer_failure),
+        ) {
+            repository.banPeers(listOf(peerAddr))
         }
     }
 

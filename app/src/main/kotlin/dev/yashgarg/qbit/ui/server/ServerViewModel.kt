@@ -1,15 +1,18 @@
 package dev.yashgarg.qbit.ui.server
 
+import android.content.Context
 import android.net.Uri
 import androidx.datastore.core.DataStore
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.runCatching
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.QbitRepository
 import dev.yashgarg.qbit.data.models.ServerPreferences
+import dev.yashgarg.qbit.ui.common.StatusViewModel
 import dev.yashgarg.qbit.utils.ExceptionHandler
 import dev.yashgarg.qbit.utils.friendlyMessage
 import javax.inject.Inject
@@ -25,7 +28,8 @@ class ServerViewModel
 constructor(
     private val repository: QbitRepository,
     private val prefsStore: DataStore<ServerPreferences>,
-) : ViewModel() {
+    @ApplicationContext context: Context,
+) : StatusViewModel(context) {
     private val _uiState = MutableStateFlow(ServerScreenState())
     val uiState = _uiState.asStateFlow()
 
@@ -86,9 +90,6 @@ constructor(
             }
             .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-
-    private val _status = MutableSharedFlow<String>()
-    val status = _status.asSharedFlow()
 
     private val _intent = MutableSharedFlow<Unit>()
     val intent = _intent.asSharedFlow()
@@ -166,11 +167,11 @@ constructor(
         paused: Boolean? = null,
         autoTmm: Boolean? = null,
     ) {
-        viewModelScope.launch {
-            when (val result = repository.addTorrentUrl(url, category, savePath, paused, autoTmm)) {
-                is Ok -> _status.emit("Successfully added torrent")
-                is Err -> _status.emit(result.error.friendlyMessage("Failed to add torrent"))
-            }
+        launchStatus(
+            successMessage = getString(CommonR.string.status_add_torrent_url_success),
+            failureMessage = getString(CommonR.string.status_add_torrent_url_failure),
+        ) {
+            repository.addTorrentUrl(url, category, savePath, paused, autoTmm)
         }
     }
 
@@ -181,104 +182,100 @@ constructor(
         paused: Boolean? = null,
         autoTmm: Boolean? = null,
     ) {
-        viewModelScope.launch {
-            when (
-                val result = repository.addTorrentFile(bytes, category, savePath, paused, autoTmm)
-            ) {
-                is Ok -> _status.emit("Successfully added file")
-                is Err -> _status.emit(result.error.friendlyMessage("Failed to add file"))
-            }
+        launchStatus(
+            successMessage = getString(CommonR.string.status_add_torrent_file_success),
+            failureMessage = getString(CommonR.string.status_add_torrent_file_failure),
+        ) {
+            repository.addTorrentFile(bytes, category, savePath, paused, autoTmm)
         }
     }
 
     fun bulkSetCategory(hashes: List<String>, category: String) {
-        viewModelScope.launch {
-            when (val result = repository.setTorrentCategory(hashes, category)) {
-                is Ok -> _status.emit("Category set on ${hashes.size} torrent(s)")
-                is Err -> _status.emit(result.error.friendlyMessage("Failed to set category"))
-            }
+        launchStatus(
+            successMessage = getString(CommonR.string.status_bulk_category_set, hashes.size),
+            failureMessage = getString(CommonR.string.status_set_category_failure),
+        ) {
+            repository.setTorrentCategory(hashes, category)
         }
     }
 
     fun bulkAddTags(hashes: List<String>, tags: List<String>) {
-        viewModelScope.launch {
-            when (val result = repository.addTorrentTags(hashes, tags)) {
-                is Ok -> _status.emit("Tags updated on ${hashes.size} torrent(s)")
-                is Err -> _status.emit(result.error.friendlyMessage("Failed to update tags"))
-            }
+        launchStatus(
+            successMessage = getString(CommonR.string.status_bulk_tags_updated, hashes.size),
+            failureMessage = getString(CommonR.string.status_update_tags_failure),
+        ) {
+            repository.addTorrentTags(hashes, tags)
         }
     }
 
     fun bulkRemoveTags(hashes: List<String>, tags: List<String>) {
-        viewModelScope.launch {
-            when (val result = repository.removeTorrentTags(hashes, tags)) {
-                is Ok -> _status.emit("Tags updated on ${hashes.size} torrent(s)")
-                is Err -> _status.emit(result.error.friendlyMessage("Failed to update tags"))
-            }
+        launchStatus(
+            successMessage = getString(CommonR.string.status_bulk_tags_updated, hashes.size),
+            failureMessage = getString(CommonR.string.status_update_tags_failure),
+        ) {
+            repository.removeTorrentTags(hashes, tags)
         }
     }
 
     fun createTag(name: String) {
-        viewModelScope.launch {
-            when (val result = repository.createTags(listOf(name))) {
-                is Ok -> _status.emit("Tag \"$name\" created")
-                is Err -> _status.emit(result.error.friendlyMessage("Failed to create tag"))
-            }
+        launchStatus(
+            successMessage = getString(CommonR.string.status_tag_created, name),
+            failureMessage = getString(CommonR.string.status_create_tag_failure),
+        ) {
+            repository.createTags(listOf(name))
         }
     }
 
     fun deleteTags(tags: List<String>) {
-        viewModelScope.launch {
-            when (val result = repository.deleteTags(tags)) {
-                is Ok -> {
-                    _uiState.update { it.copy(selectedTags = it.selectedTags - tags.toSet()) }
-                    saveFilterPrefs()
-                    _status.emit("Deleted ${tags.size} tag(s)")
-                }
-                is Err -> _status.emit(result.error.friendlyMessage("Failed to delete tags"))
-            }
+        launchStatus(
+            successMessage = getString(CommonR.string.status_tags_deleted, tags.size),
+            failureMessage = getString(CommonR.string.status_delete_tags_failure),
+            onSuccess = {
+                _uiState.update { it.copy(selectedTags = it.selectedTags - tags.toSet()) }
+                saveFilterPrefs()
+            },
+        ) {
+            repository.deleteTags(tags)
         }
     }
 
     fun createCategory(name: String) {
-        viewModelScope.launch {
-            when (val result = repository.createCategory(name)) {
-                is Ok -> _status.emit("Category \"$name\" created")
-                is Err -> _status.emit(result.error.friendlyMessage("Failed to create category"))
-            }
+        launchStatus(
+            successMessage = getString(CommonR.string.status_category_created, name),
+            failureMessage = getString(CommonR.string.status_create_category_failure),
+        ) {
+            repository.createCategory(name)
         }
     }
 
     fun deleteCategories(names: List<String>) {
-        viewModelScope.launch {
-            when (val result = repository.deleteCategories(names)) {
-                is Ok -> _status.emit("Deleted ${names.size} category(ies)")
-                is Err -> _status.emit(result.error.friendlyMessage("Failed to delete categories"))
-            }
+        launchStatus(
+            successMessage = getString(CommonR.string.status_categories_deleted, names.size),
+            failureMessage = getString(CommonR.string.status_delete_categories_failure),
+        ) {
+            repository.deleteCategories(names)
         }
     }
 
     fun removeTorrents(hashes: List<String>, deleteFiles: Boolean = false) {
-        viewModelScope.launch {
-            when (val result = repository.removeTorrents(hashes, deleteFiles)) {
-                is Ok -> _status.emit("Successfully deleted ${hashes.size} file(s)")
-                is Err -> _status.emit(result.error.friendlyMessage("Failed to remove"))
-            }
+        launchStatus(
+            successMessage = getString(CommonR.string.status_torrents_removed, hashes.size),
+            failureMessage = getString(CommonR.string.status_remove_torrents_failure),
+        ) {
+            repository.removeTorrents(hashes, deleteFiles)
         }
     }
 
     fun toggleTorrentsState(pause: Boolean, hashes: List<String>) {
-        viewModelScope.launch {
-            when (val result = repository.toggleTorrentsState(hashes, pause)) {
-                is Ok ->
-                    _status.emit("${if (pause) "Paused" else "Resumed"} ${hashes.size} torrent(s)")
-                is Err ->
-                    _status.emit(
-                        result.error.friendlyMessage(
-                            "Failed to ${if (pause) "pause" else "resume"} ${hashes.size} torrent(s)"
-                        )
-                    )
-            }
+        launchStatus(
+            successMessage =
+                if (pause) getString(CommonR.string.status_torrents_paused, hashes.size)
+                else getString(CommonR.string.status_torrents_resumed, hashes.size),
+            failureMessage =
+                if (pause) getString(CommonR.string.status_pause_torrents_failure, hashes.size)
+                else getString(CommonR.string.status_resume_torrents_failure, hashes.size),
+        ) {
+            repository.toggleTorrentsState(hashes, pause)
         }
     }
 
@@ -360,7 +357,11 @@ constructor(
             when (val result = repository.toggleSpeedLimitsMode()) {
                 is Ok -> getSpeedLimitMode(true)
                 is Err ->
-                    _status.emit(result.error.friendlyMessage("Failed to toggle speed limits"))
+                    emitStatus(
+                        result.error.friendlyMessage(
+                            getString(CommonR.string.status_toggle_speed_limits_failure)
+                        )
+                    )
             }
         }
     }
@@ -371,13 +372,20 @@ constructor(
                 is Ok -> {
                     _uiState.update { it.copy(speedLimitMode = result.value) }
                     if (showToast) {
-                        _status.emit(
-                            "Alternative speed limits are ${if (result.value == 0) "disabled" else "enabled"}"
+                        emitStatus(
+                            getString(
+                                if (result.value == 0) CommonR.string.status_speed_limits_disabled
+                                else CommonR.string.status_speed_limits_enabled
+                            )
                         )
                     }
                 }
                 is Err ->
-                    _status.emit(result.error.friendlyMessage("Failed to get speed limit mode"))
+                    emitStatus(
+                        result.error.friendlyMessage(
+                            getString(CommonR.string.status_get_speed_limit_mode_failure)
+                        )
+                    )
             }
         }
     }
@@ -423,7 +431,10 @@ constructor(
 
         when (result) {
             is Ok -> Unit
-            is Err -> _status.emit(result.error.message ?: "Failed to sync data")
+            is Err ->
+                emitStatus(
+                    result.error.message ?: getString(CommonR.string.status_sync_data_failure)
+                )
         }
     }
 }
