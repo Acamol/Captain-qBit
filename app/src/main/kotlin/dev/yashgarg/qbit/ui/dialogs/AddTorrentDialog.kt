@@ -19,6 +19,7 @@ import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import dev.yashgarg.qbit.R
+import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.utils.ClipboardUtil
 import dev.yashgarg.qbit.validation.LinkValidator
 
@@ -80,7 +81,12 @@ class AddTorrentDialog : DialogFragment() {
                 )
                 dismiss()
             } else {
-                Toast.makeText(requireContext(), "No file selected", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                        requireContext(),
+                        getString(CommonR.string.no_file_selected),
+                        Toast.LENGTH_SHORT
+                    )
+                    .show()
             }
         }
 
@@ -89,11 +95,11 @@ class AddTorrentDialog : DialogFragment() {
 
         val dialog =
             MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Add Torrent")
+                .setTitle(getString(CommonR.string.add_torrent_title))
                 .setView(R.layout.add_torrent_dialog)
-                .setNeutralButton("Upload File", null)
-                .setNegativeButton("Cancel") { d, _ -> d.dismiss() }
-                .setPositiveButton("Add", null)
+                .setNeutralButton(getString(CommonR.string.upload_file), null)
+                .setNegativeButton(getString(CommonR.string.cancel)) { d, _ -> d.dismiss() }
+                .setPositiveButton(getString(CommonR.string.add), null)
                 .create()
 
         dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
@@ -136,9 +142,11 @@ class AddTorrentDialog : DialogFragment() {
             when {
                 prefillUrl != null -> magnetTiet?.setText(prefillUrl)
                 prefillFileUri != null -> {
-                    magnetTil?.hint = "Selected file"
+                    magnetTil?.hint = getString(CommonR.string.selected_file)
                     magnetTil?.isEndIconVisible = false
-                    val filename = Uri.parse(prefillFileUri).lastPathSegment ?: "torrent file"
+                    val filename =
+                        Uri.parse(prefillFileUri).lastPathSegment
+                            ?: getString(CommonR.string.torrent_file_fallback_name)
                     magnetTiet?.setText(filename)
                     magnetTiet?.isFocusable = false
                     magnetTiet?.isClickable = false
@@ -205,7 +213,7 @@ class AddTorrentDialog : DialogFragment() {
                         )
                         dialog.dismiss()
                     } else {
-                        magnetTil?.error = "Please enter a valid link!"
+                        magnetTil?.error = getString(CommonR.string.invalid_magnet_link)
                     }
 
                     magnetTiet?.doAfterTextChanged { magnetTil?.error = null }

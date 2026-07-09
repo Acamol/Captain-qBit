@@ -85,4 +85,18 @@
 
     <!-- Dialogs -->
     <string name="peer_details">IP: %1$s\nPort: %2$d\nCountry: %3$s</string>
+    <string name="confirm_delete_torrents">Are you sure you want to delete the torrent(s)?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="rename_torrent_title">Rename torrent</string>
+    <string name="cancel">Cancel</string>
+    <string name="rename">Rename</string>
+    <string name="invalid_torrent_name">Please enter a valid name</string>
+    <string name="add_torrent_title">Add Torrent</string>
+    <string name="upload_file">Upload File</string>
+    <string name="add">Add</string>
+    <string name="no_file_selected">No file selected</string>
+    <string name="selected_file">Selected file</string>
+    <string name="torrent_file_fallback_name">torrent file</string>
+    <string name="invalid_magnet_link">Please enter a valid link!</string>
 </resources>
