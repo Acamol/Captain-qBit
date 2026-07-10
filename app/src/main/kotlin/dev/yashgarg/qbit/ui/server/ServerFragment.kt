@@ -510,11 +510,13 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                         torrentListAdapter?.submitList(emptyList()) {
                             torrentListAdapter?.submitList(torrents) {
                                 if (scroll) torrentRv.scrollToPosition(0)
+                                ensureBottomBarVisibleIfNotScrollable()
                             }
                         }
                     } else {
                         torrentListAdapter?.submitList(torrents) {
                             if (scroll) torrentRv.scrollToPosition(0)
+                            ensureBottomBarVisibleIfNotScrollable()
                         }
                     }
                 }
@@ -526,6 +528,18 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
         }
 
         viewModel.intent.collectWithLifecycle(this) { handleAddIntent(null) }
+    }
+
+    // With hideOnScroll, a hidden bottom bar can only be revealed by scrolling up. If the list
+    // isn't tall enough to scroll, the bar (and its action buttons) would be stuck hidden - so
+    // force it back into view whenever the list can't scroll in either direction.
+    private fun ensureBottomBarVisibleIfNotScrollable() {
+        val rv = binding.torrentRv
+        rv.post {
+            if (!rv.canScrollVertically(-1) && !rv.canScrollVertically(1)) {
+                binding.bottomBar.performShow()
+            }
+        }
     }
 
     private fun render(state: ServerScreenState) {
