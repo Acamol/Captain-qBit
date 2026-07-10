@@ -572,7 +572,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                 if (serverState != null) {
                     speedTv.visibility = View.VISIBLE
                     speedTv.text =
-                        "↓ ${serverState.dlInfoSpeed.toHumanReadable()}/s  ↑ ${serverState.upInfoSpeed.toHumanReadable()}/s"
+                        "↓ ${serverState.dlInfoSpeed.toHumanReadable()}/s  ↑ ${serverState.upInfoSpeed.toHumanReadable()}/s   ${serverState.freeSpace.toHumanReadable()} free"
                 } else {
                     speedTv.visibility = View.GONE
                 }
