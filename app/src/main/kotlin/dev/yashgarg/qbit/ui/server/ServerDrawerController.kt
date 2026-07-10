@@ -26,15 +26,11 @@ class ServerDrawerController(
     private val onCategoryLongPress: (String) -> Unit,
     private val onTagLongPress: (String) -> Unit,
 ) {
-    private var lastDrawerTrackers: List<String?> = emptyList()
-    private var lastDrawerTags: List<String> = emptyList()
-    private var lastDrawerState: ServerScreenState? = null
     private val collapsedCategoryPaths = mutableSetOf<String>()
 
-    // Clicking an already-selected exclusive filter reverts to `default`. Always reads the live
-    // selection from the ViewModel rather than a closure-captured ServerScreenState: the tracker
-    // drawer section only recolors existing rows on selection change instead of rebuilding them,
-    // which would otherwise leave click listeners capturing a stale selection.
+    // Clicking an already-selected exclusive filter reverts to `default`. Reads the live selection
+    // from the ViewModel at click time rather than a closure-captured ServerScreenState: every
+    // section is rebuilt on each update(), so a captured selection would be stale by the next tick.
     private fun <T> toggleSelection(clicked: T, default: T, current: () -> T): T =
         if (clicked == current()) default else clicked
 
@@ -85,9 +81,22 @@ class ServerDrawerController(
     private val Int.dpPx
         get() = (this * fragment.resources.displayMetrics.density).toInt()
 
+    // A muted trailing count (e.g. how many torrents match this filter row).
+    private fun countLabel(count: Int, selected: Boolean, itemPadV: Int): TextView {
+        val ctx = fragment.requireContext()
+        return TextView(ctx).apply {
+            text = count.toString()
+            layoutParams = LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT)
+            setPadding(0, itemPadV, 16.dpPx, itemPadV)
+            textSize = 13f
+            setTextColor(if (selected) Color.WHITE else 0x66FFFFFF.toInt())
+        }
+    }
+
     private fun sidebarItem(
         text: String,
         selected: Boolean,
+        count: Int? = null,
         onLongClick: (() -> Unit)? = null,
         onClick: () -> Unit,
     ): View {
@@ -123,13 +132,14 @@ class ServerDrawerController(
             addView(
                 TextView(ctx).apply {
                     this.text = text
-                    layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
-                    setPadding(0, itemPadV, 16.dpPx, itemPadV)
+                    layoutParams = LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f)
+                    setPadding(0, itemPadV, 8.dpPx, itemPadV)
                     textSize = 14f
                     setTextColor(if (selected) Color.WHITE else 0x80FFFFFF.toInt())
                     if (selected) setTypeface(typeface, Typeface.BOLD)
                 }
             )
+            if (count != null) addView(countLabel(count, selected, itemPadV))
         }
     }
 
@@ -137,6 +147,7 @@ class ServerDrawerController(
         node: CategoryTreeNode,
         selected: Boolean,
         collapsed: Boolean,
+        count: Int,
         onClick: () -> Unit,
         onToggleCollapse: () -> Unit,
         onLongClick: (() -> Unit)? = null,
@@ -196,25 +207,14 @@ class ServerDrawerController(
             addView(
                 TextView(ctx).apply {
                     text = node.name
-                    layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
-                    setPadding(0, itemPadV, 16.dpPx, itemPadV)
+                    layoutParams = LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f)
+                    setPadding(0, itemPadV, 8.dpPx, itemPadV)
                     textSize = 14f
                     setTextColor(if (selected) Color.WHITE else 0x80FFFFFF.toInt())
                     if (selected) setTypeface(typeface, Typeface.BOLD)
                 }
             )
-        }
-    }
-
-    private fun rebuildSidebarItemSelection(itemView: View, itemValue: Any?, selectedValue: Any?) {
-        val selected = itemValue == selectedValue
-        val seedColor = fragment.requireContext().getColor(R.color.md_theme_dark_seed)
-        (itemView as? LinearLayout)?.let { row ->
-            row.getChildAt(0)?.setBackgroundColor(if (selected) seedColor else Color.TRANSPARENT)
-            (row.getChildAt(1) as? TextView)?.apply {
-                setTextColor(if (selected) Color.WHITE else 0x80FFFFFF.toInt())
-                setTypeface(typeface, if (selected) Typeface.BOLD else Typeface.NORMAL)
-            }
+            addView(countLabel(count, selected, itemPadV))
         }
     }
 
@@ -222,12 +222,19 @@ class ServerDrawerController(
         with(binding) {
             val trackers = listOf<String?>(null) + state.availableTrackers
             val tags = state.availableTags
+            // Counts are absolute: how many torrents match each row overall, independent of the
+            // currently selected filters (matching the qBittorrent desktop sidebar).
+            val torrents = state.data?.torrents?.values ?: emptyList()
 
             // Status — always rebuilt when selection changes (small fixed list)
             statusItemsContainer.removeAllViews()
             StateFilter.entries.forEach { filter ->
                 statusItemsContainer.addView(
-                    sidebarItem(filter.label, filter == state.selectedFilter) {
+                    sidebarItem(
+                        filter.label,
+                        filter == state.selectedFilter,
+                        count = torrents.count { it.matchesFilter(filter) },
+                    ) {
                         val next =
                             toggleSelection(filter, StateFilter.ALL) {
                                 viewModel.uiState.value.selectedFilter
@@ -245,7 +252,9 @@ class ServerDrawerController(
             drawerCategoryDivider.visibility = View.VISIBLE
             categoryItemsContainer.removeAllViews()
             categoryItemsContainer.addView(
-                sidebarItem("All", state.selectedCategory == null) { viewModel.setCategory(null) }
+                sidebarItem("All", state.selectedCategory == null, count = torrents.size) {
+                    viewModel.setCategory(null)
+                }
             )
             val categoryTree = buildCategoryTree(state.availableCategories)
             flattenCategoryTree(categoryTree, collapsedCategoryPaths).forEach { node ->
@@ -254,6 +263,7 @@ class ServerDrawerController(
                         node = node,
                         selected = node.path == state.selectedCategory,
                         collapsed = node.path in collapsedCategoryPaths,
+                        count = torrents.count { it.matchesCategory(node.path) },
                         onClick = {
                             val next =
                                 toggleSelection(node.path, null) {
@@ -277,69 +287,61 @@ class ServerDrawerController(
                 )
             }
 
-            // Tracker
-            if (trackers != lastDrawerTrackers) {
-                lastDrawerTrackers = trackers
-                val hasTrackers = state.availableTrackers.isNotEmpty()
-                drawerTrackerHeader.visibility = if (hasTrackers) View.VISIBLE else View.GONE
-                drawerTagsDivider.visibility = if (hasTrackers) View.VISIBLE else View.GONE
-                trackerItemsContainer.removeAllViews()
-                trackers.forEach { tracker ->
-                    val label = tracker ?: "All"
-                    trackerItemsContainer.addView(
-                        sidebarItem(label, tracker == state.selectedTracker) {
-                            val next =
-                                toggleSelection(tracker, null) {
-                                    viewModel.uiState.value.selectedTracker
-                                }
-                            viewModel.setTracker(next)
-                        }
-                    )
-                }
-            } else if (state.selectedTracker != lastDrawerState?.selectedTracker) {
-                for (i in 0 until trackerItemsContainer.childCount) {
-                    rebuildSidebarItemSelection(
-                        trackerItemsContainer.getChildAt(i),
-                        trackers.getOrNull(i),
-                        state.selectedTracker,
-                    )
-                }
-            }
-
-            // Tags — always visible; "All" and "Untagged" are permanent entries
-            val tagsStateChanged =
-                tags != lastDrawerTags ||
-                    state.selectedTags != lastDrawerState?.selectedTags ||
-                    state.filterUntagged != lastDrawerState?.filterUntagged
-            if (tagsStateChanged) {
-                lastDrawerTags = tags
-                drawerTagsHeader.visibility = View.VISIBLE
-                tagsContainer.removeAllViews()
-                val noneSelected = !state.filterUntagged && state.selectedTags.isEmpty()
-                tagsContainer.addView(
-                    sidebarItem("All", noneSelected) { viewModel.setFilterUntagged(false) }
-                )
-                tagsContainer.addView(
-                    sidebarItem("Untagged", state.filterUntagged) {
+            // Tracker — rebuilt every update so the per-tracker counts stay current. Row click
+            // closures read the live selection (see toggleSelection), so rebuilding is safe.
+            val hasTrackers = state.availableTrackers.isNotEmpty()
+            drawerTrackerHeader.visibility = if (hasTrackers) View.VISIBLE else View.GONE
+            drawerTagsDivider.visibility = if (hasTrackers) View.VISIBLE else View.GONE
+            trackerItemsContainer.removeAllViews()
+            trackers.forEach { tracker ->
+                val label = tracker ?: "All"
+                val count =
+                    if (tracker == null) torrents.size
+                    else torrents.count { it.matchesTracker(tracker) }
+                trackerItemsContainer.addView(
+                    sidebarItem(label, tracker == state.selectedTracker, count = count) {
                         val next =
-                            toggleSelection(true, false) { viewModel.uiState.value.filterUntagged }
-                        viewModel.setFilterUntagged(next)
+                            toggleSelection(tracker, null) {
+                                viewModel.uiState.value.selectedTracker
+                            }
+                        viewModel.setTracker(next)
                     }
                 )
-                tags.forEach { tag ->
-                    tagsContainer.addView(
-                        sidebarItem(
-                            tag,
-                            state.selectedTags.contains(tag),
-                            onLongClick = { onTagLongPress(tag) },
-                        ) {
-                            viewModel.toggleTag(tag)
-                        }
-                    )
-                }
             }
 
-            lastDrawerState = state
+            // Tags — always visible; "All" and "Untagged" are permanent entries. Rebuilt every
+            // update so the per-tag counts stay current.
+            drawerTagsHeader.visibility = View.VISIBLE
+            tagsContainer.removeAllViews()
+            val noneSelected = !state.filterUntagged && state.selectedTags.isEmpty()
+            tagsContainer.addView(
+                sidebarItem("All", noneSelected, count = torrents.size) {
+                    viewModel.setFilterUntagged(false)
+                }
+            )
+            tagsContainer.addView(
+                sidebarItem(
+                    "Untagged",
+                    state.filterUntagged,
+                    count = torrents.count { it.tags.isEmpty() },
+                ) {
+                    val next =
+                        toggleSelection(true, false) { viewModel.uiState.value.filterUntagged }
+                    viewModel.setFilterUntagged(next)
+                }
+            )
+            tags.forEach { tag ->
+                tagsContainer.addView(
+                    sidebarItem(
+                        tag,
+                        state.selectedTags.contains(tag),
+                        count = torrents.count { it.tags.contains(tag) },
+                        onLongClick = { onTagLongPress(tag) },
+                    ) {
+                        viewModel.toggleTag(tag)
+                    }
+                )
+            }
         }
     }
 }

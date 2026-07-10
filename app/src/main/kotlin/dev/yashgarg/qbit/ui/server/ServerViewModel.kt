@@ -60,31 +60,11 @@ constructor(
                 else
                     state.data.torrents.values
                         .filter { torrent ->
-                            val matchesSearch =
-                                state.searchQuery.isBlank() ||
-                                    torrent.name.contains(state.searchQuery, ignoreCase = true)
-                            val matchesFilter = torrent.matchesFilter(state.selectedFilter)
-                            val matchesCategory =
-                                state.selectedCategory == null ||
-                                    torrent.category == state.selectedCategory ||
-                                    torrent.category.startsWith("${state.selectedCategory}/")
-                            val matchesTracker =
-                                state.selectedTracker == null ||
-                                    Uri.parse(torrent.tracker)
-                                        .host
-                                        .equals(state.selectedTracker, ignoreCase = true)
-                            val matchesTags =
-                                when {
-                                    state.filterUntagged -> torrent.tags.isEmpty()
-                                    state.selectedTags.isEmpty() -> true
-                                    else ->
-                                        state.selectedTags.any { tag -> torrent.tags.contains(tag) }
-                                }
-                            matchesSearch &&
-                                matchesFilter &&
-                                matchesCategory &&
-                                matchesTracker &&
-                                matchesTags
+                            torrent.matchesSearch(state.searchQuery) &&
+                                torrent.matchesFilter(state.selectedFilter) &&
+                                torrent.matchesCategory(state.selectedCategory) &&
+                                torrent.matchesTracker(state.selectedTracker) &&
+                                torrent.matchesTags(state.selectedTags, state.filterUntagged)
                         }
                         .sortedWith(state.sortOption, state.sortDirection)
             }
