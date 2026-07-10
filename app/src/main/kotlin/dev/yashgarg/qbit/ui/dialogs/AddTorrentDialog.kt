@@ -102,7 +102,7 @@ class AddTorrentDialog : DialogFragment() {
                 .setPositiveButton(getString(CommonR.string.add), null)
                 .create()
 
-        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN)
         dialog.setOnShowListener {
             val magnetTil = dialog.findViewById<TextInputLayout>(R.id.magnet_til)
             val magnetTiet = dialog.findViewById<TextInputEditText>(R.id.magnet_tiet)
