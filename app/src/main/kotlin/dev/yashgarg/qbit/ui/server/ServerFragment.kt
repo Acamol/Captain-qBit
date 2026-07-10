@@ -348,6 +348,21 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
             torrentRv.itemAnimator = null
             torrentRv.adapter = torrentListAdapter
 
+            // Pad the list by the bottom bar's height so the last torrent can clear the bar when
+            // the list fills the screen but isn't long enough to scroll (paired with the RV's
+            // clipToPadding=false). The bar overlaps the list in the CoordinatorLayout.
+            bottomBar.addOnLayoutChangeListener { _, _, top, _, bottom, _, _, _, _ ->
+                val barHeight = bottom - top
+                if (torrentRv.paddingBottom != barHeight) {
+                    torrentRv.setPadding(
+                        torrentRv.paddingLeft,
+                        torrentRv.paddingTop,
+                        torrentRv.paddingRight,
+                        barHeight,
+                    )
+                }
+            }
+
             searchEt.addTextChangedListener(
                 object : TextWatcher {
                     override fun beforeTextChanged(
