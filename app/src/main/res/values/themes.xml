@@ -28,7 +28,12 @@
         <item name="colorSurfaceInverse">@color/md_theme_dark_inverseSurface</item>
         <item name="colorPrimaryInverse">@color/md_theme_dark_inversePrimary</item>
 
+        <!-- Material 3 type scale, all on Space Grotesk for consistent typography. -->
+        <item name="textAppearanceTitleLarge">@style/TitleLarge</item>
+        <item name="textAppearanceTitleMedium">@style/TitleMedium</item>
         <item name="textAppearanceBodyLarge">@style/BodyMedium</item>
+        <item name="textAppearanceBodyMedium">@style/BodyRegular</item>
+        <item name="textAppearanceLabelLarge">@style/LabelLarge</item>
     </style>
 
     <style name="Theme.Qbit" parent="Base.Theme.Qbit" />
