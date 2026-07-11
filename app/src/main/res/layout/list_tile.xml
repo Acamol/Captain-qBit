@@ -4,19 +4,23 @@
     android:layout_height="wrap_content"
     android:foreground="?attr/selectableItemBackground"
     android:orientation="vertical"
-    android:paddingHorizontal="24dp"
-    android:paddingVertical="12dp">
+    android:paddingHorizontal="16dp"
+    android:paddingVertical="9dp">
 
     <TextView
         android:id="@+id/title"
-        style="@style/TitleMediumBold"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:textColor="@color/white" />
+        android:layout_height="wrap_content"
+        android:letterSpacing="0.02"
+        android:textColor="@color/grey"
+        android:textSize="12sp" />
 
     <TextView
         android:id="@+id/subtitle"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:paddingTop="1dp"
+        android:textColor="@color/white"
+        android:textSize="16sp" />
 
 </LinearLayout>
