@@ -481,11 +481,8 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                 drawerLayout.closeDrawer(Gravity.START)
                 actionDialogs?.showManageTagsDialog()
             }
-            drawerEditServer.setOnClickListener {
-                findNavController().navigate(R.id.action_serverFragment_to_configFragment)
-            }
-            drawerAbout.setOnClickListener {
-                findNavController().navigate(R.id.action_serverFragment_to_versionFragment)
+            drawerSettings.setOnClickListener {
+                findNavController().navigate(R.id.action_serverFragment_to_settingsFragment)
             }
         }
     }
