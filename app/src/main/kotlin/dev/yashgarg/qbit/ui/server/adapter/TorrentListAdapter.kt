@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.color.MaterialColors
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.utils.toHumanReadable
@@ -131,10 +132,20 @@ class TorrentListAdapter @Inject constructor() :
                                 torrent.connectedSeeds,
                                 torrent.seedsInSwarm,
                             )
-                        peers.setTextColor(context.getColor(R.color.md_theme_dark_seed))
+                        peers.setTextColor(
+                            MaterialColors.getColor(
+                                peers,
+                                com.google.android.material.R.attr.colorPrimary,
+                            )
+                        )
                         speed.visibility = View.VISIBLE
                         eta.visibility = View.VISIBLE
-                        progressColor = context.getColor(R.color.md_theme_dark_seed)
+                        progressColor =
+                            MaterialColors.getColor(
+                                context,
+                                com.google.android.material.R.attr.colorPrimary,
+                                context.getColor(R.color.md_theme_dark_seed),
+                            )
                     }
                     Torrent.State.STALLED_DL -> {
                         peers.text = context.getString(CommonR.string.stalled)
@@ -146,10 +157,20 @@ class TorrentListAdapter @Inject constructor() :
                     Torrent.State.PAUSED_UP,
                     Torrent.State.STOPPED_UP -> {
                         peers.text = context.getString(CommonR.string.completed)
-                        peers.setTextColor(context.getColor(R.color.md_theme_dark_seed))
+                        peers.setTextColor(
+                            MaterialColors.getColor(
+                                peers,
+                                com.google.android.material.R.attr.colorPrimary,
+                            )
+                        )
                         speed.visibility = View.GONE
                         eta.visibility = View.GONE
-                        progressColor = context.getColor(R.color.md_theme_dark_seed)
+                        progressColor =
+                            MaterialColors.getColor(
+                                context,
+                                com.google.android.material.R.attr.colorPrimary,
+                                context.getColor(R.color.md_theme_dark_seed),
+                            )
                     }
                     Torrent.State.META_DL,
                     Torrent.State.FORCED_META_DL,

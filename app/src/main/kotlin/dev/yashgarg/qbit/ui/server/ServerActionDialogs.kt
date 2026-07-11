@@ -9,6 +9,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
+import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
@@ -300,7 +301,13 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
                 textSize = 12f
                 isAllCaps = true
                 setTypeface(typeface, Typeface.BOLD)
-                setTextColor(ctx.getColor(R.color.md_theme_dark_seed_light))
+                setTextColor(
+                    MaterialColors.getColor(
+                        ctx,
+                        com.google.android.material.R.attr.colorPrimary,
+                        ctx.getColor(R.color.md_theme_dark_seed_light),
+                    )
+                )
             }
         )
     }

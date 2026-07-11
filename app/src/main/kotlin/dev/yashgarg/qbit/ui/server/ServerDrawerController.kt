@@ -9,6 +9,7 @@ import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import com.google.android.material.color.MaterialColors
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.databinding.ServerFragmentBinding
 
@@ -105,7 +106,12 @@ class ServerDrawerController(
         val indicatorW = (3 * density).toInt()
         val itemPadV = (10 * density).toInt()
         val gapH = (12 * density).toInt()
-        val seedColor = ctx.getColor(R.color.md_theme_dark_seed)
+        val seedColor =
+            MaterialColors.getColor(
+                ctx,
+                com.google.android.material.R.attr.colorPrimary,
+                ctx.getColor(R.color.md_theme_dark_seed),
+            )
 
         return LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -159,7 +165,12 @@ class ServerDrawerController(
         val gapH = (12 * density).toInt()
         val indentPerDepth = (16 * density).toInt()
         val chevronW = (20 * density).toInt()
-        val seedColor = ctx.getColor(R.color.md_theme_dark_seed)
+        val seedColor =
+            MaterialColors.getColor(
+                ctx,
+                com.google.android.material.R.attr.colorPrimary,
+                ctx.getColor(R.color.md_theme_dark_seed),
+            )
         val hasChildren = node.children.isNotEmpty()
 
         return LinearLayout(ctx).apply {
