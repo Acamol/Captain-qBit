@@ -19,6 +19,7 @@ import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import dev.yashgarg.qbit.R
+import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.utils.ClipboardUtil
 import dev.yashgarg.qbit.validation.LinkValidator
 
@@ -33,6 +34,9 @@ class AddTorrentDialog : DialogFragment() {
 
     private val defaultPaused: Boolean
         get() = arguments?.getBoolean(ARG_DEFAULT_PAUSED, false) ?: false
+
+    private val defaultCategory: String
+        get() = arguments?.getString(ARG_DEFAULT_CATEGORY).orEmpty()
 
     private val prefillUrl: String?
         get() = arguments?.getString(ARG_PREFILL_URL)
@@ -60,6 +64,9 @@ class AddTorrentDialog : DialogFragment() {
                     dialog.findViewById<MaterialSwitch>(R.id.paused_switch)?.isChecked ?: false
                 val autoTmm =
                     dialog.findViewById<MaterialSwitch>(R.id.auto_tmm_switch)?.isChecked ?: false
+                val saveCategoryDefault =
+                    dialog.findViewById<MaterialSwitch>(R.id.save_category_switch)?.isChecked
+                        ?: false
 
                 setFragmentResult(
                     ADD_TORRENT_FILE_KEY,
@@ -69,11 +76,17 @@ class AddTorrentDialog : DialogFragment() {
                         SAVE_PATH_KEY to savePath,
                         PAUSED_KEY to paused,
                         AUTO_TMM_KEY to autoTmm,
+                        SAVE_CATEGORY_DEFAULT_KEY to saveCategoryDefault,
                     ),
                 )
                 dismiss()
             } else {
-                Toast.makeText(requireContext(), "No file selected", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                        requireContext(),
+                        getString(CommonR.string.no_file_selected),
+                        Toast.LENGTH_SHORT
+                    )
+                    .show()
             }
         }
 
@@ -82,20 +95,27 @@ class AddTorrentDialog : DialogFragment() {
 
         val dialog =
             MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Add Torrent")
+                .setTitle(getString(CommonR.string.add_torrent_title))
                 .setView(R.layout.add_torrent_dialog)
-                .setNeutralButton("Upload File", null)
-                .setNegativeButton("Cancel") { d, _ -> d.dismiss() }
-                .setPositiveButton("Add", null)
+                .setNeutralButton(getString(CommonR.string.upload_file), null)
+                .setNegativeButton(getString(CommonR.string.cancel)) { d, _ -> d.dismiss() }
+                .setPositiveButton(getString(CommonR.string.add), null)
                 .create()
 
-        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN)
         dialog.setOnShowListener {
             val magnetTil = dialog.findViewById<TextInputLayout>(R.id.magnet_til)
             val magnetTiet = dialog.findViewById<TextInputEditText>(R.id.magnet_tiet)
             val categoryActv = dialog.findViewById<AutoCompleteTextView>(R.id.category_actv)
 
-            val categories = listOf("") + availableCategories
+            // Surface the saved default category first so it's the top suggestion, then prefill it.
+            val orderedCategories =
+                if (defaultCategory.isNotBlank() && availableCategories.contains(defaultCategory)) {
+                    listOf(defaultCategory) + availableCategories.filter { it != defaultCategory }
+                } else {
+                    availableCategories
+                }
+            val categories = listOf("") + orderedCategories
             val adapter =
                 ArrayAdapter(
                     requireContext(),
@@ -103,6 +123,12 @@ class AddTorrentDialog : DialogFragment() {
                     categories
                 )
             categoryActv?.setAdapter(adapter)
+            if (defaultCategory.isNotBlank()) {
+                categoryActv?.setText(defaultCategory, false)
+            }
+
+            val saveCategorySwitch = dialog.findViewById<MaterialSwitch>(R.id.save_category_switch)
+            saveCategorySwitch?.isChecked = defaultCategory.isNotBlank()
 
             val autoTmmSwitch = dialog.findViewById<MaterialSwitch>(R.id.auto_tmm_switch)
             val pausedSwitch = dialog.findViewById<MaterialSwitch>(R.id.paused_switch)
@@ -116,9 +142,11 @@ class AddTorrentDialog : DialogFragment() {
             when {
                 prefillUrl != null -> magnetTiet?.setText(prefillUrl)
                 prefillFileUri != null -> {
-                    magnetTil?.hint = "Selected file"
+                    magnetTil?.hint = getString(CommonR.string.selected_file)
                     magnetTil?.isEndIconVisible = false
-                    val filename = Uri.parse(prefillFileUri).lastPathSegment ?: "torrent file"
+                    val filename =
+                        Uri.parse(prefillFileUri).lastPathSegment
+                            ?: getString(CommonR.string.torrent_file_fallback_name)
                     magnetTiet?.setText(filename)
                     magnetTiet?.isFocusable = false
                     magnetTiet?.isClickable = false
@@ -143,6 +171,7 @@ class AddTorrentDialog : DialogFragment() {
                     val paused =
                         dialog.findViewById<MaterialSwitch>(R.id.paused_switch)?.isChecked ?: false
                     val autoTmm = autoTmmSwitch?.isChecked ?: false
+                    val saveCategoryDefault = saveCategorySwitch?.isChecked ?: false
                     setFragmentResult(
                         ADD_TORRENT_FILE_KEY,
                         bundleOf(
@@ -151,6 +180,7 @@ class AddTorrentDialog : DialogFragment() {
                             SAVE_PATH_KEY to savePath,
                             PAUSED_KEY to paused,
                             AUTO_TMM_KEY to autoTmm,
+                            SAVE_CATEGORY_DEFAULT_KEY to saveCategoryDefault,
                         ),
                     )
                     dialog.dismiss()
@@ -168,6 +198,7 @@ class AddTorrentDialog : DialogFragment() {
                             dialog.findViewById<MaterialSwitch>(R.id.paused_switch)?.isChecked
                                 ?: false
                         val autoTmm = autoTmmSwitch?.isChecked ?: false
+                        val saveCategoryDefault = saveCategorySwitch?.isChecked ?: false
 
                         setFragmentResult(
                             ADD_TORRENT_KEY,
@@ -177,11 +208,12 @@ class AddTorrentDialog : DialogFragment() {
                                 SAVE_PATH_KEY to savePath,
                                 PAUSED_KEY to paused,
                                 AUTO_TMM_KEY to autoTmm,
+                                SAVE_CATEGORY_DEFAULT_KEY to saveCategoryDefault,
                             ),
                         )
                         dialog.dismiss()
                     } else {
-                        magnetTil?.error = "Please enter a valid link!"
+                        magnetTil?.error = getString(CommonR.string.invalid_magnet_link)
                     }
 
                     magnetTiet?.doAfterTextChanged { magnetTil?.error = null }
@@ -206,6 +238,7 @@ class AddTorrentDialog : DialogFragment() {
             availableCategories: List<String> = emptyList(),
             defaultAutoTmm: Boolean = false,
             defaultPaused: Boolean = false,
+            defaultCategory: String = "",
             prefillUrl: String? = null,
             prefillFileUri: String? = null,
         ): AddTorrentDialog =
@@ -215,6 +248,7 @@ class AddTorrentDialog : DialogFragment() {
                         ARG_CATEGORIES to ArrayList(availableCategories),
                         ARG_DEFAULT_AUTO_TMM to defaultAutoTmm,
                         ARG_DEFAULT_PAUSED to defaultPaused,
+                        ARG_DEFAULT_CATEGORY to defaultCategory,
                         ARG_PREFILL_URL to prefillUrl,
                         ARG_PREFILL_FILE_URI to prefillFileUri,
                     )
@@ -228,9 +262,11 @@ class AddTorrentDialog : DialogFragment() {
         const val SAVE_PATH_KEY = "save_path"
         const val PAUSED_KEY = "paused"
         const val AUTO_TMM_KEY = "auto_tmm"
+        const val SAVE_CATEGORY_DEFAULT_KEY = "save_category_default"
         private const val ARG_CATEGORIES = "arg_categories"
         private const val ARG_DEFAULT_AUTO_TMM = "arg_default_auto_tmm"
         private const val ARG_DEFAULT_PAUSED = "arg_default_paused"
+        private const val ARG_DEFAULT_CATEGORY = "arg_default_category"
         private const val ARG_PREFILL_URL = "arg_prefill_url"
         private const val ARG_PREFILL_FILE_URI = "arg_prefill_file_uri"
         const val TORRENT_MIMETYPE = "application/x-bittorrent"

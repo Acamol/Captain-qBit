@@ -4,18 +4,15 @@ import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.flowWithLifecycle
-import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.databinding.TorrentTrackersFragmentBinding
 import dev.yashgarg.qbit.ui.torrent.TorrentDetailsState
 import dev.yashgarg.qbit.ui.torrent.TorrentDetailsViewModel
 import dev.yashgarg.qbit.ui.torrent.adapter.TorrentTrackersAdapter
+import dev.yashgarg.qbit.utils.collectWithLifecycle
 import dev.yashgarg.qbit.utils.viewBinding
 import javax.inject.Inject
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 
 @AndroidEntryPoint
 class TorrentTrackersFragment : Fragment(R.layout.torrent_trackers_fragment) {
@@ -33,10 +30,7 @@ class TorrentTrackersFragment : Fragment(R.layout.torrent_trackers_fragment) {
     }
 
     private fun observeFlows() {
-        viewModel.uiState
-            .flowWithLifecycle(viewLifecycleOwner.lifecycle)
-            .onEach(::render)
-            .launchIn(viewLifecycleOwner.lifecycleScope)
+        viewModel.uiState.collectWithLifecycle(this, ::render)
     }
 
     private fun render(state: TorrentDetailsState) {

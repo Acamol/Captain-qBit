@@ -11,7 +11,6 @@ coroutines = "1.7.3"
 custom = "1.0.0"
 googleMaterial = "1.10.0"
 agp = "9.2.1"
-espresso = "3.5.1"
 hilt = "2.60"
 axHilt = "1.1.0"
 ktor = "2.3.5"
@@ -45,7 +44,6 @@ androidx-work-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "
 androidx-hilt-work = { module = "androidx.hilt:hilt-work", version.ref = "axHilt" }
 androidx-hilt-compiler = { module = "androidx.hilt:hilt-compiler", version.ref = "axHilt" }
 androidx-test-uiautomator = { module = "androidx.test.uiautomator:uiautomator", version.ref = "uiautomator" }
-androidx-test-espresso = { module = "androidx.test.espresso:espresso-core", version.ref = "espresso" }
 androidx-test-junit = "androidx.test.ext:junit:1.1.5"
 
 build-spotless = { module = "com.diffplug.spotless:spotless-plugin-gradle", version.ref = "spotless" }

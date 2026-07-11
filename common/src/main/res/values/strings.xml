@@ -80,9 +80,83 @@
     <string name="save_and_test_cfg">Save and test config</string>
 
     <!-- Notifications -->
-    <string name="status_channel_id">qBit-Channel-1</string>
+    <string name="status_channel_id">qBit-Channel-2</string>
     <string name="status_updates">Status Updates</string>
 
     <!-- Dialogs -->
     <string name="peer_details">IP: %1$s\nPort: %2$d\nCountry: %3$s</string>
+    <string name="confirm_delete_torrents">Are you sure you want to delete the torrent(s)?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="rename_torrent_title">Rename torrent</string>
+    <string name="cancel">Cancel</string>
+    <string name="rename">Rename</string>
+    <string name="invalid_torrent_name">Please enter a valid name</string>
+    <string name="add_torrent_title">Add Torrent</string>
+    <string name="upload_file">Upload File</string>
+    <string name="add">Add</string>
+    <string name="no_file_selected">No file selected</string>
+    <string name="selected_file">Selected file</string>
+    <string name="torrent_file_fallback_name">torrent file</string>
+    <string name="invalid_magnet_link">Please enter a valid link!</string>
+    <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
+    <string name="edit_category_title">Edit category</string>
+    <string name="save_path_hint">Save path</string>
+
+    <!-- ViewModel status messages -->
+    <string name="status_add_torrent_url_success">Successfully added torrent</string>
+    <string name="status_add_torrent_url_failure">Failed to add torrent</string>
+    <string name="status_add_torrent_file_success">Successfully added file</string>
+    <string name="status_add_torrent_file_failure">Failed to add file</string>
+    <string name="status_bulk_category_set">Category set on %1$d torrent(s)</string>
+    <string name="status_set_category_failure">Failed to set category</string>
+    <string name="status_bulk_tags_updated">Tags updated on %1$d torrent(s)</string>
+    <string name="status_update_tags_failure">Failed to update tags</string>
+    <string name="status_tag_created">Tag \"%1$s\" created</string>
+    <string name="status_create_tag_failure">Failed to create tag</string>
+    <string name="status_tags_deleted">Deleted %1$d tag(s)</string>
+    <string name="status_delete_tags_failure">Failed to delete tags</string>
+    <string name="status_category_created">Category \"%1$s\" created</string>
+    <string name="status_create_category_failure">Failed to create category</string>
+    <string name="status_categories_deleted">Deleted %1$d category(ies)</string>
+    <string name="status_delete_categories_failure">Failed to delete categories</string>
+    <string name="status_torrents_removed">Successfully deleted %1$d file(s)</string>
+    <string name="status_remove_torrents_failure">Failed to remove</string>
+    <string name="status_torrents_paused">Paused %1$d torrent(s)</string>
+    <string name="status_torrents_resumed">Resumed %1$d torrent(s)</string>
+    <string name="status_pause_torrents_failure">Failed to pause %1$d torrent(s)</string>
+    <string name="status_resume_torrents_failure">Failed to resume %1$d torrent(s)</string>
+    <string name="status_speed_limits_disabled">Alternative speed limits are disabled</string>
+    <string name="status_speed_limits_enabled">Alternative speed limits are enabled</string>
+    <string name="status_toggle_speed_limits_failure">Failed to toggle speed limits</string>
+    <string name="status_get_speed_limit_mode_failure">Failed to get speed limit mode</string>
+    <string name="status_sync_data_failure">Failed to sync data</string>
+
+    <string name="status_torrent_paused">Torrent paused</string>
+    <string name="status_torrent_resumed">Torrent resumed</string>
+    <string name="status_pause_torrent_failure">Failed to pause torrent</string>
+    <string name="status_resume_torrent_failure">Failed to resume torrent</string>
+    <string name="status_torrent_removed">Torrent removed</string>
+    <string name="status_remove_torrent_failure">Failed to remove torrent</string>
+    <string name="status_rechecking_torrent">Rechecking torrent</string>
+    <string name="status_recheck_torrent_failure">Failed to recheck torrent</string>
+    <string name="status_reannouncing_torrent">Reannouncing torrent</string>
+    <string name="status_reannounce_torrent_failure">Failed to reannounce torrent</string>
+    <string name="status_torrent_renamed">Torrent renamed</string>
+    <string name="status_rename_torrent_failure">Failed to rename torrent</string>
+    <string name="status_category_set_to">Category set to \"%1$s\"</string>
+    <string name="status_category_created_not_assigned">
+        Category created, but couldn\'t assign it
+    </string>
+    <string name="status_save_path_updated">Save path updated</string>
+    <string name="status_set_save_path_failure">Failed to set save path</string>
+    <string name="status_auto_management_enabled">Auto management enabled</string>
+    <string name="status_auto_management_disabled">Auto management disabled</string>
+    <string name="status_update_auto_management_failure">Failed to update auto management</string>
+    <string name="status_tags_updated">Tags updated</string>
+    <string name="status_peer_banned">Successfully banned %1$s</string>
+    <string name="status_ban_peer_failure">Failed to ban peer</string>
+    <string name="status_category_edited">Category \"%1$s\" updated</string>
+    <string name="status_edit_category_failure">Failed to edit category</string>
 </resources>

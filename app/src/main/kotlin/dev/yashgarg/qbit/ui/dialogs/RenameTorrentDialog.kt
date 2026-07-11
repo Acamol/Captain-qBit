@@ -11,6 +11,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import dev.yashgarg.qbit.R
+import dev.yashgarg.qbit.common.R as CommonR
 
 class RenameTorrentDialog : DialogFragment() {
     private var nameTiet: TextInputEditText? = null
@@ -19,12 +20,11 @@ class RenameTorrentDialog : DialogFragment() {
         super.onCreateDialog(savedInstanceState)
         val alertDialogBuilder = MaterialAlertDialogBuilder(requireContext())
 
-        // TODO: Switch to string resources below
         alertDialogBuilder.apply {
-            setTitle("Rename torrent")
+            setTitle(getString(CommonR.string.rename_torrent_title))
             setView(R.layout.rename_torrent_dialog)
-            setNegativeButton("Cancel") { dialog, _ -> dialog.dismiss() }
-            setPositiveButton("Rename", null)
+            setNegativeButton(getString(CommonR.string.cancel)) { dialog, _ -> dialog.dismiss() }
+            setPositiveButton(getString(CommonR.string.rename), null)
         }
 
         val title =
@@ -48,7 +48,7 @@ class RenameTorrentDialog : DialogFragment() {
                     )
                     dialog.dismiss()
                 } else {
-                    nameTil?.error = "Please enter a valid name"
+                    nameTil?.error = getString(CommonR.string.invalid_torrent_name)
                 }
             }
         }

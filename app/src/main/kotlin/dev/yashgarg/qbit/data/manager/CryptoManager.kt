@@ -3,6 +3,7 @@ package dev.yashgarg.qbit.data.manager
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import android.util.Log
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -16,6 +17,7 @@ import javax.crypto.spec.GCMParameterSpec
  * unavailable, the original value is returned rather than losing the credential.
  */
 object CryptoManager {
+    private const val TAG = "CryptoManager"
     private const val KEYSTORE = "AndroidKeyStore"
     private const val KEY_ALIAS = "qbit_cred_key"
     private const val PREFIX = "enc1:"
@@ -50,6 +52,7 @@ object CryptoManager {
             val encrypted = cipher.doFinal(value.toByteArray(Charsets.UTF_8))
             PREFIX + Base64.encodeToString(cipher.iv + encrypted, Base64.NO_WRAP)
         } catch (e: Exception) {
+            Log.e(TAG, "Encryption failed, storing value unencrypted", e)
             value
         }
     }
@@ -64,6 +67,7 @@ object CryptoManager {
             cipher.init(Cipher.DECRYPT_MODE, secretKey(), GCMParameterSpec(TAG_BITS, iv))
             String(cipher.doFinal(body), Charsets.UTF_8)
         } catch (e: Exception) {
+            Log.e(TAG, "Decryption failed, returning stored value as-is", e)
             value
         }
     }

@@ -1,5 +1,3 @@
-@file:Suppress("DSL_SCOPE_VIOLATION")
-
 plugins {
     id("dev.yashgarg.qbit.kotlin-android")
     alias(libs.plugins.android.library)

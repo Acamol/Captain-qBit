@@ -2,7 +2,7 @@ package dev.yashgarg.qbit.ui.server
 
 import qbittorrent.models.MainData
 
-data class ServerState(
+data class ServerScreenState(
     val dataLoading: Boolean = true,
     val data: MainData? = null,
     val speedLimitMode: Int = 0,
@@ -19,4 +19,5 @@ data class ServerState(
     val availableTrackers: List<String> = emptyList(),
     val selectedTags: Set<String> = emptySet(),
     val availableTags: List<String> = emptyList(),
+    val filterUntagged: Boolean = false,
 )

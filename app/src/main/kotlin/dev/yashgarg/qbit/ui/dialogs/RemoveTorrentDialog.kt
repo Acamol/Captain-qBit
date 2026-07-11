@@ -10,17 +10,17 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.setFragmentResult
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dev.yashgarg.qbit.R
+import dev.yashgarg.qbit.common.R as CommonR
 
 class RemoveTorrentDialog : DialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val alertDialogBuilder = MaterialAlertDialogBuilder(requireContext())
 
-        // TODO: Switch to string resources below
         alertDialogBuilder.apply {
-            setTitle("Are you sure you want to delete the torrent(s)?")
+            setTitle(getString(CommonR.string.confirm_delete_torrents))
             setView(R.layout.delete_files_dialog)
-            setPositiveButton("Yes", null)
-            setNegativeButton("No") { dialog, _ -> dialog.dismiss() }
+            setPositiveButton(getString(CommonR.string.yes), null)
+            setNegativeButton(getString(CommonR.string.no)) { dialog, _ -> dialog.dismiss() }
         }
 
         val dialog = alertDialogBuilder.create()
@@ -30,7 +30,7 @@ class RemoveTorrentDialog : DialogFragment() {
             val deleteFilesCheckBox = dialog.findViewById<CheckBox>(R.id.deleteFiles_box)
 
             deleteFilesLL?.setOnClickListener {
-                deleteFilesCheckBox?.isChecked = !deleteFilesCheckBox!!.isChecked
+                deleteFilesCheckBox?.let { it.isChecked = !it.isChecked }
             }
 
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {

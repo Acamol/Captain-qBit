@@ -1,4 +1,4 @@
-@file:Suppress("UnstableApiUsage", "DSL_SCOPE_VIOLATION")
+@file:Suppress("UnstableApiUsage")
 
 plugins {
     id("dev.yashgarg.qbit.kotlin-android")
@@ -40,7 +40,6 @@ android {
 
 dependencies {
     implementation(libs.androidx.test.junit)
-    implementation(libs.androidx.test.espresso)
     implementation(libs.androidx.test.uiautomator)
     implementation(libs.androidx.benchmark.junit)
 }

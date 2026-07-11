@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import qbittorrent.QBittorrentClient
+import qbittorrent.*
 
 @HiltViewModel
 class VersionViewModel @Inject constructor(private val clientManager: ClientManager) : ViewModel() {

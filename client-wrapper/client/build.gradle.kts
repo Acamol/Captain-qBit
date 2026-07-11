@@ -1,4 +1,3 @@
-@Suppress("DSL_SCOPE_VIOLATION")
 plugins {
     alias(libs.plugins.multiplatform)
     alias(libs.plugins.kotlin.serialization)
@@ -25,7 +24,6 @@ kotlin {
                 implementation(libs.coroutines.core)
                 implementation(libs.kotlinx.serialization)
                 implementation(libs.ktor.client.core)
-                implementation(libs.ktor.client.logging)
                 implementation(libs.ktor.client.contentNegotiation)
                 implementation(libs.ktor.serialization)
             }

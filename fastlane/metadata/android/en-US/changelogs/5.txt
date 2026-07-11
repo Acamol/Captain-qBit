@@ -1,0 +1,8 @@
+- Redesigned filtering: the filter button and chip row are replaced by a navigation drawer sidebar for status, categories, tags and trackers
+- Categories containing "/" are grouped into a collapsible tree; long-press a tag or category to edit or delete it
+- Every filter in the drawer now shows a torrent count
+- New Statistics screen (all-time totals, share ratio, cache/performance stats), opened from the drawer
+- Manage tags/categories and toggle alternate speed limits from the drawer; free disk space is shown next to the transfer speeds
+- Create tags and set tags/categories from a torrent's details
+- Add-torrent now remembers your toggles and a default category
+- Fixes: add-torrent no longer forces the keyboard open; the bottom bar no longer hides the last torrent or gets stuck hidden; correct Up navigation on sub-screens; no more vibration when opening the app

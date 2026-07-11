@@ -8,29 +8,23 @@
         android:icon="@drawable/twotone_search_24"
         android:title="Search"
         app:showAsAction="always" />
-    <item
-        android:id="@+id/filters"
-        android:icon="@drawable/outline_filter_alt_24"
-        android:title="Filter"
-        app:showAsAction="always" />
-    <item
+<item
         android:id="@+id/sort_list"
         android:icon="@drawable/twotone_sort_24"
         android:title="@string/sort"
         app:showAsAction="always" />
     <item
-        android:id="@+id/edit_server"
-        android:title="@string/edit_server"
-        app:showAsAction="never" />
+        android:id="@+id/category_selection"
+        android:icon="@drawable/outline_category_24"
+        android:title="Category"
+        android:visible="false"
+        app:showAsAction="ifRoom" />
     <item
-        android:id="@+id/speed_toggle"
-        android:icon="@drawable/twotone_speed_24"
-        android:title="@string/toggle_limits"
-        app:showAsAction="never" />
-    <item
-        android:id="@+id/about"
-        android:title="@string/about"
-        app:showAsAction="never" />
+        android:id="@+id/tags_selection"
+        android:icon="@drawable/outline_filter_list_24"
+        android:title="Tags"
+        android:visible="false"
+        app:showAsAction="ifRoom" />
     <item
         android:id="@+id/delete_selection"
         android:icon="@drawable/outline_delete_24"

@@ -11,7 +11,6 @@ import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.findNavController
@@ -27,9 +26,8 @@ import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.manager.CryptoManager
 import dev.yashgarg.qbit.data.models.ServerConfig
 import dev.yashgarg.qbit.databinding.ConfigFragmentBinding
+import dev.yashgarg.qbit.utils.collectWithLifecycle
 import dev.yashgarg.qbit.utils.viewBinding
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
@@ -95,25 +93,16 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
     }
 
     private fun observeFlows() {
-        viewModel.uiState
-            .flowWithLifecycle(viewLifecycleOwner.lifecycle)
-            .onEach(::render)
-            .launchIn(viewLifecycleOwner.lifecycleScope)
+        viewModel.uiState.collectWithLifecycle(this, ::render)
 
-        viewModel.validationEvents
-            .flowWithLifecycle(viewLifecycleOwner.lifecycle)
-            .onEach(::handleEvent)
-            .launchIn(viewLifecycleOwner.lifecycleScope)
+        viewModel.validationEvents.collectWithLifecycle(this, ::handleEvent)
 
-        viewModel.existingConfig
-            .flowWithLifecycle(viewLifecycleOwner.lifecycle)
-            .onEach { config ->
-                if (config != null && !fieldsPopulated) {
-                    fieldsPopulated = true
-                    populateFields(config)
-                }
+        viewModel.existingConfig.collectWithLifecycle(this) { config ->
+            if (config != null && !fieldsPopulated) {
+                fieldsPopulated = true
+                populateFields(config)
             }
-            .launchIn(viewLifecycleOwner.lifecycleScope)
+        }
     }
 
     private fun populateFields(config: ServerConfig) {

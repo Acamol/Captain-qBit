@@ -22,6 +22,7 @@ import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.utils.toHumanReadable
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.delay
+import qbittorrent.getGlobalTransferInfo
 
 @HiltWorker
 class StatusWorker

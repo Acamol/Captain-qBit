@@ -6,11 +6,7 @@ class PortValidator : TextValidator {
     override fun isValid(text: String): Boolean {
         val portMatcher = portRegex.matcher(text)
 
-        return if (text.isEmpty()) {
-            true
-        } else if (text.isNotEmpty()) {
-            portMatcher.matches()
-        } else false
+        return text.isEmpty() || portMatcher.matches()
     }
 
     companion object {

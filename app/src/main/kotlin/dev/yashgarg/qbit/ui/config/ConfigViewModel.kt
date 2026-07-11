@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import qbittorrent.QBittorrentClient
+import qbittorrent.*
 
 @HiltViewModel
 class ConfigViewModel @Inject constructor(private val configDao: ConfigDao) : ViewModel() {
