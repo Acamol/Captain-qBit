@@ -357,26 +357,14 @@
                 android:textSize="14sp" />
 
             <TextView
-                android:id="@+id/drawer_edit_server"
+                android:id="@+id/drawer_settings"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="?attr/selectableItemBackground"
                 android:gravity="center_vertical"
                 android:minHeight="48dp"
                 android:paddingHorizontal="16dp"
-                android:text="@string/edit_server"
-                android:textColor="?attr/colorOnSurface"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/drawer_about"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="?attr/selectableItemBackground"
-                android:gravity="center_vertical"
-                android:minHeight="48dp"
-                android:paddingHorizontal="16dp"
-                android:text="@string/about"
+                android:text="Settings"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp" />
 

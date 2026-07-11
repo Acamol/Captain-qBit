@@ -16,4 +16,5 @@ data class ServerPreferences(
     val filterTracker: String? = null,
     val filterTags: Set<String> = emptySet(),
     val filterUntagged: Boolean = false,
+    val dynamicColors: Boolean = false,
 )
