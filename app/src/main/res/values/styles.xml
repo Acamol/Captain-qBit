@@ -3,7 +3,7 @@
     <style name="SmallBoldFont" parent="TextAppearance.Material3.BodyMedium">
         <item name="android:textSize">12sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">@color/grey</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
         <item name="fontFamily">@font/space_grotesk</item>
     </style>
 
@@ -40,15 +40,15 @@
     </style>
 
     <style name="PopupMenu" parent="Widget.Material3.PopupMenu">
-        <item name="android:popupBackground">@color/md_theme_dark_bluegray_surface</item>
+        <item name="android:popupBackground">?attr/colorSurfaceContainerHigh</item>
     </style>
 
     <style name="ProgressBarTheme" parent="ThemeOverlay.Material3.Dark">
-        <item name="colorAccent">@color/md_theme_dark_seed</item>
+        <item name="colorAccent">?attr/colorPrimary</item>
     </style>
 
     <style name="CustomCardTheme" parent="Widget.Material3.CardView.Filled">
-        <item name="cardBackgroundColor">@color/md_theme_dark_bluegray_surface_darker</item>
+        <item name="cardBackgroundColor">?attr/colorSurfaceContainer</item>
         <item name="cardElevation">4dp</item>
         <item name="cardCornerRadius">5dp</item>
         <item name="android:layout_width">match_parent</item>
