@@ -2,19 +2,25 @@ package dev.yashgarg.qbit.ui.server
 
 import android.app.AlertDialog
 import android.graphics.Typeface
+import android.util.TypedValue
+import android.view.Gravity
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.os.bundleOf
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.common.R as CommonR
+import dev.yashgarg.qbit.data.models.ServerConfig
 import dev.yashgarg.qbit.utils.toHumanReadable
 
 /** Bulk-action pickers and tag/category/sort management dialogs shown from [ServerFragment]. */
@@ -367,5 +373,123 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
             .setNeutralButton(dirLabel) { _, _ -> viewModel.toggleSortDirection() }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    /** Server switcher shown from the drawer header: switch, edit, delete, or add a server. */
+    fun showServerPicker() {
+        val ctx = requireContext()
+        val servers = viewModel.servers.value
+        val activeId = viewModel.activeServerId.value
+        val density = fragment.resources.displayMetrics.density
+        val padH = (20 * density).toInt()
+        val padV = (14 * density).toInt()
+        val gap = (12 * density).toInt()
+
+        val onSurface =
+            MaterialColors.getColor(ctx, com.google.android.material.R.attr.colorOnSurface, 0)
+        val primary =
+            MaterialColors.getColor(ctx, com.google.android.material.R.attr.colorPrimary, 0)
+        val selectableBg =
+            TypedValue()
+                .also {
+                    ctx.theme.resolveAttribute(android.R.attr.selectableItemBackground, it, true)
+                }
+                .resourceId
+
+        val container = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+
+        val dialog =
+            MaterialAlertDialogBuilder(ctx)
+                .setTitle("Servers")
+                .setView(ScrollView(ctx).apply { addView(container) })
+                .setNegativeButton("Close", null)
+                .create()
+
+        servers.forEach { server ->
+            container.addView(
+                LinearLayout(ctx).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(padH, padV, padH, padV)
+                    isClickable = true
+                    isFocusable = true
+                    setBackgroundResource(selectableBg)
+                    setOnClickListener {
+                        viewModel.switchServer(server.configId)
+                        dialog.dismiss()
+                    }
+                    setOnLongClickListener {
+                        dialog.dismiss()
+                        showServerLongPressDialog(server)
+                        true
+                    }
+                    addView(
+                        TextView(ctx).apply {
+                            text = if (server.configId == activeId) "●" else "○"
+                            setPadding(0, 0, gap, 0)
+                            setTextColor(if (server.configId == activeId) primary else onSurface)
+                        }
+                    )
+                    addView(
+                        TextView(ctx).apply {
+                            text = server.serverName
+                            layoutParams = LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f)
+                            textSize = 16f
+                            setTextColor(onSurface)
+                        }
+                    )
+                }
+            )
+        }
+
+        container.addView(
+            TextView(ctx).apply {
+                text = "+  Add server"
+                setPadding(padH, padV, padH, padV)
+                textSize = 16f
+                setTextColor(primary)
+                isClickable = true
+                isFocusable = true
+                setBackgroundResource(selectableBg)
+                setOnClickListener {
+                    dialog.dismiss()
+                    navigateToConfig(-1)
+                }
+            }
+        )
+
+        dialog.show()
+    }
+
+    private fun showServerLongPressDialog(server: ServerConfig) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(server.serverName)
+            .setPositiveButton(getString(CommonR.string.edit)) { _, _ ->
+                navigateToConfig(server.configId)
+            }
+            .setNeutralButton(getString(CommonR.string.delete)) { _, _ ->
+                confirmDeleteServer(server)
+            }
+            .setNegativeButton(getString(CommonR.string.cancel), null)
+            .show()
+    }
+
+    private fun confirmDeleteServer(server: ServerConfig) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Delete ${server.serverName}?")
+            .setPositiveButton(getString(CommonR.string.delete)) { _, _ ->
+                viewModel.deleteServer(server.configId)
+            }
+            .setNegativeButton(getString(CommonR.string.cancel), null)
+            .show()
+    }
+
+    private fun navigateToConfig(serverId: Int) {
+        fragment
+            .findNavController()
+            .navigate(
+                R.id.action_serverFragment_to_configFragment,
+                bundleOf("serverId" to serverId),
+            )
     }
 }

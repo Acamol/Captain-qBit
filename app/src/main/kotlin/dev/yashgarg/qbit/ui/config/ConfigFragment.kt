@@ -36,6 +36,9 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
     private val viewModel by viewModels<ConfigViewModel>()
     private var fieldsPopulated = false
 
+    // -1 = adding a new server; >= 0 = editing that server id (drives prefill + post-save nav).
+    private val serverId by lazy { arguments?.getInt("serverId", -1) ?: -1 }
+
     private val connectionTypes = arrayOf("HTTP", "HTTPS")
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -229,20 +232,31 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
                                     if (useBasicAuth.isChecked) basicAuthPass else null,
                                 )
 
-                                val isEdit =
-                                    findNavController().previousBackStackEntry?.destination?.id ==
+                                val navController = findNavController()
+                                val cameFromServer =
+                                    navController.previousBackStackEntry?.destination?.id ==
                                         AppR.id.serverFragment
-                                if (isEdit) {
-                                    // Pop old ServerFragment + ConfigFragment, push fresh one
-                                    val navOptions =
-                                        NavOptions.Builder()
-                                            .setPopUpTo(AppR.id.serverFragment, true)
-                                            .build()
-                                    findNavController()
-                                        .navigate(AppR.id.serverFragment, null, navOptions)
-                                } else {
-                                    findNavController()
-                                        .navigate(AppR.id.action_configFragment_to_serverFragment)
+                                when {
+                                    serverId >= 0 -> {
+                                        // Edited an existing server: recreate ServerFragment so it
+                                        // rebinds the rebuilt client for that config.
+                                        val navOptions =
+                                            NavOptions.Builder()
+                                                .setPopUpTo(AppR.id.serverFragment, true)
+                                                .build()
+                                        navController.navigate(
+                                            AppR.id.serverFragment,
+                                            null,
+                                            navOptions
+                                        )
+                                    }
+                                    // Added a new server from the picker: keep the active server.
+                                    cameFromServer -> navController.navigateUp()
+                                    // First server, added from Home.
+                                    else ->
+                                        navController.navigate(
+                                            AppR.id.action_configFragment_to_serverFragment
+                                        )
                                 }
                             }
                             is Err -> {

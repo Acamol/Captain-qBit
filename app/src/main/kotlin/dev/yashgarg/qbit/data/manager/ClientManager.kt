@@ -21,6 +21,9 @@ interface ClientManager {
 
     suspend fun checkAndGetClient(): QBittorrentClient?
 
+    /** Persist the active server id; the client is rebuilt for it on the next request. */
+    suspend fun setActiveServer(id: Int)
+
     companion object {
         const val tag = "ClientManager"
         val syncInterval = 5.seconds

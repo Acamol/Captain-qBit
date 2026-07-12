@@ -100,6 +100,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                 onTagLongPress = { name -> actionDialogs?.showTagLongPressDialog(name) },
             )
         binding.drawerStatsButton.setOnClickListener { actionDialogs?.showStatisticsDialog() }
+        binding.drawerServerSwitcher.setOnClickListener { actionDialogs?.showServerPicker() }
         clearSelectionCallback =
             object : OnBackPressedCallback(false) {
                 override fun handleOnBackPressed() {
@@ -575,6 +576,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
 
             drawerController?.update(state)
             updateFilterChips(state)
+            drawerServerName.text = state.serverName ?: "Servers"
 
             // Reflect current alt-speed-limits state on the drawer toggle. Safe to set directly:
             // the row uses a click listener (user-initiated), so this won't re-trigger a toggle.

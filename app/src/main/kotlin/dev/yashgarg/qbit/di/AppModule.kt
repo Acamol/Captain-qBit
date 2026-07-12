@@ -45,8 +45,7 @@ class AppModule {
     fun provideClientManager(clientManager: ClientManagerImpl): ClientManager = clientManager
 
     @Provides
-    fun provideQbitRepository(clientManager: ClientManager) =
-        QbitRepository(Dispatchers.IO, clientManager)
+    fun provideQbitRepository(clientManager: ClientManager) = QbitRepository(clientManager)
 
     @Singleton
     @Provides

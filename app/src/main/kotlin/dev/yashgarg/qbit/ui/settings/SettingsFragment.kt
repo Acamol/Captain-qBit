@@ -53,7 +53,7 @@ class SettingsFragment : Fragment(R.layout.settings_fragment) {
             }
 
             serverSettings.setOnClickListener {
-                findNavController().navigate(R.id.action_settingsFragment_to_configFragment)
+                findNavController().navigate(R.id.action_settingsFragment_to_serverListFragment)
             }
             about.setOnClickListener {
                 findNavController().navigate(R.id.action_settingsFragment_to_versionFragment)
