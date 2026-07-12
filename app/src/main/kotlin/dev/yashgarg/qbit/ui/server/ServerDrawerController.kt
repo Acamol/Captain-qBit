@@ -88,6 +88,18 @@ class ServerDrawerController(
     private val Int.dpPx
         get() = (this * fragment.resources.displayMetrics.density).toInt()
 
+    // Drawer text color. The selected row sits on the fixed cyan seed background, so its text
+    // stays white for contrast; unselected text uses a theme-aware muted role (was a hardcoded
+    // translucent white, which vanished on a light background).
+    private fun drawerTextColor(selected: Boolean): Int =
+        if (selected) Color.WHITE
+        else
+            MaterialColors.getColor(
+                fragment.requireContext(),
+                com.google.android.material.R.attr.colorOnSurfaceVariant,
+                Color.GRAY,
+            )
+
     // A muted trailing count (e.g. how many torrents match this filter row).
     private fun countLabel(count: Int, selected: Boolean, itemPadV: Int): TextView {
         val ctx = fragment.requireContext()
@@ -96,7 +108,7 @@ class ServerDrawerController(
             layoutParams = LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT)
             setPadding(0, itemPadV, 16.dpPx, itemPadV)
             textSize = 13f
-            setTextColor(if (selected) Color.WHITE else 0x66FFFFFF.toInt())
+            setTextColor(drawerTextColor(selected))
         }
     }
 
@@ -147,7 +159,7 @@ class ServerDrawerController(
                     layoutParams = LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f)
                     setPadding(0, itemPadV, 8.dpPx, itemPadV)
                     textSize = 14f
-                    setTextColor(if (selected) Color.WHITE else 0x80FFFFFF.toInt())
+                    setTextColor(drawerTextColor(selected))
                     if (selected) setTypeface(typeface, Typeface.BOLD)
                 }
             )
@@ -213,7 +225,7 @@ class ServerDrawerController(
                     layoutParams = LinearLayout.LayoutParams(chevronW, MATCH_PARENT)
                     gravity = Gravity.CENTER
                     textSize = 12f
-                    setTextColor(0x80FFFFFF.toInt())
+                    setTextColor(drawerTextColor(false))
                     if (hasChildren) {
                         isClickable = true
                         isFocusable = true
@@ -227,7 +239,7 @@ class ServerDrawerController(
                     layoutParams = LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f)
                     setPadding(0, itemPadV, 8.dpPx, itemPadV)
                     textSize = 14f
-                    setTextColor(if (selected) Color.WHITE else 0x80FFFFFF.toInt())
+                    setTextColor(drawerTextColor(selected))
                     if (selected) setTypeface(typeface, Typeface.BOLD)
                 }
             )

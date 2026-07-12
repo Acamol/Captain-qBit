@@ -11,6 +11,7 @@ import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -90,6 +91,11 @@ class SettingsFragment : Fragment(R.layout.settings_fragment) {
                 dynamicColorsGroup.visibility = View.GONE
             }
 
+            viewModel.themeMode.collectWithLifecycle(this@SettingsFragment) {
+                themeSubtitle.text = themeLabel(it)
+            }
+            themeSetting.setOnClickListener { showThemeDialog() }
+
             serverSettings.setOnClickListener {
                 findNavController().navigate(R.id.action_settingsFragment_to_serverListFragment)
             }
@@ -143,6 +149,36 @@ class SettingsFragment : Fragment(R.layout.settings_fragment) {
                 }
             }
         }
+    }
+
+    private fun themeLabel(mode: Int): String =
+        when (mode) {
+            AppCompatDelegate.MODE_NIGHT_NO -> "Light"
+            AppCompatDelegate.MODE_NIGHT_YES -> "Dark"
+            else -> "System default"
+        }
+
+    private fun showThemeDialog() {
+        val modes =
+            intArrayOf(
+                AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM,
+                AppCompatDelegate.MODE_NIGHT_NO,
+                AppCompatDelegate.MODE_NIGHT_YES,
+            )
+        val labels = arrayOf("System default", "Light", "Dark")
+        val checked = modes.indexOf(viewModel.themeMode.value).coerceAtLeast(0)
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Theme")
+            .setNegativeButton("Cancel", null)
+            .setSingleChoiceItems(labels, checked) { dialog, which ->
+                val mode = modes[which]
+                viewModel.setThemeMode(mode)
+                // Applies immediately and recreates started activities.
+                AppCompatDelegate.setDefaultNightMode(mode)
+                dialog.dismiss()
+            }
+            .show()
     }
 
     // Starts the monitoring service when any notification is enabled (requesting permission first
