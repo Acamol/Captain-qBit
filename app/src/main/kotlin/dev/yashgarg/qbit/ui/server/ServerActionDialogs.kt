@@ -2,10 +2,13 @@ package dev.yashgarg.qbit.ui.server
 
 import android.app.AlertDialog
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+import android.widget.GridLayout
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -202,6 +205,41 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
                 setOnClickListener { onClick() }
             }
 
+        // A round color swatch showing the category's current color (outlined when unset); tapping
+        // it opens the preset-color picker.
+        fun colorSwatch(name: String): View {
+            val color = viewModel.categoryColors.value[name]
+            val circle =
+                GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    if (color != null) {
+                        setColor(color)
+                    } else {
+                        setColor(0x00000000)
+                        setStroke(
+                            (2 * density).toInt(),
+                            MaterialColors.getColor(
+                                ctx,
+                                com.google.android.material.R.attr.colorOutline,
+                                0,
+                            ),
+                        )
+                    }
+                }
+            val inset = (iconBtn - (22 * density).toInt()) / 2
+            return View(ctx).apply {
+                layoutParams = LinearLayout.LayoutParams(iconBtn, iconBtn)
+                background = android.graphics.drawable.InsetDrawable(circle, inset)
+                isClickable = true
+                isFocusable = true
+                contentDescription = "Color for $name"
+                setOnClickListener {
+                    dialog.dismiss()
+                    showCategoryColorPicker(name)
+                }
+            }
+        }
+
         categories.forEach { name ->
             container.addView(
                 LinearLayout(ctx).apply {
@@ -216,6 +254,7 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
                             setTextColor(onSurface)
                         }
                     )
+                    addView(colorSwatch(name))
                     addView(
                         iconButton(R.drawable.outline_edit_24, "Edit $name") {
                             dialog.dismiss()
@@ -259,6 +298,97 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
             }
             .setNegativeButton(getString(CommonR.string.cancel), null)
             .show()
+    }
+
+    // App-local preset palette for category colors (qBittorrent has no category color of its own).
+    private val presetColors =
+        intArrayOf(
+            0xFFEF5350.toInt(),
+            0xFFEC407A.toInt(),
+            0xFFAB47BC.toInt(),
+            0xFF7E57C2.toInt(),
+            0xFF5C6BC0.toInt(),
+            0xFF42A5F5.toInt(),
+            0xFF26A69A.toInt(),
+            0xFF66BB6A.toInt(),
+            0xFF9CCC65.toInt(),
+            0xFFFFCA28.toInt(),
+            0xFFFFA726.toInt(),
+            0xFFFF7043.toInt(),
+        )
+
+    private fun showCategoryColorPicker(name: String, onPicked: (() -> Unit)? = null) {
+        val ctx = requireContext()
+        val density = fragment.resources.displayMetrics.density
+        val sw = (44 * density).toInt()
+        val m = (6 * density).toInt()
+        val current = viewModel.categoryColors.value[name]
+
+        val grid =
+            GridLayout(ctx).apply {
+                columnCount = 4
+                val pad = (16 * density).toInt()
+                setPadding(pad, pad, pad, pad)
+            }
+
+        val dialog =
+            MaterialAlertDialogBuilder(ctx)
+                .setTitle("Category color")
+                .setView(grid)
+                .setNegativeButton(getString(CommonR.string.cancel), null)
+                .create()
+
+        fun swatch(color: Int?) {
+            val circle =
+                GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    if (color != null) {
+                        setColor(color)
+                    } else {
+                        setColor(0x00000000)
+                        setStroke(
+                            (2 * density).toInt(),
+                            MaterialColors.getColor(
+                                ctx,
+                                com.google.android.material.R.attr.colorOutline,
+                                0,
+                            ),
+                        )
+                    }
+                    if (color == current) {
+                        setStroke(
+                            (3 * density).toInt(),
+                            MaterialColors.getColor(
+                                ctx,
+                                com.google.android.material.R.attr.colorOnSurface,
+                                0,
+                            ),
+                        )
+                    }
+                }
+            grid.addView(
+                View(ctx).apply {
+                    layoutParams =
+                        GridLayout.LayoutParams().apply {
+                            width = sw
+                            height = sw
+                            setMargins(m, m, m, m)
+                        }
+                    background = circle
+                    isClickable = true
+                    contentDescription = if (color == null) "No color" else "Color"
+                    setOnClickListener {
+                        viewModel.setCategoryColor(name, color)
+                        onPicked?.invoke()
+                        dialog.dismiss()
+                    }
+                }
+            )
+        }
+
+        swatch(null)
+        presetColors.forEach { swatch(it) }
+        dialog.show()
     }
 
     private fun showCreateNewCategoryDialog() {
@@ -312,6 +442,8 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
     }
 
     private fun showEditCategorySavePathDialog(name: String) {
+        val ctx = requireContext()
+        val density = fragment.resources.displayMetrics.density
         val currentSavePath =
             viewModel.uiState.value.data?.categories?.get(name)?.savePath.orEmpty()
         val view = fragment.layoutInflater.inflate(R.layout.dialog_text_input, null, false)
@@ -320,10 +452,78 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
         til?.hint = getString(CommonR.string.save_path_hint)
         tiet?.setText(currentSavePath)
 
+        val onSurface =
+            MaterialColors.getColor(ctx, com.google.android.material.R.attr.colorOnSurface, 0)
+
+        // Round swatch reflecting the category's current app-local color; tapping opens the picker.
+        val swatch = View(ctx)
+        fun refreshSwatch() {
+            val color = viewModel.categoryColors.value[name]
+            swatch.background =
+                GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    if (color != null) {
+                        setColor(color)
+                    } else {
+                        setColor(0x00000000)
+                        setStroke(
+                            (2 * density).toInt(),
+                            MaterialColors.getColor(
+                                ctx,
+                                com.google.android.material.R.attr.colorOutline,
+                                0,
+                            ),
+                        )
+                    }
+                }
+        }
+        refreshSwatch()
+        swatch.apply {
+            isClickable = true
+            isFocusable = true
+            contentDescription = "Color for $name"
+            setOnClickListener { showCategoryColorPicker(name) { refreshSwatch() } }
+        }
+
+        val dialogPad =
+            TypedValue()
+                .also {
+                    ctx.theme.resolveAttribute(android.R.attr.dialogPreferredPadding, it, true)
+                }
+                .let {
+                    TypedValue.complexToDimensionPixelSize(it.data, ctx.resources.displayMetrics)
+                }
+
+        val colorRow =
+            LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dialogPad, 0, dialogPad, (8 * density).toInt())
+                addView(
+                    TextView(ctx).apply {
+                        text = "Color"
+                        layoutParams = LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f)
+                        textSize = 16f
+                        setTextColor(onSurface)
+                    }
+                )
+                addView(
+                    swatch,
+                    LinearLayout.LayoutParams((28 * density).toInt(), (28 * density).toInt()),
+                )
+            }
+
+        val content =
+            LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(view)
+                addView(colorRow)
+            }
+
         val dialog =
-            MaterialAlertDialogBuilder(requireContext())
+            MaterialAlertDialogBuilder(ctx)
                 .setTitle(getString(CommonR.string.edit_category_title))
-                .setView(view)
+                .setView(content)
                 .setPositiveButton(getString(CommonR.string.edit), null)
                 .setNegativeButton(getString(CommonR.string.cancel), null)
                 .create()

@@ -18,4 +18,5 @@ data class ServerPreferences(
     val filterUntagged: Boolean = false,
     val dynamicColors: Boolean = false,
     val activeServerId: Int = -1,
+    val categoryColors: Map<String, Int> = emptyMap(),
 )

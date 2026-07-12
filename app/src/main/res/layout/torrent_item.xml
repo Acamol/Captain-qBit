@@ -7,22 +7,23 @@
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/torrent_card"
         style="@style/CustomCardTheme"
-        android:layout_height="90dp"
+        android:layout_height="wrap_content"
         android:background="?android:attr/selectableItemBackground"
         android:checkable="true"
         android:clickable="true"
         android:focusable="true"
+        android:minHeight="90dp"
         app:checkedIconGravity="TOP_END"
         app:checkedIconMargin="6dp"
         app:checkedIconSize="16dp">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="wrap_content">
 
             <TextView
                 android:id="@+id/torrentTitle"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_margin="@dimen/sm_margin"
                 android:ellipsize="end"
@@ -32,15 +33,26 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chip_group"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="@dimen/sm_margin"
+                android:visibility="gone"
+                app:chipSpacingHorizontal="4dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/torrentTitle"
+                app:singleLine="true" />
+
             <LinearLayout
                 android:id="@+id/ll_downloaded"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_margin="@dimen/sm_margin"
-                app:layout_constraintBottom_toTopOf="@id/progressBar"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/torrentTitle">
+                app:layout_constraintTop_toBottomOf="@id/chip_group">
 
                 <TextView
                     android:id="@+id/downloaded_percent"
@@ -55,7 +67,7 @@
                     android:id="@+id/eta_tv"
                     style="@style/SmallBoldFont"
                     android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
                     android:ellipsize="end"
                     android:gravity="end"
                     android:maxLines="1" />
@@ -69,9 +81,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="@dimen/sm_margin"
                 android:theme="@style/ProgressBarTheme"
-                app:layout_constraintBottom_toTopOf="@id/ll_status"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent" />
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/ll_downloaded" />
 
             <LinearLayout
                 android:id="@+id/ll_status"
@@ -79,9 +91,9 @@
                 android:layout_height="wrap_content"
                 android:layout_margin="@dimen/sm_margin"
                 android:orientation="horizontal"
-                app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent">
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/progressBar">
 
                 <TextView
                     android:id="@+id/peers_tv"

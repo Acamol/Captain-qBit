@@ -526,6 +526,10 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
             Toast.makeText(requireContext(), it, Toast.LENGTH_SHORT).show()
         }
 
+        viewModel.categoryColors.collectWithLifecycle(this) {
+            torrentListAdapter?.categoryColors = it
+        }
+
         viewModel.intent.collectWithLifecycle(this) { handleAddIntent(null) }
     }
 
