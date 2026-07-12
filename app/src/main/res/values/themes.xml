@@ -37,4 +37,11 @@
     </style>
 
     <style name="Theme.Qbit" parent="Base.Theme.Qbit" />
+
+    <!-- Full-screen dialog used by the tabbed Add-torrent screen. -->
+    <style name="FullScreenDialog" parent="ThemeOverlay.Material3.Dialog">
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowBackground">@color/theme_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
 </resources>
