@@ -28,6 +28,9 @@ fun <T> TreeScope.Leaf(
             )
         },
         update = {
+            // Propagate refreshed data into the retained node so its row re-renders.
+            set(content) { this.content = content }
+            set(name) { this.name = name }
             set(isSelected) { this.isSelectedState = isSelected }
             set(setSelected) { this.onToggleSelected = setSelected }
         }
@@ -58,6 +61,9 @@ fun <T> TreeScope.Branch(
             )
         },
         update = {
+            // Propagate refreshed data into the retained node so its row re-renders.
+            set(content) { this.content = content }
+            set(name) { this.name = name }
             set(isSelected) { this.isSelectedState = isSelected }
             set(setSelected) { this.onToggleSelected = setSelected }
             set(isExpanded) { this.isExpandedState = isExpanded }
