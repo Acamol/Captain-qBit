@@ -23,6 +23,10 @@
         android:id="@+id/configFragment"
         android:name="dev.yashgarg.qbit.ui.config.ConfigFragment"
         android:label="ConfigFragment" >
+        <argument
+            android:name="serverId"
+            android:defaultValue="-1"
+            app:argType="integer" />
         <action
             android:id="@+id/action_configFragment_to_serverFragment"
             app:destination="@id/serverFragment"
@@ -45,6 +49,9 @@
         <action
             android:id="@+id/action_settingsFragment_to_versionFragment"
             app:destination="@id/versionFragment" />
+        <action
+            android:id="@+id/action_settingsFragment_to_serverListFragment"
+            app:destination="@id/serverListFragment" />
     </fragment>
     <fragment
         android:id="@+id/serverFragment"
@@ -63,6 +70,9 @@
         <action
             android:id="@+id/action_serverFragment_to_settingsFragment"
             app:destination="@id/settingsFragment" />
+        <action
+            android:id="@+id/action_serverFragment_to_serverListFragment"
+            app:destination="@id/serverListFragment" />
     </fragment>
     <fragment
         android:id="@+id/torrentInfoFragment"
@@ -71,5 +81,14 @@
         <argument
             android:name="torrentHash"
             app:argType="string" />
+    </fragment>
+    <fragment
+        android:id="@+id/serverListFragment"
+        android:name="dev.yashgarg.qbit.ui.serverlist.ServerListFragment"
+        android:label="server_list_fragment"
+        tools:layout="@layout/server_list_fragment" >
+        <action
+            android:id="@+id/action_serverListFragment_to_configFragment"
+            app:destination="@id/configFragment" />
     </fragment>
 </navigation>

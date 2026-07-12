@@ -166,14 +166,39 @@
                 android:paddingEnd="4dp"
                 android:paddingBottom="12dp">
 
-                <TextView
+                <LinearLayout
+                    android:id="@+id/drawer_server_switcher"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Filters"
-                    android:textColor="?attr/colorOnSurface"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingVertical="4dp">
+
+                    <TextView
+                        android:id="@+id/drawer_server_name"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="Servers"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingHorizontal="4dp"
+                        android:text="▾"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="16sp" />
+
+                </LinearLayout>
 
                 <ImageButton
                     android:id="@+id/drawer_stats_button"

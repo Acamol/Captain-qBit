@@ -3,6 +3,7 @@
     <string name="add_server">Add server</string>
     <string name="edit_server">Edit server</string>
     <string name="server_settings">Server settings</string>
+    <string name="status_cannot_delete_last_server">Can\'t delete the only server</string>
     <string name="welcome_text">Welcome to Captain qBit</string>
     <string name="press_button">Use the button below to add a server</string>
 

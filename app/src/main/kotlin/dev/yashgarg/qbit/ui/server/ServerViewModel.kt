@@ -11,6 +11,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.QbitRepository
+import dev.yashgarg.qbit.data.daos.ConfigDao
+import dev.yashgarg.qbit.data.manager.ClientManager
+import dev.yashgarg.qbit.data.models.ServerConfig
 import dev.yashgarg.qbit.data.models.ServerPreferences
 import dev.yashgarg.qbit.ui.common.StatusViewModel
 import dev.yashgarg.qbit.utils.ExceptionHandler
@@ -28,10 +31,40 @@ class ServerViewModel
 constructor(
     private val repository: QbitRepository,
     private val prefsStore: DataStore<ServerPreferences>,
+    private val configDao: ConfigDao,
+    private val clientManager: ClientManager,
     @ApplicationContext context: Context,
 ) : StatusViewModel(context) {
     private val _uiState = MutableStateFlow(ServerScreenState())
     val uiState = _uiState.asStateFlow()
+
+    /** All saved servers, for the drawer switcher. */
+    val servers: StateFlow<List<ServerConfig>> =
+        configDao.getConfigs().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val activeServerId: StateFlow<Int> =
+        prefsStore.data
+            .map { it.activeServerId }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, -1)
+
+    fun switchServer(id: Int) {
+        if (id == activeServerId.value) return
+        viewModelScope.launch { clientManager.setActiveServer(id) }
+    }
+
+    fun deleteServer(id: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (configDao.getConfigs().first().size <= 1) {
+                emitStatus(getString(CommonR.string.status_cannot_delete_last_server))
+                return@launch
+            }
+            configDao.deleteConfig(id)
+            if (id == prefsStore.data.first().activeServerId) {
+                val remaining = configDao.getConfigs().first().firstOrNull()
+                clientManager.setActiveServer(remaining?.configId ?: -1)
+            }
+        }
+    }
 
     // Eagerly so the DataStore-backed flow starts collecting as soon as the ViewModel is created;
     // the add-torrent dialog reads .value directly (no long-lived collector), and WhileSubscribed
@@ -107,6 +140,43 @@ constructor(
                 }
                 syncData()
             }
+
+        // Reflect the active server's name in the UI.
+        viewModelScope.launch {
+            combine(
+                    configDao.getConfigs(),
+                    prefsStore.data.map { it.activeServerId }.distinctUntilChanged(),
+                ) { configs, activeId ->
+                    configs.find { it.configId == activeId } ?: configs.firstOrNull()
+                }
+                .collect { active -> _uiState.update { it.copy(serverName = active?.serverName) } }
+        }
+
+        // On a real server switch, drop the current sync + filters and repopulate for the new
+        // server (per-server prefs aren't stored yet, so each server starts from a clean slate).
+        viewModelScope.launch {
+            prefsStore.data
+                .map { it.activeServerId }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect {
+                    syncJob?.cancel()
+                    _uiState.update { state ->
+                        state.copy(
+                            dataLoading = true,
+                            data = null,
+                            selectedFilter = StateFilter.ALL,
+                            selectedCategory = null,
+                            selectedTracker = null,
+                            selectedTags = emptySet(),
+                            filterUntagged = false,
+                            searchQuery = "",
+                        )
+                    }
+                    saveFilterPrefs()
+                    syncJob = viewModelScope.launch { syncData() }
+                }
+        }
     }
 
     private fun saveSortPrefs(option: SortOption, direction: SortDirection) {

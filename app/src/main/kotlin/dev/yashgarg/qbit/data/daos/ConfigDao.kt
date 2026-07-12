@@ -14,5 +14,11 @@ interface ConfigDao {
     @Query("SELECT * FROM configs WHERE config_id = :index")
     fun getConfigAtIndex(index: Int = 0): ServerConfig?
 
+    @Query("SELECT * FROM configs WHERE config_id = :id") fun getConfigById(id: Int): ServerConfig?
+
+    @Query("SELECT COALESCE(MAX(config_id), -1) FROM configs") fun maxConfigId(): Int
+
+    @Query("DELETE FROM configs WHERE config_id = :id") fun deleteConfig(id: Int)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE) fun addConfig(config: ServerConfig)
 }
