@@ -46,6 +46,25 @@ constructor(
             .map { it.activeServerId }
             .stateIn(viewModelScope, SharingStarted.Eagerly, -1)
 
+    /** User-picked colors per category (app-local; qBittorrent has no category color). */
+    val categoryColors: StateFlow<Map<String, Int>> =
+        prefsStore.data
+            .map { it.categoryColors }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
+    /** Sets (or clears, when [color] is null) the app-local color for a category. */
+    fun setCategoryColor(category: String, color: Int?) {
+        viewModelScope.launch {
+            prefsStore.updateData { prefs ->
+                prefs.copy(
+                    categoryColors =
+                        if (color == null) prefs.categoryColors - category
+                        else prefs.categoryColors + (category to color)
+                )
+            }
+        }
+    }
+
     fun switchServer(id: Int) {
         if (id == activeServerId.value) return
         viewModelScope.launch { clientManager.setActiveServer(id) }
