@@ -4,8 +4,10 @@ import androidx.annotation.Keep
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 
 @Keep
+@Serializable
 @Entity(tableName = "configs")
 data class ServerConfig(
     @PrimaryKey @ColumnInfo("config_id") val configId: Int,
