@@ -16,7 +16,6 @@ import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.models.ServerConfig
 import dev.yashgarg.qbit.data.models.ServerPreferences
 import dev.yashgarg.qbit.ui.common.StatusViewModel
-import dev.yashgarg.qbit.utils.ExceptionHandler
 import dev.yashgarg.qbit.utils.friendlyMessage
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -455,10 +454,7 @@ constructor(
             repository
                 .observeMainData()
                 .catch { e ->
-                    val error = ExceptionHandler.mapException(e)
-                    _uiState.update { state ->
-                        state.copy(hasError = true, error = error, data = null)
-                    }
+                    _uiState.update { state -> state.copy(hasError = true, error = e, data = null) }
                 }
                 .collectLatest { mainData ->
                     val categories = mainData.categories.keys.sorted()
@@ -492,7 +488,7 @@ constructor(
             is Ok -> Unit
             is Err ->
                 emitStatus(
-                    result.error.message ?: getString(CommonR.string.status_sync_data_failure)
+                    result.error.friendlyMessage(getString(CommonR.string.status_sync_data_failure))
                 )
         }
     }

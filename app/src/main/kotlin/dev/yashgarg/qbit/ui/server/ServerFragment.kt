@@ -34,6 +34,7 @@ import dev.yashgarg.qbit.ui.dialogs.RemoveTorrentDialog
 import dev.yashgarg.qbit.ui.server.adapter.TorrentListAdapter
 import dev.yashgarg.qbit.utils.TorrentHashUtil
 import dev.yashgarg.qbit.utils.collectWithLifecycle
+import dev.yashgarg.qbit.utils.friendlyMessage
 import dev.yashgarg.qbit.utils.toHumanReadable
 import dev.yashgarg.qbit.utils.viewBinding
 import dev.yashgarg.qbit.validation.LinkValidator
@@ -585,9 +586,9 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
             if (state.hasError) {
                 listLoader.visibility = View.GONE
                 speedTv.visibility = View.GONE
-                errorTv.text =
-                    state.error?.message
-                        ?: requireContext().getString(dev.yashgarg.qbit.common.R.string.error)
+                val errorFallback =
+                    requireContext().getString(dev.yashgarg.qbit.common.R.string.error)
+                errorTv.text = state.error?.friendlyMessage(errorFallback) ?: errorFallback
                 errorTv.visibility = View.VISIBLE
                 torrentRv.visibility = View.GONE
                 refreshLayout.isRefreshing = false
