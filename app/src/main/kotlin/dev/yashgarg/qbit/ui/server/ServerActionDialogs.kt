@@ -114,7 +114,6 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
                 else Toast.makeText(requireContext(), "Nothing selected", Toast.LENGTH_SHORT).show()
             }
             .setNeutralButton("New tag…") { _, _ -> showCreateNewTagDialog() }
-            .setNegativeButton("Close", null)
             .show()
     }
 
@@ -164,7 +163,6 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
                 else Toast.makeText(requireContext(), "Nothing selected", Toast.LENGTH_SHORT).show()
             }
             .setNeutralButton("New category…") { _, _ -> showCreateNewCategoryDialog() }
-            .setNegativeButton("Close", null)
             .show()
     }
 
