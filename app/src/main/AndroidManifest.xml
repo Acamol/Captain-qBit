@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <application
         android:name=".QbitApplication"
@@ -110,11 +111,17 @@
             </intent-filter>
         </activity>
 
-        <!-- WorkManager's foreground service needs a type declared on Android 14+ -->
+        <!-- WorkManager's foreground service needs a type declared on Android 14+. specialUse
+             (Android 14+) because the user-enabled status/event monitoring runs indefinitely,
+             which dataSync no longer allows (Android 15 kills dataSync services after 6h). -->
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
-            android:foregroundServiceType="dataSync"
-            tools:node="merge" />
+            android:foregroundServiceType="dataSync|specialUse"
+            tools:node="merge">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="User-enabled live monitoring of the user's own qBittorrent server: an ongoing speed/status notification and torrent completion alerts" />
+        </service>
 
         <provider
             android:name="androidx.startup.InitializationProvider"

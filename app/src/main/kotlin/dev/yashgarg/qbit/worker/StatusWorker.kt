@@ -176,11 +176,15 @@ constructor(
                 listOf(Action(null, "Close", closeIntent)),
                 pendingIntent
             )
-        // Android 10+ requires declaring a foreground service type for setForeground().
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ForegroundInfo(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-        } else {
-            ForegroundInfo(1, notification)
+        // Android 10+ requires declaring a foreground service type for setForeground(). From
+        // Android 14 we use specialUse: this monitor runs as long as the user keeps it enabled,
+        // and Android 15 force-stops dataSync services after 6 hours.
+        return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE ->
+                ForegroundInfo(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ->
+                ForegroundInfo(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            else -> ForegroundInfo(1, notification)
         }
     }
 
