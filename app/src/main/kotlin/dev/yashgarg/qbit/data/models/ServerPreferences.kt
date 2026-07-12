@@ -19,4 +19,7 @@ data class ServerPreferences(
     val dynamicColors: Boolean = false,
     val activeServerId: Int = -1,
     val categoryColors: Map<String, Int> = emptyMap(),
+    val statusNotification: Boolean = true,
+    val notifyOnComplete: Boolean = false,
+    val notifyOnChecked: Boolean = false,
 )

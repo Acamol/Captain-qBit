@@ -93,6 +93,8 @@
     <!-- Notifications -->
     <string name="status_channel_id">qBit-Channel-2</string>
     <string name="status_updates">Status Updates</string>
+    <string name="events_channel_id" translatable="false">qBit-Events</string>
+    <string name="events_channel_name">Torrent events</string>
 
     <!-- Dialogs -->
     <string name="peer_details">IP: %1$s\nPort: %2$d\nCountry: %3$s</string>
