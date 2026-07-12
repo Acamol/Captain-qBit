@@ -20,5 +20,7 @@ interface ConfigDao {
 
     @Query("DELETE FROM configs WHERE config_id = :id") fun deleteConfig(id: Int)
 
+    @Query("DELETE FROM configs") fun clearConfigs()
+
     @Insert(onConflict = OnConflictStrategy.REPLACE) fun addConfig(config: ServerConfig)
 }
