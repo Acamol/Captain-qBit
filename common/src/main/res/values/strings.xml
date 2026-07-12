@@ -29,6 +29,7 @@
     <string name="basic_auth_password">Basic Auth Password</string>
 
     <string name="paused">Paused</string>
+    <string name="stopped">Stopped</string>
     <string name="stalled">Stalled</string>
     <string name="completed">Completed</string>
     <string name="state_downloading_metadata">Downloading metadata</string>

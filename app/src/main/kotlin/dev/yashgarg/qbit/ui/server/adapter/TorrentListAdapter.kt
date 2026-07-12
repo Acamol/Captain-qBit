@@ -122,11 +122,11 @@ class TorrentListAdapter @Inject constructor() :
                 when (torrent.state) {
                     Torrent.State.PAUSED_DL,
                     Torrent.State.STOPPED_DL -> {
-                        peers.text = context.getString(CommonR.string.paused)
-                        peers.setTextColor(context.getColor(R.color.yellow))
+                        peers.text = context.getString(CommonR.string.stopped)
+                        peers.setTextColor(context.getColor(R.color.grey))
                         speed.visibility = View.GONE
                         eta.visibility = View.GONE
-                        progressColor = context.getColor(R.color.yellow)
+                        progressColor = context.getColor(R.color.grey)
                     }
                     Torrent.State.UPLOADING,
                     Torrent.State.FORCED_UP,
@@ -171,21 +171,14 @@ class TorrentListAdapter @Inject constructor() :
                     }
                     Torrent.State.PAUSED_UP,
                     Torrent.State.STOPPED_UP -> {
-                        peers.text = context.getString(CommonR.string.completed)
-                        peers.setTextColor(
-                            MaterialColors.getColor(
-                                peers,
-                                com.google.android.material.R.attr.colorPrimary,
-                            )
-                        )
+                        // A stopped, fully-downloaded torrent. Show it as paused/inactive (grey),
+                        // not "Completed" in the accent colour — the full progress bar already
+                        // conveys that it finished, and this keeps it distinct from seeding.
+                        peers.text = context.getString(CommonR.string.stopped)
+                        peers.setTextColor(context.getColor(R.color.grey))
                         speed.visibility = View.GONE
                         eta.visibility = View.GONE
-                        progressColor =
-                            MaterialColors.getColor(
-                                context,
-                                com.google.android.material.R.attr.colorPrimary,
-                                context.getColor(R.color.md_theme_dark_seed),
-                            )
+                        progressColor = context.getColor(R.color.grey)
                     }
                     Torrent.State.ERROR,
                     Torrent.State.MISSING_FILES -> {
