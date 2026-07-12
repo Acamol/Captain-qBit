@@ -49,7 +49,7 @@
     <string name="reannounce">Reannounce In</string>
     <string name="last_complete">Last Seen Complete</string>
     <string name="priority">Priority</string>
-    <string name="torrent_info">Torrent Information</string>
+    <string name="torrent_info">Information</string>
     <string name="total_size">Total Size</string>
     <string name="created_by">Created By</string>
     <string name="added_on">Added On</string>
