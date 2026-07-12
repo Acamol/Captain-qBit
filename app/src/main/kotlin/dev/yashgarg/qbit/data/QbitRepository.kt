@@ -182,4 +182,13 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
     suspend fun getTorrentFiles(hash: String): Result<List<TorrentFile>, Throwable> {
         return runCatching { client().getTorrentFiles(hash) }
     }
+
+    /** Priorities: 0 = do not download, 1 = normal, 6 = high, 7 = maximal. */
+    suspend fun setFilePriority(
+        hash: String,
+        ids: List<Int>,
+        priority: Int,
+    ): Result<Unit, Throwable> {
+        return runCatching { client().setFilePriority(hash, ids, priority) }
+    }
 }

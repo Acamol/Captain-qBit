@@ -13,16 +13,22 @@ import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.QbitRepository
 import dev.yashgarg.qbit.data.daos.ConfigDao
 import dev.yashgarg.qbit.data.manager.ClientManager
+import dev.yashgarg.qbit.data.models.ContentTreeItem
 import dev.yashgarg.qbit.data.models.ServerConfig
 import dev.yashgarg.qbit.data.models.ServerPreferences
 import dev.yashgarg.qbit.ui.common.StatusViewModel
+import dev.yashgarg.qbit.utils.TorrentFileParser
+import dev.yashgarg.qbit.utils.TransformUtil
 import dev.yashgarg.qbit.utils.friendlyMessage
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import qbittorrent.models.Torrent
+import qbittorrent.models.TorrentFile
 
 @HiltViewModel
 class ServerViewModel
@@ -255,6 +261,233 @@ constructor(
             failureMessage = getString(CommonR.string.status_add_torrent_file_failure),
         ) {
             repository.addTorrentFile(bytes, category, savePath, paused, autoTmm)
+        }
+    }
+
+    // ---- Add-time file selection -------------------------------------------------------------
+    // The add API can't take file selections up front. The add screen's Files tab "prepares" a
+    // source (parsing a .torrent locally, or adding a magnet stopped and polling for metadata),
+    // and confirmAdd() then applies options + "do not download" priorities and starts the
+    // torrent unless the user chose paused.
+
+    private var pendingSource: PendingSource? = null
+    /** Set when a magnet was already added (stopped) to fetch its metadata. */
+    private var addedStoppedHash: String? = null
+    private var metadataJob: Job? = null
+
+    private val _fileSelection = MutableStateFlow<FileSelectionUiState?>(null)
+    /** Non-null while a prepared source's tree (or its loading state) should be showing. */
+    val fileSelection = _fileSelection.asStateFlow()
+
+    /** True when confirmAdd() will consume a prepared source instead of doing a plain add. */
+    val hasPendingSelection: Boolean
+        get() = pendingSource != null
+
+    /**
+     * Parses a `.torrent` locally and exposes its tree — nothing is sent to the server until
+     * [confirmAdd]. Returns false when the file can't be parsed (v2-only or invalid).
+     */
+    fun prepareTorrentFileSelection(bytes: ByteArray): Boolean {
+        val parsed = TorrentFileParser.parse(bytes) ?: return false
+        cancelFileSelection()
+        val synthetic =
+            parsed.files.mapIndexed { i, file ->
+                TorrentFile(
+                    index = i,
+                    name = file.path,
+                    size = file.size,
+                    progress = 0f,
+                    priority = 1,
+                    pieceRange = emptyList(),
+                    availability = 0f,
+                )
+            }
+        pendingSource = PendingSource.TorrentBytes(bytes, parsed)
+        _fileSelection.value =
+            FileSelectionUiState(parsed.name, TransformUtil.transformFilesToTree(synthetic, 0))
+        return true
+    }
+
+    /**
+     * Adds the magnet stopped right away and polls for its file list (metadata must arrive from
+     * peers before a tree exists). Safe to call repeatedly with the same url. Returns false when
+     * the link carries no v1 infohash.
+     */
+    fun prepareMagnetSelection(url: String): Boolean {
+        (pendingSource as? PendingSource.Magnet)?.let { if (it.url == url) return true }
+        val hash = TorrentFileParser.magnetHash(url) ?: return false
+        cancelFileSelection()
+        pendingSource = PendingSource.Magnet(url, hash)
+        _fileSelection.value = FileSelectionUiState(magnetDisplayName(url), null)
+
+        metadataJob =
+            viewModelScope.launch {
+                // Must be added RUNNING: libtorrent won't fetch metadata for a stopped magnet.
+                when (val add = repository.addTorrentUrl(url, paused = false)) {
+                    is Ok -> {
+                        addedStoppedHash = hash
+                        var attempts = 0
+                        while (isActive) {
+                            val files = repository.getTorrentFiles(hash)
+                            if (files is Ok && files.value.isNotEmpty()) {
+                                // Got the file list: stop it again so nothing downloads while the
+                                // user picks. Metadata stays cached; confirm/apply will resume it.
+                                repository.toggleTorrentsState(listOf(hash), pause = true)
+                                _fileSelection.update { current ->
+                                    current?.copy(
+                                        tree = TransformUtil.transformFilesToTree(files.value, 0)
+                                    )
+                                }
+                                break
+                            }
+                            if (++attempts >= METADATA_MAX_ATTEMPTS) {
+                                repository.toggleTorrentsState(listOf(hash), pause = true)
+                                emitStatus(getString(CommonR.string.metadata_timeout))
+                                break
+                            }
+                            delay(METADATA_POLL_MS)
+                        }
+                    }
+                    is Err -> {
+                        emitStatus(
+                            add.error.friendlyMessage(
+                                getString(CommonR.string.status_add_torrent_url_failure)
+                            )
+                        )
+                        clearFileSelection()
+                    }
+                }
+            }
+        return true
+    }
+
+    /**
+     * Commits a prepared source with the add screen's options. [deselected] holds the file indices
+     * NOT to download.
+     */
+    fun confirmAdd(
+        deselected: Set<Int>,
+        category: String?,
+        savePath: String?,
+        paused: Boolean,
+        autoTmm: Boolean,
+    ) {
+        val source = pendingSource ?: return
+        metadataJob?.cancel()
+        clearFileSelection()
+
+        viewModelScope.launch {
+            when (source) {
+                is PendingSource.TorrentBytes -> {
+                    val add =
+                        repository.addTorrentFile(
+                            source.bytes,
+                            category,
+                            savePath,
+                            paused = true,
+                            autoTmm = autoTmm.takeIf { it },
+                        )
+                    if (add is Err) {
+                        emitStatus(
+                            add.error.friendlyMessage(
+                                getString(CommonR.string.status_add_torrent_file_failure)
+                            )
+                        )
+                        return@launch
+                    }
+                    val hash = source.parsed.hash
+                    val server = awaitTorrentFiles(hash)
+                    if (server == null) {
+                        emitStatus(getString(CommonR.string.status_file_selection_failed))
+                        return@launch
+                    }
+                    applySelectionAndStart(
+                        hash,
+                        mapDeselectedToServer(source.parsed, deselected, server),
+                        paused,
+                    )
+                }
+                is PendingSource.Magnet -> {
+                    // Already added (stopped) during prepare; apply the options after the fact.
+                    val hash = source.hash
+                    if (category != null) repository.setTorrentCategory(listOf(hash), category)
+                    if (autoTmm) {
+                        repository.setAutoTorrentManagement(hash, true)
+                    } else if (savePath != null) {
+                        repository.setTorrentLocation(hash, savePath)
+                    }
+                    // Indices came from the server's own file list, so they map directly.
+                    applySelectionAndStart(hash, deselected.toList(), paused)
+                }
+            }
+        }
+    }
+
+    /** Cancels the flow; a magnet torrent that was already added (stopped) is removed again. */
+    fun cancelFileSelection() {
+        metadataJob?.cancel()
+        metadataJob = null
+        val addedHash = addedStoppedHash
+        clearFileSelection()
+        if (addedHash != null) {
+            viewModelScope.launch { repository.removeTorrents(listOf(addedHash)) }
+        }
+    }
+
+    private fun clearFileSelection() {
+        pendingSource = null
+        addedStoppedHash = null
+        _fileSelection.value = null
+    }
+
+    private suspend fun awaitTorrentFiles(hash: String): List<TorrentFile>? {
+        repeat(FILE_POLL_ATTEMPTS) {
+            val files = repository.getTorrentFiles(hash)
+            if (files is Ok && files.value.isNotEmpty()) return files.value
+            delay(FILE_POLL_MS)
+        }
+        return null
+    }
+
+    // Match by path (the server's file names mirror the .torrent's), falling back to position.
+    private fun mapDeselectedToServer(
+        parsed: TorrentFileParser.ParsedTorrent,
+        deselected: Set<Int>,
+        server: List<TorrentFile>,
+    ): List<Int> =
+        deselected.mapNotNull { i ->
+            val path = parsed.files.getOrNull(i)?.path ?: return@mapNotNull null
+            server.firstOrNull { it.name == path || it.name.endsWith("/$path") }?.index
+                ?: server.getOrNull(i)?.index
+        }
+
+    private suspend fun applySelectionAndStart(
+        hash: String,
+        deselectedIds: List<Int>,
+        paused: Boolean,
+    ) {
+        if (deselectedIds.isNotEmpty()) {
+            // Right after an add the torrent may briefly be checking, which rejects priority
+            // changes - retry a few times before giving up.
+            var applied = false
+            repeat(PRIORITY_RETRY_ATTEMPTS) {
+                if (!applied && repository.setFilePriority(hash, deselectedIds, 0) is Ok) {
+                    applied = true
+                }
+                if (!applied) delay(PRIORITY_RETRY_MS)
+            }
+            if (!applied) emitStatus(getString(CommonR.string.status_file_selection_failed))
+        }
+        if (!paused) repository.toggleTorrentsState(listOf(hash), pause = false)
+        emitStatus(getString(CommonR.string.status_add_torrent_file_success))
+    }
+
+    private fun magnetDisplayName(url: String): String {
+        val encoded = Regex("[?&]dn=([^&]+)").find(url)?.groupValues?.get(1) ?: return ""
+        return try {
+            java.net.URLDecoder.decode(encoded.replace("+", "%20"), "UTF-8")
+        } catch (e: Exception) {
+            ""
         }
     }
 
@@ -512,3 +745,25 @@ constructor(
         }
     }
 }
+
+/** Tree + name shown by the add-time file selection dialog; [tree] is null while metadata loads. */
+data class FileSelectionUiState(
+    val torrentName: String,
+    val tree: List<ContentTreeItem>?,
+)
+
+private sealed interface PendingSource {
+    data class TorrentBytes(
+        val bytes: ByteArray,
+        val parsed: TorrentFileParser.ParsedTorrent,
+    ) : PendingSource
+
+    data class Magnet(val url: String, val hash: String) : PendingSource
+}
+
+private const val METADATA_POLL_MS = 1500L
+private const val METADATA_MAX_ATTEMPTS = 80
+private const val FILE_POLL_ATTEMPTS = 20
+private const val FILE_POLL_MS = 500L
+private const val PRIORITY_RETRY_ATTEMPTS = 4
+private const val PRIORITY_RETRY_MS = 750L

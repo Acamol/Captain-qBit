@@ -29,6 +29,13 @@
                 android:hint="@string/enter_url" />
         </com.google.android.material.textfield.TextInputLayout>
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/pick_file_btn"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/pick_torrent_file" />
+
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/category_til"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
