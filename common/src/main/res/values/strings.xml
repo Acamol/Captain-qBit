@@ -31,6 +31,15 @@
     <string name="paused">Paused</string>
     <string name="stalled">Stalled</string>
     <string name="completed">Completed</string>
+    <string name="state_downloading_metadata">Downloading metadata</string>
+    <string name="state_allocating">Allocating</string>
+    <string name="state_moving">Moving</string>
+    <string name="state_checking">Checking</string>
+    <string name="state_checking_resume_data">Checking resume data</string>
+    <string name="state_queued">Queued</string>
+    <string name="state_errored">Errored</string>
+    <string name="state_missing_files">Missing files</string>
+    <string name="state_unknown">Unknown</string>
 
     <!-- Torrent Info Fragment -->
     <!-- Titles-->
