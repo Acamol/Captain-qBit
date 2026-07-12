@@ -187,6 +187,19 @@ class TorrentListAdapter @Inject constructor() :
                                 context.getColor(R.color.md_theme_dark_seed),
                             )
                     }
+                    Torrent.State.ERROR,
+                    Torrent.State.MISSING_FILES -> {
+                        peers.text =
+                            if (torrent.state == Torrent.State.MISSING_FILES)
+                                context.getString(CommonR.string.state_missing_files)
+                            else context.getString(CommonR.string.state_errored)
+                        peers.setTextColor(context.getColor(R.color.red))
+                        speed.visibility = View.GONE
+                        eta.visibility = View.GONE
+                        progressColor = context.getColor(R.color.red)
+                    }
+                    // Transient/working states: metadata download, allocation, moving files, and
+                    // the various consistency checks. No transfer to show, so speed/eta are hidden.
                     Torrent.State.META_DL,
                     Torrent.State.FORCED_META_DL,
                     Torrent.State.ALLOCATING,
@@ -196,10 +209,26 @@ class TorrentListAdapter @Inject constructor() :
                     Torrent.State.CHECKING_RESUME_DATA,
                     Torrent.State.QUEUED_DL,
                     Torrent.State.QUEUED_UP,
-                    Torrent.State.ERROR,
-                    Torrent.State.MISSING_FILES,
                     Torrent.State.UNKNOWN -> {
-                        peers.text = torrent.state.name.lowercase().replace('_', ' ')
+                        peers.text =
+                            when (torrent.state) {
+                                Torrent.State.META_DL,
+                                Torrent.State.FORCED_META_DL ->
+                                    context.getString(CommonR.string.state_downloading_metadata)
+                                Torrent.State.ALLOCATING ->
+                                    context.getString(CommonR.string.state_allocating)
+                                Torrent.State.MOVING ->
+                                    context.getString(CommonR.string.state_moving)
+                                Torrent.State.CHECKING_DL,
+                                Torrent.State.CHECKING_UP ->
+                                    context.getString(CommonR.string.state_checking)
+                                Torrent.State.CHECKING_RESUME_DATA ->
+                                    context.getString(CommonR.string.state_checking_resume_data)
+                                Torrent.State.QUEUED_DL,
+                                Torrent.State.QUEUED_UP ->
+                                    context.getString(CommonR.string.state_queued)
+                                else -> context.getString(CommonR.string.state_unknown)
+                            }
                         peers.setTextColor(context.getColor(R.color.yellow))
                         speed.visibility = View.GONE
                         eta.visibility = View.GONE
