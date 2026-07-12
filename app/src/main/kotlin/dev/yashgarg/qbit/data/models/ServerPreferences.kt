@@ -22,4 +22,7 @@ data class ServerPreferences(
     val statusNotification: Boolean = true,
     val notifyOnComplete: Boolean = false,
     val notifyOnChecked: Boolean = false,
+    // AppCompatDelegate night-mode constant. Defaults to MODE_NIGHT_YES (2) to preserve the
+    // app's original dark-only behaviour for existing installs.
+    val themeMode: Int = 2,
 )

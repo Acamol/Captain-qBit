@@ -1,6 +1,7 @@
 package dev.yashgarg.qbit
 
 import android.app.Application
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.datastore.core.DataStore
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
@@ -29,7 +30,12 @@ class QbitApplication : Application(), Configuration.Provider {
         // Material You: adopt the device's wallpaper-based palette on Android 12+, but only when
         // the user has opted in (Settings -> Dynamic colors). The precondition is checked per
         // activity on creation, so recreating the activity after the toggle changes applies it.
-        dynamicColorsEnabled = runBlocking { serverPrefsStore.data.first().dynamicColors }
+        val prefs = runBlocking { serverPrefsStore.data.first() }
+
+        // Apply the saved theme (Light / Dark / Follow system) before any activity is created.
+        AppCompatDelegate.setDefaultNightMode(prefs.themeMode)
+
+        dynamicColorsEnabled = prefs.dynamicColors
         DynamicColors.applyToActivitiesIfAvailable(
             this,
             DynamicColorsOptions.Builder().setPrecondition { _, _ -> dynamicColorsEnabled }.build(),

@@ -44,6 +44,9 @@ constructor(
             .map { it.dynamicColors }
             .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    val themeMode: StateFlow<Int> =
+        prefsStore.data.map { it.themeMode }.stateIn(viewModelScope, SharingStarted.Eagerly, 2)
+
     val statusNotification: StateFlow<Boolean> =
         prefsStore.data
             .map { it.statusNotification }
@@ -61,6 +64,10 @@ constructor(
 
     fun setDynamicColors(enabled: Boolean) {
         viewModelScope.launch { prefsStore.updateData { it.copy(dynamicColors = enabled) } }
+    }
+
+    fun setThemeMode(mode: Int) {
+        viewModelScope.launch { prefsStore.updateData { it.copy(themeMode = mode) } }
     }
 
     fun setStatusNotification(enabled: Boolean) {
