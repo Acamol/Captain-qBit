@@ -6,6 +6,7 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -149,20 +150,114 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
         dialog.show()
     }
 
+    // A per-row category manager: each category has Edit (its save path - the only property
+    // qBittorrent lets you change; there's no rename endpoint) and Delete, plus a New entry.
     fun showManageCategoriesDialog() {
+        val ctx = requireContext()
         val categories = viewModel.uiState.value.availableCategories
-        val marked = BooleanArray(categories.size) { false }
+        val density = fragment.resources.displayMetrics.density
+        val padH = (20 * density).toInt()
+        val rowPadV = (8 * density).toInt()
+        val iconBtn = (40 * density).toInt()
+        val iconPad = (8 * density).toInt()
+
+        val onSurface =
+            MaterialColors.getColor(ctx, com.google.android.material.R.attr.colorOnSurface, 0)
+        val primary =
+            MaterialColors.getColor(ctx, com.google.android.material.R.attr.colorPrimary, 0)
+        val selectableBg =
+            TypedValue()
+                .also {
+                    ctx.theme.resolveAttribute(android.R.attr.selectableItemBackground, it, true)
+                }
+                .resourceId
+        val borderlessBg =
+            TypedValue()
+                .also {
+                    ctx.theme.resolveAttribute(
+                        android.R.attr.selectableItemBackgroundBorderless,
+                        it,
+                        true,
+                    )
+                }
+                .resourceId
+
+        val container = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+
+        val dialog =
+            MaterialAlertDialogBuilder(ctx)
+                .setTitle("Manage categories")
+                .setView(ScrollView(ctx).apply { addView(container) })
+                .setNegativeButton("Close", null)
+                .create()
+
+        fun iconButton(iconRes: Int, desc: String, onClick: () -> Unit) =
+            ImageButton(ctx).apply {
+                setImageResource(iconRes)
+                layoutParams = LinearLayout.LayoutParams(iconBtn, iconBtn)
+                setPadding(iconPad, iconPad, iconPad, iconPad)
+                setBackgroundResource(borderlessBg)
+                setColorFilter(onSurface)
+                contentDescription = desc
+                setOnClickListener { onClick() }
+            }
+
+        categories.forEach { name ->
+            container.addView(
+                LinearLayout(ctx).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(padH, rowPadV, padH - iconPad, rowPadV)
+                    addView(
+                        TextView(ctx).apply {
+                            text = name
+                            layoutParams = LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f)
+                            textSize = 16f
+                            setTextColor(onSurface)
+                        }
+                    )
+                    addView(
+                        iconButton(R.drawable.outline_edit_24, "Edit $name") {
+                            dialog.dismiss()
+                            showEditCategorySavePathDialog(name)
+                        }
+                    )
+                    addView(
+                        iconButton(R.drawable.outline_delete_24, "Delete $name") {
+                            dialog.dismiss()
+                            confirmDeleteCategory(name)
+                        }
+                    )
+                }
+            )
+        }
+
+        container.addView(
+            TextView(ctx).apply {
+                text = "+  New category"
+                setPadding(padH, (14 * density).toInt(), padH, (14 * density).toInt())
+                textSize = 16f
+                setTextColor(primary)
+                isClickable = true
+                isFocusable = true
+                setBackgroundResource(selectableBg)
+                setOnClickListener {
+                    dialog.dismiss()
+                    showCreateNewCategoryDialog()
+                }
+            }
+        )
+
+        dialog.show()
+    }
+
+    private fun confirmDeleteCategory(name: String) {
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Manage categories")
-            .setMultiChoiceItems(categories.toTypedArray(), marked) { _, which, isChecked ->
-                marked[which] = isChecked
+            .setTitle("Delete $name?")
+            .setPositiveButton(getString(CommonR.string.delete)) { _, _ ->
+                viewModel.deleteCategories(listOf(name))
             }
-            .setPositiveButton("Delete") { _, _ ->
-                val toDelete = categories.filterIndexed { i, _ -> marked[i] }
-                if (toDelete.isNotEmpty()) viewModel.deleteCategories(toDelete)
-                else Toast.makeText(requireContext(), "Nothing selected", Toast.LENGTH_SHORT).show()
-            }
-            .setNeutralButton("New category…") { _, _ -> showCreateNewCategoryDialog() }
+            .setNegativeButton(getString(CommonR.string.cancel), null)
             .show()
     }
 
