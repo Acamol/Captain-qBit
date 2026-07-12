@@ -121,7 +121,7 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
                 basicAuthUsernameTiet.setText(config.basicAuthUsername)
                 basicAuthPasswordTiet.setText(CryptoManager.decrypt(config.basicAuthPassword) ?: "")
             }
-            toolbar.title = getString(R.string.edit_server)
+            toolbar.title = getString(R.string.server_settings)
         }
     }
 
