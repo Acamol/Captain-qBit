@@ -88,17 +88,18 @@ class ServerDrawerController(
     private val Int.dpPx
         get() = (this * fragment.resources.displayMetrics.density).toInt()
 
-    // Drawer text color. The selected row sits on the fixed cyan seed background, so its text
-    // stays white for contrast; unselected text uses a theme-aware muted role (was a hardcoded
-    // translucent white, which vanished on a light background).
+    // Drawer text color, both roles theme-aware so they read on the drawer's colorSurfaceContainer
+    // background in light and dark. Selected uses the primary (seed) color to match the selection
+    // indicator bar; unselected uses a muted on-surface role. (Selected was a hardcoded white,
+    // which
+    // vanished on the light-theme drawer background.)
     private fun drawerTextColor(selected: Boolean): Int =
-        if (selected) Color.WHITE
-        else
-            MaterialColors.getColor(
-                fragment.requireContext(),
-                com.google.android.material.R.attr.colorOnSurfaceVariant,
-                Color.GRAY,
-            )
+        MaterialColors.getColor(
+            fragment.requireContext(),
+            if (selected) com.google.android.material.R.attr.colorPrimary
+            else com.google.android.material.R.attr.colorOnSurfaceVariant,
+            Color.GRAY,
+        )
 
     // A muted trailing count (e.g. how many torrents match this filter row).
     private fun countLabel(count: Int, selected: Boolean, itemPadV: Int): TextView {
