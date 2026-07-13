@@ -206,38 +206,40 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
             }
 
         // A round color swatch showing the category's current color (outlined when unset); tapping
-        // it opens the preset-color picker.
+        // it opens the preset-color picker over this dialog and repaints the swatch in place, so
+        // picking a color returns here instead of closing everything.
+        val inset = (iconBtn - (22 * density).toInt()) / 2
         fun colorSwatch(name: String): View {
-            val color = viewModel.categoryColors.value[name]
-            val circle =
-                GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    if (color != null) {
-                        setColor(color)
-                    } else {
-                        setColor(0x00000000)
-                        setStroke(
-                            (2 * density).toInt(),
-                            MaterialColors.getColor(
-                                ctx,
-                                com.google.android.material.R.attr.colorOutline,
-                                0,
-                            ),
-                        )
+            val view =
+                View(ctx).apply {
+                    layoutParams = LinearLayout.LayoutParams(iconBtn, iconBtn)
+                    isClickable = true
+                    isFocusable = true
+                    contentDescription = "Color for $name"
+                }
+            fun paint(color: Int? = viewModel.categoryColors.value[name]) {
+                val circle =
+                    GradientDrawable().apply {
+                        shape = GradientDrawable.OVAL
+                        if (color != null) {
+                            setColor(color)
+                        } else {
+                            setColor(0x00000000)
+                            setStroke(
+                                (2 * density).toInt(),
+                                MaterialColors.getColor(
+                                    ctx,
+                                    com.google.android.material.R.attr.colorOutline,
+                                    0,
+                                ),
+                            )
+                        }
                     }
-                }
-            val inset = (iconBtn - (22 * density).toInt()) / 2
-            return View(ctx).apply {
-                layoutParams = LinearLayout.LayoutParams(iconBtn, iconBtn)
-                background = android.graphics.drawable.InsetDrawable(circle, inset)
-                isClickable = true
-                isFocusable = true
-                contentDescription = "Color for $name"
-                setOnClickListener {
-                    dialog.dismiss()
-                    showCategoryColorPicker(name)
-                }
+                view.background = android.graphics.drawable.InsetDrawable(circle, inset)
             }
+            paint()
+            view.setOnClickListener { showCategoryColorPicker(name) { picked -> paint(picked) } }
+            return view
         }
 
         categories.forEach { name ->
@@ -317,7 +319,7 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
             0xFFFF7043.toInt(),
         )
 
-    private fun showCategoryColorPicker(name: String, onPicked: (() -> Unit)? = null) {
+    private fun showCategoryColorPicker(name: String, onPicked: ((color: Int?) -> Unit)? = null) {
         val ctx = requireContext()
         val density = fragment.resources.displayMetrics.density
         val sw = (44 * density).toInt()
@@ -379,7 +381,9 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
                     contentDescription = if (color == null) "No color" else "Color"
                     setOnClickListener {
                         viewModel.setCategoryColor(name, color)
-                        onPicked?.invoke()
+                        // Pass the picked color so callers can repaint immediately; the
+                        // categoryColors flow updates asynchronously and would still read stale.
+                        onPicked?.invoke(color)
                         dialog.dismiss()
                     }
                 }
@@ -457,8 +461,7 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
 
         // Round swatch reflecting the category's current app-local color; tapping opens the picker.
         val swatch = View(ctx)
-        fun refreshSwatch() {
-            val color = viewModel.categoryColors.value[name]
+        fun refreshSwatch(color: Int? = viewModel.categoryColors.value[name]) {
             swatch.background =
                 GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
@@ -482,7 +485,7 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
             isClickable = true
             isFocusable = true
             contentDescription = "Color for $name"
-            setOnClickListener { showCategoryColorPicker(name) { refreshSwatch() } }
+            setOnClickListener { showCategoryColorPicker(name) { picked -> refreshSwatch(picked) } }
         }
 
         val dialogPad =
