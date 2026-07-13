@@ -16,4 +16,13 @@ data class ServerPreferences(
     val filterTracker: String? = null,
     val filterTags: Set<String> = emptySet(),
     val filterUntagged: Boolean = false,
+    val dynamicColors: Boolean = false,
+    val activeServerId: Int = -1,
+    val categoryColors: Map<String, Int> = emptyMap(),
+    val statusNotification: Boolean = true,
+    val notifyOnComplete: Boolean = false,
+    val notifyOnChecked: Boolean = false,
+    // AppCompatDelegate night-mode constant. Defaults to MODE_NIGHT_YES (2) to preserve the
+    // app's original dark-only behaviour for existing installs.
+    val themeMode: Int = 2,
 )

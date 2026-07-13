@@ -8,8 +8,12 @@ import qbittorrent.QBittorrentException
 
 class ClientConnectionError : Throwable("Failed to connect to server")
 
-fun Throwable.friendlyMessage(fallback: String = "Unknown error"): String =
-    ExceptionHandler.mapException(this).message?.substringBefore(" [")?.trim() ?: fallback
+fun Throwable.friendlyMessage(fallback: String = "Unknown error"): String {
+    val mapped = ExceptionHandler.mapException(this)
+    // Unknown/unmapped throwable: show the generic fallback, never a raw exception message.
+    if (mapped === this) return fallback
+    return mapped.message?.substringBefore(" [")?.trim() ?: fallback
+}
 
 object ExceptionHandler {
     fun mapException(ex: Throwable): Throwable =
@@ -29,10 +33,13 @@ object ExceptionHandler {
                     ex.response?.status?.value == 409 ||
                         ex.message.contains("conflict", ignoreCase = true) ->
                         Exception("Torrent already exists")
+                    ex.response?.status?.value == 401 || ex.response?.status?.value == 403 ->
+                        Exception("Authentication failed — check the username and password")
                     ex.cause is ConnectTimeoutException -> ClientConnectionError()
                     ex.cause is SocketTimeoutException -> Exception("Connection timed out")
                     else -> ex
                 }
+            is java.io.IOException -> ClientConnectionError()
             else -> ex
         }
 }

@@ -1,5 +1,6 @@
 package dev.yashgarg.qbit.ui.config
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.Result
@@ -21,11 +22,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import qbittorrent.*
 
 @HiltViewModel
-class ConfigViewModel @Inject constructor(private val configDao: ConfigDao) : ViewModel() {
+class ConfigViewModel
+@Inject
+constructor(
+    private val configDao: ConfigDao,
+    private val clientManager: ClientManager,
+    savedStateHandle: SavedStateHandle,
+) : ViewModel() {
+    // -1 = adding a new server; >= 0 = editing that server id.
+    private val serverId: Int = savedStateHandle.get<Int>("serverId") ?: -1
+
     private val hostValidator = HostValidator()
     private val portValidator = PortValidator()
     private val textValidator = StringValidator()
@@ -37,8 +46,10 @@ class ConfigViewModel @Inject constructor(private val configDao: ConfigDao) : Vi
     val existingConfig = _existingConfig.asStateFlow()
 
     init {
-        viewModelScope.launch(Dispatchers.IO) {
-            _existingConfig.value = configDao.getConfigAtIndex()
+        if (serverId >= 0) {
+            viewModelScope.launch(Dispatchers.IO) {
+                _existingConfig.value = configDao.getConfigById(serverId)
+            }
         }
     }
 
@@ -223,25 +234,31 @@ class ConfigViewModel @Inject constructor(private val configDao: ConfigDao) : Vi
         basicAuthUsername: String?,
         basicAuthPassword: String?,
     ) {
-        val config =
-            ServerConfig(
-                configId = 0,
-                serverName = serverName.trim(),
-                baseUrl = serverHost.trim(),
-                port = if (port.isEmpty()) null else port.trim().toInt(),
-                path = if (path.isEmpty()) null else "/$path",
-                username = username.trim(),
-                password = CryptoManager.encrypt(password.trim()) ?: password.trim(),
-                connectionType =
-                    if (connectionType.trim() == "http") ConnectionType.HTTP
-                    else ConnectionType.HTTPS,
-                trustSelfSigned = false,
-                basicAuthUsername = basicAuthUsername?.trim()?.ifEmpty { null },
-                basicAuthPassword =
-                    CryptoManager.encrypt(basicAuthPassword?.trim()?.ifEmpty { null }),
-            )
-
-        viewModelScope.launch { withContext(Dispatchers.IO) { configDao.addConfig(config) } }
+        viewModelScope.launch(Dispatchers.IO) {
+            val editing = serverId >= 0
+            val wasEmpty = configDao.maxConfigId() == -1
+            val newId = if (editing) serverId else configDao.maxConfigId() + 1
+            val config =
+                ServerConfig(
+                    configId = newId,
+                    serverName = serverName.trim(),
+                    baseUrl = serverHost.trim(),
+                    port = if (port.isEmpty()) null else port.trim().toInt(),
+                    path = if (path.isEmpty()) null else "/$path",
+                    username = username.trim(),
+                    password = CryptoManager.encrypt(password.trim()) ?: password.trim(),
+                    connectionType =
+                        if (connectionType.trim() == "http") ConnectionType.HTTP
+                        else ConnectionType.HTTPS,
+                    trustSelfSigned = false,
+                    basicAuthUsername = basicAuthUsername?.trim()?.ifEmpty { null },
+                    basicAuthPassword =
+                        CryptoManager.encrypt(basicAuthPassword?.trim()?.ifEmpty { null }),
+                )
+            configDao.addConfig(config)
+            // First server ever added becomes the active one.
+            if (!editing && wasEmpty) clientManager.setActiveServer(newId)
+        }
     }
 
     suspend fun testConfig(

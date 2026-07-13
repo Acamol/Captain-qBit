@@ -9,7 +9,6 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.bundleOf
 import androidx.core.view.WindowCompat
 import androidx.datastore.core.DataStore
@@ -18,10 +17,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.Navigation.findNavController
 import androidx.navigation.fragment.NavHostFragment
-import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.OutOfQuotaPolicy
-import androidx.work.WorkManager
 import dagger.hilt.android.AndroidEntryPoint
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.models.ConfigStatus
@@ -30,6 +25,7 @@ import dev.yashgarg.qbit.databinding.ActivityMainBinding
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.worker.StatusWorker
 import javax.inject.Inject
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
@@ -44,8 +40,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
-
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -89,7 +83,12 @@ class MainActivity : AppCompatActivity() {
                 clientManager.configStatus.collect { status ->
                     when (status) {
                         ConfigStatus.EXISTS -> {
-                            launchWorkManager(true)
+                            val prefs = serverPrefsStore.data.first()
+                            launchWorkManager(
+                                prefs.statusNotification ||
+                                    prefs.notifyOnComplete ||
+                                    prefs.notifyOnChecked
+                            )
                             val bundle = bundleOf(TORRENT_INTENT_KEY to intent?.data.toString())
                             val navController =
                                 findNavController(this@MainActivity, R.id.nav_host_fragment)
@@ -123,19 +122,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun launchWorkManager(show: Boolean) {
-        val workTag = "status_update"
-        val workManager = WorkManager.getInstance(applicationContext)
         if (show && AppNotificationManager.checkPermission(applicationContext)) {
-            workManager.enqueueUniqueWork(
-                workTag,
-                ExistingWorkPolicy.REPLACE,
-                OneTimeWorkRequestBuilder<StatusWorker>()
-                    .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-                    .setConstraints(StatusWorker.constraints)
-                    .build()
-            )
+            StatusWorker.enqueue(applicationContext)
         } else {
-            workManager.cancelAllWorkByTag(workTag)
+            StatusWorker.cancel(applicationContext)
         }
     }
 

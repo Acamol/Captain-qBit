@@ -4,13 +4,9 @@ import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.runCatching
 import dev.yashgarg.qbit.data.manager.ClientManager
 import javax.inject.Inject
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.launch
 import qbittorrent.*
 import qbittorrent.models.LogEntry
 import qbittorrent.models.MainData
@@ -20,26 +16,13 @@ import qbittorrent.models.TorrentPeers
 import qbittorrent.models.TorrentProperties
 import qbittorrent.models.TorrentTracker
 
-class QbitRepository
-@Inject
-constructor(dispatcher: CoroutineDispatcher, private val clientManager: ClientManager) {
-    private val clientDeferred = CompletableDeferred<QBittorrentClient>()
-    private val scope by lazy { CoroutineScope(dispatcher) }
-
-    init {
-        scope.launch {
-            val c = clientManager.checkAndGetClient()
-            if (c != null) {
-                clientDeferred.complete(c)
-            } else {
-                clientDeferred.completeExceptionally(
-                    IllegalStateException("Failed to initialize client")
-                )
-            }
-        }
-    }
-
-    private suspend fun client(): QBittorrentClient = clientDeferred.await()
+class QbitRepository @Inject constructor(private val clientManager: ClientManager) {
+    // Fetch the CURRENT client each call (rather than caching one) so switching the active server
+    // propagates: after a switch the client is rebuilt and the next call gets the new one. The
+    // long-lived observe* flows are restarted at the ViewModel level on switch.
+    private suspend fun client(): QBittorrentClient =
+        clientManager.checkAndGetClient()
+            ?: throw IllegalStateException("No active qBittorrent client")
 
     fun observeMainData(): Flow<MainData> {
         return flow { emitAll(client().observeMainData()) }
@@ -198,5 +181,14 @@ constructor(dispatcher: CoroutineDispatcher, private val clientManager: ClientMa
 
     suspend fun getTorrentFiles(hash: String): Result<List<TorrentFile>, Throwable> {
         return runCatching { client().getTorrentFiles(hash) }
+    }
+
+    /** Priorities: 0 = do not download, 1 = normal, 6 = high, 7 = maximal. */
+    suspend fun setFilePriority(
+        hash: String,
+        ids: List<Int>,
+        priority: Int,
+    ): Result<Unit, Throwable> {
+        return runCatching { client().setFilePriority(hash, ids, priority) }
     }
 }

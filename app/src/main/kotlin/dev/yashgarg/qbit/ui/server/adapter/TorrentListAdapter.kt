@@ -1,12 +1,14 @@
 package dev.yashgarg.qbit.ui.server.adapter
 
 import android.content.res.ColorStateList
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.core.graphics.ColorUtils
 import androidx.recyclerview.selection.ItemDetailsLookup
 import androidx.recyclerview.selection.ItemKeyProvider
 import androidx.recyclerview.selection.Selection
@@ -17,6 +19,9 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
+import com.google.android.material.color.MaterialColors
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.utils.toHumanReadable
@@ -29,6 +34,15 @@ class TorrentListAdapter @Inject constructor() :
 
     private var selectionTracker: SelectionTracker<String>? = null
     var onItemClick: ((String) -> Unit)? = null
+
+    // App-local category -> color map (see ServerPreferences.categoryColors). Reassigned from a
+    // ServerFragment collector; rebind so the category chips repaint.
+    var categoryColors: Map<String, Int> = emptyMap()
+        @android.annotation.SuppressLint("NotifyDataSetChanged")
+        set(value) {
+            field = value
+            notifyDataSetChanged()
+        }
 
     fun clearSelection() {
         selectionTracker?.clearSelection()
@@ -65,6 +79,7 @@ class TorrentListAdapter @Inject constructor() :
         private val speed: TextView = view.findViewById(R.id.speed_tv)
         private val downloaded: TextView = view.findViewById(R.id.downloaded_percent)
         private val eta: TextView = view.findViewById(R.id.eta_tv)
+        private val chipGroup: ChipGroup = view.findViewById(R.id.chip_group)
 
         val itemDetails: ItemDetailsLookup.ItemDetails<String> =
             object : ItemDetailsLookup.ItemDetails<String>() {
@@ -76,6 +91,7 @@ class TorrentListAdapter @Inject constructor() :
         fun bind(torrent: Torrent) {
             with(itemView) {
                 title.text = torrent.name
+                bindChips(torrent)
                 speed.text =
                     String.format(
                         context.getString(CommonR.string.speed_status),
@@ -106,11 +122,11 @@ class TorrentListAdapter @Inject constructor() :
                 when (torrent.state) {
                     Torrent.State.PAUSED_DL,
                     Torrent.State.STOPPED_DL -> {
-                        peers.text = context.getString(CommonR.string.paused)
-                        peers.setTextColor(context.getColor(R.color.yellow))
+                        peers.text = context.getString(CommonR.string.stopped)
+                        peers.setTextColor(context.getColor(R.color.grey))
                         speed.visibility = View.GONE
                         eta.visibility = View.GONE
-                        progressColor = context.getColor(R.color.yellow)
+                        progressColor = context.getColor(R.color.grey)
                     }
                     Torrent.State.UPLOADING,
                     Torrent.State.FORCED_UP,
@@ -131,10 +147,20 @@ class TorrentListAdapter @Inject constructor() :
                                 torrent.connectedSeeds,
                                 torrent.seedsInSwarm,
                             )
-                        peers.setTextColor(context.getColor(R.color.md_theme_dark_seed))
+                        peers.setTextColor(
+                            MaterialColors.getColor(
+                                peers,
+                                com.google.android.material.R.attr.colorPrimary,
+                            )
+                        )
                         speed.visibility = View.VISIBLE
                         eta.visibility = View.VISIBLE
-                        progressColor = context.getColor(R.color.md_theme_dark_seed)
+                        progressColor =
+                            MaterialColors.getColor(
+                                context,
+                                com.google.android.material.R.attr.colorPrimary,
+                                context.getColor(R.color.md_theme_dark_seed),
+                            )
                     }
                     Torrent.State.STALLED_DL -> {
                         peers.text = context.getString(CommonR.string.stalled)
@@ -145,12 +171,28 @@ class TorrentListAdapter @Inject constructor() :
                     }
                     Torrent.State.PAUSED_UP,
                     Torrent.State.STOPPED_UP -> {
-                        peers.text = context.getString(CommonR.string.completed)
-                        peers.setTextColor(context.getColor(R.color.md_theme_dark_seed))
+                        // A stopped, fully-downloaded torrent. Show it as paused/inactive (grey),
+                        // not "Completed" in the accent colour — the full progress bar already
+                        // conveys that it finished, and this keeps it distinct from seeding.
+                        peers.text = context.getString(CommonR.string.stopped)
+                        peers.setTextColor(context.getColor(R.color.grey))
                         speed.visibility = View.GONE
                         eta.visibility = View.GONE
-                        progressColor = context.getColor(R.color.md_theme_dark_seed)
+                        progressColor = context.getColor(R.color.grey)
                     }
+                    Torrent.State.ERROR,
+                    Torrent.State.MISSING_FILES -> {
+                        peers.text =
+                            if (torrent.state == Torrent.State.MISSING_FILES)
+                                context.getString(CommonR.string.state_missing_files)
+                            else context.getString(CommonR.string.state_errored)
+                        peers.setTextColor(context.getColor(R.color.red))
+                        speed.visibility = View.GONE
+                        eta.visibility = View.GONE
+                        progressColor = context.getColor(R.color.red)
+                    }
+                    // Transient/working states: metadata download, allocation, moving files, and
+                    // the various consistency checks. No transfer to show, so speed/eta are hidden.
                     Torrent.State.META_DL,
                     Torrent.State.FORCED_META_DL,
                     Torrent.State.ALLOCATING,
@@ -160,10 +202,26 @@ class TorrentListAdapter @Inject constructor() :
                     Torrent.State.CHECKING_RESUME_DATA,
                     Torrent.State.QUEUED_DL,
                     Torrent.State.QUEUED_UP,
-                    Torrent.State.ERROR,
-                    Torrent.State.MISSING_FILES,
                     Torrent.State.UNKNOWN -> {
-                        peers.text = torrent.state.name.lowercase().replace('_', ' ')
+                        peers.text =
+                            when (torrent.state) {
+                                Torrent.State.META_DL,
+                                Torrent.State.FORCED_META_DL ->
+                                    context.getString(CommonR.string.state_downloading_metadata)
+                                Torrent.State.ALLOCATING ->
+                                    context.getString(CommonR.string.state_allocating)
+                                Torrent.State.MOVING ->
+                                    context.getString(CommonR.string.state_moving)
+                                Torrent.State.CHECKING_DL,
+                                Torrent.State.CHECKING_UP ->
+                                    context.getString(CommonR.string.state_checking)
+                                Torrent.State.CHECKING_RESUME_DATA ->
+                                    context.getString(CommonR.string.state_checking_resume_data)
+                                Torrent.State.QUEUED_DL,
+                                Torrent.State.QUEUED_UP ->
+                                    context.getString(CommonR.string.state_queued)
+                                else -> context.getString(CommonR.string.state_unknown)
+                            }
                         peers.setTextColor(context.getColor(R.color.yellow))
                         speed.visibility = View.GONE
                         eta.visibility = View.GONE
@@ -173,6 +231,90 @@ class TorrentListAdapter @Inject constructor() :
                 progressBar.progressTintList = ColorStateList.valueOf(progressColor)
             }
         }
+
+        private fun bindChips(torrent: Torrent) {
+            chipGroup.removeAllViews()
+
+            val hasCategory = torrent.category.isNotBlank()
+            if (hasCategory) {
+                val userColor = categoryColors[torrent.category]
+                if (userColor != null) {
+                    addChip(
+                        torrent.category,
+                        userColor,
+                        contrastColorOn(userColor),
+                        outlined = false
+                    )
+                } else {
+                    addChip(
+                        torrent.category,
+                        MaterialColors.getColor(
+                            chipGroup,
+                            com.google.android.material.R.attr.colorSecondaryContainer,
+                        ),
+                        MaterialColors.getColor(
+                            chipGroup,
+                            com.google.android.material.R.attr.colorOnSecondaryContainer,
+                        ),
+                        outlined = false,
+                    )
+                }
+            }
+
+            torrent.tags.forEach { tag ->
+                addChip(
+                    "#$tag",
+                    null,
+                    MaterialColors.getColor(
+                        chipGroup,
+                        com.google.android.material.R.attr.colorOnSurfaceVariant,
+                    ),
+                    outlined = true,
+                )
+            }
+
+            chipGroup.visibility =
+                if (hasCategory || torrent.tags.isNotEmpty()) View.VISIBLE else View.GONE
+        }
+
+        private fun addChip(label: String, background: Int?, foreground: Int, outlined: Boolean) {
+            val context = chipGroup.context
+            val density = context.resources.displayMetrics.density
+            val chip =
+                Chip(context).apply {
+                    text = label
+                    isClickable = false
+                    isCheckable = false
+                    isCloseIconVisible = false
+                    setEnsureMinTouchTargetSize(false)
+                    chipMinHeight = 24 * density
+                    chipStartPadding = 8 * density
+                    chipEndPadding = 8 * density
+                    textStartPadding = 0f
+                    textEndPadding = 0f
+                    setTextColor(foreground)
+                    if (outlined) {
+                        chipBackgroundColor = ColorStateList.valueOf(Color.TRANSPARENT)
+                        chipStrokeWidth = density
+                        chipStrokeColor =
+                            ColorStateList.valueOf(
+                                MaterialColors.getColor(
+                                    chipGroup,
+                                    com.google.android.material.R.attr.colorOutline,
+                                )
+                            )
+                    } else {
+                        chipStrokeWidth = 0f
+                        if (background != null) {
+                            chipBackgroundColor = ColorStateList.valueOf(background)
+                        }
+                    }
+                }
+            chipGroup.addView(chip)
+        }
+
+        private fun contrastColorOn(background: Int): Int =
+            if (ColorUtils.calculateLuminance(background) > 0.5) Color.BLACK else Color.WHITE
     }
 
     init {

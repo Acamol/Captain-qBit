@@ -24,16 +24,26 @@ object AppNotificationManager {
          * class is new and not in the support library
          */
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel =
+            val statusChannel =
                 NotificationChannel(
                     context.getString(R.string.status_channel_id),
                     context.getString(R.string.status_updates),
                     NotificationManager.IMPORTANCE_LOW
                 )
 
+            // Torrent events (completed, checked) alert the user, so this channel is DEFAULT
+            // importance rather than the silent LOW status channel.
+            val eventsChannel =
+                NotificationChannel(
+                    context.getString(R.string.events_channel_id),
+                    context.getString(R.string.events_channel_name),
+                    NotificationManager.IMPORTANCE_DEFAULT
+                )
+
             val notificationManager =
                 context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
+            notificationManager.createNotificationChannel(statusChannel)
+            notificationManager.createNotificationChannel(eventsChannel)
         }
     }
 
@@ -60,14 +70,16 @@ object AppNotificationManager {
         @DrawableRes smallIcon: Int,
         persistent: Boolean = false,
         actions: List<NotificationCompat.Action> = emptyList(),
-        contentIntent: PendingIntent? = null
+        contentIntent: PendingIntent? = null,
+        channelId: String = context.getString(R.string.status_channel_id),
+        priority: Int = NotificationCompat.PRIORITY_LOW
     ): Notification {
         val builder =
-            NotificationCompat.Builder(context, context.getString(R.string.status_channel_id))
+            NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(smallIcon)
                 .setContentTitle(title)
                 .setContentText(content)
-                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setPriority(priority)
                 .setContentIntent(contentIntent)
                 .setAutoCancel(!persistent)
                 .setOngoing(persistent)
@@ -76,6 +88,25 @@ object AppNotificationManager {
         actions.forEach { builder.addAction(it) }
         return builder.build()
     }
+
+    /** A one-off, dismissible notification on the alerting "events" channel. */
+    fun createEventNotification(
+        context: Context,
+        title: String,
+        content: String,
+        @DrawableRes smallIcon: Int,
+        contentIntent: PendingIntent? = null
+    ): Notification =
+        createNotification(
+            context = context,
+            title = title,
+            content = content,
+            smallIcon = smallIcon,
+            persistent = false,
+            contentIntent = contentIntent,
+            channelId = context.getString(R.string.events_channel_id),
+            priority = NotificationCompat.PRIORITY_DEFAULT
+        )
 
     // We already check for permissions later in the process, so we can suppress this lint
     @SuppressLint("MissingPermission")

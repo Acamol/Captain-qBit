@@ -3,14 +3,18 @@ Captain qBit is a modern Android app for managing a qBittorrent instance remotel
 Features:
 
 * Live torrent list with global and per-torrent speeds, progress, and ETA
-* Sort by name, size, progress, speed, ratio, date added, and more
-* Search torrents by name, and filter by status, category, tracker, or tags
+* Sort, search, and filter by status, category, tracker, or tags from a drawer sidebar
+* Category and tags shown as chips, with a colour you can pick per category
+* Manage multiple servers and switch between them
 * Add torrents via magnet links or .torrent files, with category, save path, start-paused, and Automatic Torrent Management options
+* Choose which files to download when adding, and set per-file priorities from the Files tab
 * Create categories on the fly, manage tags, recheck, reannounce, rename, and change save paths
 * Detailed view with Info, Files, Trackers, and Peers tabs, including a browsable file tree
+* Light, Dark, or System theme, with optional Material You dynamic colours
+* Optional status notification, plus opt-in alerts when a download or force-recheck finishes
+* Encrypted backup and restore of your servers and settings
 * Clear failure reasons when a torrent errors, instead of a bare "error"
 * Optional HTTP Basic Auth for servers behind a reverse proxy, plus self-signed certificate support
-* A persistent status notification showing connection state and current speeds
 * Works with qBittorrent 4.x and 5.x
 
 Captain qBit began as a fork of qBittorrent Manager by Yash Garg and builds on that foundation. It is free and open source under the GPL-3.0 license.

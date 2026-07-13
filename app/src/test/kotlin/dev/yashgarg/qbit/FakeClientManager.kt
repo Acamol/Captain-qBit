@@ -40,4 +40,6 @@ class FakeClientManager : ClientManager {
             httpClient = ClientManager.httpClient(),
             dispatcher = Dispatchers.Default,
         )
+
+    override suspend fun setActiveServer(id: Int) = Unit
 }
