@@ -483,6 +483,11 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
         }
 
         viewModel.intent.collectWithLifecycle(this) { handleAddIntent(null) }
+
+        // Consume a URI stashed while our view was destroyed (e.g. a torrent opened from another
+        // app
+        // while on the info screen) right away, rather than waiting for the next sync tick.
+        handleAddIntent(null)
     }
 
     // With hideOnScroll, a hidden bottom bar can only be revealed by scrolling up. If the list
