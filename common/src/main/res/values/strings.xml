@@ -99,7 +99,6 @@
     <string name="events_channel_name">Torrent events</string>
 
     <!-- Dialogs -->
-    <string name="peer_details">IP: %1$s\nPort: %2$d\nCountry: %3$s</string>
     <string name="confirm_delete_torrents">Are you sure you want to delete the torrent(s)?</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
