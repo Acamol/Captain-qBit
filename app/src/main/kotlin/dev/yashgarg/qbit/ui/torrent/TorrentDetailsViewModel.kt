@@ -11,10 +11,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.QbitRepository
+import dev.yashgarg.qbit.data.models.ContentTreeItem
 import dev.yashgarg.qbit.ui.common.StatusViewModel
 import dev.yashgarg.qbit.utils.TransformUtil
 import dev.yashgarg.qbit.utils.friendlyMessage
 import javax.inject.Inject
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import qbittorrent.models.LogEntry
@@ -271,6 +273,48 @@ constructor(
 
         _uiState.update { state -> state.copy(contentLoading = false) }
     }
+
+    /** Priorities: 0 = do not download, 1 = normal, 6 = high, 7 = maximal. */
+    fun setFilePriority(ids: List<Int>, priority: Int) {
+        val hash = requireNotNull(hash)
+        viewModelScope.launch {
+            when (val result = repository.setFilePriority(hash, ids, priority)) {
+                is Ok -> {
+                    // Update the tree immediately - qBittorrent applies priorities
+                    // asynchronously, so an instant re-fetch can still return the old values.
+                    _uiState.update { state ->
+                        state.copy(
+                            contentTree = withPriorities(state.contentTree, ids.toSet(), priority)
+                        )
+                    }
+                    // Then reconcile with the server once it has settled.
+                    delay(1000)
+                    getContent()
+                }
+                is Err ->
+                    emitStatus(
+                        result.error.friendlyMessage(
+                            getString(CommonR.string.status_set_priority_failure)
+                        )
+                    )
+            }
+        }
+    }
+
+    private fun withPriorities(
+        nodes: List<ContentTreeItem>,
+        ids: Set<Int>,
+        priority: Int,
+    ): List<ContentTreeItem> =
+        nodes.map { node ->
+            node.copy(
+                item =
+                    node.item?.let { file ->
+                        if (file.index in ids) file.copy(priority = priority) else file
+                    },
+                children = node.children?.let { withPriorities(it, ids, priority) },
+            )
+        }
 
     private suspend fun syncPeers() {
         val result = runCatching {

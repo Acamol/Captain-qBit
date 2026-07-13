@@ -1,1 +1,1 @@
-Modern qBittorrent WebUI Client
+Control your qBittorrent server from your phone

@@ -3,7 +3,6 @@ package dev.yashgarg.qbit.ui.server
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -34,10 +33,10 @@ import dev.yashgarg.qbit.ui.dialogs.RemoveTorrentDialog
 import dev.yashgarg.qbit.ui.server.adapter.TorrentListAdapter
 import dev.yashgarg.qbit.utils.TorrentHashUtil
 import dev.yashgarg.qbit.utils.collectWithLifecycle
+import dev.yashgarg.qbit.utils.friendlyMessage
 import dev.yashgarg.qbit.utils.toHumanReadable
 import dev.yashgarg.qbit.utils.viewBinding
 import dev.yashgarg.qbit.validation.LinkValidator
-import java.util.ArrayList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -100,6 +99,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                 onTagLongPress = { name -> actionDialogs?.showTagLongPressDialog(name) },
             )
         binding.drawerStatsButton.setOnClickListener { actionDialogs?.showStatisticsDialog() }
+        binding.drawerServerSwitcher.setOnClickListener { actionDialogs?.showServerPicker() }
         clearSelectionCallback =
             object : OnBackPressedCallback(false) {
                 override fun handleOnBackPressed() {
@@ -195,59 +195,6 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                 }
                 binding.bottomBar.menu.findItem(R.id.delete_selection).isVisible = false
             }
-
-            setFragmentResultListener(AddTorrentDialog.ADD_TORRENT_KEY, viewLifecycleOwner) {
-                _,
-                bundle ->
-                val url = bundle.getString(AddTorrentDialog.TORRENT_KEY)
-                val category = bundle.getString(AddTorrentDialog.CATEGORY_KEY)
-                val savePath = bundle.getString(AddTorrentDialog.SAVE_PATH_KEY)
-                val paused = bundle.getBoolean(AddTorrentDialog.PAUSED_KEY, false)
-                val autoTmm = bundle.getBoolean(AddTorrentDialog.AUTO_TMM_KEY, false)
-                viewModel.saveAddTorrentPrefs(autoTmm, paused)
-                if (bundle.getBoolean(AddTorrentDialog.SAVE_CATEGORY_DEFAULT_KEY, false)) {
-                    viewModel.saveDefaultCategory(category)
-                }
-                viewModel.addTorrentUrl(
-                    requireNotNull(url),
-                    category,
-                    savePath,
-                    paused.takeIf { it },
-                    autoTmm.takeIf { it },
-                )
-            }
-
-            @Suppress("UNCHECKED_CAST")
-            setFragmentResultListener(AddTorrentDialog.ADD_TORRENT_FILE_KEY, viewLifecycleOwner) {
-                _,
-                bundle ->
-                val uris =
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        bundle.getParcelableArrayList(AddTorrentDialog.TORRENT_KEY, Uri::class.java)
-                    } else {
-                        bundle.getStringArrayList(AddTorrentDialog.TORRENT_KEY) as ArrayList<Uri>
-                    }
-                val category = bundle.getString(AddTorrentDialog.CATEGORY_KEY)
-                val savePath = bundle.getString(AddTorrentDialog.SAVE_PATH_KEY)
-                val paused = bundle.getBoolean(AddTorrentDialog.PAUSED_KEY, false)
-                val autoTmm = bundle.getBoolean(AddTorrentDialog.AUTO_TMM_KEY, false)
-                viewModel.saveAddTorrentPrefs(autoTmm, paused)
-                if (bundle.getBoolean(AddTorrentDialog.SAVE_CATEGORY_DEFAULT_KEY, false)) {
-                    viewModel.saveDefaultCategory(category)
-                }
-
-                uris?.forEach { uri ->
-                    requireContext().contentResolver.openInputStream(uri).use { stream ->
-                        viewModel.addTorrentFile(
-                            requireNotNull(stream).readBytes(),
-                            category,
-                            savePath,
-                            paused.takeIf { it },
-                            autoTmm.takeIf { it },
-                        )
-                    }
-                }
-            }
         }
     }
 
@@ -255,6 +202,13 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
         val uri: String? = (bundle ?: arguments)?.getString(MainActivity.TORRENT_INTENT_KEY)
         (bundle ?: arguments)?.clear()
         if (uri.isNullOrEmpty()) return
+        // onNewIntent can deliver while our view is destroyed (app in background). Accessing
+        // viewLifecycleOwner would crash, so stash the uri and let the viewModel.intent pass
+        // consume it from arguments once the view is recreated.
+        if (view == null) {
+            arguments = bundleOf(MainActivity.TORRENT_INTENT_KEY to uri)
+            return
+        }
         if (childFragmentManager.findFragmentByTag(AddTorrentDialog.TAG) != null) return
 
         val isLink = linkValidator.isValid(uri)
@@ -481,11 +435,8 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
                 drawerLayout.closeDrawer(Gravity.START)
                 actionDialogs?.showManageTagsDialog()
             }
-            drawerEditServer.setOnClickListener {
-                findNavController().navigate(R.id.action_serverFragment_to_configFragment)
-            }
-            drawerAbout.setOnClickListener {
-                findNavController().navigate(R.id.action_serverFragment_to_versionFragment)
+            drawerSettings.setOnClickListener {
+                findNavController().navigate(R.id.action_serverFragment_to_settingsFragment)
             }
         }
     }
@@ -525,6 +476,10 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
 
         viewModel.status.collectWithLifecycle(this) {
             Toast.makeText(requireContext(), it, Toast.LENGTH_SHORT).show()
+        }
+
+        viewModel.categoryColors.collectWithLifecycle(this) {
+            torrentListAdapter?.categoryColors = it
         }
 
         viewModel.intent.collectWithLifecycle(this) { handleAddIntent(null) }
@@ -578,6 +533,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
 
             drawerController?.update(state)
             updateFilterChips(state)
+            drawerServerName.text = state.serverName ?: "Servers"
 
             // Reflect current alt-speed-limits state on the drawer toggle. Safe to set directly:
             // the row uses a click listener (user-initiated), so this won't re-trigger a toggle.
@@ -586,9 +542,9 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
             if (state.hasError) {
                 listLoader.visibility = View.GONE
                 speedTv.visibility = View.GONE
-                errorTv.text =
-                    state.error?.message
-                        ?: requireContext().getString(dev.yashgarg.qbit.common.R.string.error)
+                val errorFallback =
+                    requireContext().getString(dev.yashgarg.qbit.common.R.string.error)
+                errorTv.text = state.error?.friendlyMessage(errorFallback) ?: errorFallback
                 errorTv.visibility = View.VISIBLE
                 torrentRv.visibility = View.GONE
                 refreshLayout.isRefreshing = false

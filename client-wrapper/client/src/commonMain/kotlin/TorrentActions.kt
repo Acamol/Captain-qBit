@@ -90,50 +90,61 @@ suspend fun QBittorrentClient.reannounceTorrents(hashes: List<String> = QBittorr
         .orThrow()
 }
 
+// The priority endpoints below mutate state, so qBittorrent only accepts them as POSTed form
+// data - a GET with query params is rejected (405).
+
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.increasePriority(hashes: List<String> = QBittorrentClient.allList) {
     http
-        .get("${config.baseUrl}/api/v2/torrents/increasePrio") {
-            parameter("hashes", hashes.joinToString("|"))
-        }
+        .submitForm(
+            "${config.baseUrl}/api/v2/torrents/increasePrio",
+            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) }
+        )
         .orThrow()
 }
 
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.decreasePriority(hashes: List<String> = QBittorrentClient.allList) {
     http
-        .get("${config.baseUrl}/api/v2/torrents/decreasePrio") {
-            parameter("hashes", hashes.joinToString("|"))
-        }
+        .submitForm(
+            "${config.baseUrl}/api/v2/torrents/decreasePrio",
+            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) }
+        )
         .orThrow()
 }
 
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.maxPriority(hashes: List<String> = QBittorrentClient.allList) {
     http
-        .get("${config.baseUrl}/api/v2/torrents/topPrio") {
-            parameter("hashes", hashes.joinToString("|"))
-        }
+        .submitForm(
+            "${config.baseUrl}/api/v2/torrents/topPrio",
+            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) }
+        )
         .orThrow()
 }
 
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.minPriority(hashes: List<String> = QBittorrentClient.allList) {
     http
-        .get("${config.baseUrl}/api/v2/torrents/bottomPrio") {
-            parameter("hashes", hashes.joinToString("|"))
-        }
+        .submitForm(
+            "${config.baseUrl}/api/v2/torrents/bottomPrio",
+            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) }
+        )
         .orThrow()
 }
 
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.setFilePriority(hash: String, ids: List<Int>, priority: Int) {
     http
-        .get("${config.baseUrl}/api/v2/torrents/filePrio") {
-            parameter("hash", hash)
-            parameter("id", ids.joinToString("|"))
-            parameter("priority", priority)
-        }
+        .submitForm(
+            "${config.baseUrl}/api/v2/torrents/filePrio",
+            formParameters =
+                Parameters.build {
+                    append("hash", hash)
+                    append("id", ids.joinToString("|"))
+                    append("priority", priority.toString())
+                }
+        )
         .orThrow()
 }
 

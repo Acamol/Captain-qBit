@@ -147,7 +147,7 @@
         android:layout_width="260dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:background="@color/md_theme_dark_bluegray_surface"
+        android:background="?attr/colorSurfaceContainerHigh"
         android:fitsSystemWindows="true">
 
         <LinearLayout
@@ -166,14 +166,39 @@
                 android:paddingEnd="4dp"
                 android:paddingBottom="12dp">
 
-                <TextView
+                <LinearLayout
+                    android:id="@+id/drawer_server_switcher"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Filters"
-                    android:textColor="@color/white"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingVertical="4dp">
+
+                    <TextView
+                        android:id="@+id/drawer_server_name"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="Servers"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingHorizontal="4dp"
+                        android:text="▾"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="16sp" />
+
+                </LinearLayout>
 
                 <ImageButton
                     android:id="@+id/drawer_stats_button"
@@ -183,7 +208,7 @@
                     android:contentDescription="Statistics"
                     android:src="@drawable/outline_bar_chart_24"
                     android:tooltipText="Statistics"
-                    app:tint="@color/white" />
+                    app:tint="?attr/colorOnSurface" />
 
             </LinearLayout>
 
@@ -194,7 +219,7 @@
                 android:paddingHorizontal="16dp"
                 android:paddingBottom="4dp"
                 android:text="Status"
-                android:textColor="@color/md_theme_dark_seed_light"
+                android:textColor="?attr/colorPrimary"
                 android:textSize="11sp"
                 android:textAllCaps="true" />
 
@@ -209,7 +234,7 @@
                 android:layout_height="1dp"
                 android:layout_marginHorizontal="16dp"
                 android:layout_marginVertical="8dp"
-                android:background="@color/md_theme_dark_outline" />
+                android:background="?attr/colorOutline" />
 
             <!-- Category -->
             <LinearLayout
@@ -229,7 +254,7 @@
                     android:paddingBottom="4dp"
                     android:text="Categories"
                     android:textAllCaps="true"
-                    android:textColor="@color/md_theme_dark_seed_light"
+                    android:textColor="?attr/colorPrimary"
                     android:textSize="11sp" />
 
                 <ImageButton
@@ -241,7 +266,7 @@
                     android:padding="6dp"
                     android:src="@drawable/outline_edit_24"
                     android:tooltipText="Manage categories"
-                    app:tint="@color/md_theme_dark_seed_light" />
+                    app:tint="?attr/colorPrimary" />
 
             </LinearLayout>
 
@@ -257,7 +282,7 @@
                 android:layout_height="1dp"
                 android:layout_marginHorizontal="16dp"
                 android:layout_marginVertical="8dp"
-                android:background="@color/md_theme_dark_outline"
+                android:background="?attr/colorOutline"
                 android:visibility="gone" />
 
             <!-- Tags -->
@@ -278,7 +303,7 @@
                     android:paddingBottom="4dp"
                     android:text="Tags"
                     android:textAllCaps="true"
-                    android:textColor="@color/md_theme_dark_seed_light"
+                    android:textColor="?attr/colorPrimary"
                     android:textSize="11sp" />
 
                 <ImageButton
@@ -290,7 +315,7 @@
                     android:padding="6dp"
                     android:src="@drawable/outline_edit_24"
                     android:tooltipText="Manage tags"
-                    app:tint="@color/md_theme_dark_seed_light" />
+                    app:tint="?attr/colorPrimary" />
 
             </LinearLayout>
 
@@ -306,7 +331,7 @@
                 android:layout_height="1dp"
                 android:layout_marginHorizontal="16dp"
                 android:layout_marginVertical="8dp"
-                android:background="@color/md_theme_dark_outline"
+                android:background="?attr/colorOutline"
                 android:visibility="gone" />
 
             <!-- Tracker -->
@@ -317,7 +342,7 @@
                 android:paddingHorizontal="16dp"
                 android:paddingBottom="4dp"
                 android:text="Trackers"
-                android:textColor="@color/md_theme_dark_seed_light"
+                android:textColor="?attr/colorPrimary"
                 android:textSize="11sp"
                 android:textAllCaps="true"
                 android:visibility="gone" />
@@ -342,7 +367,7 @@
                 android:layout_height="1dp"
                 android:layout_marginHorizontal="16dp"
                 android:layout_marginVertical="8dp"
-                android:background="@color/md_theme_dark_outline" />
+                android:background="?attr/colorOutline" />
 
             <!-- Server actions -->
             <com.google.android.material.materialswitch.MaterialSwitch
@@ -353,31 +378,19 @@
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
                 android:text="Alternate speed limits"
-                android:textColor="@color/white"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp" />
 
             <TextView
-                android:id="@+id/drawer_edit_server"
+                android:id="@+id/drawer_settings"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="?attr/selectableItemBackground"
                 android:gravity="center_vertical"
                 android:minHeight="48dp"
                 android:paddingHorizontal="16dp"
-                android:text="@string/edit_server"
-                android:textColor="@color/white"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/drawer_about"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="?attr/selectableItemBackground"
-                android:gravity="center_vertical"
-                android:minHeight="48dp"
-                android:paddingHorizontal="16dp"
-                android:text="@string/about"
-                android:textColor="@color/white"
+                android:text="Settings"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp" />
 
         </LinearLayout>

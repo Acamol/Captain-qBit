@@ -4,7 +4,6 @@ import com.github.michaelbull.result.Ok
 import dev.yashgarg.qbit.Constants
 import dev.yashgarg.qbit.FakeClientManager
 import dev.yashgarg.qbit.MainDispatcherRule
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -23,7 +22,7 @@ class QbitRepositoryTest {
 
     @Before
     fun setUp() {
-        repository = QbitRepository(Dispatchers.Main, clientManager)
+        repository = QbitRepository(clientManager)
     }
 
     @Test

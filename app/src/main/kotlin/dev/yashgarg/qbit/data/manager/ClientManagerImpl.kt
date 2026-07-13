@@ -1,17 +1,24 @@
 package dev.yashgarg.qbit.data.manager
 
 import android.util.Log
+import androidx.datastore.core.DataStore
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.runCatching
 import dev.yashgarg.qbit.data.daos.ConfigDao
 import dev.yashgarg.qbit.data.models.ConfigStatus
+import dev.yashgarg.qbit.data.models.ServerConfig
+import dev.yashgarg.qbit.data.models.ServerPreferences
 import dev.yashgarg.qbit.di.ApplicationScope
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import qbittorrent.QBittorrentClient
 
 @Singleton
@@ -19,6 +26,7 @@ class ClientManagerImpl
 @Inject
 constructor(
     private val configDao: ConfigDao,
+    private val prefsStore: DataStore<ServerPreferences>,
     @ApplicationScope coroutineScope: CoroutineScope,
 ) : ClientManager {
     private val _configStatus = MutableSharedFlow<ConfigStatus>(replay = 1)
@@ -27,21 +35,34 @@ constructor(
     private var client: QBittorrentClient? = null
 
     init {
-        coroutineScope.launch { checkIfConfigsExist() }
+        coroutineScope.launch { observeActiveServer() }
     }
 
-    private suspend fun checkIfConfigsExist() {
+    // Rebuild the client whenever the set of configs OR the active server changes. Only the
+    // activeServerId slice of the prefs is observed, so speed/filter pref writes don't churn it.
+    private suspend fun observeActiveServer() {
         withContext(Dispatchers.IO) {
-            configDao.getConfigs().collect { configs ->
-                client = null // force re-create with the latest config
-                if (configs.isNotEmpty()) {
-                    _configStatus.emit(ConfigStatus.EXISTS)
-                    checkAndGetClient()
-                } else {
-                    _configStatus.emit(ConfigStatus.DOES_NOT_EXIST)
+            combine(
+                    configDao.getConfigs(),
+                    prefsStore.data.map { it.activeServerId }.distinctUntilChanged(),
+                ) { configs, _ ->
+                    configs
                 }
-            }
+                .collect { configs ->
+                    client = null // force re-create with the (possibly new) active config
+                    if (configs.isNotEmpty()) {
+                        _configStatus.emit(ConfigStatus.EXISTS)
+                        checkAndGetClient()
+                    } else {
+                        _configStatus.emit(ConfigStatus.DOES_NOT_EXIST)
+                    }
+                }
         }
+    }
+
+    override suspend fun setActiveServer(id: Int) {
+        client = null
+        prefsStore.updateData { it.copy(activeServerId = id) }
     }
 
     override suspend fun checkAndGetClient(): QBittorrentClient? {
@@ -57,10 +78,20 @@ constructor(
         }
     }
 
+    // The active config is the one whose id matches the stored activeServerId; falls back to the
+    // first config so existing single-server users (activeServerId still -1) and deletion of the
+    // active server both resolve to a real server.
+    private suspend fun resolveActiveConfig(): ServerConfig? {
+        val configs = configDao.getConfigs().first()
+        if (configs.isEmpty()) return null
+        val activeId = prefsStore.data.first().activeServerId
+        return configs.find { it.configId == activeId } ?: configs.first()
+    }
+
     private suspend fun getClient(): QBittorrentClient =
         withContext(Dispatchers.IO) {
             if (client == null) {
-                val config = configDao.getConfigAtIndex()!!
+                val config = requireNotNull(resolveActiveConfig()) { "No server config" }
                 val port = if (config.port != null) ":${config.port}" else ""
                 val path = config.path ?: ""
 

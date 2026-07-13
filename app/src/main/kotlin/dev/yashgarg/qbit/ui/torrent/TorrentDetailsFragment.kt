@@ -51,7 +51,7 @@ class TorrentDetailsFragment : Fragment(R.layout.torrent_details_fragment) {
         TabLayoutMediator(binding.tabs, binding.pager) { tab, position ->
                 tab.text =
                     when (position) {
-                        0 -> "Info"
+                        0 -> "General"
                         1 -> "Files"
                         2 -> "Trackers"
                         else -> "Peers"
