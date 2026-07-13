@@ -182,6 +182,20 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleBackupIntent(intent)
+        // super.onNewIntent delivered a torrent to ServerFragment's listener; handleBackupIntent
+        // clears the data for .cqb files, so remaining VIEW data means a torrent. Bring the list
+        // forward (if we're elsewhere, e.g. the info screen) so its add dialog can surface.
+        if (intent.action == Intent.ACTION_VIEW && intent.data != null) popToServerList()
+    }
+
+    private fun popToServerList() {
+        val navController =
+            (supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? NavHostFragment)
+                ?.navController
+                ?: return
+        if (navController.currentDestination?.id != R.id.serverFragment) {
+            navController.popBackStack(R.id.serverFragment, false)
+        }
     }
 
     /**
