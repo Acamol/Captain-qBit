@@ -1,0 +1,10 @@
+- Multiple servers: add several qBittorrent servers and switch between them from the drawer; add, edit or remove them in Settings
+- New Settings screen: pick a Light, Dark or System theme, optionally turn on Material You dynamic colours, and control notifications
+- Encrypted backup: export and import all your servers and settings as a passphrase-protected file
+- Notifications: turn the ongoing status notification on or off, and get alerts when a download or a force-recheck finishes
+- Choose which files to download while adding a torrent (.torrent or magnet), and change file priorities from the Files tab
+- Category and tags shown as chips on each torrent, with a colour you can pick per category
+- Redesigned torrent info as grouped cards; clearer per-state labels and colours (stopped torrents now read "Stopped")
+- Friendly, readable error messages instead of raw exceptions
+- Full Status filter set matching qBittorrent, and category editing from the Manage categories dialog
+- Reliability: the monitoring service no longer stops itself after a few hours on newer Android
