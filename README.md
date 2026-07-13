@@ -49,6 +49,13 @@ over its Web API — control your self-hosted server from your phone. Written in
 ## Roadmap
 - **More in-app preferences** — configurable behaviours such as the refresh/polling interval
 
+## Support
+
+Captain qBit is free and open source. If you find it useful and want to support its
+development, you can leave a tip on Ko-fi — entirely optional, and always appreciated.
+
+[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/acamol)
+
 ## Credits
 
 Captain qBit began as a fork of [Yash-Garg/qBittorrent-Manager](https://github.com/Yash-Garg/qBittorrent-Manager)
