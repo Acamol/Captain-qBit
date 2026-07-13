@@ -1,16 +1,11 @@
 package dev.yashgarg.qbit.ui.settings
 
 import android.Manifest
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.text.InputType
 import android.view.View
-import android.widget.EditText
-import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -22,8 +17,11 @@ import com.google.android.material.transition.MaterialSharedAxis
 import dagger.hilt.android.AndroidEntryPoint
 import dev.yashgarg.qbit.QbitApplication
 import dev.yashgarg.qbit.R
+import dev.yashgarg.qbit.data.backup.PrefGroup
 import dev.yashgarg.qbit.databinding.SettingsFragmentBinding
 import dev.yashgarg.qbit.notifications.AppNotificationManager
+import dev.yashgarg.qbit.ui.backup.BackupDialogs
+import dev.yashgarg.qbit.ui.backup.BackupViewModel
 import dev.yashgarg.qbit.utils.collectWithLifecycle
 import dev.yashgarg.qbit.utils.viewBinding
 import dev.yashgarg.qbit.worker.StatusWorker
@@ -32,24 +30,50 @@ import dev.yashgarg.qbit.worker.StatusWorker
 class SettingsFragment : Fragment(R.layout.settings_fragment) {
     private val binding by viewBinding(SettingsFragmentBinding::bind)
     private val viewModel by viewModels<SettingsViewModel>()
+    private val backupViewModel by viewModels<BackupViewModel>()
 
-    private var pendingExportPassphrase: String? = null
+    // The selection + passphrase, held until the user picks an export destination.
+    private data class PendingExport(
+        val passphrase: String,
+        val serverIds: Set<Int>,
+        val prefGroups: Set<PrefGroup>,
+        val includeCategoryColors: Boolean,
+    )
 
-    // SAF: the system file creator returns where to write the backup. Passphrase is collected first
-    // and held in pendingExportPassphrase until the user picks a destination.
+    private var pendingExport: PendingExport? = null
+
+    // SAF: the system file creator returns where to write the backup. Selection and passphrase are
+    // collected first and held in pendingExport until the user picks a destination.
     private val exportLauncher =
-        registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri
-            ->
-            val passphrase = pendingExportPassphrase
-            pendingExportPassphrase = null
-            if (uri != null && passphrase != null) viewModel.exportConfig(uri, passphrase)
+        registerForActivityResult(
+            ActivityResultContracts.CreateDocument("application/octet-stream")
+        ) { uri ->
+            val pending = pendingExport
+            pendingExport = null
+            if (uri != null && pending != null) {
+                backupViewModel.exportConfig(
+                    uri,
+                    pending.passphrase,
+                    pending.serverIds,
+                    pending.prefGroups,
+                    pending.includeCategoryColors,
+                )
+            }
         }
 
-    // SAF: the system file picker returns the backup to restore. Confirmation + passphrase are
-    // collected after a file is chosen.
+    // SAF: the system file picker returns the backup to restore. The passphrase is collected next;
+    // the selection dialog is shown once the file is decrypted (BackupEvent.Loaded).
     private val importLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-            if (uri != null) confirmThenImport(uri)
+            if (uri != null) {
+                BackupDialogs.showPassphraseDialog(
+                    requireContext(),
+                    title = "Backup passphrase",
+                    confirm = false,
+                ) { passphrase ->
+                    backupViewModel.beginImport(uri, passphrase)
+                }
+            }
         }
 
     // On Android 13+ notifications need runtime permission; if granted, (re)start the service.
@@ -135,18 +159,23 @@ class SettingsFragment : Fragment(R.layout.settings_fragment) {
             }
         }
 
-        viewModel.backupEvents.collectWithLifecycle(this) { event ->
+        backupViewModel.backupEvents.collectWithLifecycle(this) { event ->
             when (event) {
-                is SettingsViewModel.BackupEvent.Exported ->
+                is BackupViewModel.BackupEvent.Exported ->
                     Snackbar.make(binding.root, event.message, Snackbar.LENGTH_LONG).show()
-                is SettingsViewModel.BackupEvent.Failed ->
+                is BackupViewModel.BackupEvent.Failed ->
                     Snackbar.make(binding.root, event.message, Snackbar.LENGTH_LONG).show()
-                is SettingsViewModel.BackupEvent.Imported -> {
-                    // Recreate so a restored theme (dynamic colors) is applied immediately.
-                    QbitApplication.dynamicColorsEnabled = viewModel.dynamicColors.value
+                is BackupViewModel.BackupEvent.Loaded ->
+                    BackupDialogs.showImportSelectionDialog(
+                        requireContext(),
+                        event.backup,
+                        event.duplicateServerIds,
+                    ) { serverIds, prefGroups, includeColors, mode ->
+                        backupViewModel.applyImport(serverIds, prefGroups, includeColors, mode)
+                    }
+                // Theme/dynamic colors are applied by MainActivity's prefs observer.
+                is BackupViewModel.BackupEvent.Imported ->
                     Toast.makeText(requireContext(), event.message, Toast.LENGTH_SHORT).show()
-                    requireActivity().recreate()
-                }
             }
         }
     }
@@ -203,82 +232,18 @@ class SettingsFragment : Fragment(R.layout.settings_fragment) {
     }
 
     private fun startExport() {
-        showPassphraseDialog(title = "Encrypt backup", confirm = true) { passphrase ->
-            pendingExportPassphrase = passphrase
-            exportLauncher.launch("captain-qbit-backup.json")
-        }
-    }
-
-    private fun confirmThenImport(uri: Uri) {
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Import configuration")
-            .setMessage(
-                "This replaces your current servers and app settings with the backup's contents. " +
-                    "Continue?"
-            )
-            .setNegativeButton("Cancel", null)
-            .setPositiveButton("Import") { _, _ ->
-                showPassphraseDialog(title = "Backup passphrase", confirm = false) { passphrase ->
-                    viewModel.importConfig(uri, passphrase)
-                }
-            }
-            .show()
-    }
-
-    /**
-     * Prompts for a passphrase (min 8 chars). When [confirm] is set, a second field must match. The
-     * OK button validates inline and only dismisses once the input is valid.
-     */
-    private fun showPassphraseDialog(title: String, confirm: Boolean, onOk: (String) -> Unit) {
-        val context = requireContext()
-        val density = resources.displayMetrics.density
-        val horizontal = (24 * density).toInt()
-        val vertical = (8 * density).toInt()
-
-        val container =
-            LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(horizontal, vertical, horizontal, 0)
-            }
-        val passField =
-            EditText(context).apply {
-                hint = "Passphrase"
-                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-            }
-        container.addView(passField)
-        val confirmField =
-            if (confirm) {
-                EditText(context)
-                    .apply {
-                        hint = "Confirm passphrase"
-                        inputType =
-                            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-                    }
-                    .also(container::addView)
-            } else null
-
-        val dialog =
-            MaterialAlertDialogBuilder(context)
-                .setTitle(title)
-                .setView(container)
-                .setNegativeButton("Cancel", null)
-                .setPositiveButton("OK", null)
-                .create()
-
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val passphrase = passField.text?.toString().orEmpty()
-                when {
-                    passphrase.length < 8 -> passField.error = "At least 8 characters"
-                    confirm && passphrase != confirmField?.text?.toString() ->
-                        confirmField?.error = "Passphrases don't match"
-                    else -> {
-                        dialog.dismiss()
-                        onOk(passphrase)
-                    }
-                }
+        BackupDialogs.showExportSelectionDialog(requireContext(), backupViewModel.servers.value) {
+            serverIds,
+            prefGroups,
+            includeColors ->
+            BackupDialogs.showPassphraseDialog(
+                requireContext(),
+                title = "Encrypt backup",
+                confirm = true,
+            ) { passphrase ->
+                pendingExport = PendingExport(passphrase, serverIds, prefGroups, includeColors)
+                exportLauncher.launch("captain-qbit-backup.cqb")
             }
         }
-        dialog.show()
     }
 }
