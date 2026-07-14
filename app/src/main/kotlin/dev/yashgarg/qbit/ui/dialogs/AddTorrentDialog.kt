@@ -3,6 +3,7 @@ package dev.yashgarg.qbit.ui.dialogs
 import android.content.DialogInterface
 import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -57,7 +58,7 @@ class AddTorrentDialog : DialogFragment() {
     /** Non-null when the Files tab can't offer selection for the current source. */
     private val filesUnavailableReason = mutableStateOf<Int?>(null)
 
-    private var pickedUris: MutableList<Uri> = mutableListOf()
+    private var pickedUri: Uri? = null
     /** The magnet url a prepare was started for, to detect edits invalidating it. */
     private var preparedMagnet: String? = null
     private var confirmed = false
@@ -80,11 +81,14 @@ class AddTorrentDialog : DialogFragment() {
     private val prefillFileUri: String?
         get() = arguments?.getString(ARG_PREFILL_FILE_URI)
 
+    // OpenDocument (ACTION_OPEN_DOCUMENT) rather than GetContent (ACTION_GET_CONTENT): the latter
+    // returns RESULT_OK with no URI on some providers/devices, so a picked .torrent silently never
+    // reaches the dialog.
     private val filePickerLauncher =
         registerForActivityResult(
-            androidx.activity.result.contract.ActivityResultContracts.GetMultipleContents()
-        ) { uris ->
-            if (!uris.isNullOrEmpty()) setPickedFiles(uris)
+            androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+        ) { uri ->
+            if (uri != null) setPickedFile(uri)
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -93,12 +97,7 @@ class AddTorrentDialog : DialogFragment() {
 
         savedInstanceState?.let { state ->
             state.getIntArray(STATE_DESELECTED)?.let { deselected.value = it.toSet() }
-            pickedUris =
-                state
-                    .getStringArrayList(STATE_PICKED_URIS)
-                    .orEmpty()
-                    .map(Uri::parse)
-                    .toMutableList()
+            pickedUri = state.getString(STATE_PICKED_URIS)?.let(Uri::parse)
             preparedMagnet = state.getString(STATE_PREPARED_MAGNET)
         }
     }
@@ -188,10 +187,10 @@ class AddTorrentDialog : DialogFragment() {
             prefillUrl != null -> options.magnetTiet.setText(prefillUrl)
             prefillFileUri != null -> {
                 options.pickFileBtn.visibility = View.GONE
-                if (pickedUris.isEmpty()) {
-                    setPickedFiles(listOf(Uri.parse(prefillFileUri)))
+                if (pickedUri == null) {
+                    setPickedFile(Uri.parse(prefillFileUri))
                 } else {
-                    showPickedFileNames()
+                    showPickedFileName()
                 }
             }
             else -> {
@@ -211,48 +210,51 @@ class AddTorrentDialog : DialogFragment() {
                 }
             }
         }
-        if (prefillFileUri == null && pickedUris.isNotEmpty()) showPickedFileNames()
+        if (prefillFileUri == null && pickedUri != null) showPickedFileName()
 
         // The Storage Access Framework picker grants read access to the chosen files, so no
         // storage permission is needed.
-        options.pickFileBtn.setOnClickListener { filePickerLauncher.launch(TORRENT_MIMETYPE) }
-    }
-
-    /** A file (or several) was chosen: display it and prepare the Files tab when possible. */
-    private fun setPickedFiles(uris: List<Uri>) {
-        pickedUris = uris.toMutableList()
-        deselected.value = emptySet()
-        preparedMagnet = null
-        filesUnavailableReason.value = null
-        showPickedFileNames()
-
-        when {
-            uris.size > 1 -> {
-                viewModel.cancelFileSelection()
-                filesUnavailableReason.value = CommonR.string.files_multi_unavailable
-            }
-            else -> {
-                val bytes = readUriBytes(uris.first())
-                if (bytes == null || !viewModel.prepareTorrentFileSelection(bytes)) {
-                    viewModel.cancelFileSelection()
-                    filesUnavailableReason.value = CommonR.string.files_unavailable
-                }
-            }
+        options.pickFileBtn.setOnClickListener {
+            filePickerLauncher.launch(arrayOf(TORRENT_MIMETYPE))
         }
     }
 
-    private fun showPickedFileNames() {
+    /** A file was chosen: display it and prepare the Files tab when possible. */
+    private fun setPickedFile(uri: Uri) {
+        pickedUri = uri
+        deselected.value = emptySet()
+        preparedMagnet = null
+        filesUnavailableReason.value = null
+        showPickedFileName()
+
+        val bytes = readUriBytes(uri)
+        if (bytes == null || !viewModel.prepareTorrentFileSelection(bytes)) {
+            viewModel.cancelFileSelection()
+            filesUnavailableReason.value = CommonR.string.files_unavailable
+        }
+    }
+
+    private fun showPickedFileName() {
         val options = requireNotNull(binding).optionsView
         options.magnetTil.hint = getString(CommonR.string.selected_file)
         options.magnetTil.isEndIconVisible = false
-        options.magnetTiet.setText(
-            pickedUris.joinToString(", ") {
-                it.lastPathSegment ?: getString(CommonR.string.torrent_file_fallback_name)
-            }
-        )
+        options.magnetTiet.setText(pickedUri?.let(::displayName).orEmpty())
         options.magnetTiet.isFocusable = false
         options.magnetTiet.isClickable = false
     }
+
+    // SAF document URIs expose the file name via OpenableColumns, not lastPathSegment (which is the
+    // opaque document id, e.g. "primary:Download/foo.torrent").
+    private fun displayName(uri: Uri): String =
+        runCatching {
+                requireContext()
+                    .contentResolver
+                    .query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+                    ?.use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
+            }
+            .getOrNull()
+            ?: uri.lastPathSegment
+            ?: getString(CommonR.string.torrent_file_fallback_name)
 
     private fun readUriBytes(uri: Uri): ByteArray? =
         runCatching {
@@ -262,7 +264,7 @@ class AddTorrentDialog : DialogFragment() {
 
     /** Called when the Files tab opens with a magnet link in the field. */
     private fun maybePrepareMagnet() {
-        if (pickedUris.isNotEmpty() || preparedMagnet != null) return
+        if (pickedUri != null || preparedMagnet != null) return
         val url = requireNotNull(binding).optionsView.magnetTiet.text?.toString().orEmpty()
         if (url.startsWith("magnet:") && linkValidator.isValid(url)) {
             filesUnavailableReason.value = null
@@ -335,26 +337,25 @@ class AddTorrentDialog : DialogFragment() {
         when {
             viewModel.hasPendingSelection ->
                 viewModel.confirmAdd(deselected.value, category, savePath, paused, autoTmm)
-            pickedUris.isNotEmpty() ->
-                pickedUris.forEach { uri ->
-                    val bytes = readUriBytes(uri)
-                    if (bytes != null) {
-                        viewModel.addTorrentFile(
-                            bytes,
-                            category,
-                            savePath,
-                            paused.takeIf { it },
-                            autoTmm.takeIf { it },
+            pickedUri != null -> {
+                val bytes = readUriBytes(requireNotNull(pickedUri))
+                if (bytes != null) {
+                    viewModel.addTorrentFile(
+                        bytes,
+                        category,
+                        savePath,
+                        paused.takeIf { it },
+                        autoTmm.takeIf { it },
+                    )
+                } else {
+                    Toast.makeText(
+                            requireContext(),
+                            getString(CommonR.string.no_file_selected),
+                            Toast.LENGTH_SHORT,
                         )
-                    } else {
-                        Toast.makeText(
-                                requireContext(),
-                                getString(CommonR.string.no_file_selected),
-                                Toast.LENGTH_SHORT,
-                            )
-                            .show()
-                    }
+                        .show()
                 }
+            }
             else -> {
                 val magnetUri = options.magnetTiet.text?.toString().orEmpty()
                 if (magnetUri.isEmpty() || !linkValidator.isValid(magnetUri)) {
@@ -384,10 +385,7 @@ class AddTorrentDialog : DialogFragment() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putIntArray(STATE_DESELECTED, deselected.value.toIntArray())
-        outState.putStringArrayList(
-            STATE_PICKED_URIS,
-            ArrayList(pickedUris.map(Uri::toString)),
-        )
+        outState.putString(STATE_PICKED_URIS, pickedUri?.toString())
         outState.putString(STATE_PREPARED_MAGNET, preparedMagnet)
     }
 

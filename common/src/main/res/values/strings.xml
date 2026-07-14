@@ -141,7 +141,6 @@
     <string name="clipboard_empty">Clipboard is empty</string>
     <string name="files_placeholder">Enter a magnet link or choose a .torrent file to see its contents</string>
     <string name="files_unavailable">File selection isn\'t available for this torrent</string>
-    <string name="files_multi_unavailable">File selection isn\'t available when adding several torrents at once</string>
     <string name="status_file_selection_failed">Torrent added, but the file selection couldn\'t be applied</string>
     <string name="status_bulk_tags_updated">Tags updated on %1$d torrent(s)</string>
     <string name="status_update_tags_failure">Failed to update tags</string>
