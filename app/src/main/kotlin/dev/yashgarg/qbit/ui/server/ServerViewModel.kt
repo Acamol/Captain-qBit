@@ -4,8 +4,9 @@ import android.content.Context
 import android.net.Uri
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.viewModelScope
-import com.github.michaelbull.result.Err
-import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.get
+import com.github.michaelbull.result.onFailure
+import com.github.michaelbull.result.onSuccess
 import com.github.michaelbull.result.runCatching
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -320,20 +321,19 @@ constructor(
 
         metadataJob = viewModelScope.launch {
             // Must be added RUNNING: libtorrent won't fetch metadata for a stopped magnet.
-            when (val add = repository.addTorrentUrl(url, paused = false)) {
-                is Ok -> {
+            repository
+                .addTorrentUrl(url, paused = false)
+                .onSuccess {
                     addedStoppedHash = hash
                     var attempts = 0
                     while (isActive) {
-                        val files = repository.getTorrentFiles(hash)
-                        if (files is Ok && files.value.isNotEmpty()) {
+                        val files = repository.getTorrentFiles(hash).get()
+                        if (!files.isNullOrEmpty()) {
                             // Got the file list: stop it again so nothing downloads while the
                             // user picks. Metadata stays cached; confirm/apply will resume it.
                             repository.toggleTorrentsState(listOf(hash), pause = true)
                             _fileSelection.update { current ->
-                                current?.copy(
-                                    tree = TransformUtil.transformFilesToTree(files.value, 0)
-                                )
+                                current?.copy(tree = TransformUtil.transformFilesToTree(files, 0))
                             }
                             break
                         }
@@ -345,15 +345,14 @@ constructor(
                         delay(METADATA_POLL_MS)
                     }
                 }
-                is Err -> {
+                .onFailure { error ->
                     emitStatus(
-                        add.error.friendlyMessage(
+                        error.friendlyMessage(
                             getString(CommonR.string.status_add_torrent_url_failure)
                         )
                     )
                     clearFileSelection()
                 }
-            }
         }
         return true
     }
@@ -384,9 +383,9 @@ constructor(
                             paused = true,
                             autoTmm = autoTmm.takeIf { it },
                         )
-                    if (add is Err) {
+                    add.onFailure { error ->
                         emitStatus(
-                            add.error.friendlyMessage(
+                            error.friendlyMessage(
                                 getString(CommonR.string.status_add_torrent_file_failure)
                             )
                         )
@@ -439,8 +438,8 @@ constructor(
 
     private suspend fun awaitTorrentFiles(hash: String): List<TorrentFile>? {
         repeat(FILE_POLL_ATTEMPTS) {
-            val files = repository.getTorrentFiles(hash)
-            if (files is Ok && files.value.isNotEmpty()) return files.value
+            val files = repository.getTorrentFiles(hash).get()
+            if (!files.isNullOrEmpty()) return files
             delay(FILE_POLL_MS)
         }
         return null
@@ -467,7 +466,7 @@ constructor(
             // changes - retry a few times before giving up.
             var applied = false
             repeat(PRIORITY_RETRY_ATTEMPTS) {
-                if (!applied && repository.setFilePriority(hash, deselectedIds, 0) is Ok) {
+                if (!applied && repository.setFilePriority(hash, deselectedIds, 0).isOk) {
                     applied = true
                 }
                 if (!applied) delay(PRIORITY_RETRY_MS)
@@ -658,39 +657,41 @@ constructor(
 
     fun toggleSpeedLimits() {
         viewModelScope.launch {
-            when (val result = repository.toggleSpeedLimitsMode()) {
-                is Ok -> getSpeedLimitMode(true)
-                is Err ->
+            repository
+                .toggleSpeedLimitsMode()
+                .onSuccess { getSpeedLimitMode(true) }
+                .onFailure {
                     emitStatus(
-                        result.error.friendlyMessage(
+                        it.friendlyMessage(
                             getString(CommonR.string.status_toggle_speed_limits_failure)
                         )
                     )
-            }
+                }
         }
     }
 
     private fun getSpeedLimitMode(showToast: Boolean = false) {
         viewModelScope.launch {
-            when (val result = repository.getSpeedLimitMode()) {
-                is Ok -> {
-                    _uiState.update { it.copy(speedLimitMode = result.value) }
+            repository
+                .getSpeedLimitMode()
+                .onSuccess { mode ->
+                    _uiState.update { it.copy(speedLimitMode = mode) }
                     if (showToast) {
                         emitStatus(
                             getString(
-                                if (result.value == 0) CommonR.string.status_speed_limits_disabled
+                                if (mode == 0) CommonR.string.status_speed_limits_disabled
                                 else CommonR.string.status_speed_limits_enabled
                             )
                         )
                     }
                 }
-                is Err ->
+                .onFailure {
                     emitStatus(
-                        result.error.friendlyMessage(
+                        it.friendlyMessage(
                             getString(CommonR.string.status_get_speed_limit_mode_failure)
                         )
                     )
-            }
+                }
         }
     }
 
@@ -730,12 +731,8 @@ constructor(
                 }
         }
 
-        when (result) {
-            is Ok -> Unit
-            is Err ->
-                emitStatus(
-                    result.error.friendlyMessage(getString(CommonR.string.status_sync_data_failure))
-                )
+        result.onFailure {
+            emitStatus(it.friendlyMessage(getString(CommonR.string.status_sync_data_failure)))
         }
     }
 }

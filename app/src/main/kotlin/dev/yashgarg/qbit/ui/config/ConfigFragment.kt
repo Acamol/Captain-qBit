@@ -15,8 +15,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
-import com.github.michaelbull.result.Err
-import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.onFailure
+import com.github.michaelbull.result.onSuccess
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.transition.MaterialSharedAxis
 import dagger.hilt.android.AndroidEntryPoint
@@ -210,12 +210,12 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
                                 if (useBasicAuth.isChecked) basicAuthPass else null,
                             )
 
-                        when (connectionResponse) {
-                            is Ok -> {
+                        connectionResponse
+                            .onSuccess { version ->
                                 checkSnackbar.dismiss()
                                 Toast.makeText(
                                         context,
-                                        "Success! Client app version is ${connectionResponse.value}",
+                                        "Success! Client app version is $version",
                                         Toast.LENGTH_LONG,
                                     )
                                     .show()
@@ -259,16 +259,15 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
                                         )
                                 }
                             }
-                            is Err -> {
-                                Log.e(ClientManager.tag, connectionResponse.error.toString())
+                            .onFailure { error ->
+                                Log.e(ClientManager.tag, error.toString())
                                 Snackbar.make(
                                         requireView(),
-                                        "Failed! ${connectionResponse.error.message}",
+                                        "Failed! ${error.message}",
                                         Snackbar.LENGTH_LONG,
                                     )
                                     .show()
                             }
-                        }
                         enableFields(true)
                     }
                 }

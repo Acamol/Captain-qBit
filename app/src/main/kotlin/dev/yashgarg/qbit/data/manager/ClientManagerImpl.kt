@@ -2,8 +2,9 @@ package dev.yashgarg.qbit.data.manager
 
 import android.util.Log
 import androidx.datastore.core.DataStore
-import com.github.michaelbull.result.Err
-import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.get
+import com.github.michaelbull.result.onFailure
+import com.github.michaelbull.result.onSuccess
 import com.github.michaelbull.result.runCatching
 import dev.yashgarg.qbit.data.daos.ConfigDao
 import dev.yashgarg.qbit.data.models.ConfigStatus
@@ -66,16 +67,10 @@ constructor(
     }
 
     override suspend fun checkAndGetClient(): QBittorrentClient? {
-        return when (val result = runCatching { getClient() }) {
-            is Ok -> {
-                this.client = result.value
-                client
-            }
-            is Err -> {
-                Log.e(this::class.simpleName, result.error.toString())
-                null
-            }
-        }
+        return runCatching { getClient() }
+            .onSuccess { client = it }
+            .onFailure { Log.e(this::class.simpleName, it.toString()) }
+            .get()
     }
 
     // The active config is the one whose id matches the stored activeServerId; falls back to the
