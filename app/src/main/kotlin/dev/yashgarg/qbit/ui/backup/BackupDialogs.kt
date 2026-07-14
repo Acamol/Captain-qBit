@@ -4,6 +4,7 @@ import android.content.Context
 import android.text.InputType
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.View
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -186,12 +187,12 @@ object BackupDialogs {
         val modeGroup = RadioGroup(context).apply { orientation = RadioGroup.VERTICAL }
         val mergeButton =
             RadioButton(context).apply {
-                id = 1
+                id = View.generateViewId()
                 text = "Merge with current"
             }
         val replaceButton =
             RadioButton(context).apply {
-                id = 2
+                id = View.generateViewId()
                 text = "Replace everything"
             }
         modeGroup.addView(mergeButton)
