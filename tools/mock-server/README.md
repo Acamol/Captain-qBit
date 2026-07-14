@@ -11,6 +11,11 @@ screen (`auth/login`, `sync/maindata`, `transfer/info`, `transfer/speedLimitsMod
 `creative-commons`, `datasets`), tags and trackers. All demo content is legal
 (Linux ISOs, Creative-Commons films, public-domain books) — no piracy-looking data.
 
+The torrent actions used by the UI are **stateful** — `torrents/delete` drops the
+torrent, and `torrents/{stop,pause}` / `torrents/{start,resume}` flip its state —
+so swipe and bulk pause/resume/delete are reflected on the next `sync/maindata`
+poll. Other POST actions still return a generic `Ok.`.
+
 ## Run
 
 ```bash

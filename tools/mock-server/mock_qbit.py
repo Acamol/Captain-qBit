@@ -387,8 +387,32 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == "/api/v2/auth/login":
             self._send("Ok.", "text/plain", cookie=True)
-        else:
-            self._send("Ok.", "text/plain")  # generic success for any action
+            return
+
+        # Stateful torrent actions so the UI (swipe pause/resume/delete, bulk
+        # actions) reflects the change on the next maindata poll. Body is
+        # x-www-form-urlencoded; hashes are "|"-joined.
+        length = int(self.headers.get("Content-Length") or 0)
+        form = parse_qs(self.rfile.read(length).decode() if length else "")
+        hashes = [h for h in (form.get("hashes", [""])[0]).split("|") if h]
+
+        if path == "/api/v2/torrents/delete":
+            for h in hashes:
+                TORRENTS.pop(h, None)
+        elif path in ("/api/v2/torrents/stop", "/api/v2/torrents/pause"):
+            for h in hashes:
+                t = TORRENTS.get(h)
+                if t:
+                    t["state"] = "stoppedUP" if t["progress"] >= 1.0 else "stoppedDL"
+                    t["dlspeed"] = 0
+                    t["upspeed"] = 0
+        elif path in ("/api/v2/torrents/start", "/api/v2/torrents/resume"):
+            for h in hashes:
+                t = TORRENTS.get(h)
+                if t:
+                    t["state"] = "uploading" if t["progress"] >= 1.0 else "downloading"
+
+        self._send("Ok.", "text/plain")  # generic success for any other action
 
     def do_GET(self):
         path = urlparse(self.path).path
