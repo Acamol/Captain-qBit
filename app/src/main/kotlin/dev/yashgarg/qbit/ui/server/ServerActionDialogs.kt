@@ -445,7 +445,7 @@ class ServerActionDialogs(
                 showEditCategorySavePathDialog(name)
             }
             .setNeutralButton(getString(CommonR.string.delete)) { _, _ ->
-                viewModel.deleteCategories(listOf(name))
+                confirmDeleteCategory(name)
             }
             .setNegativeButton(getString(CommonR.string.cancel), null)
             .show()
@@ -559,6 +559,14 @@ class ServerActionDialogs(
     fun showTagLongPressDialog(name: String) {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(name)
+            .setPositiveButton(getString(CommonR.string.delete)) { _, _ -> confirmDeleteTag(name) }
+            .setNegativeButton(getString(CommonR.string.cancel), null)
+            .show()
+    }
+
+    private fun confirmDeleteTag(name: String) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Delete $name?")
             .setPositiveButton(getString(CommonR.string.delete)) { _, _ ->
                 viewModel.deleteTags(listOf(name))
             }
