@@ -18,7 +18,7 @@ dependencyResolutionManagement {
     }
 }
 
-plugins { id("com.gradle.enterprise") version "3.15.1" }
+plugins { id("com.gradle.enterprise") version "3.19.2" }
 
 gradleEnterprise {
     buildScan {
