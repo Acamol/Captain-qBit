@@ -5,6 +5,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -12,16 +13,21 @@ import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.transition.MaterialSharedAxis
 import dagger.hilt.android.AndroidEntryPoint
 import dev.yashgarg.qbit.R
+import dev.yashgarg.qbit.data.manager.ClientManager
+import dev.yashgarg.qbit.data.models.ConfigStatus
 import dev.yashgarg.qbit.databinding.HomeFragmentBinding
 import dev.yashgarg.qbit.ui.backup.BackupDialogs
 import dev.yashgarg.qbit.ui.backup.BackupViewModel
 import dev.yashgarg.qbit.utils.collectWithLifecycle
 import dev.yashgarg.qbit.utils.viewBinding
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class HomeFragment : Fragment(R.layout.home_fragment) {
     private val binding by viewBinding(HomeFragmentBinding::bind)
     private val backupViewModel by viewModels<BackupViewModel>()
+
+    @Inject lateinit var clientManager: ClientManager
 
     // SAF: the system file picker returns the backup to restore. The passphrase is collected next;
     // the selection dialog is shown once the file is decrypted (BackupEvent.Loaded).
@@ -59,6 +65,15 @@ class HomeFragment : Fragment(R.layout.home_fragment) {
 
         binding.restoreBackupButton.setOnClickListener {
             importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*"))
+        }
+
+        // Keep the spinner until we know there's genuinely no server, so the welcome screen doesn't
+        // flash before MainActivity navigates an existing server to the list.
+        clientManager.configStatus.collectWithLifecycle(this) { status ->
+            val noServer = status == ConfigStatus.DOES_NOT_EXIST
+            binding.loadingIndicator.isVisible = !noServer
+            binding.welcomeContent.isVisible = noServer
+            binding.addServerFab.isVisible = noServer
         }
 
         backupViewModel.backupEvents.collectWithLifecycle(this) { event ->
