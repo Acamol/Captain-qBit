@@ -23,7 +23,7 @@ plugins {
 
 android {
     namespace = "dev.yashgarg.qbit"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         // Distinct from upstream (namespace stays dev.yashgarg.qbit) so this fork can be
@@ -88,6 +88,11 @@ android {
         checkReleaseBuilds = false
         warningsAsErrors = true
         disable.add("PluralsCandidate")
+        // Dependency freshness is managed by Dependabot, so don't fail the build on these
+        // "a newer version is available" checks (they'd also recur after every Dependabot bump).
+        disable.add("GradleDependency")
+        disable.add("NewerVersionAvailable")
+        disable.add("AndroidGradlePluginVersion")
         baseline = file("lint-baseline.xml")
     }
 

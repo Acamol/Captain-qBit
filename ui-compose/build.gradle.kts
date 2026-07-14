@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "dev.yashgarg.qbit.ui.compose"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig { minSdk = 28 }
 
