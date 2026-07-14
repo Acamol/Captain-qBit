@@ -35,6 +35,8 @@ constructor(
     // -1 = adding a new server; >= 0 = editing that server id.
     private val serverId: Int = savedStateHandle.get<Int>("serverId") ?: -1
 
+    val editing: Boolean = serverId >= 0
+
     private val hostValidator = HostValidator()
     private val portValidator = PortValidator()
     private val textValidator = StringValidator()

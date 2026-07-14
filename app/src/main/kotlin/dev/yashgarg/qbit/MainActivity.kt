@@ -8,7 +8,7 @@ import android.os.Bundle
 import android.provider.OpenableColumns
 import android.util.Log
 import android.widget.Toast
-import androidx.activity.OnBackPressedCallback
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
@@ -19,16 +19,17 @@ import androidx.datastore.core.DataStore
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.navigation.Navigation.findNavController
-import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.models.ConfigStatus
 import dev.yashgarg.qbit.data.models.ServerPreferences
-import dev.yashgarg.qbit.databinding.ActivityMainBinding
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.ui.backup.BackupDialogs
 import dev.yashgarg.qbit.ui.backup.BackupViewModel
+import dev.yashgarg.qbit.ui.navigation.AppNavigator
+import dev.yashgarg.qbit.ui.navigation.NavCommand
+import dev.yashgarg.qbit.ui.navigation.QbitNavHost
+import dev.yashgarg.qbit.ui.theme.QbitComposeTheme
 import dev.yashgarg.qbit.worker.StatusWorker
 import javax.inject.Inject
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -38,50 +39,26 @@ import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
-    private lateinit var binding: ActivityMainBinding
 
     @Inject lateinit var clientManager: ClientManager
     @Inject lateinit var serverPrefsStore: DataStore<ServerPreferences>
+    @Inject lateinit var appNavigator: AppNavigator
 
     private val backupViewModel by viewModels<BackupViewModel>()
 
     private var lastBackPressTime = 0L
+    // Land on the torrent list once when a server exists; don't re-route on later config-status
+    // replays (e.g. resume).
+    private var navigatedToServer = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
 
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
-        // Starts disabled: the dispatcher invokes callbacks in reverse-registration order, so if
-        // this were always enabled it would win over the NavHostFragment's own (earlier-
-        // registered) back handling on every screen, not just the root one. Only enabled when
-        // there's truly no previous destination to navigate back to.
-        val exitOnBackPressed =
-            object : OnBackPressedCallback(false) {
-                override fun handleOnBackPressed() {
-                    val now = System.currentTimeMillis()
-                    if (now - lastBackPressTime < EXIT_CONFIRMATION_WINDOW_MS) {
-                        finish()
-                    } else {
-                        lastBackPressTime = now
-                        Toast.makeText(
-                                this@MainActivity,
-                                "Press back again to exit",
-                                Toast.LENGTH_SHORT,
-                            )
-                            .show()
-                    }
-                }
+        setContent {
+            QbitComposeTheme {
+                QbitNavHost(appNavigator = appNavigator, onExitDoubleBack = ::onExitDoubleBack)
             }
-        onBackPressedDispatcher.addCallback(this, exitOnBackPressed)
-        // NavHostFragment.navController is safe to read this early; Navigation.findNavController
-        // (view-tag based) isn't - the tag isn't set until the child fragment's view is created.
-        val navHostFragment =
-            supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
-        navHostFragment.navController.addOnDestinationChangedListener { controller, _, _ ->
-            exitOnBackPressed.isEnabled = controller.previousBackStackEntry == null
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -90,8 +67,8 @@ class MainActivity : AppCompatActivity() {
 
         // Apply theme/dynamic colors from the persisted prefs. Driving this off the stored value
         // (rather than a one-shot import event) is what makes a restored theme take effect: the
-        // import can navigate away and tear down the fragment collector before an event is seen,
-        // but this observer lives on the activity and survives that.
+        // import can navigate away and tear down a screen collector before an event is seen, but
+        // this observer lives on the activity and survives that.
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 serverPrefsStore.data
@@ -100,7 +77,6 @@ class MainActivity : AppCompatActivity() {
                     .collect { (themeMode, dynamicColors) ->
                         var recreated = false
                         if (themeMode != AppCompatDelegate.getDefaultNightMode()) {
-                            // Recreates started activities to apply the new night mode.
                             AppCompatDelegate.setDefaultNightMode(themeMode)
                             recreated = true
                         }
@@ -132,13 +108,9 @@ class MainActivity : AppCompatActivity() {
                                     mode,
                                 )
                             }
-                        // Theme/dynamic colors and leaving the empty state are handled by the prefs
-                        // and config-status observers, so this only needs to acknowledge the
-                        // import.
                         is BackupViewModel.BackupEvent.Imported ->
                             Toast.makeText(this@MainActivity, event.message, Toast.LENGTH_SHORT)
                                 .show()
-                        // Export isn't triggered from an opened file.
                         is BackupViewModel.BackupEvent.Exported -> Unit
                     }
                 }
@@ -156,18 +128,9 @@ class MainActivity : AppCompatActivity() {
                                     prefs.notifyOnComplete ||
                                     prefs.notifyOnChecked
                             )
-                            val bundle =
-                                Bundle().apply {
-                                    putString(TORRENT_INTENT_KEY, intent?.data.toString())
-                                }
-                            val navController =
-                                findNavController(this@MainActivity, R.id.nav_host_fragment)
-
-                            if (navController.currentDestination?.id == R.id.homeFragment) {
-                                navController.navigate(
-                                    R.id.action_homeFragment_to_serverFragment,
-                                    bundle,
-                                )
+                            if (!navigatedToServer) {
+                                navigatedToServer = true
+                                appNavigator.navigate(NavCommand.OpenServerAsRoot)
                             }
                         }
                         ConfigStatus.DOES_NOT_EXIST -> Log.i(ClientManager.tag, "No config found!")
@@ -186,16 +149,20 @@ class MainActivity : AppCompatActivity() {
         handleBackupIntent(intent)
         // super.onNewIntent delivered a torrent to ServerFragment's listener; handleBackupIntent
         // clears the data for .cqb files, so remaining VIEW data means a torrent. Bring the list
-        // forward (if we're elsewhere, e.g. the info screen) so its add dialog can surface.
-        if (intent.action == Intent.ACTION_VIEW && intent.data != null) popToServerList()
+        // forward so its add dialog can surface.
+        if (intent.action == Intent.ACTION_VIEW && intent.data != null) {
+            appNavigator.navigate(NavCommand.PopToServer)
+        }
     }
 
-    private fun popToServerList() {
-        val navController =
-            (supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? NavHostFragment)
-                ?.navController ?: return
-        if (navController.currentDestination?.id != R.id.serverFragment) {
-            navController.popBackStack(R.id.serverFragment, false)
+    // "Press back twice to exit" at the navigation root (invoked by QbitNavHost's BackHandler).
+    private fun onExitDoubleBack() {
+        val now = System.currentTimeMillis()
+        if (now - lastBackPressTime < EXIT_CONFIRMATION_WINDOW_MS) {
+            finish()
+        } else {
+            lastBackPressTime = now
+            Toast.makeText(this, "Press back again to exit", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -208,7 +175,7 @@ class MainActivity : AppCompatActivity() {
         val uri = intent?.data ?: return
         if (intent.action != Intent.ACTION_VIEW || !isBackupUri(uri)) return
 
-        // Prevent the config-status collector from treating this URI as a torrent to add.
+        // Prevent the torrent handling from treating this URI as a torrent to add.
         setIntent(intent.apply { data = null })
 
         BackupDialogs.showPassphraseDialog(this, title = "Backup passphrase", confirm = false) {

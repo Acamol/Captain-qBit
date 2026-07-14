@@ -27,6 +27,7 @@ import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
 import com.google.android.material.tabs.TabLayout
+import dagger.hilt.android.AndroidEntryPoint
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.models.ContentTreeItem
@@ -44,12 +45,15 @@ import dev.yashgarg.qbit.validation.LinkValidator
  * `.torrent` (parsed locally) and shows a loading state for magnets while their metadata is fetched
  * via a hidden stopped add — cancelled again if the screen is dismissed.
  */
+@AndroidEntryPoint
 class AddTorrentDialog : DialogFragment() {
     private val linkValidator by lazy { LinkValidator() }
 
-    // Shown via ServerFragment's childFragmentManager, so the parent fragment owns the VM.
-    private val viewModel by
-        viewModels<ServerViewModel>(ownerProducer = { requireParentFragment() })
+    // Shown from the activity's FragmentManager (the host is Compose now), so the dialog owns its
+    // own
+    // ServerViewModel — it lives only while the dialog is open. Add/prepare/confirm all act on the
+    // shared client singletons, so the main screen's list picks up the result on its next sync.
+    private val viewModel by viewModels<ServerViewModel>()
 
     private var binding: AddTorrentScreenBinding? = null
 

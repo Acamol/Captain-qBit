@@ -18,7 +18,6 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
-    alias(libs.plugins.navigation.safeargs)
 }
 
 android {
@@ -138,6 +137,11 @@ dependencies {
     ksp(libs.androidx.hilt.compiler)
 
     implementation(libs.bundles.compose)
+    implementation(libs.compose.material.icons)
+    implementation(libs.compose.navigation)
+    implementation(libs.compose.hilt.navigation)
+    implementation(libs.compose.lifecycle.runtime)
+    implementation(libs.androidx.fragment.compose)
 
     implementation(libs.google.material)
     implementation(libs.google.dagger.hilt)
@@ -159,4 +163,5 @@ dependencies {
     debugImplementation(libs.tools.whatthestack)
 
     testImplementation(libs.bundles.testing)
+    testImplementation(libs.ktor.client.mock)
 }

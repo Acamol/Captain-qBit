@@ -10,7 +10,6 @@ plugins {
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.hilt) apply false
     alias(libs.plugins.ksp) apply false
-    alias(libs.plugins.navigation.safeargs) apply false
     alias(libs.plugins.multiplatform) apply false
     alias(libs.plugins.binaryCompat) apply false
 

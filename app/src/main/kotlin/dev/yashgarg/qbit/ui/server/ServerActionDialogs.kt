@@ -1,11 +1,12 @@
 package dev.yashgarg.qbit.ui.server
 
 import android.app.AlertDialog
+import android.content.Context
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.os.Bundle
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
@@ -16,8 +17,6 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.widget.doAfterTextChanged
-import androidx.fragment.app.Fragment
-import androidx.navigation.fragment.findNavController
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
@@ -25,11 +24,17 @@ import com.google.android.material.textfield.TextInputLayout
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.models.ServerConfig
+import dev.yashgarg.qbit.ui.navigation.AppNavigator
+import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.utils.toHumanReadable
 
-/** Bulk-action pickers and tag/category/sort management dialogs shown from [ServerFragment]. */
-class ServerActionDialogs(private val fragment: Fragment, private val viewModel: ServerViewModel) {
-    private fun requireContext() = fragment.requireContext()
+/** Bulk-action pickers and tag/category/sort management dialogs shown from the server screen. */
+class ServerActionDialogs(
+    private val context: Context,
+    private val viewModel: ServerViewModel,
+    private val appNavigator: AppNavigator,
+) {
+    private fun requireContext() = context
 
     fun showBulkCategoryPicker(hashes: List<String>) {
         val state = viewModel.uiState.value
@@ -73,7 +78,7 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
     }
 
     private fun showCreateTagForSelectionDialog(hashes: List<String>) {
-        val view = fragment.layoutInflater.inflate(R.layout.dialog_text_input, null, false)
+        val view = LayoutInflater.from(context).inflate(R.layout.dialog_text_input, null, false)
         val til = view.findViewById<TextInputLayout>(R.id.text_input_layout)
         val tiet = view.findViewById<TextInputEditText>(R.id.text_input_edit)
         til?.hint = "Tag name"
@@ -122,7 +127,7 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
     }
 
     private fun showCreateNewTagDialog() {
-        val view = fragment.layoutInflater.inflate(R.layout.dialog_text_input, null, false)
+        val view = LayoutInflater.from(context).inflate(R.layout.dialog_text_input, null, false)
         val til = view.findViewById<TextInputLayout>(R.id.text_input_layout)
         val tiet = view.findViewById<TextInputEditText>(R.id.text_input_edit)
         til?.hint = "Tag name"
@@ -158,7 +163,7 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
     fun showManageCategoriesDialog() {
         val ctx = requireContext()
         val categories = viewModel.uiState.value.availableCategories
-        val density = fragment.resources.displayMetrics.density
+        val density = context.resources.displayMetrics.density
         val padH = (20 * density).toInt()
         val rowPadV = (8 * density).toInt()
         val iconBtn = (40 * density).toInt()
@@ -320,7 +325,7 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
 
     private fun showCategoryColorPicker(name: String, onPicked: ((color: Int?) -> Unit)? = null) {
         val ctx = requireContext()
-        val density = fragment.resources.displayMetrics.density
+        val density = context.resources.displayMetrics.density
         val sw = (44 * density).toInt()
         val m = (6 * density).toInt()
         val current = viewModel.categoryColors.value[name]
@@ -395,7 +400,7 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
     }
 
     private fun showCreateNewCategoryDialog() {
-        val view = fragment.layoutInflater.inflate(R.layout.dialog_text_input, null, false)
+        val view = LayoutInflater.from(context).inflate(R.layout.dialog_text_input, null, false)
         val til = view.findViewById<TextInputLayout>(R.id.text_input_layout)
         val tiet = view.findViewById<TextInputEditText>(R.id.text_input_edit)
         til?.hint = "Category name"
@@ -446,10 +451,10 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
 
     private fun showEditCategorySavePathDialog(name: String) {
         val ctx = requireContext()
-        val density = fragment.resources.displayMetrics.density
+        val density = context.resources.displayMetrics.density
         val currentSavePath =
             viewModel.uiState.value.data?.categories?.get(name)?.savePath.orEmpty()
-        val view = fragment.layoutInflater.inflate(R.layout.dialog_text_input, null, false)
+        val view = LayoutInflater.from(context).inflate(R.layout.dialog_text_input, null, false)
         val til = view.findViewById<TextInputLayout>(R.id.text_input_layout)
         val tiet = view.findViewById<TextInputEditText>(R.id.text_input_edit)
         til?.hint = getString(CommonR.string.save_path_hint)
@@ -558,7 +563,7 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
     /** Server-wide transfer/session stats, grouped like qBittorrent's own "Statistics" dialog. */
     fun showStatisticsDialog() {
         val serverState = viewModel.uiState.value.data?.serverState ?: return
-        val view = fragment.layoutInflater.inflate(R.layout.dialog_statistics, null, false)
+        val view = LayoutInflater.from(context).inflate(R.layout.dialog_statistics, null, false)
         val container = view.findViewById<LinearLayout>(R.id.statistics_container)
 
         container.addStatSectionHeader("User statistics")
@@ -642,7 +647,7 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
         )
     }
 
-    private fun getString(resId: Int) = fragment.getString(resId)
+    private fun getString(resId: Int) = context.getString(resId)
 
     fun showSortPicker() {
         val state = viewModel.uiState.value
@@ -674,7 +679,7 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
         val ctx = requireContext()
         val servers = viewModel.servers.value
         val activeId = viewModel.activeServerId.value
-        val density = fragment.resources.displayMetrics.density
+        val density = context.resources.displayMetrics.density
         val padH = (20 * density).toInt()
         val padV = (14 * density).toInt()
         val gap = (12 * density).toInt()
@@ -778,11 +783,6 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
     }
 
     private fun navigateToConfig(serverId: Int) {
-        fragment
-            .findNavController()
-            .navigate(
-                R.id.action_serverFragment_to_configFragment,
-                Bundle().apply { putInt("serverId", serverId) },
-            )
+        appNavigator.navigate(NavCommand.OpenConfig(serverId))
     }
 }
