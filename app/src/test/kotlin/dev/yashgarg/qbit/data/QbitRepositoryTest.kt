@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -22,14 +21,8 @@ class QbitRepositoryTest {
 
     @Before
     fun setUp() {
-        // These are integration tests: they hit a real qBittorrent server configured via the
-        // base_url/password env vars. Skip (rather than fail) when that env isn't set, e.g. on CI.
-        assumeTrue(
-            "Set base_url and password env vars (and point them at a reachable qBittorrent server)" +
-                " to run QbitRepository integration tests",
-            !System.getenv("base_url").isNullOrBlank() &&
-                !System.getenv("password").isNullOrBlank(),
-        )
+        // Integration tests against an in-JVM Ktor MockEngine ([FakeClientManager]) — no real
+        // qBittorrent server or env vars needed, so they always run (incl. CI).
         repository = QbitRepository(clientManager)
     }
 
