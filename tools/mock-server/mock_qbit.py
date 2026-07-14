@@ -318,6 +318,53 @@ def trackers_for(hash_):
     return rows
 
 
+# ---- torrent list (torrents/info) + peers (sync/torrentPeers) -------------
+def torrents_info(qs):
+    """The GET /torrents/info list endpoint (used by the background StatusWorker).
+    Honors the optional `hashes` filter; otherwise returns every torrent."""
+    hashes = (qs.get("hashes") or [""])[0]
+    if hashes:
+        wanted = set(hashes.split("|"))
+        return [t for t in _TORRENTS if t["hash"] in wanted]
+    return _TORRENTS
+
+
+# TEST-NET documentation IPs (RFC 5737) — never real peers.
+_PEERS = {
+    "203.0.113.10:51413": {
+        "client": "qBittorrent 4.6.0", "connection": "μTP", "country": "Germany",
+        "country_code": "de", "dl_speed": 0, "downloaded": 734003200, "files": "",
+        "flags": "U E", "flags_desc": "U: peer is unchoked\nE: uses μTP",
+        "ip": "203.0.113.10", "port": 51413, "progress": 1.0, "relevance": 0.0,
+        "up_speed": 245760, "uploaded": 104857600,
+    },
+    "198.51.100.23:6881": {
+        "client": "Transmission 4.0.5", "connection": "BT", "country": "United States",
+        "country_code": "us", "dl_speed": 0, "downloaded": 466616320, "files": "",
+        "flags": "D", "flags_desc": "D: currently downloading",
+        "ip": "198.51.100.23", "port": 6881, "progress": 0.62, "relevance": 0.38,
+        "up_speed": 131072, "uploaded": 52428800,
+    },
+    "192.0.2.44:49152": {
+        "client": "Deluge 2.1.1", "connection": "μTP", "country": "Japan",
+        "country_code": "jp", "dl_speed": 0, "downloaded": 88080384, "files": "",
+        "flags": "K", "flags_desc": "K: peer unchoked, but not interested",
+        "ip": "192.0.2.44", "port": 49152, "progress": 0.14, "relevance": 0.11,
+        "up_speed": 40960, "uploaded": 8388608,
+    },
+}
+
+_peer_poll = 0
+
+
+def peers_for(hash_):
+    """A full-update peers snapshot each poll with a fresh rid (mirrors maindata),
+    so the sync loop always merges to the same set."""
+    global _peer_poll
+    _peer_poll += 1
+    return {"full_update": True, "rid": _peer_poll, "show_flags": True, "peers": _PEERS}
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass  # quiet
@@ -362,6 +409,10 @@ class Handler(BaseHTTPRequestHandler):
             self._send(json.dumps(files_for((qs.get("hash") or [""])[0])))
         elif path == "/api/v2/torrents/trackers":
             self._send(json.dumps(trackers_for((qs.get("hash") or [""])[0])))
+        elif path == "/api/v2/torrents/info":
+            self._send(json.dumps(torrents_info(qs)))
+        elif path == "/api/v2/sync/torrentPeers":
+            self._send(json.dumps(peers_for((qs.get("hash") or [""])[0])))
         elif path == "/api/v2/auth/logout":
             self._send("Ok.", "text/plain")
         else:

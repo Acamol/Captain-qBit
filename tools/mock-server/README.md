@@ -6,7 +6,7 @@ needing a real qBittorrent instance or having to stage real torrent states.
 
 It serves only the endpoints the app hits while browsing + the torrent-details
 screen (`auth/login`, `sync/maindata`, `transfer/info`, `transfer/speedLimitsMode`,
-`app/version`, `torrents/{properties,files,trackers}`) and returns a fixed set of
+`app/version`, `torrents/{info,properties,files,trackers}`, `sync/torrentPeers`) and returns a fixed set of
 14 torrents across varied states, a category tree (`distros/*`, `public-domain/*`,
 `creative-commons`, `datasets`), tags and trackers. All demo content is legal
 (Linux ISOs, Creative-Commons films, public-domain books) — no piracy-looking data.
