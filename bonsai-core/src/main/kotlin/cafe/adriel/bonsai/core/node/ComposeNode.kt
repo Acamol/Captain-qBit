@@ -33,7 +33,7 @@ fun <T> TreeScope.Leaf(
             set(name) { this.name = name }
             set(isSelected) { this.isSelectedState = isSelected }
             set(setSelected) { this.onToggleSelected = setSelected }
-        }
+        },
     )
 }
 
@@ -43,7 +43,7 @@ fun <T> TreeScope.Branch(
     customIcon: NodeComponent<T>? = null,
     customName: NodeComponent<T>? = null,
     name: String = content.toString(),
-    children: @Composable TreeScope.() -> Unit = {}
+    children: @Composable TreeScope.() -> Unit = {},
 ) {
     val (isSelected, setSelected) = rememberSaveable { mutableStateOf(false) }
     val (isExpanded, setExpanded) =
@@ -73,7 +73,7 @@ fun <T> TreeScope.Branch(
                     setExpandMaxDepth(maxDepth)
                 }
             }
-        }
+        },
     )
 
     if (isExpanded && depth <= expandMaxDepth) {

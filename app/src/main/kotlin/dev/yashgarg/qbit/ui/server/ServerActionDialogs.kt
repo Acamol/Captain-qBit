@@ -648,14 +648,13 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
     fun showSortPicker() {
         val state = viewModel.uiState.value
         val options = SortOption.entries
-        val labels =
-            options.map { option ->
-                when {
-                    option != state.sortOption -> option.label
-                    state.sortDirection == SortDirection.ASC -> "↑ ${option.label}"
-                    else -> "↓ ${option.label}"
-                }
+        val labels = options.map { option ->
+            when {
+                option != state.sortOption -> option.label
+                state.sortDirection == SortDirection.ASC -> "↑ ${option.label}"
+                else -> "↓ ${option.label}"
             }
+        }
         val checkedIndex = options.indexOf(state.sortOption)
 
         val dirLabel =

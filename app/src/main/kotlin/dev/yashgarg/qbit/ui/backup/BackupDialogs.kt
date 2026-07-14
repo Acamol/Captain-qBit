@@ -126,16 +126,15 @@ object BackupDialogs {
         content.addView(colorsBox)
 
         content.addView(sectionHeader(context, "Servers", first = false))
-        val serverBoxes =
-            servers.map { server ->
-                val box =
-                    CheckBox(context).apply {
-                        text = server.serverName
-                        isChecked = true
-                    }
-                content.addView(box)
-                server.configId to box
-            }
+        val serverBoxes = servers.map { server ->
+            val box =
+                CheckBox(context).apply {
+                    text = server.serverName
+                    isChecked = true
+                }
+            content.addView(box)
+            server.configId to box
+        }
 
         val dialog =
             MaterialAlertDialogBuilder(context)

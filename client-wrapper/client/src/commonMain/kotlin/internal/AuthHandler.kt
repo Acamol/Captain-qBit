@@ -27,15 +27,14 @@ internal class AuthHandler {
     val lastAuthResponseState: StateFlow<HttpResponse?> = lastAuthResponse
 
     suspend fun tryAuth(http: HttpClient): Boolean {
-        val response =
-            authMutex.withLock {
-                if (lastAuthResponse.value?.isValidForAuth() == true) {
-                    // Authentication completed while waiting for lock, skip
-                    return true
-                }
-
-                login(http, config).also { lastAuthResponse.value = it }
+        val response = authMutex.withLock {
+            if (lastAuthResponse.value?.isValidForAuth() == true) {
+                // Authentication completed while waiting for lock, skip
+                return true
             }
+
+            login(http, config).also { lastAuthResponse.value = it }
+        }
         yield()
         return response.isValidForAuth()
     }

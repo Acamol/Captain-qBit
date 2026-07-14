@@ -19,5 +19,5 @@ data class TorrentPeer(
     val progress: Float = 0f,
     val relevance: Float = 0f,
     @SerialName("up_speed") val upSpeed: Long = 0,
-    val uploaded: Long = 0
+    val uploaded: Long = 0,
 )

@@ -210,7 +210,7 @@ constructor(
     private suspend fun syncAvailableFilters() {
         repository
             .observeMainData()
-            .catch { /* non-fatal, ignore */}
+            .catch { /* non-fatal, ignore */ }
             .collectLatest { mainData ->
                 val categories = mainData.categories.keys.sorted()
                 val tags = mainData.tags.sorted()
@@ -241,7 +241,7 @@ constructor(
                             when (props) {
                                 is Ok -> props.value
                                 is Err -> null
-                            }
+                            },
                     )
                 }
             }
@@ -305,16 +305,15 @@ constructor(
         nodes: List<ContentTreeItem>,
         ids: Set<Int>,
         priority: Int,
-    ): List<ContentTreeItem> =
-        nodes.map { node ->
-            node.copy(
-                item =
-                    node.item?.let { file ->
-                        if (file.index in ids) file.copy(priority = priority) else file
-                    },
-                children = node.children?.let { withPriorities(it, ids, priority) },
-            )
-        }
+    ): List<ContentTreeItem> = nodes.map { node ->
+        node.copy(
+            item =
+                node.item?.let { file ->
+                    if (file.index in ids) file.copy(priority = priority) else file
+                },
+            children = node.children?.let { withPriorities(it, ids, priority) },
+        )
+    }
 
     private suspend fun syncPeers() {
         val result = runCatching {
@@ -341,7 +340,7 @@ constructor(
                 _uiState.update { state ->
                     state.copy(
                         peersLoading = false,
-                        error = Exception(result.error.friendlyMessage())
+                        error = Exception(result.error.friendlyMessage()),
                     )
                 }
         }

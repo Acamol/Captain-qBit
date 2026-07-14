@@ -40,7 +40,7 @@ internal constructor(
     override val key: String = randomUUID,
     name: String = content.toString(),
     override val iconComponent: NodeComponent<T> = { DefaultNodeIcon(it) },
-    override val nameComponent: NodeComponent<T> = { DefaultNodeName(it) }
+    override val nameComponent: NodeComponent<T> = { DefaultNodeName(it) },
 ) : Node<T>, SelectableNode by SelectableNodeHandler() {
     override var content: T by mutableStateOf(content)
         internal set
@@ -56,7 +56,7 @@ internal constructor(
     override val key: String = randomUUID,
     name: String = content.toString(),
     override val iconComponent: NodeComponent<T> = { DefaultNodeIcon(it) },
-    override val nameComponent: NodeComponent<T> = { DefaultNodeName(it) }
+    override val nameComponent: NodeComponent<T> = { DefaultNodeName(it) },
 ) : Node<T>, SelectableNode by SelectableNodeHandler(), ExpandableNode by ExpandableNodeHandler() {
     override var content: T by mutableStateOf(content)
         internal set

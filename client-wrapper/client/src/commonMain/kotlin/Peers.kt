@@ -21,7 +21,7 @@ suspend fun QBittorrentClient.banPeers(peers: List<String>) {
     http
         .submitForm(
             "${config.baseUrl}/api/v2/transfer/banPeers",
-            formParameters = Parameters.build { append("peers", peers.joinToString("|")) }
+            formParameters = Parameters.build { append("peers", peers.joinToString("|")) },
         )
         .orThrow()
 }

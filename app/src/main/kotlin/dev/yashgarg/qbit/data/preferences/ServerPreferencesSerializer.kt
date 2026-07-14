@@ -20,7 +20,7 @@ object ServerPreferencesSerializer : Serializer<ServerPreferences> {
         try {
             return Json.decodeFromString(
                 ServerPreferences.serializer(),
-                input.readBytes().decodeToString()
+                input.readBytes().decodeToString(),
             )
         } catch (serialization: SerializationException) {
             throw CorruptionException("Unable to read ServerPrefs", serialization)

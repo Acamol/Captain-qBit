@@ -164,7 +164,7 @@ class MainActivity : AppCompatActivity() {
                             if (navController.currentDestination?.id == R.id.homeFragment) {
                                 navController.navigate(
                                     R.id.action_homeFragment_to_serverFragment,
-                                    bundle
+                                    bundle,
                                 )
                             }
                         }
@@ -191,8 +191,7 @@ class MainActivity : AppCompatActivity() {
     private fun popToServerList() {
         val navController =
             (supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? NavHostFragment)
-                ?.navController
-                ?: return
+                ?.navController ?: return
         if (navController.currentDestination?.id != R.id.serverFragment) {
             navController.popBackStack(R.id.serverFragment, false)
         }
@@ -239,7 +238,7 @@ class MainActivity : AppCompatActivity() {
             registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
                 Log.i(
                     AppNotificationManager.javaClass.simpleName,
-                    "Notification permission: $granted"
+                    "Notification permission: $granted",
                 )
                 if (granted) launchWorkManager(true)
             }

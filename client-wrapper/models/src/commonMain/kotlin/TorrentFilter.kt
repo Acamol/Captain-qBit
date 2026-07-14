@@ -10,5 +10,5 @@ enum class TorrentFilter {
     RESUMED,
     STALLED,
     STALLED_UPLOADING,
-    STALLED_DOWNLOADING
+    STALLED_DOWNLOADING,
 }

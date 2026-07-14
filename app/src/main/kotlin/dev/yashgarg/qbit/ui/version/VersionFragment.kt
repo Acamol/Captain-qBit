@@ -89,7 +89,7 @@ fun AboutView(state: VersionState) {
         )
         Text(
             text = "Captain qBit",
-            style = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            style = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold),
         )
         Text(
             text = "Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
@@ -102,7 +102,7 @@ fun AboutView(state: VersionState) {
             state.serverVersion?.let {
                 Text(
                     text = "qBittorrent $it",
-                    style = TextStyle(fontSize = 14.sp, color = secondary)
+                    style = TextStyle(fontSize = 14.sp, color = secondary),
                 )
             }
             state.apiVersion?.let {

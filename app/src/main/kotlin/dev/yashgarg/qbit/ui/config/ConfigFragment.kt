@@ -183,7 +183,7 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
                     Snackbar.make(
                         requireView(),
                         "Checking connection, please wait...",
-                        Snackbar.LENGTH_SHORT
+                        Snackbar.LENGTH_SHORT,
                     )
                 checkSnackbar.show()
 
@@ -216,7 +216,7 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
                                 Toast.makeText(
                                         context,
                                         "Success! Client app version is ${connectionResponse.value}",
-                                        Toast.LENGTH_LONG
+                                        Toast.LENGTH_LONG,
                                     )
                                     .show()
 
@@ -247,7 +247,7 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
                                         navController.navigate(
                                             AppR.id.serverFragment,
                                             null,
-                                            navOptions
+                                            navOptions,
                                         )
                                     }
                                     // Added a new server from the picker: keep the active server.
@@ -264,7 +264,7 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
                                 Snackbar.make(
                                         requireView(),
                                         "Failed! ${connectionResponse.error.message}",
-                                        Snackbar.LENGTH_LONG
+                                        Snackbar.LENGTH_LONG,
                                     )
                                     .show()
                             }

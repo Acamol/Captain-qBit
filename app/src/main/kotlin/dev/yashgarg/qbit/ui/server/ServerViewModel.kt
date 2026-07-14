@@ -134,36 +134,34 @@ constructor(
     private var syncJob: Job? = null
 
     init {
-        syncJob =
-            viewModelScope.launch {
-                val prefs = prefsStore.data.first()
-                val option =
-                    try {
-                        SortOption.valueOf(prefs.sortOptionName)
-                    } catch (e: Exception) {
-                        SortOption.NAME
-                    }
-                val direction =
-                    if (prefs.sortDirectionAsc) SortDirection.ASC else SortDirection.DESC
-                val filter =
-                    try {
-                        StateFilter.valueOf(prefs.filterStateName)
-                    } catch (e: Exception) {
-                        StateFilter.ALL
-                    }
-                _uiState.update {
-                    it.copy(
-                        sortOption = option,
-                        sortDirection = direction,
-                        selectedFilter = filter,
-                        selectedCategory = prefs.filterCategory,
-                        selectedTracker = prefs.filterTracker,
-                        selectedTags = prefs.filterTags,
-                        filterUntagged = prefs.filterUntagged,
-                    )
+        syncJob = viewModelScope.launch {
+            val prefs = prefsStore.data.first()
+            val option =
+                try {
+                    SortOption.valueOf(prefs.sortOptionName)
+                } catch (e: Exception) {
+                    SortOption.NAME
                 }
-                syncData()
+            val direction = if (prefs.sortDirectionAsc) SortDirection.ASC else SortDirection.DESC
+            val filter =
+                try {
+                    StateFilter.valueOf(prefs.filterStateName)
+                } catch (e: Exception) {
+                    StateFilter.ALL
+                }
+            _uiState.update {
+                it.copy(
+                    sortOption = option,
+                    sortDirection = direction,
+                    selectedFilter = filter,
+                    selectedCategory = prefs.filterCategory,
+                    selectedTracker = prefs.filterTracker,
+                    selectedTags = prefs.filterTags,
+                    filterUntagged = prefs.filterUntagged,
+                )
             }
+            syncData()
+        }
 
         // Reflect the active server's name in the UI.
         viewModelScope.launch {
@@ -208,7 +206,7 @@ constructor(
             prefsStore.updateData {
                 it.copy(
                     sortOptionName = option.name,
-                    sortDirectionAsc = direction == SortDirection.ASC
+                    sortDirectionAsc = direction == SortDirection.ASC,
                 )
             }
         }
@@ -320,44 +318,43 @@ constructor(
         pendingSource = PendingSource.Magnet(url, hash)
         _fileSelection.value = FileSelectionUiState(magnetDisplayName(url), null)
 
-        metadataJob =
-            viewModelScope.launch {
-                // Must be added RUNNING: libtorrent won't fetch metadata for a stopped magnet.
-                when (val add = repository.addTorrentUrl(url, paused = false)) {
-                    is Ok -> {
-                        addedStoppedHash = hash
-                        var attempts = 0
-                        while (isActive) {
-                            val files = repository.getTorrentFiles(hash)
-                            if (files is Ok && files.value.isNotEmpty()) {
-                                // Got the file list: stop it again so nothing downloads while the
-                                // user picks. Metadata stays cached; confirm/apply will resume it.
-                                repository.toggleTorrentsState(listOf(hash), pause = true)
-                                _fileSelection.update { current ->
-                                    current?.copy(
-                                        tree = TransformUtil.transformFilesToTree(files.value, 0)
-                                    )
-                                }
-                                break
+        metadataJob = viewModelScope.launch {
+            // Must be added RUNNING: libtorrent won't fetch metadata for a stopped magnet.
+            when (val add = repository.addTorrentUrl(url, paused = false)) {
+                is Ok -> {
+                    addedStoppedHash = hash
+                    var attempts = 0
+                    while (isActive) {
+                        val files = repository.getTorrentFiles(hash)
+                        if (files is Ok && files.value.isNotEmpty()) {
+                            // Got the file list: stop it again so nothing downloads while the
+                            // user picks. Metadata stays cached; confirm/apply will resume it.
+                            repository.toggleTorrentsState(listOf(hash), pause = true)
+                            _fileSelection.update { current ->
+                                current?.copy(
+                                    tree = TransformUtil.transformFilesToTree(files.value, 0)
+                                )
                             }
-                            if (++attempts >= METADATA_MAX_ATTEMPTS) {
-                                repository.toggleTorrentsState(listOf(hash), pause = true)
-                                emitStatus(getString(CommonR.string.metadata_timeout))
-                                break
-                            }
-                            delay(METADATA_POLL_MS)
+                            break
                         }
-                    }
-                    is Err -> {
-                        emitStatus(
-                            add.error.friendlyMessage(
-                                getString(CommonR.string.status_add_torrent_url_failure)
-                            )
-                        )
-                        clearFileSelection()
+                        if (++attempts >= METADATA_MAX_ATTEMPTS) {
+                            repository.toggleTorrentsState(listOf(hash), pause = true)
+                            emitStatus(getString(CommonR.string.metadata_timeout))
+                            break
+                        }
+                        delay(METADATA_POLL_MS)
                     }
                 }
+                is Err -> {
+                    emitStatus(
+                        add.error.friendlyMessage(
+                            getString(CommonR.string.status_add_torrent_url_failure)
+                        )
+                    )
+                    clearFileSelection()
+                }
             }
+        }
         return true
     }
 
@@ -454,12 +451,11 @@ constructor(
         parsed: TorrentFileParser.ParsedTorrent,
         deselected: Set<Int>,
         server: List<TorrentFile>,
-    ): List<Int> =
-        deselected.mapNotNull { i ->
-            val path = parsed.files.getOrNull(i)?.path ?: return@mapNotNull null
-            server.firstOrNull { it.name == path || it.name.endsWith("/$path") }?.index
-                ?: server.getOrNull(i)?.index
-        }
+    ): List<Int> = deselected.mapNotNull { i ->
+        val path = parsed.files.getOrNull(i)?.path ?: return@mapNotNull null
+        server.firstOrNull { it.name == path || it.name.endsWith("/$path") }?.index
+            ?: server.getOrNull(i)?.index
+    }
 
     private suspend fun applySelectionAndStart(
         hash: String,
@@ -590,29 +586,27 @@ constructor(
     }
 
     fun setSort(option: SortOption) {
-        val newState =
-            _uiState.updateAndGet { state ->
-                val newDirection =
-                    if (state.sortOption == option) {
-                        if (state.sortDirection == SortDirection.ASC) SortDirection.DESC
-                        else SortDirection.ASC
-                    } else {
-                        SortDirection.ASC
-                    }
-                state.copy(sortOption = option, sortDirection = newDirection)
-            }
+        val newState = _uiState.updateAndGet { state ->
+            val newDirection =
+                if (state.sortOption == option) {
+                    if (state.sortDirection == SortDirection.ASC) SortDirection.DESC
+                    else SortDirection.ASC
+                } else {
+                    SortDirection.ASC
+                }
+            state.copy(sortOption = option, sortDirection = newDirection)
+        }
         saveSortPrefs(newState.sortOption, newState.sortDirection)
     }
 
     fun toggleSortDirection() {
-        val newState =
-            _uiState.updateAndGet { state ->
-                state.copy(
-                    sortDirection =
-                        if (state.sortDirection == SortDirection.ASC) SortDirection.DESC
-                        else SortDirection.ASC
-                )
-            }
+        val newState = _uiState.updateAndGet { state ->
+            state.copy(
+                sortDirection =
+                    if (state.sortDirection == SortDirection.ASC) SortDirection.DESC
+                    else SortDirection.ASC
+            )
+        }
         saveSortPrefs(newState.sortOption, newState.sortDirection)
     }
 

@@ -126,7 +126,7 @@ constructor(
                 notifyEvent(
                     "complete:${torrent.hash}".hashCode(),
                     "Download complete",
-                    torrent.name
+                    torrent.name,
                 )
             }
             if (prefs.notifyOnChecked && before.state.isChecking() && !torrent.state.isChecking()) {
@@ -174,7 +174,7 @@ constructor(
                 R.drawable.ic_stat_qbit,
                 true,
                 listOf(Action(null, "Close", closeIntent)),
-                pendingIntent
+                pendingIntent,
             )
         // Android 10+ requires declaring a foreground service type for setForeground(). From
         // Android 14 we use specialUse: this monitor runs as long as the user keeps it enabled,

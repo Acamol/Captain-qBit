@@ -14,6 +14,6 @@ fun Center(modifier: Modifier = Modifier, content: @Composable ColumnScope.() ->
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
-        content = content
+        content = content,
     )
 }

@@ -30,7 +30,7 @@ fun ListTile(
                 .combinedClickable(enabled = true, onClick = onClick, onLongClick = onLongClick)
                 .then(modifier),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Column(horizontalAlignment = Alignment.Start, modifier = Modifier.weight(.6f)) {
             Text(title, style = titleStyle, maxLines = 1, overflow = TextOverflow.Ellipsis)

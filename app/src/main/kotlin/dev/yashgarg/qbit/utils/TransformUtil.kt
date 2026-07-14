@@ -39,7 +39,7 @@ object TransformUtil {
                         path = values.first().name.substring(0, start + folder.length),
                         children = subTree,
                         size = subTree.sumOf { it.size },
-                        progress = subTree.sumOf { it.progress } / subTree.size
+                        progress = subTree.sumOf { it.progress } / subTree.size,
                     )
                 )
                 continue
@@ -53,7 +53,7 @@ object TransformUtil {
                         path = item.name,
                         item,
                         size = item.size,
-                        progress = item.progress.toLong()
+                        progress = item.progress.toLong(),
                     )
                 )
             }

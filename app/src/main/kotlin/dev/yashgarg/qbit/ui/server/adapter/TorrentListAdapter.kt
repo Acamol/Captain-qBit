@@ -55,7 +55,7 @@ class TorrentListAdapter @Inject constructor() :
                     recyclerView,
                     itemKeyProvider,
                     TorrentItemDetailsLookup(recyclerView),
-                    StorageStrategy.createStringStorage()
+                    StorageStrategy.createStringStorage(),
                 )
                 .withSelectionPredicate(SelectionPredicates.createSelectAnything())
                 .build()
@@ -243,7 +243,7 @@ class TorrentListAdapter @Inject constructor() :
                         torrent.category,
                         userColor,
                         contrastColorOn(userColor),
-                        outlined = false
+                        outlined = false,
                     )
                 } else {
                     addChip(
