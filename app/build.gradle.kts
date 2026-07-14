@@ -1,6 +1,13 @@
 @file:Suppress("UnstableApiUsage")
 
 import java.util.Properties
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 
 val commitHash: String by lazy {
     providers
@@ -11,6 +18,12 @@ val commitHash: String by lazy {
         .trim()
 }
 
+// In-app "What's New": the per-release notes shown by F-Droid live in the fastlane metadata. Bundle
+// them into the APK as assets so the same content is available offline in-app. Generated during the
+// Gradle build (see the syncChangelogAssets task), so an F-Droid source build produces it
+// identically.
+val changelogSource = rootProject.file("fastlane/metadata/android/en-US/changelogs")
+
 plugins {
     alias(libs.plugins.android.application)
     id("dev.yashgarg.qbit.kotlin-android")
@@ -18,6 +31,30 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
+}
+
+// Copies the fastlane changelog notes into a generated assets dir as assets/changelogs/*.txt.
+// Declared after the plugins block (Gradle requires that block to come first). See usage below.
+abstract class SyncChangelogAssets : DefaultTask() {
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val source: DirectoryProperty
+
+    @get:OutputDirectory abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun sync() {
+        val dest = outputDir.get().asFile.resolve("changelogs")
+        dest.deleteRecursively()
+        dest.mkdirs()
+        source
+            .get()
+            .asFile
+            .listFiles { file -> file.extension == "txt" }
+            ?.forEach { file ->
+                file.copyTo(dest.resolve(file.name), overwrite = true)
+            }
+    }
 }
 
 android {
@@ -110,6 +147,22 @@ android {
             excludes += "**/*.xml"
             excludes += "**/*.properties"
         }
+    }
+}
+
+// Register the changelog sync as a generated assets dir on every variant.
+// addGeneratedSourceDirectory
+// carries the task dependency automatically, so the notes are present for any build — including
+// F-Droid's `assembleRelease` — without relying on task ordering.
+val syncChangelogAssets =
+    tasks.register<SyncChangelogAssets>("syncChangelogAssets") { source.fileValue(changelogSource) }
+
+androidComponents {
+    onVariants { variant ->
+        variant.sources.assets?.addGeneratedSourceDirectory(
+            syncChangelogAssets,
+            SyncChangelogAssets::outputDir,
+        )
     }
 }
 

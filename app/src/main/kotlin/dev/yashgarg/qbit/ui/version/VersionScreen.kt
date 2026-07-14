@@ -20,7 +20,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -38,6 +42,8 @@ import dev.yashgarg.qbit.BuildConfig
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
+import dev.yashgarg.qbit.ui.whatsnew.ChangelogAssets
+import dev.yashgarg.qbit.ui.whatsnew.WhatsNewDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,6 +71,13 @@ fun AboutView(state: VersionState, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val secondary = colorResource(R.color.grey)
     val accent = colorResource(R.color.md_theme_dark_seed)
+
+    // Load this build's release notes once; the "What's New" link only appears when notes exist.
+    var whatsNewEntries by remember { mutableStateOf<List<String>>(emptyList()) }
+    var showWhatsNew by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        whatsNewEntries = ChangelogAssets.read(context, BuildConfig.VERSION_CODE)
+    }
 
     fun open(url: String) = context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
 
@@ -121,6 +134,13 @@ fun AboutView(state: VersionState, modifier: Modifier = Modifier) {
         Spacer(Modifier.height(24.dp))
         val linkStyle =
             TextStyle(fontSize = 16.sp, color = accent, fontWeight = FontWeight.SemiBold)
+        if (whatsNewEntries.isNotEmpty()) {
+            Text(
+                text = "What's New",
+                modifier = Modifier.padding(vertical = 8.dp).clickable { showWhatsNew = true },
+                style = linkStyle,
+            )
+        }
         Text(
             text = "Source code",
             modifier =
@@ -136,6 +156,14 @@ fun AboutView(state: VersionState, modifier: Modifier = Modifier) {
                     open("https://github.com/Acamol/Captain-qBit/issues")
                 },
             style = linkStyle,
+        )
+    }
+
+    if (showWhatsNew) {
+        WhatsNewDialog(
+            versionName = BuildConfig.VERSION_NAME,
+            entries = whatsNewEntries,
+            onDismiss = { showWhatsNew = false },
         )
     }
 }

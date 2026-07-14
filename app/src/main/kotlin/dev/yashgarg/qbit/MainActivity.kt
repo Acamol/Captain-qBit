@@ -14,9 +14,11 @@ import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.runtime.getValue
 import androidx.core.view.WindowCompat
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import dagger.hilt.android.AndroidEntryPoint
@@ -30,6 +32,8 @@ import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.ui.navigation.QbitNavHost
 import dev.yashgarg.qbit.ui.theme.QbitComposeTheme
+import dev.yashgarg.qbit.ui.whatsnew.WhatsNewDialog
+import dev.yashgarg.qbit.ui.whatsnew.WhatsNewViewModel
 import dev.yashgarg.qbit.worker.StatusWorker
 import javax.inject.Inject
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -45,6 +49,7 @@ class MainActivity : AppCompatActivity() {
     @Inject lateinit var appNavigator: AppNavigator
 
     private val backupViewModel by viewModels<BackupViewModel>()
+    private val whatsNewViewModel by viewModels<WhatsNewViewModel>()
 
     private var lastBackPressTime = 0L
     // Land on the torrent list once when a server exists; don't re-route on later config-status
@@ -58,6 +63,15 @@ class MainActivity : AppCompatActivity() {
         setContent {
             QbitComposeTheme {
                 QbitNavHost(appNavigator = appNavigator, onExitDoubleBack = ::onExitDoubleBack)
+
+                val whatsNew by whatsNewViewModel.uiState.collectAsStateWithLifecycle()
+                if (whatsNew.visible) {
+                    WhatsNewDialog(
+                        versionName = whatsNew.versionName,
+                        entries = whatsNew.entries,
+                        onDismiss = whatsNewViewModel::dismiss,
+                    )
+                }
             }
         }
 
