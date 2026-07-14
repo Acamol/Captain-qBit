@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 /** Independently selectable groups of app preferences for export/import. */
 @Serializable
 enum class PrefGroup {
-    THEME,
+    APPEARANCE,
     NOTIFICATIONS,
     FILTERS,
 }
@@ -40,7 +40,7 @@ fun ConfigBackup.availablePrefGroups(): Set<PrefGroup> =
 /** Copies the fields belonging to [group] from [src] onto this preferences object. */
 fun ServerPreferences.overlayGroup(group: PrefGroup, src: ServerPreferences): ServerPreferences =
     when (group) {
-        PrefGroup.THEME -> copy(themeMode = src.themeMode, dynamicColors = src.dynamicColors)
+        PrefGroup.APPEARANCE -> copy(themeMode = src.themeMode, dynamicColors = src.dynamicColors)
         PrefGroup.NOTIFICATIONS ->
             copy(
                 statusNotification = src.statusNotification,

@@ -286,7 +286,7 @@ object BackupDialogs {
     /** User-facing label for a preference group checkbox. */
     private fun prefGroupLabel(group: PrefGroup): String =
         when (group) {
-            PrefGroup.THEME -> "Theme"
+            PrefGroup.APPEARANCE -> "Appearance"
             PrefGroup.NOTIFICATIONS -> "Notifications"
             PrefGroup.FILTERS -> "Filters & sorting"
         }
