@@ -21,8 +21,8 @@ class QbitApplication : Application(), Configuration.Provider {
 
     @Inject lateinit var serverPrefsStore: DataStore<ServerPreferences>
 
-    override fun getWorkManagerConfiguration() =
-        Configuration.Builder().setWorkerFactory(workerFactory).build()
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
 
     override fun onCreate() {
         super.onCreate()

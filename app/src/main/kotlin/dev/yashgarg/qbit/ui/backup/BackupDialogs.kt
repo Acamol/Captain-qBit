@@ -300,7 +300,7 @@ object BackupDialogs {
             setTextAppearance(
                 com.google.android.material.R.style.TextAppearance_Material3_TitleSmall
             )
-            setTextColor(context.themeColor(com.google.android.material.R.attr.colorPrimary))
+            setTextColor(context.themeColor(androidx.appcompat.R.attr.colorPrimary))
             setPadding(0, (if (first) 0 else 16 * density).toInt(), 0, (4 * density).toInt())
         }
     }
