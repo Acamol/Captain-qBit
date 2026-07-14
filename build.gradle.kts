@@ -19,7 +19,7 @@ plugins {
     alias(libs.plugins.kotlin.common)
 }
 
-val clean by tasks.existing(Delete::class) { delete(rootProject.layout.buildDirectory) }
+tasks.named<Delete>("clean") { delete(rootProject.layout.buildDirectory) }
 
 afterEvaluate {
     tasks.prepareKotlinBuildScriptModel.dependsOn(tasks.copyGitHooks, tasks.installGitHooks)

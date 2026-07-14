@@ -18,17 +18,15 @@ kotlin {
     }
 
     sourceSets {
-        val commonMain by getting {
-            dependencies {
-                api(projects.clientWrapper.models)
-                implementation(libs.coroutines.core)
-                implementation(libs.kotlinx.serialization)
-                implementation(libs.ktor.client.core)
-                implementation(libs.ktor.client.contentNegotiation)
-                implementation(libs.ktor.serialization)
-            }
+        commonMain.dependencies {
+            api(projects.clientWrapper.models)
+            implementation(libs.coroutines.core)
+            implementation(libs.kotlinx.serialization)
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.contentNegotiation)
+            implementation(libs.ktor.serialization)
         }
 
-        val jvmMain by getting { dependencies { implementation(kotlin("stdlib-jdk8")) } }
+        jvmMain.dependencies { implementation(kotlin("stdlib-jdk8")) }
     }
 }

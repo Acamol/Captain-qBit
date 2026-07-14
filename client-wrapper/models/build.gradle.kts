@@ -8,11 +8,9 @@ kotlin {
     jvm()
 
     sourceSets {
-        val commonMain by getting {
-            dependencies {
-                implementation(libs.serialization.core)
-                implementation(libs.kotlinx.serialization)
-            }
+        commonMain.dependencies {
+            implementation(libs.serialization.core)
+            implementation(libs.kotlinx.serialization)
         }
     }
 }
