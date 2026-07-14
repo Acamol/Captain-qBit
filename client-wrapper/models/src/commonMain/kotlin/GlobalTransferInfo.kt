@@ -33,5 +33,5 @@ data class GlobalTransferInfo(
 enum class ConnectionStatus {
     @SerialName("connected") CONNECTED,
     @SerialName("firewalled") FIREWALLED,
-    @SerialName("disconnected") DISCONNECTED
+    @SerialName("disconnected") DISCONNECTED,
 }

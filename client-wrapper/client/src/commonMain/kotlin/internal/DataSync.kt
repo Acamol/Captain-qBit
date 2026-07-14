@@ -43,14 +43,13 @@ internal abstract class DataSync<T>(
             atomicSyncRid.value = value
         }
 
-    private val syncLoopJob =
-        syncScope.launch {
-            while (true) {
-                // Wait for the first subscribers
-                isSyncingState.first { it }
-                syncData()
-            }
+    private val syncLoopJob = syncScope.launch {
+        while (true) {
+            // Wait for the first subscribers
+            isSyncingState.first { it }
+            syncData()
         }
+    }
 
     fun isSyncing(): Boolean {
         return isSyncingState.value
@@ -133,7 +132,7 @@ internal class MainDataSync(
         typeInfo = typeInfo<MainData>(),
         http = http,
         config = config,
-        syncScope = syncScope
+        syncScope = syncScope,
     ) {
     override val endpointUrl: String = "/api/v2/sync/maindata"
     override val nestedObjectKeys: List<String> = listOf("torrents", "categories")

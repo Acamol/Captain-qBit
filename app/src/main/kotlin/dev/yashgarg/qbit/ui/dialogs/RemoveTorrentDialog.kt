@@ -36,7 +36,7 @@ class RemoveTorrentDialog : DialogFragment() {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 setFragmentResult(
                     REMOVE_TORRENT_KEY,
-                    bundleOf(TORRENT_KEY to deleteFilesCheckBox?.isChecked)
+                    bundleOf(TORRENT_KEY to deleteFilesCheckBox?.isChecked),
                 )
                 dialog.dismiss()
             }

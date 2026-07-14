@@ -41,5 +41,5 @@ include(
     ":bonsai-core",
     ":benchmark",
     ":client-wrapper:models",
-    ":client-wrapper:client"
+    ":client-wrapper:client",
 )

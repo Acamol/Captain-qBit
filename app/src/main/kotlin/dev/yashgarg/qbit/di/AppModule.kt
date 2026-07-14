@@ -59,7 +59,7 @@ class AppModule {
             scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
             produceFile = {
                 appContext.preferencesDataStoreFile(ServerPreferencesSerializer.SERVER_PREFS_NAME)
-            }
+            },
         )
     }
 }

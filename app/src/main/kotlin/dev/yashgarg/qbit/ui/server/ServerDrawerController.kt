@@ -96,7 +96,7 @@ class ServerDrawerController(
     private fun drawerTextColor(selected: Boolean): Int =
         MaterialColors.getColor(
             fragment.requireContext(),
-            if (selected) com.google.android.material.R.attr.colorPrimary
+            if (selected) androidx.appcompat.R.attr.colorPrimary
             else com.google.android.material.R.attr.colorOnSurfaceVariant,
             Color.GRAY,
         )
@@ -128,7 +128,7 @@ class ServerDrawerController(
         val seedColor =
             MaterialColors.getColor(
                 ctx,
-                com.google.android.material.R.attr.colorPrimary,
+                androidx.appcompat.R.attr.colorPrimary,
                 ctx.getColor(R.color.md_theme_dark_seed),
             )
 
@@ -187,7 +187,7 @@ class ServerDrawerController(
         val seedColor =
             MaterialColors.getColor(
                 ctx,
-                com.google.android.material.R.attr.colorPrimary,
+                androidx.appcompat.R.attr.colorPrimary,
                 ctx.getColor(R.color.md_theme_dark_seed),
             )
         val hasChildren = node.children.isNotEmpty()

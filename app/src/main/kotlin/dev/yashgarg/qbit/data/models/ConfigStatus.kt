@@ -5,5 +5,5 @@ import androidx.annotation.Keep
 @Keep
 enum class ConfigStatus {
     EXISTS,
-    DOES_NOT_EXIST
+    DOES_NOT_EXIST,
 }

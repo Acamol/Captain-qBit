@@ -166,8 +166,7 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
 
         val onSurface =
             MaterialColors.getColor(ctx, com.google.android.material.R.attr.colorOnSurface, 0)
-        val primary =
-            MaterialColors.getColor(ctx, com.google.android.material.R.attr.colorPrimary, 0)
+        val primary = MaterialColors.getColor(ctx, androidx.appcompat.R.attr.colorPrimary, 0)
         val selectableBg =
             TypedValue()
                 .also {
@@ -606,7 +605,7 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
                 setTextColor(
                     MaterialColors.getColor(
                         ctx,
-                        com.google.android.material.R.attr.colorPrimary,
+                        androidx.appcompat.R.attr.colorPrimary,
                         ctx.getColor(R.color.md_theme_dark_seed_light),
                     )
                 )
@@ -648,14 +647,13 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
     fun showSortPicker() {
         val state = viewModel.uiState.value
         val options = SortOption.entries
-        val labels =
-            options.map { option ->
-                when {
-                    option != state.sortOption -> option.label
-                    state.sortDirection == SortDirection.ASC -> "↑ ${option.label}"
-                    else -> "↓ ${option.label}"
-                }
+        val labels = options.map { option ->
+            when {
+                option != state.sortOption -> option.label
+                state.sortDirection == SortDirection.ASC -> "↑ ${option.label}"
+                else -> "↓ ${option.label}"
             }
+        }
         val checkedIndex = options.indexOf(state.sortOption)
 
         val dirLabel =
@@ -683,8 +681,7 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
 
         val onSurface =
             MaterialColors.getColor(ctx, com.google.android.material.R.attr.colorOnSurface, 0)
-        val primary =
-            MaterialColors.getColor(ctx, com.google.android.material.R.attr.colorPrimary, 0)
+        val primary = MaterialColors.getColor(ctx, androidx.appcompat.R.attr.colorPrimary, 0)
         val selectableBg =
             TypedValue()
                 .also {

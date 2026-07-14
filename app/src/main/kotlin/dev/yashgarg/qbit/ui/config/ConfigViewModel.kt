@@ -279,7 +279,7 @@ constructor(
                     username,
                     password,
                     httpClient = ClientManager.httpClient(basicAuth),
-                    dispatcher = Dispatchers.Default
+                    dispatcher = Dispatchers.Default,
                 )
             client.getVersion()
         }

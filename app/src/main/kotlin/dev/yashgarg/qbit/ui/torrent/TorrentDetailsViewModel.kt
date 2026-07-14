@@ -4,8 +4,9 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import com.github.michaelbull.result.Err
-import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.get
+import com.github.michaelbull.result.onErr
+import com.github.michaelbull.result.onOk
 import com.github.michaelbull.result.runCatching
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -114,24 +115,27 @@ constructor(
     fun createCategory(name: String, savePath: String = "") {
         viewModelScope.launch {
             val hash = requireNotNull(hash)
-            when (val created = repository.createCategory(name, savePath)) {
-                is Ok ->
-                    when (val set = repository.setTorrentCategory(listOf(hash), name)) {
-                        is Ok -> emitStatus(getString(CommonR.string.status_category_set_to, name))
-                        is Err ->
+            repository
+                .createCategory(name, savePath)
+                .onOk {
+                    repository
+                        .setTorrentCategory(listOf(hash), name)
+                        .onOk {
+                            emitStatus(getString(CommonR.string.status_category_set_to, name))
+                        }
+                        .onErr {
                             emitStatus(
-                                set.error.friendlyMessage(
+                                it.friendlyMessage(
                                     getString(CommonR.string.status_category_created_not_assigned)
                                 )
                             )
-                    }
-                is Err ->
+                        }
+                }
+                .onErr {
                     emitStatus(
-                        created.error.friendlyMessage(
-                            getString(CommonR.string.status_create_category_failure)
-                        )
+                        it.friendlyMessage(getString(CommonR.string.status_create_category_failure))
                     )
-            }
+                }
         }
     }
 
@@ -188,16 +192,14 @@ constructor(
         }
 
         val fromLog =
-            when (val logs = repository.getLogs()) {
-                is Ok ->
-                    logs.value
-                        .filter {
-                            it.type == LogEntry.TYPE_WARNING || it.type == LogEntry.TYPE_CRITICAL
-                        }
-                        .lastOrNull { it.message.contains(torrent.name, ignoreCase = true) }
-                        ?.message
-                is Err -> null
-            }
+            repository
+                .getLogs()
+                .get()
+                ?.filter {
+                    it.type == LogEntry.TYPE_WARNING || it.type == LogEntry.TYPE_CRITICAL
+                }
+                ?.lastOrNull { it.message.contains(torrent.name, ignoreCase = true) }
+                ?.message
 
         return fromLog
             ?: if (torrent.state == Torrent.State.MISSING_FILES) {
@@ -210,7 +212,7 @@ constructor(
     private suspend fun syncAvailableFilters() {
         repository
             .observeMainData()
-            .catch { /* non-fatal, ignore */}
+            .catch { /* non-fatal, ignore */ }
             .collectLatest { mainData ->
                 val categories = mainData.categories.keys.sorted()
                 val tags = mainData.tags.sorted()
@@ -232,44 +234,30 @@ constructor(
                         torrent = info,
                         error = null,
                         errorReason = errorReason,
-                        trackers =
-                            when (trackers) {
-                                is Ok -> trackers.value
-                                is Err -> emptyList()
-                            },
-                        torrentProperties =
-                            when (props) {
-                                is Ok -> props.value
-                                is Err -> null
-                            }
+                        trackers = trackers.get() ?: emptyList(),
+                        torrentProperties = props.get(),
                     )
                 }
             }
         }
 
-        when (result) {
-            is Ok -> Unit
-            is Err -> {
-                _uiState.update { state ->
-                    state.copy(loading = false, error = Exception(result.error.friendlyMessage()))
-                }
+        result.onErr {
+            _uiState.update { state ->
+                state.copy(loading = false, error = Exception(it.friendlyMessage()))
             }
         }
     }
 
     private suspend fun getContent() {
-        val files = hash?.let { repository.getTorrentFiles(it) }
-        if (files != null) {
-            when (files) {
-                is Ok -> {
-                    val tree = TransformUtil.transformFilesToTree(files.value, 0)
-                    _uiState.update { state -> state.copy(contentTree = tree) }
-                }
-                is Err -> {
-                    _uiState.update { state -> state.copy(contentTree = emptyList()) }
-                }
+        hash
+            ?.let { repository.getTorrentFiles(it) }
+            ?.onOk { files ->
+                val tree = TransformUtil.transformFilesToTree(files, 0)
+                _uiState.update { state -> state.copy(contentTree = tree) }
             }
-        }
+            ?.onErr {
+                _uiState.update { state -> state.copy(contentTree = emptyList()) }
+            }
 
         _uiState.update { state -> state.copy(contentLoading = false) }
     }
@@ -278,8 +266,9 @@ constructor(
     fun setFilePriority(ids: List<Int>, priority: Int) {
         val hash = requireNotNull(hash)
         viewModelScope.launch {
-            when (val result = repository.setFilePriority(hash, ids, priority)) {
-                is Ok -> {
+            repository
+                .setFilePriority(hash, ids, priority)
+                .onOk {
                     // Update the tree immediately - qBittorrent applies priorities
                     // asynchronously, so an instant re-fetch can still return the old values.
                     _uiState.update { state ->
@@ -291,13 +280,11 @@ constructor(
                     delay(1000)
                     getContent()
                 }
-                is Err ->
+                .onErr {
                     emitStatus(
-                        result.error.friendlyMessage(
-                            getString(CommonR.string.status_set_priority_failure)
-                        )
+                        it.friendlyMessage(getString(CommonR.string.status_set_priority_failure))
                     )
-            }
+                }
         }
     }
 
@@ -305,16 +292,15 @@ constructor(
         nodes: List<ContentTreeItem>,
         ids: Set<Int>,
         priority: Int,
-    ): List<ContentTreeItem> =
-        nodes.map { node ->
-            node.copy(
-                item =
-                    node.item?.let { file ->
-                        if (file.index in ids) file.copy(priority = priority) else file
-                    },
-                children = node.children?.let { withPriorities(it, ids, priority) },
-            )
-        }
+    ): List<ContentTreeItem> = nodes.map { node ->
+        node.copy(
+            item =
+                node.item?.let { file ->
+                    if (file.index in ids) file.copy(priority = priority) else file
+                },
+            children = node.children?.let { withPriorities(it, ids, priority) },
+        )
+    }
 
     private suspend fun syncPeers() {
         val result = runCatching {
@@ -335,15 +321,10 @@ constructor(
                 }
         }
 
-        when (result) {
-            is Ok -> Unit
-            is Err ->
-                _uiState.update { state ->
-                    state.copy(
-                        peersLoading = false,
-                        error = Exception(result.error.friendlyMessage())
-                    )
-                }
+        result.onErr {
+            _uiState.update { state ->
+                state.copy(peersLoading = false, error = Exception(it.friendlyMessage()))
+            }
         }
     }
 }

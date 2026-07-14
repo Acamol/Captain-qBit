@@ -82,7 +82,7 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
 
     suspend fun setTorrentCategory(
         hashes: List<String>,
-        category: String
+        category: String,
     ): Result<Unit, Throwable> {
         return runCatching { client().setTorrentCategory(hashes, category) }
     }
@@ -105,7 +105,7 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
 
     suspend fun removeTorrentTags(
         hashes: List<String>,
-        tags: List<String>
+        tags: List<String>,
     ): Result<Unit, Throwable> {
         return runCatching { client().removeTorrentTags(hashes, tags) }
     }
@@ -132,7 +132,7 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
 
     suspend fun removeTorrents(
         hashes: List<String>,
-        deleteFiles: Boolean = false
+        deleteFiles: Boolean = false,
     ): Result<Unit, Throwable> {
         return runCatching { client().deleteTorrents(hashes, deleteFiles) }
     }

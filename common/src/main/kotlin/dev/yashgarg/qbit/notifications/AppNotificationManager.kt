@@ -28,7 +28,7 @@ object AppNotificationManager {
                 NotificationChannel(
                     context.getString(R.string.status_channel_id),
                     context.getString(R.string.status_updates),
-                    NotificationManager.IMPORTANCE_LOW
+                    NotificationManager.IMPORTANCE_LOW,
                 )
 
             // Torrent events (completed, checked) alert the user, so this channel is DEFAULT
@@ -37,7 +37,7 @@ object AppNotificationManager {
                 NotificationChannel(
                     context.getString(R.string.events_channel_id),
                     context.getString(R.string.events_channel_name),
-                    NotificationManager.IMPORTANCE_DEFAULT
+                    NotificationManager.IMPORTANCE_DEFAULT,
                 )
 
             val notificationManager =
@@ -72,7 +72,7 @@ object AppNotificationManager {
         actions: List<NotificationCompat.Action> = emptyList(),
         contentIntent: PendingIntent? = null,
         channelId: String = context.getString(R.string.status_channel_id),
-        priority: Int = NotificationCompat.PRIORITY_LOW
+        priority: Int = NotificationCompat.PRIORITY_LOW,
     ): Notification {
         val builder =
             NotificationCompat.Builder(context, channelId)
@@ -95,7 +95,7 @@ object AppNotificationManager {
         title: String,
         content: String,
         @DrawableRes smallIcon: Int,
-        contentIntent: PendingIntent? = null
+        contentIntent: PendingIntent? = null,
     ): Notification =
         createNotification(
             context = context,
@@ -105,7 +105,7 @@ object AppNotificationManager {
             persistent = false,
             contentIntent = contentIntent,
             channelId = context.getString(R.string.events_channel_id),
-            priority = NotificationCompat.PRIORITY_DEFAULT
+            priority = NotificationCompat.PRIORITY_DEFAULT,
         )
 
     // We already check for permissions later in the process, so we can suppress this lint

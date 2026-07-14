@@ -10,8 +10,7 @@ internal suspend fun HttpResponse.orThrow() {
     if (!status.isSuccess()) {
         throw call.attributes
             .takeOrNull(ErrorTransformer.KEY_INTERNAL_ERROR)
-            ?.run(::QBittorrentException)
-            ?: QBittorrentException(this, bodyAsText())
+            ?.run(::QBittorrentException) ?: QBittorrentException(this, bodyAsText())
     }
 }
 
@@ -24,8 +23,7 @@ internal suspend inline fun <reified T> HttpResponse.bodyOrThrow(): T {
     } else {
         throw call.attributes
             .takeOrNull(ErrorTransformer.KEY_INTERNAL_ERROR)
-            ?.run(::QBittorrentException)
-            ?: QBittorrentException(this, bodyAsText())
+            ?.run(::QBittorrentException) ?: QBittorrentException(this, bodyAsText())
     }
 }
 
@@ -35,7 +33,6 @@ internal suspend fun <T> HttpResponse.bodyOrThrow(typeInfo: TypeInfo): T {
     } else {
         throw call.attributes
             .takeOrNull(ErrorTransformer.KEY_INTERNAL_ERROR)
-            ?.run(::QBittorrentException)
-            ?: QBittorrentException(this, bodyAsText())
+            ?.run(::QBittorrentException) ?: QBittorrentException(this, bodyAsText())
     }
 }

@@ -6,6 +6,8 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
     commit-message:
       prefix: "chore(deps)"
     groups:
@@ -24,6 +26,8 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
     commit-message:
       prefix: "chore(deps)"
     groups:
@@ -39,6 +43,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    labels:
+      - "dependencies"
     commit-message:
       prefix: "chore(ci)"
     groups:

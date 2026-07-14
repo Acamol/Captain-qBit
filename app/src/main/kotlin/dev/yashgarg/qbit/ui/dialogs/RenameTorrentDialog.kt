@@ -44,7 +44,7 @@ class RenameTorrentDialog : DialogFragment() {
                 if (!nameTiet?.text.isNullOrEmpty()) {
                     setFragmentResult(
                         RENAME_TORRENT_KEY,
-                        bundleOf(RENAME_KEY to nameTiet?.text.toString())
+                        bundleOf(RENAME_KEY to nameTiet?.text.toString()),
                     )
                     dialog.dismiss()
                 } else {

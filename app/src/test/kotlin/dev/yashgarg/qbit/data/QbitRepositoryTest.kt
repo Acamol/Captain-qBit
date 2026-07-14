@@ -1,6 +1,5 @@
 package dev.yashgarg.qbit.data
 
-import com.github.michaelbull.result.Ok
 import dev.yashgarg.qbit.Constants
 import dev.yashgarg.qbit.FakeClientManager
 import dev.yashgarg.qbit.MainDispatcherRule
@@ -36,13 +35,13 @@ class QbitRepositoryTest {
 
     @Test
     fun checkClientConnected() = runTest {
-        assertTrue(repository.getVersion() is Ok)
-        assertTrue(repository.getApiVersion() is Ok)
+        assertTrue(repository.getVersion().isOk)
+        assertTrue(repository.getApiVersion().isOk)
     }
 
     @Test
     fun checkAddTorrentSuccess() = runTest {
-        assertTrue(repository.addTorrentUrl(Constants.magnetUrl) is Ok)
+        assertTrue(repository.addTorrentUrl(Constants.magnetUrl).isOk)
 
         val data = repository.observeMainData().first()
         assertTrue(data.torrents.containsKey(Constants.magnetHash))
@@ -50,7 +49,7 @@ class QbitRepositoryTest {
 
     @Test
     fun checkRemoveTorrentSuccess() = runTest {
-        assertTrue(repository.removeTorrents(listOf(Constants.magnetHash)) is Ok)
+        assertTrue(repository.removeTorrents(listOf(Constants.magnetHash)).isOk)
 
         val data = repository.observeMainData().first()
         assertFalse(data.torrents.containsKey(Constants.magnetHash))

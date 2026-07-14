@@ -11,7 +11,7 @@ import qbittorrent.models.Category
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.setTorrentCategory(
     hashes: List<String> = QBittorrentClient.allList,
-    category: String
+    category: String,
 ) {
     http
         .submitForm(
@@ -20,7 +20,7 @@ suspend fun QBittorrentClient.setTorrentCategory(
                 Parameters.build {
                     append("hashes", hashes.joinToString("|"))
                     append("category", category)
-                }
+                },
         )
         .orThrow()
 }
@@ -43,7 +43,7 @@ suspend fun QBittorrentClient.createCategory(name: String, savePath: String) {
                 Parameters.build {
                     append("category", name)
                     append("savePath", savePath)
-                }
+                },
         )
         .orThrow()
 }
@@ -57,7 +57,7 @@ suspend fun QBittorrentClient.editCategory(name: String, savePath: String) {
                 Parameters.build {
                     append("category", name)
                     append("savePath", savePath)
-                }
+                },
         )
         .orThrow()
 }
@@ -67,7 +67,7 @@ suspend fun QBittorrentClient.removeCategories(names: List<String>) {
     http
         .submitForm(
             "${config.baseUrl}/api/v2/torrents/removeCategories",
-            formParameters = Parameters.build { append("categories", names.joinToString("\n")) }
+            formParameters = Parameters.build { append("categories", names.joinToString("\n")) },
         )
         .orThrow()
 }
@@ -75,7 +75,7 @@ suspend fun QBittorrentClient.removeCategories(names: List<String>) {
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.addTorrentTags(
     hashes: List<String> = QBittorrentClient.allList,
-    tags: List<String>
+    tags: List<String>,
 ) {
     http
         .submitForm(
@@ -84,7 +84,7 @@ suspend fun QBittorrentClient.addTorrentTags(
                 Parameters.build {
                     append("hashes", hashes.joinToString("|"))
                     append("tags", tags.joinToString(","))
-                }
+                },
         )
         .orThrow()
 }
@@ -92,7 +92,7 @@ suspend fun QBittorrentClient.addTorrentTags(
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.removeTorrentTags(
     hashes: List<String> = QBittorrentClient.allList,
-    tags: List<String>
+    tags: List<String>,
 ) {
     http
         .submitForm(
@@ -101,7 +101,7 @@ suspend fun QBittorrentClient.removeTorrentTags(
                 Parameters.build {
                     append("hashes", hashes.joinToString("|"))
                     append("tags", tags.joinToString(","))
-                }
+                },
         )
         .orThrow()
 }
@@ -115,7 +115,7 @@ suspend fun QBittorrentClient.createTags(tags: List<String>) {
     http
         .submitForm(
             "${config.baseUrl}/api/v2/torrents/createTags",
-            formParameters = Parameters.build { append("tags", tags.joinToString(",")) }
+            formParameters = Parameters.build { append("tags", tags.joinToString(",")) },
         )
         .orThrow()
 }
@@ -125,7 +125,7 @@ suspend fun QBittorrentClient.deleteTags(tags: List<String>) {
     http
         .submitForm(
             "${config.baseUrl}/api/v2/torrents/deleteTags",
-            formParameters = Parameters.build { append("tags", tags.joinToString(",")) }
+            formParameters = Parameters.build { append("tags", tags.joinToString(",")) },
         )
         .orThrow()
 }

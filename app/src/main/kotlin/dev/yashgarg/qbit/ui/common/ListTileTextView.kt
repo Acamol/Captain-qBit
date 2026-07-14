@@ -33,7 +33,7 @@ class ListTileTextView(context: Context, attrs: AttributeSet) : LinearLayout(con
                 ClipboardUtil.copyToClipboard(
                     context,
                     titleTv.text.toString(),
-                    "${titleTv.text} | $subtitle"
+                    "${titleTv.text} | $subtitle",
                 )
                 true
             }

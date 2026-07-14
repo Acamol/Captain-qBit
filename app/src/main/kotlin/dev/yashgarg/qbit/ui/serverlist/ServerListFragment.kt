@@ -57,7 +57,7 @@ class ServerListFragment : Fragment(R.layout.server_list_fragment) {
         findNavController()
             .navigate(
                 R.id.action_serverListFragment_to_configFragment,
-                bundleOf("serverId" to serverId)
+                bundleOf("serverId" to serverId),
             )
     }
 
@@ -76,10 +76,9 @@ class ServerListFragment : Fragment(R.layout.server_list_fragment) {
             MaterialColors.getColor(
                 ctx,
                 com.google.android.material.R.attr.colorOnSurfaceVariant,
-                0
+                0,
             )
-        val primary =
-            MaterialColors.getColor(ctx, com.google.android.material.R.attr.colorPrimary, 0)
+        val primary = MaterialColors.getColor(ctx, androidx.appcompat.R.attr.colorPrimary, 0)
         val selectableBg =
             android.util
                 .TypedValue()

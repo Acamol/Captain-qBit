@@ -25,7 +25,7 @@ class StartupBenchmark {
             iterations = 5,
             startupMode = StartupMode.COLD,
             compilationMode = mode,
-            setupBlock = { pressHome() }
+            setupBlock = { pressHome() },
         ) {
             startActivityAndWait()
 

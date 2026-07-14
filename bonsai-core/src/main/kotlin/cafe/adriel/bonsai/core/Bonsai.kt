@@ -57,7 +57,7 @@ data class BonsaiStyle<T>(
     val nodeExpandedIcon: NodeIcon<T> = nodeCollapsedIcon,
     val nodeExpandedIconColorFilter: ColorFilter? = nodeCollapsedIconColorFilter,
     val nodeNameStartPadding: Dp = 0.dp,
-    val nodeNameTextStyle: TextStyle = DefaultNodeTextStyle
+    val nodeNameTextStyle: TextStyle = DefaultNodeTextStyle,
 ) {
 
     companion object {

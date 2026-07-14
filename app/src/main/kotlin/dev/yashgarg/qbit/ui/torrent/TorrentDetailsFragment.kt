@@ -94,7 +94,7 @@ class TorrentDetailsFragment : Fragment(R.layout.torrent_details_fragment) {
                         ClipboardUtil.copyToClipboard(
                             requireContext(),
                             "torrent-name",
-                            torrent.name
+                            torrent.name,
                         )
                         true
                     }
@@ -102,7 +102,7 @@ class TorrentDetailsFragment : Fragment(R.layout.torrent_details_fragment) {
                         ClipboardUtil.copyToClipboard(
                             requireContext(),
                             "torrent-hash",
-                            torrent.hash
+                            torrent.hash,
                         )
                         true
                     }
@@ -110,7 +110,7 @@ class TorrentDetailsFragment : Fragment(R.layout.torrent_details_fragment) {
                         ClipboardUtil.copyToClipboard(
                             requireContext(),
                             "torrent-magnet",
-                            torrent.magnetUri
+                            torrent.magnetUri,
                         )
                         true
                     }
@@ -268,8 +268,9 @@ class TorrentDetailsFragment : Fragment(R.layout.torrent_details_fragment) {
             }
             .setPositiveButton("OK") { _, _ ->
                 val toAdd = tags.filterIndexed { i, _ -> currentChecked[i] && !initialChecked[i] }
-                val toRemove =
-                    tags.filterIndexed { i, _ -> !currentChecked[i] && initialChecked[i] }
+                val toRemove = tags.filterIndexed { i, _ ->
+                    !currentChecked[i] && initialChecked[i]
+                }
                 if (toAdd.isNotEmpty() || toRemove.isNotEmpty()) {
                     viewModel.setTags(toAdd, toRemove)
                 }

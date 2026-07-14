@@ -15,8 +15,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
-import com.github.michaelbull.result.Err
-import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.onErr
+import com.github.michaelbull.result.onOk
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.transition.MaterialSharedAxis
 import dagger.hilt.android.AndroidEntryPoint
@@ -183,7 +183,7 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
                     Snackbar.make(
                         requireView(),
                         "Checking connection, please wait...",
-                        Snackbar.LENGTH_SHORT
+                        Snackbar.LENGTH_SHORT,
                     )
                 checkSnackbar.show()
 
@@ -210,13 +210,13 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
                                 if (useBasicAuth.isChecked) basicAuthPass else null,
                             )
 
-                        when (connectionResponse) {
-                            is Ok -> {
+                        connectionResponse
+                            .onOk { version ->
                                 checkSnackbar.dismiss()
                                 Toast.makeText(
                                         context,
-                                        "Success! Client app version is ${connectionResponse.value}",
-                                        Toast.LENGTH_LONG
+                                        "Success! Client app version is $version",
+                                        Toast.LENGTH_LONG,
                                     )
                                     .show()
 
@@ -247,7 +247,7 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
                                         navController.navigate(
                                             AppR.id.serverFragment,
                                             null,
-                                            navOptions
+                                            navOptions,
                                         )
                                     }
                                     // Added a new server from the picker: keep the active server.
@@ -259,16 +259,15 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
                                         )
                                 }
                             }
-                            is Err -> {
-                                Log.e(ClientManager.tag, connectionResponse.error.toString())
+                            .onErr { error ->
+                                Log.e(ClientManager.tag, error.toString())
                                 Snackbar.make(
                                         requireView(),
-                                        "Failed! ${connectionResponse.error.message}",
-                                        Snackbar.LENGTH_LONG
+                                        "Failed! ${error.message}",
+                                        Snackbar.LENGTH_LONG,
                                     )
                                     .show()
                             }
-                        }
                         enableFields(true)
                     }
                 }

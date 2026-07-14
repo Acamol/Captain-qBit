@@ -26,7 +26,7 @@ suspend fun QBittorrentClient.getLogs(
     info: Boolean = true,
     warning: Boolean = true,
     critical: Boolean = true,
-    lastKnownId: Int = -1
+    lastKnownId: Int = -1,
 ): List<LogEntry> =
     http
         .get("${config.baseUrl}/api/v2/log/main") {

@@ -18,7 +18,7 @@ data class LogEntry(
      * @see TYPE_WARNING
      * @see TYPE_CRITICAL
      */
-    val type: Int
+    val type: Int,
 ) {
     companion object {
         const val TYPE_NORMAL = 1

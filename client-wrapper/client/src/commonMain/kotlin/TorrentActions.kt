@@ -63,7 +63,7 @@ suspend fun QBittorrentClient.deleteTorrents(hashes: List<String>, deleteFiles: 
                 Parameters.build {
                     append("hashes", hashes.joinToString("|"))
                     append("deleteFiles", deleteFiles.toString())
-                }
+                },
         )
         .orThrow()
 }
@@ -74,7 +74,7 @@ suspend fun QBittorrentClient.recheckTorrents(hashes: List<String> = QBittorrent
     http
         .submitForm(
             "${config.baseUrl}/api/v2/torrents/recheck",
-            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) }
+            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) },
         )
         .orThrow()
 }
@@ -85,7 +85,7 @@ suspend fun QBittorrentClient.reannounceTorrents(hashes: List<String> = QBittorr
     http
         .submitForm(
             "${config.baseUrl}/api/v2/torrents/reannounce",
-            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) }
+            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) },
         )
         .orThrow()
 }
@@ -98,7 +98,7 @@ suspend fun QBittorrentClient.increasePriority(hashes: List<String> = QBittorren
     http
         .submitForm(
             "${config.baseUrl}/api/v2/torrents/increasePrio",
-            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) }
+            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) },
         )
         .orThrow()
 }
@@ -108,7 +108,7 @@ suspend fun QBittorrentClient.decreasePriority(hashes: List<String> = QBittorren
     http
         .submitForm(
             "${config.baseUrl}/api/v2/torrents/decreasePrio",
-            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) }
+            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) },
         )
         .orThrow()
 }
@@ -118,7 +118,7 @@ suspend fun QBittorrentClient.maxPriority(hashes: List<String> = QBittorrentClie
     http
         .submitForm(
             "${config.baseUrl}/api/v2/torrents/topPrio",
-            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) }
+            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) },
         )
         .orThrow()
 }
@@ -128,7 +128,7 @@ suspend fun QBittorrentClient.minPriority(hashes: List<String> = QBittorrentClie
     http
         .submitForm(
             "${config.baseUrl}/api/v2/torrents/bottomPrio",
-            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) }
+            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) },
         )
         .orThrow()
 }
@@ -143,7 +143,7 @@ suspend fun QBittorrentClient.setFilePriority(hash: String, ids: List<Int>, prio
                     append("hash", hash)
                     append("id", ids.joinToString("|"))
                     append("priority", priority.toString())
-                }
+                },
         )
         .orThrow()
 }
@@ -151,7 +151,7 @@ suspend fun QBittorrentClient.setFilePriority(hash: String, ids: List<Int>, prio
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.setTorrentLocation(
     hashes: List<String> = QBittorrentClient.allList,
-    location: String
+    location: String,
 ) {
     http
         .submitForm(
@@ -160,7 +160,7 @@ suspend fun QBittorrentClient.setTorrentLocation(
                 Parameters.build {
                     append("hashes", hashes.joinToString("|"))
                     append("location", location)
-                }
+                },
         )
         .orThrow()
 }
@@ -174,7 +174,7 @@ suspend fun QBittorrentClient.setTorrentName(hash: String, name: String) {
                 Parameters.build {
                     append("hash", hash)
                     append("name", name)
-                }
+                },
         )
         .orThrow()
 }
@@ -182,7 +182,7 @@ suspend fun QBittorrentClient.setTorrentName(hash: String, name: String) {
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.setAutoTorrentManagement(
     hashes: List<String> = QBittorrentClient.allList,
-    enabled: Boolean
+    enabled: Boolean,
 ) {
     http
         .submitForm(
@@ -191,7 +191,7 @@ suspend fun QBittorrentClient.setAutoTorrentManagement(
                 Parameters.build {
                     append("hashes", hashes.joinToString("|"))
                     append("enable", enabled.toString())
-                }
+                },
         )
         .orThrow()
 }
@@ -221,7 +221,7 @@ suspend fun QBittorrentClient.toggleFirstLastPriority(
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.setForceStart(
     hashes: List<String> = QBittorrentClient.allList,
-    value: Boolean
+    value: Boolean,
 ) {
     http
         .submitForm(
@@ -230,7 +230,7 @@ suspend fun QBittorrentClient.setForceStart(
                 Parameters.build {
                     append("hashes", hashes.joinToString("|"))
                     append("value", value.toString())
-                }
+                },
         )
         .orThrow()
 }
@@ -238,7 +238,7 @@ suspend fun QBittorrentClient.setForceStart(
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.setSuperSeeding(
     hashes: List<String> = QBittorrentClient.allList,
-    value: Boolean
+    value: Boolean,
 ) {
     http
         .submitForm(
@@ -247,7 +247,7 @@ suspend fun QBittorrentClient.setSuperSeeding(
                 Parameters.build {
                     append("hashes", hashes.joinToString("|"))
                     append("value", value.toString())
-                }
+                },
         )
         .orThrow()
 }

@@ -23,5 +23,5 @@ data class TorrentFile(
      */
     @SerialName("piece_range") val pieceRange: List<Int>,
     /** Percentage of file pieces currently available */
-    val availability: Float
+    val availability: Float,
 )

@@ -27,7 +27,7 @@ class FakeClientManager : ClientManager {
             username = "admin",
             password = password,
             connectionType = ConnectionType.HTTPS,
-            trustSelfSigned = false
+            trustSelfSigned = false,
         )
 
     private val _configStatus = MutableSharedFlow<ConfigStatus>()

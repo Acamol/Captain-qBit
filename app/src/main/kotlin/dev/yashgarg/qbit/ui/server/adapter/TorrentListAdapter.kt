@@ -55,7 +55,7 @@ class TorrentListAdapter @Inject constructor() :
                     recyclerView,
                     itemKeyProvider,
                     TorrentItemDetailsLookup(recyclerView),
-                    StorageStrategy.createStringStorage()
+                    StorageStrategy.createStringStorage(),
                 )
                 .withSelectionPredicate(SelectionPredicates.createSelectAnything())
                 .build()
@@ -150,7 +150,7 @@ class TorrentListAdapter @Inject constructor() :
                         peers.setTextColor(
                             MaterialColors.getColor(
                                 peers,
-                                com.google.android.material.R.attr.colorPrimary,
+                                androidx.appcompat.R.attr.colorPrimary,
                             )
                         )
                         speed.visibility = View.VISIBLE
@@ -158,7 +158,7 @@ class TorrentListAdapter @Inject constructor() :
                         progressColor =
                             MaterialColors.getColor(
                                 context,
-                                com.google.android.material.R.attr.colorPrimary,
+                                androidx.appcompat.R.attr.colorPrimary,
                                 context.getColor(R.color.md_theme_dark_seed),
                             )
                     }
@@ -243,7 +243,7 @@ class TorrentListAdapter @Inject constructor() :
                         torrent.category,
                         userColor,
                         contrastColorOn(userColor),
-                        outlined = false
+                        outlined = false,
                     )
                 } else {
                     addChip(
