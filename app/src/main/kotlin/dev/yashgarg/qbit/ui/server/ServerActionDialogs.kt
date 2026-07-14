@@ -264,13 +264,13 @@ class ServerActionDialogs(
                     addView(
                         iconButton(R.drawable.outline_edit_24, "Edit $name") {
                             dialog.dismiss()
-                            showEditCategorySavePathDialog(name)
+                            showEditCategorySavePathDialog(name) { showManageCategoriesDialog() }
                         }
                     )
                     addView(
                         iconButton(R.drawable.outline_delete_24, "Delete $name") {
                             dialog.dismiss()
-                            confirmDeleteCategory(name)
+                            confirmDeleteCategory(name) { showManageCategoriesDialog() }
                         }
                     )
                 }
@@ -288,7 +288,7 @@ class ServerActionDialogs(
                 setBackgroundResource(selectableBg)
                 setOnClickListener {
                     dialog.dismiss()
-                    showCreateNewCategoryDialog()
+                    showCreateNewCategoryDialog { showManageCategoriesDialog() }
                 }
             }
         )
@@ -296,13 +296,14 @@ class ServerActionDialogs(
         dialog.show()
     }
 
-    private fun confirmDeleteCategory(name: String) {
+    private fun confirmDeleteCategory(name: String, onClose: () -> Unit = {}) {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Delete $name?")
             .setPositiveButton(getString(CommonR.string.delete)) { _, _ ->
                 viewModel.deleteCategories(listOf(name))
             }
             .setNegativeButton(getString(CommonR.string.cancel), null)
+            .setOnDismissListener { onClose() }
             .show()
     }
 
@@ -399,7 +400,7 @@ class ServerActionDialogs(
         dialog.show()
     }
 
-    private fun showCreateNewCategoryDialog() {
+    private fun showCreateNewCategoryDialog(onClose: () -> Unit = {}) {
         val view = LayoutInflater.from(context).inflate(R.layout.dialog_text_input, null, false)
         val til = view.findViewById<TextInputLayout>(R.id.text_input_layout)
         val tiet = view.findViewById<TextInputEditText>(R.id.text_input_edit)
@@ -428,6 +429,7 @@ class ServerActionDialogs(
             }
             tiet?.doAfterTextChanged { til?.error = null }
         }
+        dialog.setOnDismissListener { onClose() }
         dialog.show()
     }
 
@@ -449,7 +451,7 @@ class ServerActionDialogs(
             .show()
     }
 
-    private fun showEditCategorySavePathDialog(name: String) {
+    private fun showEditCategorySavePathDialog(name: String, onClose: () -> Unit = {}) {
         val ctx = requireContext()
         val density = context.resources.displayMetrics.density
         val currentSavePath =
@@ -543,6 +545,10 @@ class ServerActionDialogs(
                 dialog.dismiss()
             }
         }
+        // Return to whatever opened this (e.g. the manage-categories list) once it closes, on
+        // cancel, save, or back — but not when the color picker is layered on top (that doesn't
+        // dismiss this dialog).
+        dialog.setOnDismissListener { onClose() }
         dialog.show()
     }
 
