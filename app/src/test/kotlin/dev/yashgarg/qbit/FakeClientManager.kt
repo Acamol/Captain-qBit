@@ -11,8 +11,11 @@ import kotlinx.coroutines.flow.asSharedFlow
 import qbittorrent.QBittorrentClient
 
 class FakeClientManager : ClientManager {
-    private val baseUrl: String by lazy { System.getenv("base_url") }
-    private val password: String by lazy { System.getenv("password") }
+    // Empty fallback so constructing the fake doesn't NPE when the integration-test env vars are
+    // absent; QbitRepositoryTest skips (assumeTrue) in that case, so the empty values are never
+    // used.
+    private val baseUrl: String by lazy { System.getenv("base_url").orEmpty() }
+    private val password: String by lazy { System.getenv("password").orEmpty() }
 
     private val config =
         ServerConfig(
