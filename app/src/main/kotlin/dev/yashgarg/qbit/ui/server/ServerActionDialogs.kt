@@ -3,6 +3,7 @@ package dev.yashgarg.qbit.ui.server
 import android.app.AlertDialog
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.os.Bundle
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -14,7 +15,6 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.os.bundleOf
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
@@ -782,7 +782,7 @@ class ServerActionDialogs(private val fragment: Fragment, private val viewModel:
             .findNavController()
             .navigate(
                 R.id.action_serverFragment_to_configFragment,
-                bundleOf("serverId" to serverId),
+                Bundle().apply { putInt("serverId", serverId) },
             )
     }
 }

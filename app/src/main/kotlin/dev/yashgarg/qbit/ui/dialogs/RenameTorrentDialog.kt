@@ -4,7 +4,6 @@ import android.app.AlertDialog
 import android.app.Dialog
 import android.os.Bundle
 import android.view.WindowManager
-import androidx.core.os.bundleOf
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.setFragmentResult
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -44,7 +43,7 @@ class RenameTorrentDialog : DialogFragment() {
                 if (!nameTiet?.text.isNullOrEmpty()) {
                     setFragmentResult(
                         RENAME_TORRENT_KEY,
-                        bundleOf(RENAME_KEY to nameTiet?.text.toString()),
+                        Bundle().apply { putString(RENAME_KEY, nameTiet?.text.toString()) },
                     )
                     dialog.dismiss()
                 } else {

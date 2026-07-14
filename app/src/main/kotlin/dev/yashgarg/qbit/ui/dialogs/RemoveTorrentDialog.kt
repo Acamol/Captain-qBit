@@ -5,7 +5,6 @@ import android.app.Dialog
 import android.os.Bundle
 import android.widget.CheckBox
 import android.widget.LinearLayout
-import androidx.core.os.bundleOf
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.setFragmentResult
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -36,7 +35,9 @@ class RemoveTorrentDialog : DialogFragment() {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 setFragmentResult(
                     REMOVE_TORRENT_KEY,
-                    bundleOf(TORRENT_KEY to deleteFilesCheckBox?.isChecked),
+                    Bundle().apply {
+                        putBoolean(TORRENT_KEY, deleteFilesCheckBox?.isChecked == true)
+                    },
                 )
                 dialog.dismiss()
             }

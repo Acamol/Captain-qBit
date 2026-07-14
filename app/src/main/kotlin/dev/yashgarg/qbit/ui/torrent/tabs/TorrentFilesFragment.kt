@@ -13,7 +13,6 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.platform.rememberNestedScrollInteropConnection
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import com.google.accompanist.themeadapter.material3.Mdc3Theme
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.common.R as CommonR
@@ -26,6 +25,7 @@ import dev.yashgarg.qbit.ui.compose.FILE_PRIORITY_NORMAL
 import dev.yashgarg.qbit.ui.compose.FILE_PRIORITY_SKIP
 import dev.yashgarg.qbit.ui.compose.TorrentContentTreeView
 import dev.yashgarg.qbit.ui.compose.isSkipped
+import dev.yashgarg.qbit.ui.theme.QbitComposeTheme
 import dev.yashgarg.qbit.ui.torrent.TorrentDetailsState
 import dev.yashgarg.qbit.ui.torrent.TorrentDetailsViewModel
 import dev.yashgarg.qbit.utils.ClipboardUtil
@@ -54,7 +54,7 @@ class TorrentFilesFragment : Fragment() {
                 val state by viewModel.uiState.collectAsState()
                 val scrollState = rememberNestedScrollInteropConnection()
 
-                Mdc3Theme(setTextColors = true, setDefaultFontFamily = true) {
+                QbitComposeTheme {
                     FilesListView(
                         state,
                         Modifier.nestedScroll(scrollState),

@@ -9,7 +9,6 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -57,7 +56,7 @@ class ServerListFragment : Fragment(R.layout.server_list_fragment) {
         findNavController()
             .navigate(
                 R.id.action_serverListFragment_to_configFragment,
-                bundleOf("serverId" to serverId),
+                Bundle().apply { putInt("serverId", serverId) },
             )
     }
 

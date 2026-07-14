@@ -23,7 +23,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import com.google.accompanist.themeadapter.material3.Mdc3Theme
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.databinding.TorrentPeersFragmentBinding
 import dev.yashgarg.qbit.ui.compose.Center
@@ -31,6 +30,7 @@ import dev.yashgarg.qbit.ui.compose.CenterLinearLoading
 import dev.yashgarg.qbit.ui.compose.ListTile
 import dev.yashgarg.qbit.ui.compose.theme.AppTypography
 import dev.yashgarg.qbit.ui.compose.theme.bodyMediumPrimary
+import dev.yashgarg.qbit.ui.theme.QbitComposeTheme
 import dev.yashgarg.qbit.ui.torrent.TorrentDetailsState
 import dev.yashgarg.qbit.ui.torrent.TorrentDetailsViewModel
 import dev.yashgarg.qbit.utils.ClipboardUtil
@@ -55,13 +55,7 @@ class TorrentPeersFragment : Fragment(R.layout.torrent_peers_fragment) {
             val state by viewModel.uiState.collectAsState()
             val scrollState = rememberNestedScrollInteropConnection()
 
-            Mdc3Theme(
-                setTextColors = true,
-                readTypography = true,
-                setDefaultFontFamily = true,
-                readShapes = true,
-                readColorScheme = true,
-            ) {
+            QbitComposeTheme {
                 PeersListView(
                     state,
                     Modifier.nestedScroll(scrollState),

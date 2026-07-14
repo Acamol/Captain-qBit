@@ -14,7 +14,6 @@ import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.core.os.bundleOf
 import androidx.core.view.WindowCompat
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.Lifecycle
@@ -157,7 +156,10 @@ class MainActivity : AppCompatActivity() {
                                     prefs.notifyOnComplete ||
                                     prefs.notifyOnChecked
                             )
-                            val bundle = bundleOf(TORRENT_INTENT_KEY to intent?.data.toString())
+                            val bundle =
+                                Bundle().apply {
+                                    putString(TORRENT_INTENT_KEY, intent?.data.toString())
+                                }
                             val navController =
                                 findNavController(this@MainActivity, R.id.nav_host_fragment)
 

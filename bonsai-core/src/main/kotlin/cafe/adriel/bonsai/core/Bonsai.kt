@@ -32,6 +32,7 @@ typealias OnNodeClick<T> = ((Node<T>) -> Unit)?
 typealias NodeIcon<T> = @Composable (Node<T>) -> Painter?
 
 @Immutable
+@ConsistentCopyVisibility
 data class BonsaiScope<T>
 internal constructor(
     internal val expandableManager: ExpandableTree<T>,

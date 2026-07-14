@@ -56,7 +56,6 @@ compose-activity = "androidx.activity:activity-compose:1.13.0"
 compose-foundation = "androidx.compose.foundation:foundation:1.11.4"
 compose-material3 = "androidx.compose.material3:material3:1.4.0"
 compose-material-icons = "androidx.compose.material:material-icons-extended:1.7.8"
-compose-theme-adapter = "com.google.accompanist:accompanist-themeadapter-material3:0.36.0"
 
 google-material = { module = "com.google.android.material:material", version.ref = "googleMaterial" }
 google-dagger-hilt = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
@@ -99,5 +98,5 @@ navigation-safeargs = { id = "androidx.navigation.safeargs", version.ref = "axNa
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 
 [bundles]
-compose = ["compose-theme-adapter", "compose-activity", "compose-foundation", "compose-material3"]
+compose = ["compose-activity", "compose-foundation", "compose-material3"]
 testing = ["junit", "mockito-core", "mockito-kotlin", "kotlin-coroutines-test"]

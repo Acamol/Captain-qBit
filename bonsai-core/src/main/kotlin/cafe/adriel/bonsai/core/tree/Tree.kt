@@ -19,6 +19,7 @@ import cafe.adriel.bonsai.core.tree.extension.SelectableTreeHandler
 
 @Immutable
 @TreeMarker
+@ConsistentCopyVisibility
 data class TreeScope
 internal constructor(
     val depth: Int,

@@ -9,12 +9,11 @@ import android.text.TextWatcher
 import android.util.Log
 import android.view.Gravity
 import android.view.View
-import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
-import androidx.core.content.getSystemService
-import androidx.core.os.bundleOf
 import androidx.core.util.Consumer
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.setFragmentResultListener
@@ -72,7 +71,10 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
 
     private val onNewIntentListener =
         Consumer<Intent> { intent ->
-            val bundle = bundleOf(MainActivity.TORRENT_INTENT_KEY to intent?.data.toString())
+            val bundle =
+                Bundle().apply {
+                    putString(MainActivity.TORRENT_INTENT_KEY, intent?.data.toString())
+                }
             handleAddIntent(bundle)
         }
 
@@ -206,7 +208,7 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
         // viewLifecycleOwner would crash, so stash the uri and let the viewModel.intent pass
         // consume it from arguments once the view is recreated.
         if (view == null) {
-            arguments = bundleOf(MainActivity.TORRENT_INTENT_KEY to uri)
+            arguments = Bundle().apply { putString(MainActivity.TORRENT_INTENT_KEY, uri) }
             return
         }
         if (childFragmentManager.findFragmentByTag(AddTorrentDialog.TAG) != null) return
@@ -269,8 +271,8 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
         with(binding) {
             searchLayout.visibility = View.VISIBLE
             searchEt.requestFocus()
-            val imm = requireContext().getSystemService<InputMethodManager>()
-            imm?.showSoftInput(searchEt, InputMethodManager.SHOW_IMPLICIT)
+            WindowCompat.getInsetsController(requireActivity().window, searchEt)
+                .show(WindowInsetsCompat.Type.ime())
         }
         searchBackCallback?.isEnabled = true
     }
@@ -280,8 +282,8 @@ class ServerFragment : Fragment(R.layout.server_fragment) {
             searchEt.setText("")
             viewModel.setSearchQuery("")
             searchLayout.visibility = View.GONE
-            val imm = requireContext().getSystemService<InputMethodManager>()
-            imm?.hideSoftInputFromWindow(searchEt.windowToken, 0)
+            WindowCompat.getInsetsController(requireActivity().window, searchEt)
+                .hide(WindowInsetsCompat.Type.ime())
         }
         searchBackCallback?.isEnabled = false
     }

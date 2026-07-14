@@ -22,11 +22,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.core.os.bundleOf
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
-import com.google.accompanist.themeadapter.material3.Mdc3Theme
 import com.google.android.material.tabs.TabLayout
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.common.R as CommonR
@@ -35,6 +33,7 @@ import dev.yashgarg.qbit.databinding.AddTorrentScreenBinding
 import dev.yashgarg.qbit.ui.compose.TorrentContentSelectionView
 import dev.yashgarg.qbit.ui.compose.allFileIndices
 import dev.yashgarg.qbit.ui.server.ServerViewModel
+import dev.yashgarg.qbit.ui.theme.QbitComposeTheme
 import dev.yashgarg.qbit.utils.ClipboardUtil
 import dev.yashgarg.qbit.validation.LinkValidator
 
@@ -139,7 +138,7 @@ class AddTorrentDialog : DialogFragment() {
         )
 
         binding.filesView.setContent {
-            Mdc3Theme(setTextColors = true, setDefaultFontFamily = true) { FilesTabContent() }
+            QbitComposeTheme { FilesTabContent() }
         }
 
         setUpOptionsTab()
@@ -408,14 +407,14 @@ class AddTorrentDialog : DialogFragment() {
         ): AddTorrentDialog =
             AddTorrentDialog().apply {
                 arguments =
-                    bundleOf(
-                        ARG_CATEGORIES to ArrayList(availableCategories),
-                        ARG_DEFAULT_AUTO_TMM to defaultAutoTmm,
-                        ARG_DEFAULT_PAUSED to defaultPaused,
-                        ARG_DEFAULT_CATEGORY to defaultCategory,
-                        ARG_PREFILL_URL to prefillUrl,
-                        ARG_PREFILL_FILE_URI to prefillFileUri,
-                    )
+                    Bundle().apply {
+                        putStringArrayList(ARG_CATEGORIES, ArrayList(availableCategories))
+                        putBoolean(ARG_DEFAULT_AUTO_TMM, defaultAutoTmm)
+                        putBoolean(ARG_DEFAULT_PAUSED, defaultPaused)
+                        putString(ARG_DEFAULT_CATEGORY, defaultCategory)
+                        putString(ARG_PREFILL_URL, prefillUrl)
+                        putString(ARG_PREFILL_FILE_URI, prefillFileUri)
+                    }
             }
 
         const val TAG = "AddTorrentDialogFragment"

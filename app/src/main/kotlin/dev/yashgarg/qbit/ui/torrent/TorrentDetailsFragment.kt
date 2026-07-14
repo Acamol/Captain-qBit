@@ -3,7 +3,6 @@ package dev.yashgarg.qbit.ui.torrent
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
-import androidx.core.os.bundleOf
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -132,7 +131,9 @@ class TorrentDetailsFragment : Fragment(R.layout.torrent_details_fragment) {
                     .setOnMenuItemClickListener {
                         val dialog = RenameTorrentDialog.newInstance()
                         dialog.arguments =
-                            bundleOf(RenameTorrentDialog.TORRENT_NAME_KEY to torrent.name)
+                            Bundle().apply {
+                                putString(RenameTorrentDialog.TORRENT_NAME_KEY, torrent.name)
+                            }
                         dialog.show(childFragmentManager, RenameTorrentDialog.TAG)
                         true
                     }

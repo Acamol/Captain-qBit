@@ -32,12 +32,12 @@ import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.findNavController
-import com.google.accompanist.themeadapter.material3.Mdc3Theme
 import com.google.android.material.transition.MaterialSharedAxis
 import dagger.hilt.android.AndroidEntryPoint
 import dev.yashgarg.qbit.BuildConfig
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.databinding.VersionFragmentBinding
+import dev.yashgarg.qbit.ui.theme.QbitComposeTheme
 import dev.yashgarg.qbit.utils.viewBinding
 
 @AndroidEntryPoint
@@ -63,7 +63,7 @@ class VersionFragment : Fragment(R.layout.version_fragment) {
             composeView.setContent {
                 val state by viewModel.uiState.collectAsState()
 
-                Mdc3Theme(setDefaultFontFamily = true) { AboutView(state) }
+                QbitComposeTheme { AboutView(state) }
             }
         }
     }
