@@ -5,8 +5,8 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.get
-import com.github.michaelbull.result.onFailure
-import com.github.michaelbull.result.onSuccess
+import com.github.michaelbull.result.onErr
+import com.github.michaelbull.result.onOk
 import com.github.michaelbull.result.runCatching
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -117,13 +117,13 @@ constructor(
             val hash = requireNotNull(hash)
             repository
                 .createCategory(name, savePath)
-                .onSuccess {
+                .onOk {
                     repository
                         .setTorrentCategory(listOf(hash), name)
-                        .onSuccess {
+                        .onOk {
                             emitStatus(getString(CommonR.string.status_category_set_to, name))
                         }
-                        .onFailure {
+                        .onErr {
                             emitStatus(
                                 it.friendlyMessage(
                                     getString(CommonR.string.status_category_created_not_assigned)
@@ -131,7 +131,7 @@ constructor(
                             )
                         }
                 }
-                .onFailure {
+                .onErr {
                     emitStatus(
                         it.friendlyMessage(getString(CommonR.string.status_create_category_failure))
                     )
@@ -241,7 +241,7 @@ constructor(
             }
         }
 
-        result.onFailure {
+        result.onErr {
             _uiState.update { state ->
                 state.copy(loading = false, error = Exception(it.friendlyMessage()))
             }
@@ -251,11 +251,11 @@ constructor(
     private suspend fun getContent() {
         hash
             ?.let { repository.getTorrentFiles(it) }
-            ?.onSuccess { files ->
+            ?.onOk { files ->
                 val tree = TransformUtil.transformFilesToTree(files, 0)
                 _uiState.update { state -> state.copy(contentTree = tree) }
             }
-            ?.onFailure {
+            ?.onErr {
                 _uiState.update { state -> state.copy(contentTree = emptyList()) }
             }
 
@@ -268,7 +268,7 @@ constructor(
         viewModelScope.launch {
             repository
                 .setFilePriority(hash, ids, priority)
-                .onSuccess {
+                .onOk {
                     // Update the tree immediately - qBittorrent applies priorities
                     // asynchronously, so an instant re-fetch can still return the old values.
                     _uiState.update { state ->
@@ -280,7 +280,7 @@ constructor(
                     delay(1000)
                     getContent()
                 }
-                .onFailure {
+                .onErr {
                     emitStatus(
                         it.friendlyMessage(getString(CommonR.string.status_set_priority_failure))
                     )
@@ -321,7 +321,7 @@ constructor(
                 }
         }
 
-        result.onFailure {
+        result.onErr {
             _uiState.update { state ->
                 state.copy(peersLoading = false, error = Exception(it.friendlyMessage()))
             }

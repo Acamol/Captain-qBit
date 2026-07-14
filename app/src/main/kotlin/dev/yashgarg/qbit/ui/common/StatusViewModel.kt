@@ -4,8 +4,8 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.Result
-import com.github.michaelbull.result.onFailure
-import com.github.michaelbull.result.onSuccess
+import com.github.michaelbull.result.onErr
+import com.github.michaelbull.result.onOk
 import dev.yashgarg.qbit.utils.friendlyMessage
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -37,11 +37,11 @@ abstract class StatusViewModel(private val context: Context) : ViewModel() {
     ) {
         viewModelScope.launch {
             action()
-                .onSuccess {
+                .onOk {
                     onSuccess(it)
                     _status.emit(successMessage)
                 }
-                .onFailure { _status.emit(it.friendlyMessage(failureMessage)) }
+                .onErr { _status.emit(it.friendlyMessage(failureMessage)) }
         }
     }
 }

@@ -5,8 +5,8 @@ import android.net.Uri
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.get
-import com.github.michaelbull.result.onFailure
-import com.github.michaelbull.result.onSuccess
+import com.github.michaelbull.result.onErr
+import com.github.michaelbull.result.onOk
 import com.github.michaelbull.result.runCatching
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -323,7 +323,7 @@ constructor(
             // Must be added RUNNING: libtorrent won't fetch metadata for a stopped magnet.
             repository
                 .addTorrentUrl(url, paused = false)
-                .onSuccess {
+                .onOk {
                     addedStoppedHash = hash
                     var attempts = 0
                     while (isActive) {
@@ -345,7 +345,7 @@ constructor(
                         delay(METADATA_POLL_MS)
                     }
                 }
-                .onFailure { error ->
+                .onErr { error ->
                     emitStatus(
                         error.friendlyMessage(
                             getString(CommonR.string.status_add_torrent_url_failure)
@@ -383,7 +383,7 @@ constructor(
                             paused = true,
                             autoTmm = autoTmm.takeIf { it },
                         )
-                    add.onFailure { error ->
+                    add.onErr { error ->
                         emitStatus(
                             error.friendlyMessage(
                                 getString(CommonR.string.status_add_torrent_file_failure)
@@ -659,8 +659,8 @@ constructor(
         viewModelScope.launch {
             repository
                 .toggleSpeedLimitsMode()
-                .onSuccess { getSpeedLimitMode(true) }
-                .onFailure {
+                .onOk { getSpeedLimitMode(true) }
+                .onErr {
                     emitStatus(
                         it.friendlyMessage(
                             getString(CommonR.string.status_toggle_speed_limits_failure)
@@ -674,7 +674,7 @@ constructor(
         viewModelScope.launch {
             repository
                 .getSpeedLimitMode()
-                .onSuccess { mode ->
+                .onOk { mode ->
                     _uiState.update { it.copy(speedLimitMode = mode) }
                     if (showToast) {
                         emitStatus(
@@ -685,7 +685,7 @@ constructor(
                         )
                     }
                 }
-                .onFailure {
+                .onErr {
                     emitStatus(
                         it.friendlyMessage(
                             getString(CommonR.string.status_get_speed_limit_mode_failure)
@@ -731,7 +731,7 @@ constructor(
                 }
         }
 
-        result.onFailure {
+        result.onErr {
             emitStatus(it.friendlyMessage(getString(CommonR.string.status_sync_data_failure)))
         }
     }

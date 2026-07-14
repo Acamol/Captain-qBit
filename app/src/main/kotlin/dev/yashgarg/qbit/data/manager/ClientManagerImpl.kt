@@ -3,8 +3,8 @@ package dev.yashgarg.qbit.data.manager
 import android.util.Log
 import androidx.datastore.core.DataStore
 import com.github.michaelbull.result.get
-import com.github.michaelbull.result.onFailure
-import com.github.michaelbull.result.onSuccess
+import com.github.michaelbull.result.onErr
+import com.github.michaelbull.result.onOk
 import com.github.michaelbull.result.runCatching
 import dev.yashgarg.qbit.data.daos.ConfigDao
 import dev.yashgarg.qbit.data.models.ConfigStatus
@@ -68,8 +68,8 @@ constructor(
 
     override suspend fun checkAndGetClient(): QBittorrentClient? {
         return runCatching { getClient() }
-            .onSuccess { client = it }
-            .onFailure { Log.e(this::class.simpleName, it.toString()) }
+            .onOk { client = it }
+            .onErr { Log.e(this::class.simpleName, it.toString()) }
             .get()
     }
 

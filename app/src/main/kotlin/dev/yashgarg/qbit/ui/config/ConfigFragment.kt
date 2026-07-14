@@ -15,8 +15,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
-import com.github.michaelbull.result.onFailure
-import com.github.michaelbull.result.onSuccess
+import com.github.michaelbull.result.onErr
+import com.github.michaelbull.result.onOk
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.transition.MaterialSharedAxis
 import dagger.hilt.android.AndroidEntryPoint
@@ -211,7 +211,7 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
                             )
 
                         connectionResponse
-                            .onSuccess { version ->
+                            .onOk { version ->
                                 checkSnackbar.dismiss()
                                 Toast.makeText(
                                         context,
@@ -259,7 +259,7 @@ class ConfigFragment : Fragment(AppR.layout.config_fragment) {
                                         )
                                 }
                             }
-                            .onFailure { error ->
+                            .onErr { error ->
                                 Log.e(ClientManager.tag, error.toString())
                                 Snackbar.make(
                                         requireView(),
