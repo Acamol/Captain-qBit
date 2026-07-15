@@ -157,6 +157,12 @@ fun AboutView(state: VersionState, modifier: Modifier = Modifier) {
                 },
             style = linkStyle,
         )
+        Text(
+            text = "Support on Ko-fi",
+            modifier =
+                Modifier.padding(vertical = 8.dp).clickable { open("https://ko-fi.com/acamol") },
+            style = linkStyle,
+        )
     }
 
     if (showWhatsNew) {
