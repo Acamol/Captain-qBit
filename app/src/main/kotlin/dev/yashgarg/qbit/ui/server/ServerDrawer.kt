@@ -184,7 +184,7 @@ fun ServerDrawer(
             // Footer
             FilledTonalButton(
                 onClick = onClearFilters,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
             ) {
                 Text("Clear all")
             }
