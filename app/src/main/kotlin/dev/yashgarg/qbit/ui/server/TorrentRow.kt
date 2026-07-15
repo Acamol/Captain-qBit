@@ -143,7 +143,7 @@ fun TorrentRow(
                 }
 
                 LinearProgressIndicator(
-                    progress = { torrent.progress.toFloat() },
+                    progress = { torrent.progress },
                     modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
                     color = visuals.progressColor,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant,
