@@ -39,13 +39,17 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -61,7 +65,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -253,56 +260,61 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                     // Ride above the keyboard so the bar stays reachable while searching.
                     modifier = Modifier.imePadding(),
                     actions = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Filled.Menu, contentDescription = "Filters")
-                        }
+                        TooltipIconButton(
+                            label = "Filters",
+                            icon = Icons.Filled.Menu,
+                            onClick = { scope.launch { drawerState.open() } },
+                        )
                         if (hasSelection) {
-                            IconButton(
-                                onClick = { viewModel.toggleTorrentsState(true, selected.toList()) }
-                            ) {
-                                Icon(Icons.Filled.Pause, contentDescription = "Pause")
-                            }
-                            IconButton(
+                            TooltipIconButton(
+                                label = "Pause",
+                                icon = Icons.Filled.Pause,
+                                onClick = {
+                                    viewModel.toggleTorrentsState(true, selected.toList())
+                                },
+                            )
+                            TooltipIconButton(
+                                label = "Resume",
+                                icon = Icons.Filled.PlayArrow,
                                 onClick = {
                                     viewModel.toggleTorrentsState(false, selected.toList())
-                                }
-                            ) {
-                                Icon(Icons.Filled.PlayArrow, contentDescription = "Resume")
-                            }
-                            IconButton(
+                                },
+                            )
+                            TooltipIconButton(
+                                label = "Category",
+                                icon = Icons.Filled.Category,
                                 onClick = {
                                     serverDialog = ServerDialog.BulkCategory(selected.toList())
-                                }
-                            ) {
-                                Icon(Icons.Filled.Category, contentDescription = "Category")
-                            }
-                            IconButton(
+                                },
+                            )
+                            TooltipIconButton(
+                                label = "Tags",
+                                icon = Icons.AutoMirrored.Filled.Label,
                                 onClick = {
                                     serverDialog = ServerDialog.BulkTags(selected.toList())
-                                }
-                            ) {
-                                Icon(Icons.AutoMirrored.Filled.Label, contentDescription = "Tags")
-                            }
-                            IconButton(onClick = { deleteTargets = selected.toList() }) {
-                                Icon(Icons.Filled.Delete, contentDescription = "Delete")
-                            }
+                                },
+                            )
+                            TooltipIconButton(
+                                label = "Delete",
+                                icon = Icons.Filled.Delete,
+                                onClick = { deleteTargets = selected.toList() },
+                            )
                         } else {
-                            IconButton(onClick = { searchOpen = !searchOpen }) {
-                                Icon(Icons.Filled.Search, contentDescription = "Search")
-                            }
+                            TooltipIconButton(
+                                label = "Search",
+                                icon = Icons.Filled.Search,
+                                onClick = { searchOpen = !searchOpen },
+                            )
                             val sortActive =
                                 state.sortOption != SortOption.NAME ||
                                     state.sortDirection != SortDirection.ASC
-                            IconButton(onClick = { serverDialog = ServerDialog.SortPicker }) {
-                                Icon(
-                                    Icons.Filled.Sort,
-                                    contentDescription = stringResource(CommonR.string.sort),
-                                    modifier =
-                                        Modifier.graphicsLayer {
-                                            alpha = if (sortActive) 1f else 0.5f
-                                        },
-                                )
-                            }
+                            TooltipIconButton(
+                                label = stringResource(CommonR.string.sort),
+                                icon = Icons.Filled.Sort,
+                                onClick = { serverDialog = ServerDialog.SortPicker },
+                                iconModifier =
+                                    Modifier.graphicsLayer { alpha = if (sortActive) 1f else 0.5f },
+                            )
                         }
                     },
                     floatingActionButton = {
@@ -504,6 +516,36 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                 addPrefillFileUri = null
             },
         )
+    }
+}
+
+/**
+ * Icon-only action-bar button that shows a plain tooltip label on long-press/hover, so the action
+ * is discoverable without relying on the icon alone. [label] also serves as the accessibility
+ * [contentDescription].
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TooltipIconButton(
+    label: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    iconModifier: Modifier = Modifier,
+) {
+    val tooltipState = rememberTooltipState()
+    val haptics = LocalHapticFeedback.current
+    // Buzz when the long-press reveals the tooltip, matching the platform's press-and-hold feel.
+    LaunchedEffect(tooltipState.isVisible) {
+        if (tooltipState.isVisible) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+    }
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        tooltip = { PlainTooltip { Text(label) } },
+        state = tooltipState,
+    ) {
+        IconButton(onClick = onClick) {
+            Icon(icon, contentDescription = label, modifier = iconModifier)
+        }
     }
 }
 
