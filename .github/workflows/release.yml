@@ -52,15 +52,24 @@ jobs:
           version="${GITHUB_REF_NAME#v}"
           cp app/build/outputs/apk/release/*.apk "Captain-qBit-${version}.apk"
 
-      - name: Build release notes from tag message
+      - name: Build release notes from the fastlane changelog
         id: notes
         run: |
-          # checkout leaves a lightweight tag on the runner; re-fetch the annotated tag
-          # so its message (not the commit message) is used as the release notes.
-          git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+          # Single-source the changelog from fastlane (the same file F-Droid uses), formatted
+          # like previous releases: "Captain qBit X.Y.Z" + blank line + the changelog bullets.
+          # Fail the release if the changelog for this versionCode is missing.
+          version="${GITHUB_REF_NAME#v}"
+          version_code="$(grep -oE 'versionCode[[:space:]]*=[[:space:]]*[0-9]+' app/build.gradle.kts | grep -oE '[0-9]+' | head -1)"
+          changelog="fastlane/metadata/android/en-US/changelogs/${version_code}.txt"
+          if [ ! -f "$changelog" ]; then
+            echo "::error::Changelog $changelog not found for versionCode $version_code"
+            exit 1
+          fi
           {
             echo 'body<<__NOTES_EOF__'
-            git tag -l --format='%(contents)' "$GITHUB_REF_NAME"
+            echo "Captain qBit ${version}"
+            echo
+            cat "$changelog"
             echo '__NOTES_EOF__'
           } >> "$GITHUB_OUTPUT"
 
