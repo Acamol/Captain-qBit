@@ -137,26 +137,6 @@ fun ServerDrawer(
                 )
             }
 
-            // Trackers
-            if (state.availableTrackers.isNotEmpty()) {
-                HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                SectionHeader("Trackers")
-                SidebarItem(
-                    text = "All",
-                    selected = state.selectedTracker == null,
-                    count = total,
-                    onClick = { onTracker(null) },
-                )
-                state.availableTrackers.forEach { host ->
-                    SidebarItem(
-                        text = host,
-                        selected = host == state.selectedTracker,
-                        count = torrents.count { it.matchesTracker(host) },
-                        onClick = { onTracker(if (host == state.selectedTracker) null else host) },
-                    )
-                }
-            }
-
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
 
             // Tags
@@ -179,6 +159,26 @@ fun ServerDrawer(
                     onClick = { onToggleTag(tag) },
                     onLongClick = { onTagLongPress(tag) },
                 )
+            }
+
+            // Trackers
+            if (state.availableTrackers.isNotEmpty()) {
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                SectionHeader("Trackers")
+                SidebarItem(
+                    text = "All",
+                    selected = state.selectedTracker == null,
+                    count = total,
+                    onClick = { onTracker(null) },
+                )
+                state.availableTrackers.forEach { host ->
+                    SidebarItem(
+                        text = host,
+                        selected = host == state.selectedTracker,
+                        count = torrents.count { it.matchesTracker(host) },
+                        onClick = { onTracker(if (host == state.selectedTracker) null else host) },
+                    )
+                }
             }
 
             // Footer
