@@ -36,8 +36,8 @@ import dev.yashgarg.qbit.ui.whatsnew.WhatsNewDialog
 import dev.yashgarg.qbit.ui.whatsnew.WhatsNewViewModel
 import dev.yashgarg.qbit.worker.StatusWorker
 import javax.inject.Inject
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
@@ -132,23 +132,32 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                clientManager.configStatus.collect { status ->
-                    when (status) {
-                        ConfigStatus.EXISTS -> {
-                            val prefs = serverPrefsStore.data.first()
-                            launchWorkManager(
-                                prefs.statusNotification ||
-                                    prefs.notifyOnComplete ||
-                                    prefs.notifyOnChecked
-                            )
-                            if (!navigatedToServer) {
-                                navigatedToServer = true
-                                appNavigator.navigate(NavCommand.OpenServerAsRoot)
+                // Re-run whenever a notification pref changes too, so enabling a toggle in Settings
+                // actually (re)starts the status worker — not only on the Activity's first resume
+                // with a server configured.
+                combine(
+                        clientManager.configStatus,
+                        serverPrefsStore.data
+                            .map {
+                                it.statusNotification || it.notifyOnComplete || it.notifyOnChecked
                             }
-                        }
-                        ConfigStatus.DOES_NOT_EXIST -> Log.i(ClientManager.tag, "No config found!")
+                            .distinctUntilChanged(),
+                    ) { status, notify ->
+                        status to notify
                     }
-                }
+                    .collect { (status, notify) ->
+                        when (status) {
+                            ConfigStatus.EXISTS -> {
+                                launchWorkManager(notify)
+                                if (!navigatedToServer) {
+                                    navigatedToServer = true
+                                    appNavigator.navigate(NavCommand.OpenServerAsRoot)
+                                }
+                            }
+                            ConfigStatus.DOES_NOT_EXIST ->
+                                Log.i(ClientManager.tag, "No config found!")
+                        }
+                    }
             }
         }
 
