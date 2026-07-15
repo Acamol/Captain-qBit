@@ -10,6 +10,7 @@ object Routes {
     const val SERVER = "server"
     const val SETTINGS = "settings"
     const val VERSION = "version"
+    const val LOGS = "logs"
 
     const val CONFIG = "config"
     const val ARG_SERVER_ID = "serverId"

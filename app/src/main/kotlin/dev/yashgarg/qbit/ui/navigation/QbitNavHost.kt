@@ -16,6 +16,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import dev.yashgarg.qbit.ui.config.ConfigScreen
 import dev.yashgarg.qbit.ui.home.HomeScreen
+import dev.yashgarg.qbit.ui.logs.LogsScreen
 import dev.yashgarg.qbit.ui.server.ServerScreen
 import dev.yashgarg.qbit.ui.serverlist.ServerListScreen
 import dev.yashgarg.qbit.ui.settings.SettingsScreen
@@ -66,6 +67,7 @@ fun QbitNavHost(
         composable(Routes.SERVER) { ServerScreen(appNavigator = appNavigator) }
         composable(Routes.SETTINGS) { SettingsScreen(appNavigator = appNavigator) }
         composable(Routes.VERSION) { VersionScreen(appNavigator = appNavigator) }
+        composable(Routes.LOGS) { LogsScreen(appNavigator = appNavigator) }
 
         composable(
             route = Routes.CONFIG_PATTERN,
@@ -106,6 +108,7 @@ private fun NavController.execute(command: NavCommand) {
         NavCommand.OpenSettings -> navigate(Routes.SETTINGS)
         NavCommand.OpenServerList -> navigate(Routes.SERVERS)
         NavCommand.OpenVersion -> navigate(Routes.VERSION)
+        NavCommand.OpenLogs -> navigate(Routes.LOGS)
         NavCommand.Back -> {
             if (!navigateUp()) popBackStack()
         }

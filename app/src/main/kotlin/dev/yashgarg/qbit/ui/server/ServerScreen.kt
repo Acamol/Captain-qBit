@@ -230,6 +230,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                 collapsedPaths = collapsedPaths,
                 onServerPicker = { serverDialog = ServerDialog.ServerPicker },
                 onStats = { serverDialog = ServerDialog.Statistics },
+                onLogs = { appNavigator.navigate(NavCommand.OpenLogs) },
                 onFilter = viewModel::setFilter,
                 onCategory = viewModel::setCategory,
                 onCategoryLongPress = { serverDialog = ServerDialog.CategoryLongPress(it) },
@@ -527,11 +528,12 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TooltipIconButton(
+internal fun TooltipIconButton(
     label: String,
     icon: ImageVector,
     onClick: () -> Unit,
     iconModifier: Modifier = Modifier,
+    position: TooltipAnchorPosition = TooltipAnchorPosition.Above,
 ) {
     val tooltipState = rememberTooltipState()
     val haptics = LocalHapticFeedback.current
@@ -540,8 +542,7 @@ private fun TooltipIconButton(
         if (tooltipState.isVisible) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
     }
     TooltipBox(
-        positionProvider =
-            TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(position),
         tooltip = { PlainTooltip { Text(label) } },
         state = tooltipState,
     ) {

@@ -16,15 +16,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -39,13 +40,14 @@ import androidx.compose.ui.unit.sp
  * sections with absolute per-row counts. Categories with "/" group into a collapsible tree; a path
  * segment that is only a synthetic parent still filters its whole subtree (see [matchesCategory]).
  */
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ServerDrawer(
     state: ServerScreenState,
     collapsedPaths: MutableList<String>,
     onServerPicker: () -> Unit,
     onStats: () -> Unit,
+    onLogs: () -> Unit,
     onFilter: (StateFilter) -> Unit,
     onCategory: (String?) -> Unit,
     onCategoryLongPress: (String) -> Unit,
@@ -91,9 +93,18 @@ fun ServerDrawer(
                     )
                     Text(" ▾", fontSize = 12.sp)
                 }
-                IconButton(onClick = onStats) {
-                    Icon(Icons.Filled.BarChart, contentDescription = "Statistics")
-                }
+                TooltipIconButton(
+                    label = "Server logs",
+                    icon = Icons.Filled.Description,
+                    onClick = onLogs,
+                    position = TooltipAnchorPosition.Below,
+                )
+                TooltipIconButton(
+                    label = "Statistics",
+                    icon = Icons.Filled.BarChart,
+                    onClick = onStats,
+                    position = TooltipAnchorPosition.Below,
+                )
             }
 
             // Status
@@ -225,6 +236,7 @@ private fun SectionHeader(title: String) {
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SectionHeaderWithAction(title: String, onAction: () -> Unit) {
     Row(
@@ -238,9 +250,13 @@ private fun SectionHeaderWithAction(title: String, onAction: () -> Unit) {
             fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f),
         )
-        IconButton(onClick = onAction) {
-            Icon(Icons.Filled.Edit, contentDescription = "Manage $title", Modifier.width(20.dp))
-        }
+        TooltipIconButton(
+            label = "Manage $title",
+            icon = Icons.Filled.Edit,
+            onClick = onAction,
+            iconModifier = Modifier.width(20.dp),
+            position = TooltipAnchorPosition.Below,
+        )
     }
 }
 

@@ -48,6 +48,9 @@ sealed interface NavCommand {
 
     data object OpenVersion : NavCommand
 
+    /** Open the read-only viewer for the remote qBittorrent server's main log. */
+    data object OpenLogs : NavCommand
+
     /** Up / system-back within the Compose back stack. */
     data object Back : NavCommand
 }

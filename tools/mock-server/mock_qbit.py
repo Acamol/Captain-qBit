@@ -18,6 +18,7 @@ import json
 import math
 import os
 import socket
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
@@ -365,6 +366,49 @@ def peers_for(hash_):
     return {"full_update": True, "rid": _peer_poll, "show_flags": True, "peers": _PEERS}
 
 
+# (id, type, seconds-ago, message). type: 1=NORMAL, 2=INFO, 4=WARNING, 8=CRITICAL.
+_LOG = [
+    (0, 2, 7200, "qBittorrent v4.6.0 started"),
+    (1, 2, 7198, "Using config directory: /config/qBittorrent"),
+    (2, 1, 7195, "Options were saved successfully"),
+    (3, 2, 7190, "Web UI: Now listening on IP: 0.0.0.0, port: 8080"),
+    (4, 2, 7180, "Detected external IP: 203.0.113.42"),
+    (5, 1, 7175, "Restored 14 torrents from the previous session"),
+    (6, 2, 3600, "Successfully listening on IP: 0.0.0.0, port: TCP/UDP 6881"),
+    (7, 1, 1800, "'Debian 12.7.0 amd64 netinst' added to download list"),
+    (8, 4, 1500, "Tracker 'udp://tracker.example.org:80' is down"),
+    (9, 2, 1200, "Category 'creative-commons' added"),
+    (10, 4, 900, "Truncated data for torrent 'Fedora Workstation 40': re-checking"),
+    (11, 8, 600, "I/O error for 'Cosmos Laundromat': not enough free space on /downloads"),
+    (12, 2, 300, "'Big Buck Bunny (1080p, CC-BY)' finished downloading"),
+    (13, 1, 90, "External IP address updated"),
+]
+
+
+def logs_response(qs):
+    """GET /api/v2/log/main — honours the level toggles and last_known_id like real qBittorrent."""
+    now = int(time.time())
+
+    def flag(name):
+        return (qs.get(name) or ["true"])[0].lower() != "false"
+
+    allowed = set()
+    if flag("normal"):
+        allowed.add(1)
+    if flag("info"):
+        allowed.add(2)
+    if flag("warning"):
+        allowed.add(4)
+    if flag("critical"):
+        allowed.add(8)
+    last = int((qs.get("last_known_id") or ["-1"])[0])
+    return [
+        {"id": i, "message": msg, "timestamp": now - ago, "type": t}
+        for (i, t, ago, msg) in _LOG
+        if t in allowed and i > last
+    ]
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass  # quiet
@@ -437,6 +481,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send(json.dumps(torrents_info(qs)))
         elif path == "/api/v2/sync/torrentPeers":
             self._send(json.dumps(peers_for((qs.get("hash") or [""])[0])))
+        elif path == "/api/v2/log/main":
+            self._send(json.dumps(logs_response(qs)))
         elif path == "/api/v2/auth/logout":
             self._send("Ok.", "text/plain")
         else:
