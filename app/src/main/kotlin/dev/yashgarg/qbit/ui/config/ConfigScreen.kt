@@ -55,6 +55,7 @@ import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.manager.CryptoManager
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
+import dev.yashgarg.qbit.utils.friendlyMessage
 
 private val CONNECTION_TYPES = listOf("HTTP", "HTTPS")
 
@@ -65,6 +66,7 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val existing by viewModel.existingConfig.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val genericError = stringResource(CommonR.string.error)
 
     var name by remember { mutableStateOf("") }
     var host by remember { mutableStateOf("") }
@@ -130,7 +132,9 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                                 .show()
                         }
                         .onErr { error ->
-                            snackbarHostState.showSnackbar("Failed! ${error.message ?: error}")
+                            snackbarHostState.showSnackbar(
+                                "Failed! ${error.friendlyMessage(genericError)}"
+                            )
                         }
                     checking = false
                 }

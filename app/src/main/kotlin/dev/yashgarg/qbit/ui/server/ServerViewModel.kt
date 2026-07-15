@@ -686,11 +686,16 @@ constructor(
                     }
                 }
                 .onErr {
-                    emitStatus(
-                        it.friendlyMessage(
-                            getString(CommonR.string.status_get_speed_limit_mode_failure)
+                    // Only surface this on a user-initiated fetch. On background syncs it fires
+                    // for every unreachable-server poll, popping a spurious speed-limit toast
+                    // over whatever screen is showing; the sync-failure banner already covers it.
+                    if (showToast) {
+                        emitStatus(
+                            it.friendlyMessage(
+                                getString(CommonR.string.status_get_speed_limit_mode_failure)
+                            )
                         )
-                    )
+                    }
                 }
         }
     }
