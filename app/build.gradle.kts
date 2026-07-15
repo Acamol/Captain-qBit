@@ -18,11 +18,18 @@ val commitHash: String by lazy {
         .trim()
 }
 
-// In-app "What's New": the per-release notes shown by F-Droid live in the fastlane metadata. Bundle
-// them into the APK as assets so the same content is available offline in-app. Generated during the
-// Gradle build (see the syncChangelogAssets task), so an F-Droid source build produces it
-// identically.
+// In-app "What's New": bundle the per-release notes into the APK as assets so they're available
+// offline in-app. Generated during the Gradle build (see the syncChangelogAssets task), so an
+// F-Droid source build produces it identically.
+//
+// Two sources, because F-Droid truncates its "What's New" listing at 500 chars but the in-app
+// dialog has no such limit:
+//   - fastlane/.../changelogs/<versionCode>.txt — the short (<=500) summary F-Droid shows.
+//   - whatsnew/<versionCode>.txt               — the full in-app notes (optional, no limit).
+// The task copies the fastlane summary, then overlays the full version when one exists, so the app
+// shows the richer text while F-Droid keeps the short summary.
 val changelogSource = rootProject.file("fastlane/metadata/android/en-US/changelogs")
+val fullChangelogSource = rootProject.file("whatsnew")
 
 plugins {
     alias(libs.plugins.android.application)
@@ -40,6 +47,12 @@ abstract class SyncChangelogAssets : DefaultTask() {
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val source: DirectoryProperty
 
+    // Full in-app notes overlaid on top of the fastlane summary; optional (older versions have none).
+    @get:InputDirectory
+    @get:Optional
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val fullSource: DirectoryProperty
+
     @get:OutputDirectory abstract val outputDir: DirectoryProperty
 
     @TaskAction
@@ -54,6 +67,13 @@ abstract class SyncChangelogAssets : DefaultTask() {
             ?.forEach { file ->
                 file.copyTo(dest.resolve(file.name), overwrite = true)
             }
+        // Overlay the full in-app notes where present, so the app shows the richer text while
+        // F-Droid keeps the short fastlane summary.
+        val full = fullSource.orNull?.asFile
+        if (full != null && full.isDirectory) {
+            full.listFiles { file -> file.extension == "txt" }
+                ?.forEach { file -> file.copyTo(dest.resolve(file.name), overwrite = true) }
+        }
     }
 }
 
@@ -154,7 +174,10 @@ android {
 // carries the task dependency automatically, so the notes are present for any build — including
 // F-Droid's `assembleRelease` — without relying on task ordering.
 val syncChangelogAssets =
-    tasks.register<SyncChangelogAssets>("syncChangelogAssets") { source.fileValue(changelogSource) }
+    tasks.register<SyncChangelogAssets>("syncChangelogAssets") {
+        source.fileValue(changelogSource)
+        if (fullChangelogSource.isDirectory) fullSource.fileValue(fullChangelogSource)
+    }
 
 androidComponents {
     onVariants { variant ->

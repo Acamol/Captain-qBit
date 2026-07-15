@@ -6,9 +6,10 @@ import kotlinx.coroutines.withContext
 
 /**
  * Reads the per-release "What's New" notes bundled into the APK by the `syncChangelogAssets` Gradle
- * task. The source of truth is the fastlane changelog
- * (`fastlane/.../changelogs/<versionCode>.txt`), so what F-Droid shows on its listing and what the
- * app shows in-app stay identical.
+ * task. That task overlays the full in-app notes (`whatsnew/<versionCode>.txt`, no length limit) on
+ * top of the short fastlane summary (`fastlane/.../changelogs/<versionCode>.txt`, kept ≤500 chars
+ * because F-Droid truncates its listing there). So in-app this shows the full notes when a
+ * `whatsnew/` file exists, otherwise it falls back to the same short summary F-Droid shows.
  */
 object ChangelogAssets {
 
