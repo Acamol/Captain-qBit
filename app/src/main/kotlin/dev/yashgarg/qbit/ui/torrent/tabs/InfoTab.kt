@@ -20,6 +20,7 @@ import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.ui.compose.CenterLinearLoading
 import dev.yashgarg.qbit.ui.compose.ListTile
 import dev.yashgarg.qbit.ui.torrent.TorrentDetailsState
+import dev.yashgarg.qbit.utils.rememberCopyToClipboard
 import dev.yashgarg.qbit.utils.toDate
 import dev.yashgarg.qbit.utils.toHumanReadable
 import dev.yashgarg.qbit.utils.toTime
@@ -125,9 +126,12 @@ private fun SectionCard(title: String, content: @Composable ColumnScope.() -> Un
 
 @Composable
 private fun Row(label: String, value: String) {
+    val copy = rememberCopyToClipboard()
     ListTile(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
         title = label,
         subtitle = value,
+        // Long-press any field to copy its value.
+        onLongClick = { copy(label, value, "Copied $label") },
     )
 }

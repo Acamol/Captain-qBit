@@ -1,6 +1,7 @@
 package dev.yashgarg.qbit.ui.torrent
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,7 +20,6 @@ import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Category
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.FindInPage
@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
@@ -57,7 +56,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -68,7 +67,7 @@ import dev.yashgarg.qbit.ui.torrent.tabs.FilesTab
 import dev.yashgarg.qbit.ui.torrent.tabs.InfoTab
 import dev.yashgarg.qbit.ui.torrent.tabs.PeersListView
 import dev.yashgarg.qbit.ui.torrent.tabs.TrackersTab
-import dev.yashgarg.qbit.utils.ClipboardUtil
+import dev.yashgarg.qbit.utils.rememberCopyToClipboard
 import kotlinx.coroutines.launch
 
 private val TAB_TITLES = listOf("General", "Files", "Trackers", "Peers")
@@ -79,7 +78,7 @@ fun TorrentDetailsScreen(
     appNavigator: AppNavigator,
     viewModel: TorrentDetailsViewModel = hiltViewModel(),
 ) {
-    val context = LocalContext.current
+    val copy = rememberCopyToClipboard()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val torrent = state.torrent
     val snackbarHostState = remember { SnackbarHostState() }
@@ -96,7 +95,20 @@ fun TorrentDetailsScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(torrent?.name.orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        torrent?.name.orEmpty(),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        // Long-press the title to copy the torrent name.
+                        modifier =
+                            Modifier.pointerInput(torrent?.name) {
+                                detectTapGestures(
+                                    onLongPress = {
+                                        torrent?.let { copy("name", it.name, "Copied name") }
+                                    }
+                                )
+                            },
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = { appNavigator.navigate(NavCommand.Back) }) {
@@ -128,37 +140,23 @@ fun TorrentDetailsScreen(
                                 leadingIcon = { Icon(Icons.Filled.Delete, null) },
                                 onClick = { act { dialog = DetailDialog.Delete } },
                             )
-                            DropdownMenuItem(
-                                text = { Text("Copy name") },
-                                leadingIcon = { Icon(Icons.Filled.ContentCopy, null) },
-                                onClick = {
-                                    act {
-                                        ClipboardUtil.copyToClipboard(context, "name", torrent.name)
-                                    }
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Copy info hash") },
-                                leadingIcon = { Icon(Icons.Filled.Tag, null) },
-                                onClick = {
-                                    act {
-                                        ClipboardUtil.copyToClipboard(context, "hash", torrent.hash)
-                                    }
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Copy magnet link") },
-                                leadingIcon = { Icon(Icons.Filled.Link, null) },
-                                onClick = {
-                                    act {
-                                        ClipboardUtil.copyToClipboard(
-                                            context,
-                                            "magnet",
-                                            torrent.magnetUri,
-                                        )
-                                    }
-                                },
-                            )
+                            // qBittorrent derives a magnet URI for every torrent; only guard the
+                            // rare case where one isn't available yet (e.g. metadata not fetched).
+                            if (torrent.magnetUri.isNotBlank()) {
+                                DropdownMenuItem(
+                                    text = { Text("Copy magnet link") },
+                                    leadingIcon = { Icon(Icons.Filled.Link, null) },
+                                    onClick = {
+                                        act {
+                                            copy(
+                                                "magnet",
+                                                torrent.magnetUri,
+                                                "Copied to clipboard",
+                                            )
+                                        }
+                                    },
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text("Force recheck") },
                                 leadingIcon = { Icon(Icons.Filled.FindInPage, null) },

@@ -19,7 +19,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.yashgarg.qbit.R
@@ -29,8 +28,8 @@ import dev.yashgarg.qbit.ui.compose.ListTile
 import dev.yashgarg.qbit.ui.compose.theme.AppTypography
 import dev.yashgarg.qbit.ui.compose.theme.bodyMediumPrimary
 import dev.yashgarg.qbit.ui.torrent.TorrentDetailsState
-import dev.yashgarg.qbit.utils.ClipboardUtil
 import dev.yashgarg.qbit.utils.CountryFlags
+import dev.yashgarg.qbit.utils.rememberCopyToClipboard
 import dev.yashgarg.qbit.utils.toHumanReadable
 import qbittorrent.models.TorrentPeer
 
@@ -49,7 +48,7 @@ fun PeersListView(
         LazyColumn(modifier) {
             itemsIndexed(peers, key = { pos, peer -> "${peer.ip}-$pos" }) { _, peer ->
                 var openDialog by remember { mutableStateOf(false) }
-                val context = LocalContext.current
+                val copy = rememberCopyToClipboard()
 
                 ListTile(
                     modifier = Modifier.fillMaxWidth().padding(18.dp),
@@ -65,11 +64,7 @@ fun PeersListView(
                     },
                     onClick = { openDialog = true },
                     onLongClick = {
-                        ClipboardUtil.copyToClipboard(
-                            context,
-                            "peer_${peer.ip}",
-                            "${peer.ip}:${peer.port}",
-                        )
+                        copy("peer_${peer.ip}", "${peer.ip}:${peer.port}", "Copied to clipboard")
                     },
                 )
 

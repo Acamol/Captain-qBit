@@ -19,7 +19,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.yashgarg.qbit.R
@@ -34,7 +33,7 @@ import dev.yashgarg.qbit.ui.compose.FILE_PRIORITY_SKIP
 import dev.yashgarg.qbit.ui.compose.TorrentContentTreeView
 import dev.yashgarg.qbit.ui.compose.isSkipped
 import dev.yashgarg.qbit.ui.torrent.TorrentDetailsState
-import dev.yashgarg.qbit.utils.ClipboardUtil
+import dev.yashgarg.qbit.utils.rememberCopyToClipboard
 
 @Composable
 fun FilesTab(
@@ -130,7 +129,7 @@ fun FilesTab(
     }
 
     pathItem?.let { item ->
-        val context = LocalContext.current
+        val copy = rememberCopyToClipboard()
         val fullPath =
             state.torrentProperties?.savePath?.let { joinPath(it, item.path) } ?: item.path
         AlertDialog(
@@ -140,7 +139,7 @@ fun FilesTab(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        ClipboardUtil.copyToClipboard(context, "content-path", fullPath)
+                        copy("content-path", fullPath, "Copied to clipboard")
                         pathItem = null
                     }
                 ) {
