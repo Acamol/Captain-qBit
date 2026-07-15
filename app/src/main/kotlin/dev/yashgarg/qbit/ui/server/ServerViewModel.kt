@@ -7,7 +7,6 @@ import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.get
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
-import com.github.michaelbull.result.runCatching
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.yashgarg.qbit.common.R as CommonR
@@ -17,6 +16,7 @@ import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.models.ContentTreeItem
 import dev.yashgarg.qbit.data.models.ServerConfig
 import dev.yashgarg.qbit.data.models.ServerPreferences
+import dev.yashgarg.qbit.data.models.ServerViewPrefs
 import dev.yashgarg.qbit.ui.common.StatusViewModel
 import dev.yashgarg.qbit.utils.TorrentFileParser
 import dev.yashgarg.qbit.utils.TransformUtil
@@ -137,30 +137,7 @@ constructor(
     init {
         syncJob = viewModelScope.launch {
             val prefs = prefsStore.data.first()
-            val option =
-                try {
-                    SortOption.valueOf(prefs.sortOptionName)
-                } catch (e: Exception) {
-                    SortOption.NAME
-                }
-            val direction = if (prefs.sortDirectionAsc) SortDirection.ASC else SortDirection.DESC
-            val filter =
-                try {
-                    StateFilter.valueOf(prefs.filterStateName)
-                } catch (e: Exception) {
-                    StateFilter.ALL
-                }
-            _uiState.update {
-                it.copy(
-                    sortOption = option,
-                    sortDirection = direction,
-                    selectedFilter = filter,
-                    selectedCategory = prefs.filterCategory,
-                    selectedTracker = prefs.filterTracker,
-                    selectedTags = prefs.filterTags,
-                    filterUntagged = prefs.filterUntagged,
-                )
-            }
+            applyViewPrefs(prefs, prefs.activeServerId)
             syncData()
         }
 
@@ -175,54 +152,81 @@ constructor(
                 .collect { active -> _uiState.update { it.copy(serverName = active?.serverName) } }
         }
 
-        // On a real server switch, drop the current sync + filters and repopulate for the new
-        // server (per-server prefs aren't stored yet, so each server starts from a clean slate).
+        // On a real server switch, drop the current sync and restore the target server's own
+        // saved filters + sort (each server remembers its own view).
         viewModelScope.launch {
             prefsStore.data
                 .map { it.activeServerId }
                 .distinctUntilChanged()
                 .drop(1)
-                .collect {
+                .collect { newId ->
                     syncJob?.cancel()
-                    _uiState.update { state ->
-                        state.copy(
-                            dataLoading = true,
-                            data = null,
-                            selectedFilter = StateFilter.ALL,
-                            selectedCategory = null,
-                            selectedTracker = null,
-                            selectedTags = emptySet(),
-                            filterUntagged = false,
-                            searchQuery = "",
-                        )
-                    }
-                    saveFilterPrefs()
+                    _uiState.update { it.copy(dataLoading = true, data = null, searchQuery = "") }
+                    applyViewPrefs(prefsStore.data.first(), newId)
                     syncJob = viewModelScope.launch { syncData() }
                 }
         }
     }
 
-    private fun saveSortPrefs(option: SortOption, direction: SortDirection) {
-        viewModelScope.launch {
-            prefsStore.updateData {
-                it.copy(
-                    sortOptionName = option.name,
-                    sortDirectionAsc = direction == SortDirection.ASC,
+    /**
+     * Restore [serverId]'s saved filters + sort into the UI state. Servers without a per-server
+     * entry yet fall back to the legacy global values (one-time migration from pre-per-server
+     * builds; those legacy fields go away at 1.0.0).
+     */
+    private fun applyViewPrefs(prefs: ServerPreferences, serverId: Int) {
+        val v =
+            prefs.serverViewPrefs[serverId]
+                ?: ServerViewPrefs(
+                    sortOptionName = prefs.sortOptionName,
+                    sortDirectionAsc = prefs.sortDirectionAsc,
+                    filterStateName = prefs.filterStateName,
+                    filterCategory = prefs.filterCategory,
+                    filterTracker = prefs.filterTracker,
+                    filterTags = prefs.filterTags,
+                    filterUntagged = prefs.filterUntagged,
                 )
+        val option =
+            try {
+                SortOption.valueOf(v.sortOptionName)
+            } catch (e: Exception) {
+                SortOption.NAME
             }
+        val filter =
+            try {
+                StateFilter.valueOf(v.filterStateName)
+            } catch (e: Exception) {
+                StateFilter.ALL
+            }
+        _uiState.update { state ->
+            state.copy(
+                sortOption = option,
+                sortDirection = if (v.sortDirectionAsc) SortDirection.ASC else SortDirection.DESC,
+                selectedFilter = filter,
+                selectedCategory = v.filterCategory,
+                selectedTracker = v.filterTracker,
+                selectedTags = v.filterTags,
+                filterUntagged = v.filterUntagged,
+            )
         }
     }
 
-    private fun saveFilterPrefs() {
-        val state = _uiState.value
+    /** Persist the current filters + sort against the active server id. */
+    private fun persistViewPrefs() {
+        val s = _uiState.value
         viewModelScope.launch {
-            prefsStore.updateData {
-                it.copy(
-                    filterStateName = state.selectedFilter.name,
-                    filterCategory = state.selectedCategory,
-                    filterTracker = state.selectedTracker,
-                    filterTags = state.selectedTags,
-                    filterUntagged = state.filterUntagged,
+            prefsStore.updateData { prefs ->
+                val entry =
+                    ServerViewPrefs(
+                        sortOptionName = s.sortOption.name,
+                        sortDirectionAsc = s.sortDirection == SortDirection.ASC,
+                        filterStateName = s.selectedFilter.name,
+                        filterCategory = s.selectedCategory,
+                        filterTracker = s.selectedTracker,
+                        filterTags = s.selectedTags,
+                        filterUntagged = s.filterUntagged,
+                    )
+                prefs.copy(
+                    serverViewPrefs = prefs.serverViewPrefs + (prefs.activeServerId to entry)
                 )
             }
         }
@@ -528,7 +532,7 @@ constructor(
             failureMessage = getString(CommonR.string.status_delete_tags_failure),
             onSuccess = {
                 _uiState.update { it.copy(selectedTags = it.selectedTags - tags.toSet()) }
-                saveFilterPrefs()
+                persistViewPrefs()
             },
         ) {
             repository.deleteTags(tags)
@@ -585,7 +589,7 @@ constructor(
     }
 
     fun setSort(option: SortOption) {
-        val newState = _uiState.updateAndGet { state ->
+        _uiState.update { state ->
             val newDirection =
                 if (state.sortOption == option) {
                     if (state.sortDirection == SortDirection.ASC) SortDirection.DESC
@@ -595,18 +599,18 @@ constructor(
                 }
             state.copy(sortOption = option, sortDirection = newDirection)
         }
-        saveSortPrefs(newState.sortOption, newState.sortDirection)
+        persistViewPrefs()
     }
 
     fun toggleSortDirection() {
-        val newState = _uiState.updateAndGet { state ->
+        _uiState.update { state ->
             state.copy(
                 sortDirection =
                     if (state.sortDirection == SortDirection.ASC) SortDirection.DESC
                     else SortDirection.ASC
             )
         }
-        saveSortPrefs(newState.sortOption, newState.sortDirection)
+        persistViewPrefs()
     }
 
     fun setSearchQuery(query: String) {
@@ -615,17 +619,17 @@ constructor(
 
     fun setCategory(category: String?) {
         _uiState.update { state -> state.copy(selectedCategory = category) }
-        saveFilterPrefs()
+        persistViewPrefs()
     }
 
     fun setFilter(filter: StateFilter) {
         _uiState.update { state -> state.copy(selectedFilter = filter) }
-        saveFilterPrefs()
+        persistViewPrefs()
     }
 
     fun setTracker(tracker: String?) {
         _uiState.update { state -> state.copy(selectedTracker = tracker) }
-        saveFilterPrefs()
+        persistViewPrefs()
     }
 
     fun toggleTag(tag: String) {
@@ -634,12 +638,12 @@ constructor(
             if (tags.contains(tag)) tags.remove(tag) else tags.add(tag)
             state.copy(selectedTags = tags, filterUntagged = false)
         }
-        saveFilterPrefs()
+        persistViewPrefs()
     }
 
     fun setFilterUntagged(untagged: Boolean) {
         _uiState.update { it.copy(filterUntagged = untagged, selectedTags = emptySet()) }
-        saveFilterPrefs()
+        persistViewPrefs()
     }
 
     fun clearFilters() {
@@ -652,7 +656,7 @@ constructor(
                 filterUntagged = false,
             )
         }
-        saveFilterPrefs()
+        persistViewPrefs()
     }
 
     fun toggleSpeedLimits() {
@@ -702,43 +706,47 @@ constructor(
 
     private suspend fun syncData() {
         getSpeedLimitMode()
-        val result = runCatching {
-            repository
-                .observeMainData()
-                .catch { e ->
-                    _uiState.update { state -> state.copy(hasError = true, error = e, data = null) }
+        repository
+            .observeMainData()
+            // A sync error (e.g. the connection dropping while the app was backgrounded or on the
+            // logs screen) used to end the flow, leaving the list stale until a manual refresh.
+            // Surface it once, then keep retrying so syncing resumes on its own.
+            .retryWhen { cause, attempt ->
+                if (attempt == 0L) {
+                    emitStatus(
+                        cause.friendlyMessage(getString(CommonR.string.status_sync_data_failure))
+                    )
                 }
-                .collectLatest { mainData ->
-                    val categories = mainData.categories.keys.sorted()
-                    val trackers =
-                        mainData.torrents.values
-                            .mapNotNull { t -> t.tracker.takeIf { it.isNotBlank() } }
-                            .mapNotNull { url -> Uri.parse(url).host?.takeIf { it.isNotBlank() } }
-                            .distinct()
-                            .sorted()
-                    val tags =
-                        (mainData.tags + mainData.torrents.values.flatMap { it.tags })
-                            .filter { it.isNotBlank() }
-                            .distinct()
-                            .sorted()
-                    _uiState.update { state ->
-                        state.copy(
-                            dataLoading = false,
-                            data = mainData,
-                            hasError = false,
-                            error = null,
-                            availableCategories = categories,
-                            availableTrackers = trackers,
-                            availableTags = tags,
-                        )
-                    }
-                    _intent.emit(Unit)
+                _uiState.update { state -> state.copy(hasError = true, error = cause, data = null) }
+                delay(SYNC_RETRY_MS)
+                true
+            }
+            .collectLatest { mainData ->
+                val categories = mainData.categories.keys.sorted()
+                val trackers =
+                    mainData.torrents.values
+                        .mapNotNull { t -> t.tracker.takeIf { it.isNotBlank() } }
+                        .mapNotNull { url -> Uri.parse(url).host?.takeIf { it.isNotBlank() } }
+                        .distinct()
+                        .sorted()
+                val tags =
+                    (mainData.tags + mainData.torrents.values.flatMap { it.tags })
+                        .filter { it.isNotBlank() }
+                        .distinct()
+                        .sorted()
+                _uiState.update { state ->
+                    state.copy(
+                        dataLoading = false,
+                        data = mainData,
+                        hasError = false,
+                        error = null,
+                        availableCategories = categories,
+                        availableTrackers = trackers,
+                        availableTags = tags,
+                    )
                 }
-        }
-
-        result.onErr {
-            emitStatus(it.friendlyMessage(getString(CommonR.string.status_sync_data_failure)))
-        }
+                _intent.emit(Unit)
+            }
     }
 }
 
@@ -757,6 +765,7 @@ private sealed interface PendingSource {
     data class Magnet(val url: String, val hash: String) : PendingSource
 }
 
+private const val SYNC_RETRY_MS = 5000L
 private const val METADATA_POLL_MS = 1500L
 private const val METADATA_MAX_ATTEMPTS = 80
 private const val FILE_POLL_ATTEMPTS = 20
