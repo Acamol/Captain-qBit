@@ -1,0 +1,14 @@
+- The app is rebuilt entirely in Jetpack Compose for a smoother, more modern UI throughout
+- Swipe a torrent in the list to reveal quick Pause/Resume and Delete actions
+- New "What's New" dialog after each update (this one!)
+- Peers tab now shows per-peer speeds and full connection details
+- Selective, mergeable config backup you can reach from the first-run screen — export and import your servers and settings
+- Add server: separate "Test connection" and "Save" buttons, and enabling HTTP basic auth prefills your username and password
+- Torrent details: long-press any field, or the title, to copy its value — with haptic feedback
+- Action-bar buttons now show tooltips and give haptic feedback on long-press
+- Friendlier, readable connection error messages instead of raw exceptions
+- Bulk category picker now shows the torrent's current category
+- Your selection clears when you switch filters, so bulk actions never hit hidden torrents
+- Filter drawer lists Tags before Trackers
+- Confirm before deleting a category or tag
+- Various theming and add-torrent fixes from the Compose migration
