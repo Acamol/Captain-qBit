@@ -7,5 +7,5 @@ import kotlinx.serialization.Serializable
 @Serializable
 enum class ConnectionType {
     HTTP,
-    HTTPS
+    HTTPS,
 }

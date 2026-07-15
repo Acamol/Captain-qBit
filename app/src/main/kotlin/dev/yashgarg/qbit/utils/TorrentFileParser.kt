@@ -41,8 +41,7 @@ object TorrentFileParser {
                             val segments =
                                 (dict["path"] as? List<*>)?.map {
                                     (it as? ByteArray)?.decodeToString() ?: return null
-                                }
-                                    ?: return null
+                                } ?: return null
                             ParsedFile("$name/${segments.joinToString("/")}", size)
                         }
                     // Single-file: the name is the file.

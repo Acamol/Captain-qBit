@@ -18,13 +18,13 @@ dependencyResolutionManagement {
     }
 }
 
-plugins { id("com.gradle.enterprise") version "3.15.1" }
+plugins { id("com.gradle.develocity") version "4.5.0" }
 
-gradleEnterprise {
+develocity {
     buildScan {
-        termsOfServiceUrl = "https://gradle.com/terms-of-service"
-        termsOfServiceAgree = "yes"
-        publishAlways()
+        termsOfUseUrl = "https://gradle.com/terms-of-service"
+        termsOfUseAgree = "yes"
+        publishing.onlyIf { true }
     }
 }
 
@@ -41,5 +41,5 @@ include(
     ":bonsai-core",
     ":benchmark",
     ":client-wrapper:models",
-    ":client-wrapper:client"
+    ":client-wrapper:client",
 )

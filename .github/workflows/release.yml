@@ -13,18 +13,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Decode keystore
         env:
@@ -52,20 +52,37 @@ jobs:
           version="${GITHUB_REF_NAME#v}"
           cp app/build/outputs/apk/release/*.apk "Captain-qBit-${version}.apk"
 
-      - name: Build release notes from tag message
+      - name: Build release notes from the fastlane changelog
         id: notes
         run: |
-          # checkout leaves a lightweight tag on the runner; re-fetch the annotated tag
-          # so its message (not the commit message) is used as the release notes.
-          git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+          # Single-source the changelog from fastlane (the same file F-Droid uses), formatted
+          # like previous releases: "Captain qBit X.Y.Z" + blank line + the changelog bullets.
+          # Fail the release if the changelog for this versionCode is missing.
+          version="${GITHUB_REF_NAME#v}"
+          version_code="$(grep -oE 'versionCode[[:space:]]*=[[:space:]]*[0-9]+' app/build.gradle.kts | grep -oE '[0-9]+' | head -1)"
+          changelog="fastlane/metadata/android/en-US/changelogs/${version_code}.txt"
+          if [ ! -f "$changelog" ]; then
+            echo "::error::Changelog $changelog not found for versionCode $version_code"
+            exit 1
+          fi
+          # F-Droid truncates the "What's New" text at 500 characters, so a longer
+          # changelog shows cut off for every user. Fail the release before publishing.
+          max_chars=500
+          char_count="$(wc -m < "$changelog" | tr -d '[:space:]')"
+          if [ "$char_count" -gt "$max_chars" ]; then
+            echo "::error::Changelog $changelog is $char_count characters; F-Droid truncates the \"What's New\" text at $max_chars. Trim it."
+            exit 1
+          fi
           {
             echo 'body<<__NOTES_EOF__'
-            git tag -l --format='%(contents)' "$GITHUB_REF_NAME"
+            echo "Captain qBit ${version}"
+            echo
+            cat "$changelog"
             echo '__NOTES_EOF__'
           } >> "$GITHUB_OUTPUT"
 
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: Captain-qBit-*.apk
           body: ${{ steps.notes.outputs.body }}

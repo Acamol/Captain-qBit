@@ -32,6 +32,7 @@ typealias OnNodeClick<T> = ((Node<T>) -> Unit)?
 typealias NodeIcon<T> = @Composable (Node<T>) -> Painter?
 
 @Immutable
+@ConsistentCopyVisibility
 data class BonsaiScope<T>
 internal constructor(
     internal val expandableManager: ExpandableTree<T>,
@@ -57,7 +58,7 @@ data class BonsaiStyle<T>(
     val nodeExpandedIcon: NodeIcon<T> = nodeCollapsedIcon,
     val nodeExpandedIconColorFilter: ColorFilter? = nodeCollapsedIconColorFilter,
     val nodeNameStartPadding: Dp = 0.dp,
-    val nodeNameTextStyle: TextStyle = DefaultNodeTextStyle
+    val nodeNameTextStyle: TextStyle = DefaultNodeTextStyle,
 ) {
 
     companion object {

@@ -97,7 +97,7 @@ data class Torrent(
     /** Amount of data uploaded this session */
     @SerialName("uploaded_session") val uploadedSession: Long,
     /** Torrent upload speed (bytes/s) */
-    @SerialName("upspeed") val uploadSpeed: Long
+    @SerialName("upspeed") val uploadSpeed: Long,
 ) {
     @Serializable
     enum class State {
@@ -122,6 +122,6 @@ data class Torrent(
         @SerialName("queuedDL") QUEUED_DL,
         @SerialName("checkingResumeData") CHECKING_RESUME_DATA,
         @SerialName("moving") MOVING,
-        @SerialName("unknown") UNKNOWN
+        @SerialName("unknown") UNKNOWN,
     }
 }

@@ -35,8 +35,10 @@ object ExceptionHandler {
                         Exception("Torrent already exists")
                     ex.response?.status?.value == 401 || ex.response?.status?.value == 403 ->
                         Exception("Authentication failed — check the username and password")
-                    ex.cause is ConnectTimeoutException -> ClientConnectionError()
-                    ex.cause is SocketTimeoutException -> Exception("Connection timed out")
+                    // Socket errors reach us wrapped as the cause (unreachable host, DNS,
+                    // timeout, SSL, …). Map the underlying cause so the user gets a specific hint
+                    // instead of the generic fallback.
+                    ex.cause != null && ex.cause !== ex -> mapException(ex.cause!!)
                     else -> ex
                 }
             is java.io.IOException -> ClientConnectionError()

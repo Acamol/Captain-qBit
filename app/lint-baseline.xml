@@ -1,15 +1,194 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<issues format="6" by="lint 8.1.0-alpha07" type="baseline" client="gradle" dependencies="false" name="AGP (8.1.0-alpha07)" variant="all" version="8.1.0-alpha07">
+<issues format="6" by="lint 9.2.1" type="baseline" client="gradle" dependencies="false" name="AGP (9.2.1)" variant="all" version="9.2.1">
 
     <issue
-        id="KaptUsageInsteadOfKsp"
-        message="This library supports using KSP instead of kapt, which greatly improves performance. Learn more: https://developer.android.com/studio/build/migrate-to-ksp"
-        errorLine1="    kapt(libs.androidx.room.compiler)"
-        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="        return String.format(&quot;%.2f %ciB&quot;, value / 1024.0, ci.current()).trim()"
+        errorLine2="               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/utils/NumberFormat.kt"
+            line="28"
+            column="16"/>
+    </issue>
+
+    <issue
+        id="OldTargetApi"
+        message="Not targeting the latest versions of Android; compatibility modes apply. Consider testing and updating this version. Consult the `android.os.Build.VERSION_CODES` javadoc for details."
+        errorLine1="        targetSdk = 35"
+        errorLine2="        ~~~~~~~~~~~~~~">
         <location
             file="build.gradle.kts"
-            line="124"
-            column="5"/>
+            line="33"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="WrongConstant"
+        message="Must be one of: AppCompatDelegate.MODE_NIGHT_NO, AppCompatDelegate.MODE_NIGHT_YES, AppCompatDelegate.MODE_NIGHT_AUTO_TIME, AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM, AppCompatDelegate.MODE_NIGHT_UNSPECIFIED, AppCompatDelegate.MODE_NIGHT_AUTO_BATTERY"
+        errorLine1="        AppCompatDelegate.setDefaultNightMode(prefs.themeMode)"
+        errorLine2="                                              ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/QbitApplication.kt"
+            line="36"
+            column="47"/>
+    </issue>
+
+    <issue
+        id="WrongConstant"
+        message="Must be one or more of: Gravity.LEFT, Gravity.RIGHT, GravityCompat.START, GravityCompat.END, Gravity.NO_GRAVITY"
+        errorLine1="                    binding.drawerLayout.closeDrawer(Gravity.START)"
+        errorLine2="                                                     ~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/server/ServerFragment.kt"
+            line="130"
+            column="54"/>
+    </issue>
+
+    <issue
+        id="WrongConstant"
+        message="Must be one or more of: Gravity.LEFT, Gravity.RIGHT, GravityCompat.START, GravityCompat.END, Gravity.NO_GRAVITY"
+        errorLine1="            bottomBar.setNavigationOnClickListener { drawerLayout.openDrawer(Gravity.START) }"
+        errorLine2="                                                                             ~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/server/ServerFragment.kt"
+            line="291"
+            column="78"/>
+    </issue>
+
+    <issue
+        id="WrongConstant"
+        message="Must be one or more of: Gravity.LEFT, Gravity.RIGHT, GravityCompat.START, GravityCompat.END, Gravity.NO_GRAVITY"
+        errorLine1="                drawerLayout.closeDrawer(Gravity.START)"
+        errorLine2="                                         ~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/server/ServerFragment.kt"
+            line="294"
+            column="42"/>
+    </issue>
+
+    <issue
+        id="WrongConstant"
+        message="Must be one or more of: Gravity.LEFT, Gravity.RIGHT, GravityCompat.START, GravityCompat.END, Gravity.NO_GRAVITY"
+        errorLine1="                drawerLayout.closeDrawer(Gravity.START)"
+        errorLine2="                                         ~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/server/ServerFragment.kt"
+            line="431"
+            column="42"/>
+    </issue>
+
+    <issue
+        id="WrongConstant"
+        message="Must be one or more of: Gravity.LEFT, Gravity.RIGHT, GravityCompat.START, GravityCompat.END, Gravity.NO_GRAVITY"
+        errorLine1="                drawerLayout.closeDrawer(Gravity.START)"
+        errorLine2="                                         ~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/server/ServerFragment.kt"
+            line="435"
+            column="42"/>
+    </issue>
+
+    <issue
+        id="AppLinkWarning"
+        message="This intent filter has the format of an Android App Link but is missing the `autoVerify` attribute; add `android:autoVerify=&quot;true&quot;` to ensure your domain will be validated and enable App Link-related Lint warnings. If you do not want clicked URLs to bring the user to your app, remove the `android.intent.category.BROWSABLE` category, or set `android:autoVerify=&quot;false&quot;` to make it clear this is not intended to be an Android App Link."
+        errorLine1="            &lt;intent-filter>"
+        errorLine2="             ~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="38"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="AppLinkWarning"
+        message="This intent filter has the format of an Android App Link but is missing the `autoVerify` attribute; add `android:autoVerify=&quot;true&quot;` to ensure your domain will be validated and enable App Link-related Lint warnings. If you do not want clicked URLs to bring the user to your app, remove the `android.intent.category.BROWSABLE` category, or set `android:autoVerify=&quot;false&quot;` to make it clear this is not intended to be an Android App Link."
+        errorLine1="            &lt;intent-filter>"
+        errorLine2="             ~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="49"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="AppLinkWarning"
+        message="This intent filter has the format of an Android App Link but is missing the `autoVerify` attribute; add `android:autoVerify=&quot;true&quot;` to ensure your domain will be validated and enable App Link-related Lint warnings. If you do not want clicked URLs to bring the user to your app, remove the `android.intent.category.BROWSABLE` category, or set `android:autoVerify=&quot;false&quot;` to make it clear this is not intended to be an Android App Link."
+        errorLine1="            &lt;intent-filter>"
+        errorLine2="             ~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="60"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="AppLinkWarning"
+        message="This intent filter has the format of an Android App Link but is missing the `autoVerify` attribute; add `android:autoVerify=&quot;true&quot;` to ensure your domain will be validated and enable App Link-related Lint warnings. If you do not want clicked URLs to bring the user to your app, remove the `android.intent.category.BROWSABLE` category, or set `android:autoVerify=&quot;false&quot;` to make it clear this is not intended to be an Android App Link."
+        errorLine1="            &lt;intent-filter>"
+        errorLine2="             ~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="71"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="InflateParams"
+        message="Avoid passing `null` as the view root (needed to resolve layout parameters on the inflated layout&apos;s root element)"
+        errorLine1="        val view = fragment.layoutInflater.inflate(R.layout.dialog_text_input, null, false)"
+        errorLine2="                                                                               ~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/server/ServerActionDialogs.kt"
+            line="453"
+            column="80"/>
+    </issue>
+
+    <issue
+        id="AcceptsUserCertificates"
+        message="The Network Security Configuration allows the use of user certificates in the release version of your app"
+        errorLine1="            &lt;certificates src=&quot;user&quot; />"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/xml/network_security_config.xml"
+            line="13"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="This folder configuration (`v26`) is unnecessary; `minSdkVersion` is 28. Merge all the resources in this folder into `font`.">
+        <location
+            file="src/main/res/font-v26"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="This folder configuration (`v26`) is unnecessary; `minSdkVersion` is 28. Merge all the resources in this folder into `mipmap-anydpi`.">
+        <location
+            file="src/main/res/mipmap-anydpi-v26"/>
+    </issue>
+
+    <issue
+        id="StaticFieldLeak"
+        message="This field leaks a context object"
+        errorLine1="abstract class StatusViewModel(private val context: Context) : ViewModel() {"
+        errorLine2="                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/common/StatusViewModel.kt"
+            line="15"
+            column="32"/>
+    </issue>
+
+    <issue
+        id="NestedWeights"
+        message="Nested weights are bad for performance"
+        errorLine1="                        android:layout_weight=&quot;1&quot;"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/server_fragment.xml"
+            line="185"
+            column="25"/>
     </issue>
 
     <issue
@@ -25,9 +204,262 @@
 
     <issue
         id="UnusedResources"
-        message="The resource `R.color.md_theme_dark_shadow` appears to be unused"
-        errorLine1="    &lt;color name=&quot;md_theme_dark_shadow&quot;>#000000&lt;/color>"
-        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        message="The resource `R.drawable.circle_filled` appears to be unused"
+        errorLine1="&lt;shape xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;"
+        errorLine2="^">
+        <location
+            file="src/main/res/drawable/circle_filled.xml"
+            line="2"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.white` appears to be unused"
+        errorLine1="    &lt;color name=&quot;white&quot;>#FFFFFF&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="3"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.md_theme_dark_bluegray_surface` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_bluegray_surface&quot;>#353A4E&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="14"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.md_theme_dark_bluegray_surface_darker` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_bluegray_surface_darker&quot;>#1F222E&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="15"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.md_theme_dark_primary` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_primary&quot;>#5CD4EF&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="17"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.md_theme_dark_onPrimary` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_onPrimary&quot;>#00363F&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="18"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.md_theme_dark_primaryContainer` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_primaryContainer&quot;>#004E5B&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="19"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.md_theme_dark_onPrimaryContainer` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_onPrimaryContainer&quot;>#B4EAFF&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="20"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.md_theme_dark_secondary` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_secondary&quot;>#5CD4EF&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="21"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.md_theme_dark_onSecondary` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_onSecondary&quot;>#00363F&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="22"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.md_theme_dark_secondaryContainer` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_secondaryContainer&quot;>#004E5B&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="23"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.md_theme_dark_onSecondaryContainer` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_onSecondaryContainer&quot;>#B4EAFF&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="24"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.md_theme_dark_error` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_error&quot;>#FFB4AB&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="25"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.md_theme_dark_errorContainer` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_errorContainer&quot;>#93000A&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="26"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.md_theme_dark_onError` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_onError&quot;>#690005&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="27"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.md_theme_dark_onErrorContainer` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_onErrorContainer&quot;>#FFDAD6&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="28"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.md_theme_dark_background` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_background&quot;>#262C3A&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="29"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.md_theme_dark_onBackground` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_onBackground&quot;>#FFFFFF&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="30"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.md_theme_dark_surface` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_surface&quot;>#262C3A&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="31"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.md_theme_dark_onSurface` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_onSurface&quot;>#FFFFFF&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="32"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.md_theme_dark_surfaceVariant` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_surfaceVariant&quot;>#40484E&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="33"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.md_theme_dark_onSurfaceVariant` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_onSurfaceVariant&quot;>#BFC8CE&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="34"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.md_theme_dark_outline` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_outline&quot;>#899298&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="35"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.md_theme_dark_inverseOnSurface` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_inverseOnSurface&quot;>#262C3A&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/colors.xml"
             line="36"
@@ -36,9 +468,9 @@
 
     <issue
         id="UnusedResources"
-        message="The resource `R.color.md_theme_dark_surfaceTint` appears to be unused"
-        errorLine1="    &lt;color name=&quot;md_theme_dark_surfaceTint&quot;>#DAB9FF&lt;/color>"
-        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        message="The resource `R.color.md_theme_dark_inverseSurface` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_inverseSurface&quot;>#FFFFFF&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/colors.xml"
             line="37"
@@ -47,12 +479,56 @@
 
     <issue
         id="UnusedResources"
-        message="The resource `R.color.md_theme_dark_surfaceTintColor` appears to be unused"
-        errorLine1="    &lt;color name=&quot;md_theme_dark_surfaceTintColor&quot;>#DAB9FF&lt;/color>"
-        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        message="The resource `R.color.md_theme_dark_inversePrimary` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_inversePrimary&quot;>#00687C&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/colors.xml"
             line="38"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.md_theme_dark_surfaceTint` appears to be unused"
+        errorLine1="    &lt;color name=&quot;md_theme_dark_surfaceTint&quot;>#5CD4EF&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="39"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.theme_surface_tint` appears to be unused"
+        errorLine1="    &lt;color name=&quot;theme_surface_tint&quot;>#00687C&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="66"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.dimen.status_dot_size` appears to be unused"
+        errorLine1="    &lt;dimen name=&quot;status_dot_size&quot;>18dp&lt;/dimen>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/dimens.xml"
+            line="3"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.dimen.status_dot_margin` appears to be unused"
+        errorLine1="    &lt;dimen name=&quot;status_dot_margin&quot;>6dp&lt;/dimen>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/dimens.xml"
+            line="4"
             column="12"/>
     </issue>
 
@@ -63,7 +539,7 @@
         errorLine2="           ~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/dimens.xml"
-            line="4"
+            line="6"
             column="12"/>
     </issue>
 
@@ -74,8 +550,373 @@
         errorLine2="           ~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/dimens.xml"
-            line="5"
+            line="7"
             column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.drawable.ic_chevron_down` appears to be unused"
+        errorLine1="&lt;vector xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;"
+        errorLine2="^">
+        <location
+            file="src/main/res/drawable/ic_chevron_down.xml"
+            line="2"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.drawable.ic_chevron_up` appears to be unused"
+        errorLine1="&lt;vector xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;"
+        errorLine2="^">
+        <location
+            file="src/main/res/drawable/ic_chevron_up.xml"
+            line="2"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.drawable.outline_filter_alt_24` appears to be unused"
+        errorLine1="&lt;vector xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;"
+        errorLine2="^">
+        <location
+            file="src/main/res/drawable/outline_filter_alt_24.xml"
+            line="1"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.style.TitleMediumBold` appears to be unused"
+        errorLine1="    &lt;style name=&quot;TitleMediumBold&quot; parent=&quot;TitleMedium&quot;>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/styles.xml"
+            line="28"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.drawable.twotone_speed_24` appears to be unused"
+        errorLine1="&lt;vector xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;"
+        errorLine2="^">
+        <location
+            file="src/main/res/drawable/twotone_speed_24.xml"
+            line="1"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="IconLauncherShape"
+        message="Launcher icons should not fill every pixel of their square region; see the design guide for details">
+        <location
+            file="src/main/res/mipmap-hdpi/ic_launcher.png"/>
+    </issue>
+
+    <issue
+        id="IconLauncherShape"
+        message="Launcher icons should not fill every pixel of their square region; see the design guide for details">
+        <location
+            file="src/main/res/mipmap-mdpi/ic_launcher.png"/>
+    </issue>
+
+    <issue
+        id="IconLauncherShape"
+        message="Launcher icons should not fill every pixel of their square region; see the design guide for details">
+        <location
+            file="src/main/res/mipmap-xhdpi/ic_launcher.png"/>
+    </issue>
+
+    <issue
+        id="IconLauncherShape"
+        message="Launcher icons should not fill every pixel of their square region; see the design guide for details">
+        <location
+            file="src/main/res/mipmap-xxhdpi/ic_launcher.png"/>
+    </issue>
+
+    <issue
+        id="IconLauncherShape"
+        message="Launcher icons should not fill every pixel of their square region; see the design guide for details">
+        <location
+            file="src/main/res/mipmap-xxxhdpi/ic_launcher.png"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="                    setPickedFiles(listOf(Uri.parse(prefillFileUri)))"
+        errorLine2="                                          ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/dialogs/AddTorrentDialog.kt"
+            line="193"
+            column="43"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="                                    .openInputStream(Uri.parse(uri))"
+        errorLine2="                                                     ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/server/ServerFragment.kt"
+            line="228"
+            column="54"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension property `View.isVisible` instead?"
+        errorLine1="                        if (searchLayout.visibility == View.VISIBLE) closeSearch() else openSearch()"
+        errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/server/ServerFragment.kt"
+            line="417"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `ViewGroup.isNotEmpty` instead?"
+        errorLine1="            val hasChips = filterChipGroup.childCount > 0"
+        errorLine2="                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/server/ServerFragment.kt"
+            line="603"
+            column="28"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="                            .mapNotNull { url -> Uri.parse(url).host?.takeIf { it.isNotBlank() } }"
+        errorLine2="                                                 ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/server/ServerViewModel.kt"
+            line="716"
+            column="50"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="    host == null || Uri.parse(tracker).host.equals(host, ignoreCase = true)"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/server/StateFilter.kt"
+            line="86"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="    fun open(url: String) = context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))"
+        errorLine2="                                                                             ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/version/VersionFragment.kt"
+            line="78"
+            column="78"/>
+    </issue>
+
+    <issue
+        id="LabelFor"
+        message="Missing accessibility label: provide either a view with an `android:labelFor` that references this view or provide an `android:hint`"
+        errorLine1="            &lt;AutoCompleteTextView"
+        errorLine2="             ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/add_torrent_dialog.xml"
+            line="47"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="                text = &quot;Category colors&quot;"
+        errorLine2="                        ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/backup/BackupDialogs.kt"
+            line="123"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="                text = &quot;Merge with current&quot;"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/backup/BackupDialogs.kt"
+            line="191"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="                text = &quot;Replace everything&quot;"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/backup/BackupDialogs.kt"
+            line="196"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="                        text = &quot;Category colors&quot;"
+        errorLine2="                                ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/backup/BackupDialogs.kt"
+            line="226"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Number formatting does not take into account locale settings. Consider using `String.format` instead."
+        errorLine1="            config.port?.let { serverPortTiet.setText(it.toString()) }"
+        errorLine2="                                                      ~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/config/ConfigFragment.kt"
+            line="115"
+            column="55"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="                text = &quot;+  New category&quot;"
+        errorLine2="                        ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/server/ServerActionDialogs.kt"
+            line="278"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="                        text = &quot;Color&quot;"
+        errorLine2="                                ~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/server/ServerActionDialogs.kt"
+            line="507"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="                text = &quot;+  Add server&quot;"
+        errorLine2="                        ~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/server/ServerActionDialogs.kt"
+            line="743"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Number formatting does not take into account locale settings. Consider using `String.format` instead."
+        errorLine1="            text = count.toString()"
+        errorLine2="                   ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/server/ServerDrawerController.kt"
+            line="108"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="                        &quot;↓ ${serverState.dlInfoSpeed.toHumanReadable()}/s  ↑ ${serverState.upInfoSpeed.toHumanReadable()}/s   ${serverState.freeSpace.toHumanReadable()} free&quot;"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/server/ServerFragment.kt"
+            line="565"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="                        &quot;↓ ${serverState.dlInfoSpeed.toHumanReadable()}/s  ↑ ${serverState.upInfoSpeed.toHumanReadable()}/s   ${serverState.freeSpace.toHumanReadable()} free&quot;"
+        errorLine2="                                                                                                                                                                        ~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/server/ServerFragment.kt"
+            line="565"
+            column="169"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="                        text = &quot;Active&quot;"
+        errorLine2="                                ~~~~~~">
+        <location
+            file="src/main/kotlin/dev/yashgarg/qbit/ui/serverlist/ServerListFragment.kt"
+            line="127"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Category (pick or type a new one)&quot;, should use `@string` resource"
+        errorLine1="            android:hint=&quot;Category (pick or type a new one)&quot;>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/add_torrent_dialog.xml"
+            line="45"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Save as default category&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;Save as default category&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/add_torrent_dialog.xml"
+            line="67"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Automatic torrent management&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;Automatic torrent management&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/add_torrent_dialog.xml"
+            line="89"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Save path (optional)&quot;, should use `@string` resource"
+        errorLine1="            android:hint=&quot;Save path (optional)&quot;>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/add_torrent_dialog.xml"
+            line="105"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Add as paused&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;Add as paused&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/add_torrent_dialog.xml"
+            line="127"
+            column="17"/>
     </issue>
 
     <issue
@@ -98,6 +939,369 @@
             file="src/main/res/layout/rename_torrent_dialog.xml"
             line="17"
             column="13"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Search&quot;, should use `@string` resource"
+        errorLine1="        android:title=&quot;Search&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/menu/server_bottombar.xml"
+            line="9"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Category&quot;, should use `@string` resource"
+        errorLine1="        android:title=&quot;Category&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/menu/server_bottombar.xml"
+            line="19"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Tags&quot;, should use `@string` resource"
+        errorLine1="        android:title=&quot;Tags&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/menu/server_bottombar.xml"
+            line="25"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Delete&quot;, should use `@string` resource"
+        errorLine1="        android:title=&quot;Delete&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/menu/server_bottombar.xml"
+            line="31"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Pause&quot;, should use `@string` resource"
+        errorLine1="        android:title=&quot;Pause&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/menu/server_bottombar.xml"
+            line="37"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Resume&quot;, should use `@string` resource"
+        errorLine1="        android:title=&quot;Resume&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/menu/server_bottombar.xml"
+            line="43"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Search torrents&quot;, should use `@string` resource"
+        errorLine1="                        android:hint=&quot;Search torrents&quot;>"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/server_fragment.xml"
+            line="45"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Servers&quot;, should use `@string` resource"
+        errorLine1="                        android:text=&quot;Servers&quot;"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/server_fragment.xml"
+            line="188"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;▾&quot;, should use `@string` resource"
+        errorLine1="                        android:text=&quot;▾&quot;"
+        errorLine2="                        ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/server_fragment.xml"
+            line="197"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Statistics&quot;, should use `@string` resource"
+        errorLine1="                    android:contentDescription=&quot;Statistics&quot;"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/server_fragment.xml"
+            line="208"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Status&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;Status&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/server_fragment.xml"
+            line="221"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Categories&quot;, should use `@string` resource"
+        errorLine1="                    android:text=&quot;Categories&quot;"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/server_fragment.xml"
+            line="255"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Manage categories&quot;, should use `@string` resource"
+        errorLine1="                    android:contentDescription=&quot;Manage categories&quot;"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/server_fragment.xml"
+            line="265"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Tags&quot;, should use `@string` resource"
+        errorLine1="                    android:text=&quot;Tags&quot;"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/server_fragment.xml"
+            line="304"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Manage tags&quot;, should use `@string` resource"
+        errorLine1="                    android:contentDescription=&quot;Manage tags&quot;"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/server_fragment.xml"
+            line="314"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Trackers&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;Trackers&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/server_fragment.xml"
+            line="344"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Clear all&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;Clear all&quot; />"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/server_fragment.xml"
+            line="363"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Alternate speed limits&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;Alternate speed limits&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/server_fragment.xml"
+            line="380"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Settings&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;Settings&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/server_fragment.xml"
+            line="392"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Appearance&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;Appearance&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/settings_fragment.xml"
+            line="47"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Theme&quot;, should use `@string` resource"
+        errorLine1="                    android:text=&quot;Theme&quot;"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/settings_fragment.xml"
+            line="69"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Dynamic colors&quot;, should use `@string` resource"
+        errorLine1="                    android:text=&quot;Dynamic colors&quot;"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/settings_fragment.xml"
+            line="95"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Use colors from your wallpaper&quot;, should use `@string` resource"
+        errorLine1="                    android:text=&quot;Use colors from your wallpaper&quot;"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/settings_fragment.xml"
+            line="105"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Notifications&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;Notifications&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/settings_fragment.xml"
+            line="118"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Status notification&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;Status notification&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/settings_fragment.xml"
+            line="130"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Ongoing notification showing connection state and speeds&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;Ongoing notification showing connection state and speeds&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/settings_fragment.xml"
+            line="140"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Notify when a download completes&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;Notify when a download completes&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/settings_fragment.xml"
+            line="150"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Notify when a force-recheck completes&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;Notify when a force-recheck completes&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/settings_fragment.xml"
+            line="160"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;General&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;General&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/settings_fragment.xml"
+            line="171"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Servers&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;Servers&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/settings_fragment.xml"
+            line="185"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Backup&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;Backup&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/settings_fragment.xml"
+            line="196"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Export configuration&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;Export configuration&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/settings_fragment.xml"
+            line="210"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Import configuration&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;Import configuration&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/settings_fragment.xml"
+            line="222"
+            column="17"/>
     </issue>
 
 </issues>

@@ -25,7 +25,7 @@ internal fun <T> BonsaiScope<T>.Node(node: Node<T>) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
-            Modifier.padding(vertical = 1.dp).padding(start = node.depth * style.toggleIconSize)
+            Modifier.padding(vertical = 1.dp).padding(start = node.depth * style.toggleIconSize),
     ) {
         ToggleIcon(node)
         NodeContent(node)
@@ -49,7 +49,7 @@ private fun <T> BonsaiScope<T>.ToggleIcon(node: Node<T>) {
                     .clickable { expandableManager.toggleExpansion(node) }
                     .size(style.nodeIconSize)
                     .requiredSize(style.toggleIconSize)
-                    .rotate(rotationDegrees)
+                    .rotate(rotationDegrees),
         )
     } else {
         Spacer(Modifier.size(style.nodeIconSize))
@@ -67,7 +67,7 @@ private fun <T> BonsaiScope<T>.NodeContent(node: Node<T>) {
                 }
                 .then(clickableNode(node))
                 .padding(style.nodePadding)
-                .defaultMinSize(minHeight = style.nodeIconSize)
+                .defaultMinSize(minHeight = style.nodeIconSize),
     ) {
         with(node) {
             iconComponent(node)
@@ -86,7 +86,7 @@ private fun <T> BonsaiScope<T>.clickableNode(node: Node<T>) =
         Modifier.combinedClickable(
             onClick = { onClick?.invoke(node) },
             onDoubleClick = { onDoubleClick?.invoke(node) },
-            onLongClick = { onLongClick?.invoke(node) }
+            onLongClick = { onLongClick?.invoke(node) },
         )
     }
 
@@ -115,6 +115,6 @@ internal fun <T> BonsaiScope<T>.DefaultNodeName(node: Node<T>) {
         style = style.nodeNameTextStyle,
         modifier = Modifier.padding(start = style.nodeNameStartPadding),
         maxLines = 2,
-        overflow = TextOverflow.Ellipsis
+        overflow = TextOverflow.Ellipsis,
     )
 }

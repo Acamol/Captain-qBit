@@ -24,7 +24,7 @@ suspend fun QBittorrentClient.getTorrents(
     limit: Int = 0,
     offset: Int = 0,
     tag: String? = null,
-    hashes: List<String> = emptyList()
+    hashes: List<String> = emptyList(),
 ): List<Torrent> {
     return http
         .get("${config.baseUrl}/api/v2/torrents/info") {
@@ -64,7 +64,7 @@ suspend fun QBittorrentClient.getGlobalTransferInfo(): GlobalTransferInfo {
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.getTorrentFiles(
     hash: String,
-    indexes: List<Int> = emptyList()
+    indexes: List<Int> = emptyList(),
 ): List<TorrentFile> {
     return http
         .get("${config.baseUrl}/api/v2/torrents/files") {
@@ -106,7 +106,7 @@ suspend fun QBittorrentClient.getTorrentDownloadLimit(
     return http
         .submitForm(
             "${config.baseUrl}/api/v2/torrents/downloadLimit",
-            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) }
+            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) },
         )
         .bodyOrThrow()
 }
@@ -118,7 +118,7 @@ suspend fun QBittorrentClient.setTorrentDownloadLimit(
     http
         .submitForm(
             "${config.baseUrl}/api/v2/torrents/downloadLimit",
-            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) }
+            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) },
         )
         .orThrow()
 }
@@ -127,7 +127,7 @@ suspend fun QBittorrentClient.setTorrentDownloadLimit(
 suspend fun QBittorrentClient.setTorrentShareLimits(
     hashes: List<String> = QBittorrentClient.allList,
     ratioLimit: Float,
-    seedingTimeLimit: Duration
+    seedingTimeLimit: Duration,
 ) {
     http
         .submitForm(
@@ -137,7 +137,7 @@ suspend fun QBittorrentClient.setTorrentShareLimits(
                     append("hashes", hashes.joinToString("|"))
                     append("ratioLimit", ratioLimit.toString())
                     append("seedingTimeLimit", seedingTimeLimit.inWholeSeconds.toString())
-                }
+                },
         )
         .orThrow()
 }
@@ -149,7 +149,7 @@ suspend fun QBittorrentClient.getTorrentUploadLimit(
     return http
         .submitForm(
             "${config.baseUrl}/api/v2/torrents/uploadLimit",
-            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) }
+            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) },
         )
         .bodyOrThrow()
 }
@@ -157,7 +157,7 @@ suspend fun QBittorrentClient.getTorrentUploadLimit(
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.setTorrentUploadLimit(
     hashes: List<String> = QBittorrentClient.allList,
-    limit: Long
+    limit: Long,
 ) {
     http
         .submitForm(
@@ -166,7 +166,7 @@ suspend fun QBittorrentClient.setTorrentUploadLimit(
                 Parameters.build {
                     append("hashes", hashes.joinToString("|"))
                     append("limit", limit.toString())
-                }
+                },
         )
         .orThrow()
 }

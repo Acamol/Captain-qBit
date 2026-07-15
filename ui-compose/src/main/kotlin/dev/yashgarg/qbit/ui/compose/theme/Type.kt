@@ -25,7 +25,7 @@ val AppTypography =
                 fontFamily = SpaceGrotesk,
                 color = Color.White,
                 fontSize = 14.sp,
-                letterSpacing = 0.3.sp
+                letterSpacing = 0.3.sp,
             ),
     )
 

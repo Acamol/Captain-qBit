@@ -109,6 +109,58 @@
                     android:pathPattern=".*.torrent"
                     android:scheme="content" />
             </intent-filter>
+
+            <!-- Captain qBit encrypted backup files (.cqb). Custom extensions have no registered
+                 MIME type: many file managers hand out opaque MediaStore content:// URIs with no
+                 filename in the path and no explicit type, which Android then resolves to the
+                 generic application/octet-stream. The only way to be offered for these is to match
+                 that generic type, so we do — MainActivity.isBackupUri() then verifies the real
+                 .cqb filename before doing anything, and ignores non-backups. The type-less
+                 pathPattern variants additionally catch file:// URIs that do expose the name. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="*"
+                    android:mimeType="application/octet-stream"
+                    android:scheme="content" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="*"
+                    android:mimeType="application/octet-stream"
+                    android:scheme="file" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="*"
+                    android:pathPattern=".*\\.cqb"
+                    android:scheme="content" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="*"
+                    android:pathPattern=".*\\.cqb"
+                    android:scheme="file" />
+            </intent-filter>
         </activity>
 
         <!-- WorkManager's foreground service needs a type declared on Android 14+. specialUse

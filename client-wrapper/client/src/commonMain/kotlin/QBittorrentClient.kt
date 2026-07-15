@@ -110,13 +110,12 @@ class QBittorrentClient(
 
     internal val config = Config(baseUrl, username, password, syncInterval)
 
-    internal val http: HttpClient =
-        httpClient.config {
-            install(ErrorTransformer)
-            install(AuthHandler) { config = this@QBittorrentClient.config }
-            install(ContentNegotiation) { json(json) }
-            install(HttpCookies) { storage = RawCookiesStorage(AcceptAllCookiesStorage()) }
-        }
+    internal val http: HttpClient = httpClient.config {
+        install(ErrorTransformer)
+        install(AuthHandler) { config = this@QBittorrentClient.config }
+        install(ContentNegotiation) { json(json) }
+        install(HttpCookies) { storage = RawCookiesStorage(AcceptAllCookiesStorage()) }
+    }
     private val syncScope = CoroutineScope(SupervisorJob() + dispatcher + http.coroutineContext)
     private val mainDataSync = MainDataSync(http, config, syncScope)
     private val peerDataSyncMapAtomic = AtomicReference(emptyMap<String, TorrentPeersSync>())
@@ -247,14 +246,14 @@ class QBittorrentClient(
                     }
                     appendUnlessNull(
                         PARAM_URLS,
-                        body.urls.joinToString("|").takeUnless(String::isBlank)
+                        body.urls.joinToString("|").takeUnless(String::isBlank),
                     )
                     appendUnlessNull(PARAM_SAVE_PATH, body.savepath)
                     appendUnlessNull(PARAM_COOKIE, body.cookie)
                     appendUnlessNull(PARAM_CATEGORY, body.category)
                     appendUnlessNull(
                         PARAM_TAGS,
-                        body.tags.joinToString(",").takeUnless(String::isBlank)
+                        body.tags.joinToString(",").takeUnless(String::isBlank),
                     )
                     appendUnlessNull(PARAM_SKIP_CHECKING, body.skipChecking)
                     // qBittorrent 5.x renamed the add "paused" field to "stopped"; send both so
@@ -268,7 +267,7 @@ class QBittorrentClient(
                     appendUnlessNull(PARAM_RATIO_LIMIT, body.ratioLimit)
                     appendUnlessNull(
                         PARAM_SEEDING_TIME_LIMIT,
-                        body.seedingTimeLimit?.inWholeSeconds
+                        body.seedingTimeLimit?.inWholeSeconds,
                     )
                     appendUnlessNull(PARAM_AUTO_TTM, body.autoTMM)
                     appendUnlessNull(PARAM_SEQUENTIAL_DOWNLOAD, body.sequentialDownload)
@@ -288,12 +287,12 @@ class QBittorrentClient(
                             Headers.build {
                                 append(
                                     HttpHeaders.ContentDisposition,
-                                    "filename=${filename.escapeIfNeeded()}"
+                                    "filename=${filename.escapeIfNeeded()}",
                                 )
-                            }
+                            },
                         )
                     }
-                }
+                },
             )
             .orThrow()
     }
@@ -306,7 +305,7 @@ internal suspend fun login(http: HttpClient, config: QBittorrentClient.Config): 
             Parameters.build {
                 append("username", config.username)
                 append("password", config.password)
-            }
+            },
     ) {
         header("Referer", config.baseUrl)
     }

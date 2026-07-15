@@ -33,7 +33,7 @@ enum class SortOption(val label: String) {
 
 enum class SortDirection {
     ASC,
-    DESC
+    DESC,
 }
 
 fun List<Torrent>.sortedWith(option: SortOption, direction: SortDirection): List<Torrent> {

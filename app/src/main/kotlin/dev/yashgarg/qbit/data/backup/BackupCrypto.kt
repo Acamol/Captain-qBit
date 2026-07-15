@@ -35,7 +35,7 @@ object BackupCrypto {
                 init(
                     Cipher.ENCRYPT_MODE,
                     deriveKey(passphrase, salt),
-                    GCMParameterSpec(GCM_TAG_BITS, iv)
+                    GCMParameterSpec(GCM_TAG_BITS, iv),
                 )
             }
         return EncryptedPayload(salt, iv, cipher.doFinal(plaintext))

@@ -2,6 +2,13 @@
   <img src="docs/banner.png" alt="Captain qBit" width="100%" />
 </p>
 
+<p align="center">
+  <a href="https://f-droid.org/packages/dev.acamol.qbit/">
+    <img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
+         alt="Get it on F-Droid" height="80">
+  </a>
+</p>
+
 A modern Android app for managing a [qBittorrent](https://www.qbittorrent.org/) instance remotely
 over its Web API — control your self-hosted server from your phone. Written in Kotlin.
 

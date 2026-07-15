@@ -25,4 +25,7 @@ data class ServerPreferences(
     // AppCompatDelegate night-mode constant. Defaults to MODE_NIGHT_YES (2) to preserve the
     // app's original dark-only behaviour for existing installs.
     val themeMode: Int = 2,
+    // Highest versionCode whose "What's New" has been shown. 0 = never recorded (fresh install),
+    // so the dialog is skipped on first run and only appears after an upgrade.
+    val lastSeenVersionCode: Int = 0,
 )

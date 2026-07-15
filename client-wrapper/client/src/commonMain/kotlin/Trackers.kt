@@ -28,7 +28,7 @@ suspend fun QBittorrentClient.addTrackers(hash: String, urls: List<String>) {
                 Parameters.build {
                     append("hash", hash)
                     append("urls", urls.joinToString("\n"))
-                }
+                },
         )
         .orThrow()
 }

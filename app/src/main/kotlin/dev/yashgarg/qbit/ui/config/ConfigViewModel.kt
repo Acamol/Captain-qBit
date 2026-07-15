@@ -35,6 +35,8 @@ constructor(
     // -1 = adding a new server; >= 0 = editing that server id.
     private val serverId: Int = savedStateHandle.get<Int>("serverId") ?: -1
 
+    val editing: Boolean = serverId >= 0
+
     private val hostValidator = HostValidator()
     private val portValidator = PortValidator()
     private val textValidator = StringValidator()
@@ -56,8 +58,13 @@ constructor(
     private val validationEventChannel = Channel<ValidationEvent>()
     val validationEvents = validationEventChannel.receiveAsFlow()
 
+    enum class FormAction {
+        TEST,
+        SAVE,
+    }
+
     sealed class ValidationEvent {
-        object Success : ValidationEvent()
+        data class Success(val action: FormAction) : ValidationEvent()
     }
 
     fun validateHostUrl(url: String) {
@@ -176,6 +183,7 @@ constructor(
         useBasicAuth: Boolean,
         basicAuthUsername: String,
         basicAuthPassword: String,
+        action: FormAction,
     ) {
         val serverNameValid = textValidator.isValid(serverName)
         val serverHostValid = hostValidator.isValid(serverHost)
@@ -219,7 +227,7 @@ constructor(
                 )
             }
         } else {
-            viewModelScope.launch { validationEventChannel.send(ValidationEvent.Success) }
+            viewModelScope.launch { validationEventChannel.send(ValidationEvent.Success(action)) }
         }
     }
 
@@ -279,7 +287,7 @@ constructor(
                     username,
                     password,
                     httpClient = ClientManager.httpClient(basicAuth),
-                    dispatcher = Dispatchers.Default
+                    dispatcher = Dispatchers.Default,
                 )
             client.getVersion()
         }

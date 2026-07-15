@@ -1,0 +1,9 @@
+- Rebuilt entirely in Jetpack Compose for a smoother, modern UI
+- Swipe a torrent to reveal quick Pause/Resume and Delete actions
+- New "What's New" dialog after each update
+- Peers: per-peer speeds and connection details
+- Selective, mergeable config backup from first-run
+- Add server: separate Test/Save buttons; basic auth prefills credentials
+- Torrent details: long-press a field to copy it
+- Action-bar tooltips and haptics
+- Friendlier errors; category/tag/filter polish

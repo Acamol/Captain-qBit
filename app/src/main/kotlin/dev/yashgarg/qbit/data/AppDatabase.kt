@@ -12,7 +12,7 @@ import dev.yashgarg.qbit.data.models.ServerConfig
     entities = [ServerConfig::class],
     version = 4,
     autoMigrations = [AutoMigration(from = 2, to = 3)],
-    exportSchema = true
+    exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun configDao(): ConfigDao
