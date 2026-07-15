@@ -91,6 +91,8 @@
     <string name="host_or_ip">Host or IP</string>
     <string name="server_name">Server name</string>
     <string name="save_and_test_cfg">Save and test config</string>
+    <string name="test_cfg">Test connection</string>
+    <string name="save_cfg">Save</string>
 
     <!-- Notifications -->
     <string name="status_channel_id">qBit-Channel-2</string>

@@ -25,6 +25,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -99,31 +100,41 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
         }
     }
 
-    // validateForm passing → test the connection, save, and route to the list.
+    // validateForm passing → either test the connection or save, depending on which button was
+    // pressed.
     LaunchedEffect(Unit) {
-        viewModel.validationEvents.collect {
-            checking = true
-            snackbarHostState.showSnackbar("Checking connection, please wait…")
+        viewModel.validationEvents.collect { event ->
             val type = connectionType.lowercase()
-            val portPart = if (port.isNotEmpty()) ":$port" else ""
-            val pathPart = if (path.isNotEmpty()) "/$path" else ""
             val basicUser = if (useBasicAuth) basicAuthUser.ifEmpty { null } else null
             val basicPass = if (useBasicAuth) basicAuthPass.ifEmpty { null } else null
-            viewModel
-                .testConfig(
-                    "$type://$host$portPart$pathPart",
-                    username,
-                    password,
-                    basicUser,
-                    basicPass,
-                )
-                .onOk { version ->
-                    Toast.makeText(
-                            context,
-                            "Success! Client version is $version",
-                            Toast.LENGTH_LONG,
+            when ((event as ConfigViewModel.ValidationEvent.Success).action) {
+                ConfigViewModel.FormAction.TEST -> {
+                    checking = true
+                    snackbarHostState.showSnackbar("Checking connection, please wait…")
+                    val portPart = if (port.isNotEmpty()) ":$port" else ""
+                    val pathPart = if (path.isNotEmpty()) "/$path" else ""
+                    viewModel
+                        .testConfig(
+                            "$type://$host$portPart$pathPart",
+                            username,
+                            password,
+                            basicUser,
+                            basicPass,
                         )
-                        .show()
+                        .onOk { version ->
+                            Toast.makeText(
+                                    context,
+                                    "Success! Client version is $version",
+                                    Toast.LENGTH_LONG,
+                                )
+                                .show()
+                        }
+                        .onErr { error ->
+                            snackbarHostState.showSnackbar("Failed! ${error.message ?: error}")
+                        }
+                    checking = false
+                }
+                ConfigViewModel.FormAction.SAVE -> {
                     viewModel.insert(
                         name,
                         host,
@@ -137,10 +148,7 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                     )
                     appNavigator.navigate(NavCommand.OpenServerAsRoot)
                 }
-                .onErr { error ->
-                    snackbarHostState.showSnackbar("Failed! ${error.message ?: error}")
-                }
-            checking = false
+            }
         }
     }
 
@@ -289,6 +297,18 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                     onCheckedChange = {
                         useBasicAuth = it
                         viewModel.toggleBasicAuth(it)
+                        // Prefill basic-auth credentials from the client ones when turning it on,
+                        // without clobbering anything the user already typed. They can still edit.
+                        if (it) {
+                            if (basicAuthUser.isEmpty()) {
+                                basicAuthUser = username
+                                viewModel.validateBasicAuthUsername(username)
+                            }
+                            if (basicAuthPass.isEmpty()) {
+                                basicAuthPass = password
+                                viewModel.validateBasicAuthPassword(password)
+                            }
+                        }
                     },
                     enabled = !checking,
                 )
@@ -323,27 +343,53 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                 )
             }
 
-            Button(
-                onClick = {
-                    viewModel.validateForm(
-                        name,
-                        host,
-                        port,
-                        connectionType,
-                        username,
-                        password,
-                        useBasicAuth,
-                        basicAuthUser,
-                        basicAuthPass,
-                    )
-                },
-                enabled = !checking,
+            Row(
                 modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                if (checking) {
-                    CircularProgressIndicator(Modifier.size(20.dp))
-                } else {
-                    Text(stringResource(CommonR.string.save_and_test_cfg))
+                OutlinedButton(
+                    onClick = {
+                        viewModel.validateForm(
+                            name,
+                            host,
+                            port,
+                            connectionType,
+                            username,
+                            password,
+                            useBasicAuth,
+                            basicAuthUser,
+                            basicAuthPass,
+                            ConfigViewModel.FormAction.TEST,
+                        )
+                    },
+                    enabled = !checking,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    if (checking) {
+                        CircularProgressIndicator(Modifier.size(20.dp))
+                    } else {
+                        Text(stringResource(CommonR.string.test_cfg))
+                    }
+                }
+                Button(
+                    onClick = {
+                        viewModel.validateForm(
+                            name,
+                            host,
+                            port,
+                            connectionType,
+                            username,
+                            password,
+                            useBasicAuth,
+                            basicAuthUser,
+                            basicAuthPass,
+                            ConfigViewModel.FormAction.SAVE,
+                        )
+                    },
+                    enabled = !checking,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(stringResource(CommonR.string.save_cfg))
                 }
             }
         }

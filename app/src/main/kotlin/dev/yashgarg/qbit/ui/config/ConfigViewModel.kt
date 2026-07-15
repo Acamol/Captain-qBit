@@ -58,8 +58,13 @@ constructor(
     private val validationEventChannel = Channel<ValidationEvent>()
     val validationEvents = validationEventChannel.receiveAsFlow()
 
+    enum class FormAction {
+        TEST,
+        SAVE,
+    }
+
     sealed class ValidationEvent {
-        object Success : ValidationEvent()
+        data class Success(val action: FormAction) : ValidationEvent()
     }
 
     fun validateHostUrl(url: String) {
@@ -178,6 +183,7 @@ constructor(
         useBasicAuth: Boolean,
         basicAuthUsername: String,
         basicAuthPassword: String,
+        action: FormAction,
     ) {
         val serverNameValid = textValidator.isValid(serverName)
         val serverHostValid = hostValidator.isValid(serverHost)
@@ -221,7 +227,7 @@ constructor(
                 )
             }
         } else {
-            viewModelScope.launch { validationEventChannel.send(ValidationEvent.Success) }
+            viewModelScope.launch { validationEventChannel.send(ValidationEvent.Success(action)) }
         }
     }
 
