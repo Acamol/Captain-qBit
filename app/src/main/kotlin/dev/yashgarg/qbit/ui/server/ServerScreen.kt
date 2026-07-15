@@ -112,6 +112,17 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
     val linkValidator = remember { LinkValidator() }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val selected = remember { mutableStateListOf<String>() }
+    // Switching any filter (drawer, active-filter chips, or "Clear all") drops the current
+    // selection, so bulk actions never apply to torrents scrolled out of the new filter.
+    LaunchedEffect(
+        state.selectedFilter,
+        state.selectedCategory,
+        state.selectedTracker,
+        state.selectedTags,
+        state.filterUntagged,
+    ) {
+        selected.clear()
+    }
     val collapsedPaths = remember { mutableStateListOf<String>() }
     var searchOpen by remember { mutableStateOf(false) }
     var deleteTargets by remember { mutableStateOf<List<String>?>(null) }
