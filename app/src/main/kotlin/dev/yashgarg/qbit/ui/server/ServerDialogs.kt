@@ -128,10 +128,15 @@ fun ServerDialogHost(
     when (dialog) {
         is ServerDialog.BulkCategory -> {
             val options = listOf("") + state.availableCategories
+            // Preselect the current category. With multiple torrents, only preselect when they all
+            // share one category; a mixed selection stays unset so we don't silently overwrite.
+            val currentCategories =
+                dialog.hashes.mapNotNull { state.data?.torrents?.get(it)?.category }.toSet()
+            val selectedIndex = currentCategories.singleOrNull()?.let { options.indexOf(it) } ?: -1
             SingleChoiceDialog(
                 title = "Set category",
                 labels = options.map { it.ifBlank { "None" } },
-                selectedIndex = -1,
+                selectedIndex = selectedIndex,
                 onSelect = { i ->
                     viewModel.bulkSetCategory(dialog.hashes, options[i])
                     dismiss()
