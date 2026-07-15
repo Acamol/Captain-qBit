@@ -61,6 +61,7 @@ over its Web API — control your self-hosted server from your phone. Written in
 
 ## Roadmap
 - **More in-app preferences** — configurable behaviours such as the refresh/polling interval
+- **RSS support** — browse RSS feeds, view articles, and manage auto-download rules
 
 ## Support
 
