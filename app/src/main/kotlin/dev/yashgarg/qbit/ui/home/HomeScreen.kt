@@ -10,9 +10,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -42,6 +43,7 @@ import dev.yashgarg.qbit.ui.navigation.NavCommand
  * content when there's no server (MainActivity routes to the list when one exists). Also hosts the
  * restore-from-backup flow (SAF pick -> passphrase -> import), reusing the shared [BackupDialogs].
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun HomeScreen(
     appNavigator: AppNavigator,
@@ -119,7 +121,7 @@ fun HomeScreen(
                 }
             } else {
                 // null (unresolved) or EXISTS (about to be routed to the list): keep spinning.
-                CircularProgressIndicator()
+                LoadingIndicator()
             }
         }
     }

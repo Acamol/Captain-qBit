@@ -30,13 +30,14 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
@@ -53,6 +54,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
@@ -71,7 +73,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.common.R as CommonR
-import dev.yashgarg.qbit.ui.dialogs.AddTorrentDialog
+import dev.yashgarg.qbit.ui.dialogs.AddTorrentScreen
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.utils.TorrentHashUtil
@@ -92,10 +94,10 @@ import kotlinx.coroutines.withTimeoutOrNull
 /**
  * The main torrent-list screen (native Compose port of `ServerFragment`). A [ModalNavigationDrawer]
  * (filter sidebar) wraps a [Scaffold] with a [BottomAppBar] (menu / search / sort, or bulk-action
- * icons while selecting) and an add-torrent FAB. Bulk pickers and management dialogs are reused
- * from [ServerActionDialogs]; add/import still uses the [AddTorrentDialog] DialogFragment.
+ * icons while selecting) and an add-torrent FAB. Bulk pickers and management dialogs are driven by
+ * [ServerDialogHost]; add/import uses the [AddTorrentScreen] full-screen Compose dialog.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltViewModel()) {
     val context = LocalContext.current
@@ -107,7 +109,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
     val torrents by viewModel.sortedTorrents.collectAsStateWithLifecycle()
     val categoryColors by viewModel.categoryColors.collectAsStateWithLifecycle()
 
-    val actionDialogs = remember { ServerActionDialogs(context, viewModel, appNavigator) }
+    var serverDialog by remember { mutableStateOf<ServerDialog?>(null) }
     val linkValidator = remember { LinkValidator() }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val selected = remember { mutableStateListOf<String>() }
@@ -119,18 +121,16 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
     var openHash by remember { mutableStateOf<String?>(null) }
     val searchFocus = remember { FocusRequester() }
 
+    // Add-torrent screen state (full-screen Compose dialog). Prefills carry an incoming link/file.
+    var showAddTorrent by rememberSaveable { mutableStateOf(false) }
+    var addPrefillUrl by rememberSaveable { mutableStateOf<String?>(null) }
+    var addPrefillFileUri by rememberSaveable { mutableStateOf<String?>(null) }
+
     fun openTorrentDialog(prefillUrl: String? = null, prefillFileUri: String? = null) {
-        if (activity.supportFragmentManager.findFragmentByTag(AddTorrentDialog.TAG) != null) return
-        val prefs = viewModel.addTorrentPrefs.value
-        AddTorrentDialog.newInstance(
-                availableCategories = viewModel.uiState.value.availableCategories,
-                defaultAutoTmm = prefs.addTorrentAutoTmm,
-                defaultPaused = prefs.addTorrentPaused,
-                defaultCategory = prefs.addTorrentCategory,
-                prefillUrl = prefillUrl,
-                prefillFileUri = prefillFileUri,
-            )
-            .show(activity.supportFragmentManager, AddTorrentDialog.TAG)
+        if (showAddTorrent) return
+        addPrefillUrl = prefillUrl
+        addPrefillFileUri = prefillFileUri
+        showAddTorrent = true
     }
 
     fun handleAddIntent(uri: String?) {
@@ -210,22 +210,22 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
             ServerDrawer(
                 state = state,
                 collapsedPaths = collapsedPaths,
-                onServerPicker = { actionDialogs.showServerPicker() },
-                onStats = { actionDialogs.showStatisticsDialog() },
+                onServerPicker = { serverDialog = ServerDialog.ServerPicker },
+                onStats = { serverDialog = ServerDialog.Statistics },
                 onFilter = viewModel::setFilter,
                 onCategory = viewModel::setCategory,
-                onCategoryLongPress = { actionDialogs.showCategoryLongPressDialog(it) },
+                onCategoryLongPress = { serverDialog = ServerDialog.CategoryLongPress(it) },
                 onManageCategories = {
                     scope.launch { drawerState.close() }
-                    actionDialogs.showManageCategoriesDialog()
+                    serverDialog = ServerDialog.ManageCategories
                 },
                 onTracker = viewModel::setTracker,
                 onFilterUntagged = viewModel::setFilterUntagged,
                 onToggleTag = viewModel::toggleTag,
-                onTagLongPress = { actionDialogs.showTagLongPressDialog(it) },
+                onTagLongPress = { serverDialog = ServerDialog.TagLongPress(it) },
                 onManageTags = {
                     scope.launch { drawerState.close() }
-                    actionDialogs.showManageTagsDialog()
+                    serverDialog = ServerDialog.ManageTags
                 },
                 onClearFilters = {
                     viewModel.clearFilters()
@@ -261,13 +261,15 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                             }
                             IconButton(
                                 onClick = {
-                                    actionDialogs.showBulkCategoryPicker(selected.toList())
+                                    serverDialog = ServerDialog.BulkCategory(selected.toList())
                                 }
                             ) {
                                 Icon(Icons.Filled.Category, contentDescription = "Category")
                             }
                             IconButton(
-                                onClick = { actionDialogs.showBulkTagsPicker(selected.toList()) }
+                                onClick = {
+                                    serverDialog = ServerDialog.BulkTags(selected.toList())
+                                }
                             ) {
                                 Icon(Icons.AutoMirrored.Filled.Label, contentDescription = "Tags")
                             }
@@ -281,7 +283,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                             val sortActive =
                                 state.sortOption != SortOption.NAME ||
                                     state.sortDirection != SortDirection.ASC
-                            IconButton(onClick = { actionDialogs.showSortPicker() }) {
+                            IconButton(onClick = { serverDialog = ServerDialog.SortPicker }) {
                                 Icon(
                                     Icons.Filled.Sort,
                                     contentDescription = stringResource(CommonR.string.sort),
@@ -369,7 +371,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                             }
                         }
                         state.dataLoading || torrents == null ->
-                            CircularProgressIndicator(Modifier.align(Alignment.Center))
+                            LoadingIndicator(Modifier.align(Alignment.Center))
                         torrents.isNullOrEmpty() ->
                             Column(
                                 modifier = Modifier.align(Alignment.Center).padding(20.dp),
@@ -465,6 +467,31 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
             },
             dismissButton = {
                 TextButton(onClick = { deleteTargets = null }) { Text("Cancel") }
+            },
+        )
+    }
+
+    ServerDialogHost(
+        dialog = serverDialog,
+        onDialogChange = { serverDialog = it },
+        viewModel = viewModel,
+        appNavigator = appNavigator,
+    )
+
+    if (showAddTorrent) {
+        val prefs = viewModel.addTorrentPrefs.value
+        AddTorrentScreen(
+            viewModel = viewModel,
+            availableCategories = state.availableCategories,
+            defaultAutoTmm = prefs.addTorrentAutoTmm,
+            defaultPaused = prefs.addTorrentPaused,
+            defaultCategory = prefs.addTorrentCategory,
+            prefillUrl = addPrefillUrl,
+            prefillFileUri = addPrefillFileUri,
+            onDismiss = {
+                showAddTorrent = false
+                addPrefillUrl = null
+                addPrefillFileUri = null
             },
         )
     }

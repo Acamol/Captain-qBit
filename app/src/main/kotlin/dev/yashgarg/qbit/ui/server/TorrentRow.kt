@@ -26,8 +26,9 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -57,7 +58,7 @@ import qbittorrent.models.Torrent
  * drives the peers label, its colour, whether speed/eta show, and the progress-bar colour, matching
  * the qBittorrent conventions the old adapter used.
  */
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun TorrentRow(
     torrent: Torrent,
@@ -142,7 +143,7 @@ fun TorrentRow(
                     }
                 }
 
-                LinearProgressIndicator(
+                LinearWavyProgressIndicator(
                     progress = { torrent.progress.toFloat() },
                     modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
                     color = visuals.progressColor,

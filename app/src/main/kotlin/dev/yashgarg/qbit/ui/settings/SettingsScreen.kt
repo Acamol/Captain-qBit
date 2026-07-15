@@ -45,7 +45,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.google.android.material.color.DynamicColors
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.ui.backup.BackupDialogs
 import dev.yashgarg.qbit.ui.backup.BackupViewModel
@@ -194,7 +193,7 @@ fun SettingsScreen(
                 subtitle = themeLabel(themeMode),
                 onClick = { showThemeDialog = true },
             )
-            if (DynamicColors.isDynamicColorAvailable()) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                 SwitchRow(
                     "Dynamic colors",
                     dynamicColors,

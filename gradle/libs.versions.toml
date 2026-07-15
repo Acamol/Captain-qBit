@@ -55,7 +55,7 @@ kotlin-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-te
 
 compose-activity = "androidx.activity:activity-compose:1.13.0"
 compose-foundation = "androidx.compose.foundation:foundation:1.11.4"
-compose-material3 = "androidx.compose.material3:material3:1.4.0"
+compose-material3 = "androidx.compose.material3:material3:1.5.0-alpha23"
 compose-material-icons = "androidx.compose.material:material-icons-extended:1.7.8"
 compose-navigation = { module = "androidx.navigation:navigation-compose", version.ref = "axNavigation" }
 compose-hilt-navigation = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "axHilt" }
