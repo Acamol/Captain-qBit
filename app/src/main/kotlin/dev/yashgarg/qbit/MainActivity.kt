@@ -61,7 +61,11 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            QbitComposeTheme {
+            val dynamicColors by
+                serverPrefsStore.data
+                    .map { it.dynamicColors }
+                    .collectAsStateWithLifecycle(initialValue = false)
+            QbitComposeTheme(dynamicColors = dynamicColors) {
                 QbitNavHost(appNavigator = appNavigator, onExitDoubleBack = ::onExitDoubleBack)
 
                 val whatsNew by whatsNewViewModel.uiState.collectAsStateWithLifecycle()
@@ -79,24 +83,19 @@ class MainActivity : AppCompatActivity() {
             checkPermissions(applicationContext)
         }
 
-        // Apply theme/dynamic colors from the persisted prefs. Driving this off the stored value
-        // (rather than a one-shot import event) is what makes a restored theme take effect: the
-        // import can navigate away and tear down a screen collector before an event is seen, but
-        // this observer lives on the activity and survives that.
+        // Apply the persisted theme mode (Light / Dark / Follow system). Driving this off the
+        // stored value (rather than a one-shot import event) is what makes a restored theme take
+        // effect: the import can navigate away and tear down a screen collector before an event is
+        // seen, but this observer lives on the activity and survives that. Dynamic colors are read
+        // reactively by the Compose theme (see setContent), so no activity recreate is needed.
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 serverPrefsStore.data
-                    .map { it.themeMode to it.dynamicColors }
+                    .map { it.themeMode }
                     .distinctUntilChanged()
-                    .collect { (themeMode, dynamicColors) ->
-                        var recreated = false
+                    .collect { themeMode ->
                         if (themeMode != AppCompatDelegate.getDefaultNightMode()) {
                             AppCompatDelegate.setDefaultNightMode(themeMode)
-                            recreated = true
-                        }
-                        if (QbitApplication.dynamicColorsEnabled != dynamicColors) {
-                            QbitApplication.dynamicColorsEnabled = dynamicColors
-                            if (!recreated) recreate()
                         }
                     }
             }
