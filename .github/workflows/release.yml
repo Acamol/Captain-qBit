@@ -65,6 +65,14 @@ jobs:
             echo "::error::Changelog $changelog not found for versionCode $version_code"
             exit 1
           fi
+          # F-Droid truncates the "What's New" text at 500 characters, so a longer
+          # changelog shows cut off for every user. Fail the release before publishing.
+          max_chars=500
+          char_count="$(wc -m < "$changelog" | tr -d '[:space:]')"
+          if [ "$char_count" -gt "$max_chars" ]; then
+            echo "::error::Changelog $changelog is $char_count characters; F-Droid truncates the \"What's New\" text at $max_chars. Trim it."
+            exit 1
+          fi
           {
             echo 'body<<__NOTES_EOF__'
             echo "Captain qBit ${version}"
