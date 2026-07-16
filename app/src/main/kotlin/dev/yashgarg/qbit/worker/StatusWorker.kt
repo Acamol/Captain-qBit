@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationCompat.Action
 import androidx.datastore.core.DataStore
 import androidx.hilt.work.HiltWorker
@@ -21,6 +22,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import dev.yashgarg.qbit.MainActivity
 import dev.yashgarg.qbit.R
+import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.models.ServerPreferences
 import dev.yashgarg.qbit.notifications.AppNotificationManager
@@ -42,9 +44,15 @@ constructor(
     private val prefsStore: DataStore<ServerPreferences>,
 ) : CoroutineWorker(appContext, workerParams) {
 
-    // Lets WorkManager start this as an expedited foreground service right away.
+    // Lets WorkManager start this as an expedited foreground service right away. Pick the channel
+    // up front from the user's prefs so an events-only user never even briefly sees the louder
+    // status notification.
     override suspend fun getForegroundInfo(): ForegroundInfo =
-        createForegroundInfo("Connecting…", "")
+        if (prefsStore.data.first().statusNotification) {
+            createForegroundInfo("Connecting…", "")
+        } else {
+            createForegroundInfo("Captain qBit", "Torrent alerts are on", minimal = true)
+        }
 
     override suspend fun doWork(): Result {
         // Promote to a foreground service immediately, while the app is still likely in the
@@ -60,16 +68,6 @@ constructor(
     // alerts (completed / checked). The user can toggle each independently in Settings; the service
     // keeps running while any of them is enabled, and stops itself once all are off.
     private suspend fun getStatus() {
-        // Baseline of the previous poll, keyed by hash, for the checked-transition alert. Null
-        // until
-        // the first successful fetch so we never alert for the pre-existing state. (Completion
-        // alerts
-        // don't use this — they compare against a persisted completion_on watermark instead, so
-        // they
-        // survive the worker process being killed and restarted.)
-        var previous: Map<String, Torrent>? = null
-        var lastServerId: Int? = null
-
         while (true) {
             val prefs = prefsStore.data.first()
             val eventsOn = prefs.notifyOnComplete || prefs.notifyOnChecked
@@ -81,12 +79,6 @@ constructor(
             if (client == null) {
                 delay(REFRESH_INTERVAL_MS)
                 continue
-            }
-            // Drop the recheck baseline when the active server changes so we never compare torrents
-            // across servers.
-            if (prefs.activeServerId != lastServerId) {
-                previous = null
-                lastServerId = prefs.activeServerId
             }
 
             try {
@@ -100,21 +92,21 @@ constructor(
                     )
                 } else {
                     // Events-only: Android still requires an ongoing notification for the service,
-                    // so show a low-key one instead of the speed readout.
+                    // so show a minimal, min-importance one (no sound/status-bar icon) instead of
+                    // the speed readout.
                     setForeground(
-                        createForegroundInfo("Captain qBit", "Watching for torrent events")
+                        createForegroundInfo(
+                            "Captain qBit",
+                            "Torrent alerts are on",
+                            minimal = true,
+                        )
                     )
                 }
 
                 if (eventsOn) {
                     val torrents = client.getTorrents()
                     if (prefs.notifyOnComplete) notifyCompletions(torrents, prefs)
-                    if (prefs.notifyOnChecked) {
-                        notifyRechecks(previous, torrents.associateBy(Torrent::hash))
-                    }
-                    previous = torrents.associateBy(Torrent::hash)
-                } else {
-                    previous = null
+                    if (prefs.notifyOnChecked) notifyRechecks(torrents, prefs)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -158,13 +150,29 @@ constructor(
         }
     }
 
-    private fun notifyRechecks(previous: Map<String, Torrent>?, current: Map<String, Torrent>) {
-        // First poll (or right after events were toggled on): just establish the baseline.
-        if (previous == null) return
-        current.values.forEach { torrent ->
-            val before = previous[torrent.hash] ?: return@forEach
-            if (before.state.isChecking() && !torrent.state.isChecking()) {
-                notifyEvent("checked:${torrent.hash}".hashCode(), "Check complete", torrent.name)
+    /**
+     * Fire a "check complete" alert for any torrent that was being checked as of the last poll but
+     * no longer is. The set of currently-checking hashes is persisted per server (like the
+     * completion watermark), so this survives the worker restarting and never needs a live
+     * in-memory baseline. A torrent already done when we first watch is never in the set, so it
+     * doesn't alert; one caught mid-check is recorded and alerts once it finishes.
+     */
+    private suspend fun notifyRechecks(torrents: List<Torrent>, prefs: ServerPreferences) {
+        val serverId = prefs.activeServerId
+        val byHash = torrents.associateBy(Torrent::hash)
+        val nowChecking = torrents.filter { it.state.isChecking() }.map(Torrent::hash).toSet()
+        val wasChecking = prefs.notifCheckingSeen[serverId] ?: emptySet()
+
+        wasChecking.forEach { hash ->
+            if (hash !in nowChecking) {
+                byHash[hash]?.let {
+                    notifyEvent("checked:$hash".hashCode(), "Check complete", it.name)
+                }
+            }
+        }
+        if (nowChecking != wasChecking) {
+            prefsStore.updateData {
+                it.copy(notifCheckingSeen = it.notifCheckingSeen + (serverId to nowChecking))
             }
         }
     }
@@ -192,7 +200,11 @@ constructor(
             this == Torrent.State.CHECKING_DL ||
             this == Torrent.State.CHECKING_RESUME_DATA
 
-    private fun createForegroundInfo(title: String, text: String): ForegroundInfo {
+    private fun createForegroundInfo(
+        title: String,
+        text: String,
+        minimal: Boolean = false,
+    ): ForegroundInfo {
         val closeIntent = WorkManager.getInstance(applicationContext).createCancelPendingIntent(id)
         val intent =
             Intent(applicationContext, MainActivity::class.java).apply {
@@ -200,15 +212,23 @@ constructor(
             }
         val pendingIntent =
             PendingIntent.getActivity(applicationContext, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+        val channelId =
+            applicationContext.getString(
+                if (minimal) CommonR.string.monitor_channel_id else CommonR.string.status_channel_id
+            )
         val notification =
             AppNotificationManager.createNotification(
                 applicationContext,
                 title,
                 text,
                 R.drawable.ic_stat_qbit,
-                true,
-                listOf(Action(null, "Close", closeIntent)),
-                pendingIntent,
+                persistent = true,
+                actions = listOf(Action(null, "Close", closeIntent)),
+                contentIntent = pendingIntent,
+                channelId = channelId,
+                priority =
+                    if (minimal) NotificationCompat.PRIORITY_MIN
+                    else NotificationCompat.PRIORITY_LOW,
             )
         // Android 10+ requires declaring a foreground service type for setForeground(). From
         // Android 14 we use specialUse: this monitor runs as long as the user keeps it enabled,

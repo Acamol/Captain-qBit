@@ -99,6 +99,8 @@
     <string name="status_updates">Status Updates</string>
     <string name="events_channel_id" translatable="false">qBit-Events</string>
     <string name="events_channel_name">Torrent events</string>
+    <string name="monitor_channel_id" translatable="false">qBit-Monitor</string>
+    <string name="monitor_channel_name">Background monitor</string>
 
     <!-- Dialogs -->
     <string name="confirm_delete_torrents">Are you sure you want to delete the torrent(s)?</string>
