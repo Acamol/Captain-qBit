@@ -1,48 +1,179 @@
 package dev.yashgarg.qbit.ui.torrent.tabs
 
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.data.models.TrackerStatus
-import dev.yashgarg.qbit.ui.compose.Center
 import dev.yashgarg.qbit.ui.torrent.TorrentDetailsState
 
+// qBittorrent lists the DHT/PeX/LSD pseudo-sources as trackers whose URL is bracketed like
+// "** [DHT] **"; those aren't real URLs and can't be edited or removed.
+private fun String.isRealTracker() = !startsWith("**")
+
 @Composable
-fun TrackersTab(state: TorrentDetailsState, modifier: Modifier = Modifier) {
+fun TrackersTab(
+    state: TorrentDetailsState,
+    onAddTrackers: (List<String>) -> Unit,
+    onEditTracker: (originalUrl: String, newUrl: String) -> Unit,
+    onRemoveTracker: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val trackers = state.trackers
-    if (trackers.isEmpty()) {
-        Center(modifier.fillMaxSize()) { Text("No trackers") }
-        return
-    }
 
     val green = colorResource(R.color.green)
     val yellow = colorResource(R.color.yellow)
     val red = colorResource(R.color.red)
 
+    var dialog by remember { mutableStateOf<TrackerDialog?>(null) }
+
     LazyColumn(modifier.fillMaxSize()) {
-        itemsIndexed(trackers) { _, tracker ->
+        item {
+            TextButton(
+                onClick = { dialog = TrackerDialog.Add },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = null)
+                Text("Add tracker", modifier = Modifier.padding(start = 8.dp))
+            }
+        }
+
+        if (trackers.isEmpty()) {
+            item { Text("No trackers", modifier = Modifier.fillMaxWidth().padding(16.dp)) }
+        }
+
+        items(trackers, key = { it.url }) { tracker ->
             val color: Color =
                 when (TrackerStatus.statusOf(tracker.status)) {
                     TrackerStatus.CONTACTED_WORKING -> green
                     TrackerStatus.UPDATING -> yellow
                     else -> red
                 }
-            Text(
-                text = tracker.url,
-                color = color,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(start = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = tracker.url,
+                    color = color,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f).padding(vertical = 16.dp),
+                )
+                if (tracker.url.isRealTracker()) {
+                    IconButton(onClick = { dialog = TrackerDialog.Edit(tracker.url) }) {
+                        Icon(Icons.Filled.Edit, contentDescription = "Edit tracker")
+                    }
+                    IconButton(onClick = { dialog = TrackerDialog.Remove(tracker.url) }) {
+                        Icon(Icons.Filled.Delete, contentDescription = "Remove tracker")
+                    }
+                }
+            }
         }
     }
+
+    when (val current = dialog) {
+        TrackerDialog.Add ->
+            TrackerInputDialog(
+                title = "Add trackers",
+                initial = "",
+                // One tracker URL per line, matching the qBittorrent desktop dialog.
+                supportingText = "One URL per line",
+                onConfirm = { text ->
+                    val urls = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
+                    if (urls.isNotEmpty()) onAddTrackers(urls)
+                    dialog = null
+                },
+                onDismiss = { dialog = null },
+            )
+        is TrackerDialog.Edit ->
+            TrackerInputDialog(
+                title = "Edit tracker",
+                initial = current.url,
+                onConfirm = { newUrl ->
+                    val trimmed = newUrl.trim()
+                    if (trimmed.isNotEmpty() && trimmed != current.url) {
+                        onEditTracker(current.url, trimmed)
+                    }
+                    dialog = null
+                },
+                onDismiss = { dialog = null },
+            )
+        is TrackerDialog.Remove ->
+            AlertDialog(
+                onDismissRequest = { dialog = null },
+                title = { Text("Remove tracker?") },
+                text = { Text(current.url) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onRemoveTracker(current.url)
+                            dialog = null
+                        }
+                    ) {
+                        Text("Remove")
+                    }
+                },
+                dismissButton = { TextButton(onClick = { dialog = null }) { Text("Cancel") } },
+            )
+        null -> Unit
+    }
+}
+
+private sealed interface TrackerDialog {
+    data object Add : TrackerDialog
+
+    data class Edit(val url: String) : TrackerDialog
+
+    data class Remove(val url: String) : TrackerDialog
+}
+
+@Composable
+private fun TrackerInputDialog(
+    title: String,
+    initial: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+    supportingText: String? = null,
+) {
+    var value by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            OutlinedTextField(
+                value = value,
+                onValueChange = { value = it },
+                supportingText = supportingText?.let { { Text(it) } },
+            )
+        },
+        confirmButton = { TextButton(onClick = { onConfirm(value) }) { Text("OK") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }

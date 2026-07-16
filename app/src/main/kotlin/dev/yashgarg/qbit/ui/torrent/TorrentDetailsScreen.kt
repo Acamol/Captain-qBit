@@ -17,6 +17,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Label
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Category
@@ -25,9 +27,12 @@ import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.FindInPage
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.LowPriority
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.VerticalAlignBottom
+import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
@@ -56,6 +61,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -182,6 +188,15 @@ fun TorrentDetailsScreen(
                                 leadingIcon = { Icon(Icons.Filled.DriveFileRenameOutline, null) },
                                 onClick = { act { dialog = DetailDialog.Rename } },
                             )
+                            // Queue-priority moves only do anything when the server has torrent
+                            // queueing enabled; qBittorrent reports priority as -1 otherwise.
+                            if (torrent.priority >= 0) {
+                                DropdownMenuItem(
+                                    text = { Text("Queue priority") },
+                                    leadingIcon = { Icon(Icons.Filled.LowPriority, null) },
+                                    onClick = { act { dialog = DetailDialog.QueuePriority } },
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text("Set category") },
                                 leadingIcon = { Icon(Icons.Filled.Category, null) },
@@ -235,7 +250,14 @@ fun TorrentDetailsScreen(
                 when (page) {
                     0 -> InfoTab(state, Modifier.fillMaxSize())
                     1 -> FilesTab(state, viewModel::setFilePriority, Modifier.fillMaxSize())
-                    2 -> TrackersTab(state, Modifier.fillMaxSize())
+                    2 ->
+                        TrackersTab(
+                            state = state,
+                            onAddTrackers = viewModel::addTracker,
+                            onEditTracker = viewModel::editTracker,
+                            onRemoveTracker = viewModel::removeTracker,
+                            modifier = Modifier.fillMaxSize(),
+                        )
                     else -> PeersListView(state, Modifier.fillMaxSize(), viewModel::banPeer)
                 }
             }
@@ -260,6 +282,16 @@ fun TorrentDetailsScreen(
                     initial = torrent.name,
                     onConfirm = {
                         viewModel.renameTorrent(it, torrent.hash)
+                        dialog = null
+                    },
+                    onDismiss = { dialog = null },
+                )
+            }
+        DetailDialog.QueuePriority ->
+            if (torrent != null) {
+                QueuePriorityDialog(
+                    onSelect = { action ->
+                        viewModel.setQueuePriority(action, torrent.hash)
                         dialog = null
                     },
                     onDismiss = { dialog = null },
@@ -330,6 +362,7 @@ fun TorrentDetailsScreen(
 private enum class DetailDialog {
     Delete,
     Rename,
+    QueuePriority,
     SavePath,
     Category,
     CreateCategory,
@@ -354,6 +387,36 @@ private fun DeleteDialog(onConfirm: (Boolean) -> Unit, onDismiss: () -> Unit) {
             }
         },
         confirmButton = { TextButton(onClick = { onConfirm(deleteFiles) }) { Text("Delete") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun QueuePriorityDialog(onSelect: (QueueAction) -> Unit, onDismiss: () -> Unit) {
+    @Composable
+    fun Option(icon: ImageVector, label: String, action: QueueAction) {
+        Row(
+            modifier =
+                Modifier.fillMaxWidth().clickable { onSelect(action) }.padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(icon, contentDescription = null)
+            Spacer(Modifier.size(16.dp))
+            Text(label)
+        }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Queue priority") },
+        text = {
+            Column {
+                Option(Icons.Filled.VerticalAlignTop, "Move to top", QueueAction.TOP)
+                Option(Icons.Filled.ArrowUpward, "Move up", QueueAction.UP)
+                Option(Icons.Filled.ArrowDownward, "Move down", QueueAction.DOWN)
+                Option(Icons.Filled.VerticalAlignBottom, "Move to bottom", QueueAction.BOTTOM)
+            }
+        },
+        confirmButton = {},
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }

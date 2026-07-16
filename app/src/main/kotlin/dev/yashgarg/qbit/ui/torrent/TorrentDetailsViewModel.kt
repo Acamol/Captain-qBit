@@ -24,6 +24,14 @@ import qbittorrent.models.LogEntry
 import qbittorrent.models.Torrent
 import qbittorrent.models.TorrentPeer
 
+/** Queue-priority moves, mapped to qBittorrent's topPrio/increasePrio/decreasePrio/bottomPrio. */
+enum class QueueAction {
+    TOP,
+    UP,
+    DOWN,
+    BOTTOM,
+}
+
 @HiltViewModel
 class TorrentDetailsViewModel
 @Inject
@@ -102,6 +110,21 @@ constructor(
         }
     }
 
+    fun setQueuePriority(action: QueueAction, hash: String) {
+        val hashes = listOf(hash)
+        launchStatus(
+            successMessage = getString(CommonR.string.status_queue_priority_updated),
+            failureMessage = getString(CommonR.string.status_queue_priority_failure),
+        ) {
+            when (action) {
+                QueueAction.TOP -> repository.maxTorrentPriority(hashes)
+                QueueAction.UP -> repository.increaseTorrentPriority(hashes)
+                QueueAction.DOWN -> repository.decreaseTorrentPriority(hashes)
+                QueueAction.BOTTOM -> repository.minTorrentPriority(hashes)
+            }
+        }
+    }
+
     fun setCategory(category: String) {
         launchStatus(
             successMessage = getString(CommonR.string.status_category_set_to, category),
@@ -167,6 +190,50 @@ constructor(
             if (toAdd.isNotEmpty()) repository.addTorrentTags(listOf(hash), toAdd)
             if (toRemove.isNotEmpty()) repository.removeTorrentTags(listOf(hash), toRemove)
             emitStatus(getString(CommonR.string.status_tags_updated))
+        }
+    }
+
+    fun addTracker(urls: List<String>) {
+        val hash = requireNotNull(hash)
+        launchStatus(
+            successMessage = getString(CommonR.string.status_tracker_added),
+            failureMessage = getString(CommonR.string.status_add_tracker_failure),
+            onSuccess = { refreshTrackers() },
+        ) {
+            repository.addTorrentTrackers(hash, urls)
+        }
+    }
+
+    fun editTracker(originalUrl: String, newUrl: String) {
+        val hash = requireNotNull(hash)
+        launchStatus(
+            successMessage = getString(CommonR.string.status_tracker_edited),
+            failureMessage = getString(CommonR.string.status_edit_tracker_failure),
+            onSuccess = { refreshTrackers() },
+        ) {
+            repository.editTorrentTracker(hash, originalUrl, newUrl)
+        }
+    }
+
+    fun removeTracker(url: String) {
+        val hash = requireNotNull(hash)
+        launchStatus(
+            successMessage = getString(CommonR.string.status_tracker_removed),
+            failureMessage = getString(CommonR.string.status_remove_tracker_failure),
+            onSuccess = { refreshTrackers() },
+        ) {
+            repository.removeTorrentTrackers(hash, listOf(url))
+        }
+    }
+
+    /**
+     * Re-fetch trackers after a mutation. The torrent sync flow also refreshes them, but only when
+     * it next emits, so pull them explicitly to reflect the change right away.
+     */
+    private suspend fun refreshTrackers() {
+        val hash = requireNotNull(hash)
+        repository.getTorrentTrackers(hash).onOk { trackers ->
+            _uiState.update { state -> state.copy(trackers = trackers) }
         }
     }
 

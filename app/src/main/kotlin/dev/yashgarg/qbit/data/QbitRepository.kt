@@ -172,6 +172,26 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
         return runCatching { client().setTorrentName(hash, name) }
     }
 
+    /**
+     * Queue-priority actions. These only have an effect when torrent queueing is enabled on the
+     * server; qBittorrent otherwise reports every torrent's priority as -1 and ignores the call.
+     */
+    suspend fun increaseTorrentPriority(hashes: List<String>): Result<Unit, Throwable> {
+        return runCatching { client().increasePriority(hashes) }
+    }
+
+    suspend fun decreaseTorrentPriority(hashes: List<String>): Result<Unit, Throwable> {
+        return runCatching { client().decreasePriority(hashes) }
+    }
+
+    suspend fun maxTorrentPriority(hashes: List<String>): Result<Unit, Throwable> {
+        return runCatching { client().maxPriority(hashes) }
+    }
+
+    suspend fun minTorrentPriority(hashes: List<String>): Result<Unit, Throwable> {
+        return runCatching { client().minPriority(hashes) }
+    }
+
     suspend fun banPeers(peers: List<String>): Result<Unit, Throwable> {
         return runCatching { client().banPeers(peers) }
     }
@@ -182,6 +202,22 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
 
     suspend fun getTorrentTrackers(hash: String): Result<List<TorrentTracker>, Throwable> {
         return runCatching { client().getTrackers(hash) ?: emptyList() }
+    }
+
+    suspend fun addTorrentTrackers(hash: String, urls: List<String>): Result<Unit, Throwable> {
+        return runCatching { client().addTrackers(hash, urls) }
+    }
+
+    suspend fun editTorrentTracker(
+        hash: String,
+        originalUrl: String,
+        newUrl: String,
+    ): Result<Unit, Throwable> {
+        return runCatching { client().editTrackers(hash, originalUrl, newUrl) }
+    }
+
+    suspend fun removeTorrentTrackers(hash: String, urls: List<String>): Result<Unit, Throwable> {
+        return runCatching { client().removeTrackers(hash, urls) }
     }
 
     suspend fun getTorrentFiles(hash: String): Result<List<TorrentFile>, Throwable> {

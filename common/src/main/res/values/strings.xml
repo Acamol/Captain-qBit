@@ -178,6 +178,8 @@
     <string name="status_reannounce_torrent_failure">Failed to reannounce torrent</string>
     <string name="status_torrent_renamed">Torrent renamed</string>
     <string name="status_rename_torrent_failure">Failed to rename torrent</string>
+    <string name="status_queue_priority_updated">Queue priority updated</string>
+    <string name="status_queue_priority_failure">Failed to change queue priority</string>
     <string name="status_category_set_to">Category set to \"%1$s\"</string>
     <string name="status_category_created_not_assigned">
         Category created, but couldn\'t assign it
@@ -190,6 +192,12 @@
     <string name="status_tags_updated">Tags updated</string>
     <string name="status_peer_banned">Successfully banned %1$s</string>
     <string name="status_ban_peer_failure">Failed to ban peer</string>
+    <string name="status_tracker_added">Tracker added</string>
+    <string name="status_add_tracker_failure">Failed to add tracker</string>
+    <string name="status_tracker_edited">Tracker updated</string>
+    <string name="status_edit_tracker_failure">Failed to update tracker</string>
+    <string name="status_tracker_removed">Tracker removed</string>
+    <string name="status_remove_tracker_failure">Failed to remove tracker</string>
     <string name="status_category_edited">Category \"%1$s\" updated</string>
     <string name="status_edit_category_failure">Failed to edit category</string>
 </resources>
