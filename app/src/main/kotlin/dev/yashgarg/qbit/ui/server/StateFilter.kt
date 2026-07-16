@@ -3,10 +3,12 @@ package dev.yashgarg.qbit.ui.server
 import android.net.Uri
 import qbittorrent.models.Torrent
 
-// The Status filters, matching qBittorrent's own sidebar set and order.
+// The Status filters, matching qBittorrent's own sidebar set and order, plus a "Queued" filter for
+// the torrents that currently hold a queue position.
 enum class StateFilter(val label: String) {
     ALL("All"),
     DOWNLOADING("Downloading"),
+    QUEUED("Queued"),
     SEEDING("Seeding"),
     COMPLETED("Completed"),
     RUNNING("Running"),
@@ -59,6 +61,7 @@ fun Torrent.matchesFilter(filter: StateFilter): Boolean =
     when (filter) {
         StateFilter.ALL -> true
         StateFilter.DOWNLOADING -> state in downloadingStates
+        StateFilter.QUEUED -> priority > 0
         StateFilter.SEEDING -> state in seedingStates
         StateFilter.COMPLETED -> amountLeft == 0L
         StateFilter.RUNNING -> state !in stoppedStates
