@@ -4,7 +4,6 @@ import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import kotlin.coroutines.cancellation.CancellationException
-import kotlin.time.Duration
 import qbittorrent.internal.bodyOrThrow
 import qbittorrent.internal.orThrow
 import qbittorrent.models.GlobalTransferInfo
@@ -128,11 +127,18 @@ suspend fun QBittorrentClient.setTorrentDownloadLimit(
         .orThrow()
 }
 
+/**
+ * Sets a torrent's share limits. For every value: -2 means "use the global limit", -1 means "no
+ * limit", and any other value is the limit itself ([ratioLimit] as a ratio, the time limits in
+ * minutes). [inactiveSeedingTimeLimit] became a required parameter in qBittorrent 4.6; older
+ * servers simply ignore it.
+ */
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.setTorrentShareLimits(
     hashes: List<String> = QBittorrentClient.allList,
     ratioLimit: Float,
-    seedingTimeLimit: Duration,
+    seedingTimeLimit: Long,
+    inactiveSeedingTimeLimit: Long = -2,
 ) {
     http
         .submitForm(
@@ -141,7 +147,8 @@ suspend fun QBittorrentClient.setTorrentShareLimits(
                 Parameters.build {
                     append("hashes", hashes.joinToString("|"))
                     append("ratioLimit", ratioLimit.toString())
-                    append("seedingTimeLimit", seedingTimeLimit.inWholeSeconds.toString())
+                    append("seedingTimeLimit", seedingTimeLimit.toString())
+                    append("inactiveSeedingTimeLimit", inactiveSeedingTimeLimit.toString())
                 },
         )
         .orThrow()

@@ -172,6 +172,20 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
         return runCatching { client().setTorrentUploadLimit(listOf(hash), limit) }
     }
 
+    /**
+     * Share limits. For each value: -2 = use the global limit, -1 = no limit, else the limit
+     * ([ratioLimit] as a ratio, [seedingTimeMinutes] in minutes).
+     */
+    suspend fun setTorrentShareLimits(
+        hash: String,
+        ratioLimit: Float,
+        seedingTimeMinutes: Long,
+    ): Result<Unit, Throwable> {
+        return runCatching {
+            client().setTorrentShareLimits(listOf(hash), ratioLimit, seedingTimeMinutes)
+        }
+    }
+
     /** Global limits are in bytes/s; 0 means unlimited. */
     suspend fun getGlobalDownloadLimit(): Result<Int, Throwable> {
         return runCatching { client().getGlobalDownloadLimit() }

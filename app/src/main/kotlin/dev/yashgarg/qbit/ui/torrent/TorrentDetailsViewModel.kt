@@ -146,6 +146,17 @@ constructor(
         }
     }
 
+    /** ratioLimit/seedingTimeMinutes: -2 = global, -1 = unlimited, else the limit. */
+    fun setShareLimits(ratioLimit: Float, seedingTimeMinutes: Long) {
+        val hash = requireNotNull(hash)
+        launchStatus(
+            successMessage = getString(CommonR.string.status_share_limits_updated),
+            failureMessage = getString(CommonR.string.status_set_share_limits_failure),
+        ) {
+            repository.setTorrentShareLimits(hash, ratioLimit, seedingTimeMinutes)
+        }
+    }
+
     fun setForceStart(value: Boolean) {
         val hash = requireNotNull(hash)
         launchStatus(

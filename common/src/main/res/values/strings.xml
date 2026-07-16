@@ -184,6 +184,8 @@
     <string name="status_set_speed_limit_failure">Failed to set speed limit</string>
     <string name="status_torrent_updated">Torrent updated</string>
     <string name="status_update_torrent_failure">Failed to update torrent</string>
+    <string name="status_share_limits_updated">Share limits updated</string>
+    <string name="status_set_share_limits_failure">Failed to set share limits</string>
     <string name="status_category_set_to">Category set to \"%1$s\"</string>
     <string name="status_category_created_not_assigned">
         Category created, but couldn\'t assign it

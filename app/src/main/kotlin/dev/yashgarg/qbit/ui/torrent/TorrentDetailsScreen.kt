@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.LowPriority
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.VerticalAlignBottom
 import androidx.compose.material.icons.filled.VerticalAlignTop
@@ -240,6 +241,11 @@ fun TorrentDetailsScreen(
                                 onClick = { act { dialog = DetailDialog.UploadLimit } },
                             )
                             DropdownMenuItem(
+                                text = { Text("Share limits…") },
+                                leadingIcon = { Icon(Icons.Filled.Share, null) },
+                                onClick = { act { dialog = DetailDialog.ShareLimits } },
+                            )
+                            DropdownMenuItem(
                                 text = { Text("Force start") },
                                 leadingIcon = { Icon(Icons.Filled.Bolt, null) },
                                 trailingIcon = {
@@ -392,6 +398,18 @@ fun TorrentDetailsScreen(
                     onDismiss = { dialog = null },
                 )
             }
+        DetailDialog.ShareLimits ->
+            if (torrent != null) {
+                ShareLimitDialog(
+                    currentRatioLimit = torrent.ratioLimit,
+                    currentSeedingTimeLimit = torrent.seedingTimeLimit,
+                    onConfirm = { ratio, minutes ->
+                        viewModel.setShareLimits(ratio, minutes)
+                        dialog = null
+                    },
+                    onDismiss = { dialog = null },
+                )
+            }
         DetailDialog.Category ->
             if (torrent != null) {
                 CategoryDialog(
@@ -449,6 +467,7 @@ private enum class DetailDialog {
     SavePath,
     DownloadLimit,
     UploadLimit,
+    ShareLimits,
     Category,
     CreateCategory,
     Tags,
@@ -543,6 +562,123 @@ private fun QueuePriorityDialog(onSelect: (QueueAction) -> Unit, onDismiss: () -
         confirmButton = {},
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
+}
+
+private enum class LimitMode {
+    GLOBAL,
+    UNLIMITED,
+    CUSTOM,
+}
+
+/**
+ * Share-limit editor. qBittorrent encodes each limit as -2 (use global), -1 (no limit), or a real
+ * value, so each row is a Global/Unlimited/Custom choice with a value field shown only for Custom.
+ * [currentSeedingTimeLimit] is in minutes.
+ */
+@Composable
+private fun ShareLimitDialog(
+    currentRatioLimit: Float,
+    currentSeedingTimeLimit: Long,
+    onConfirm: (ratioLimit: Float, seedingTimeMinutes: Long) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    fun modeOf(v: Double): LimitMode =
+        when {
+            v <= -2.0 -> LimitMode.GLOBAL
+            v < 0.0 -> LimitMode.UNLIMITED
+            else -> LimitMode.CUSTOM
+        }
+    var ratioMode by remember { mutableStateOf(modeOf(currentRatioLimit.toDouble())) }
+    var seedMode by remember { mutableStateOf(modeOf(currentSeedingTimeLimit.toDouble())) }
+    var ratioValue by remember {
+        mutableStateOf(if (currentRatioLimit >= 0) currentRatioLimit.toString() else "")
+    }
+    var seedValue by remember {
+        mutableStateOf(if (currentSeedingTimeLimit >= 0) currentSeedingTimeLimit.toString() else "")
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Share limits") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text("Ratio limit", style = MaterialTheme.typography.titleSmall)
+                LimitMode.entries.forEach { mode ->
+                    LimitModeOption(mode, ratioMode == mode) { ratioMode = mode }
+                }
+                if (ratioMode == LimitMode.CUSTOM) {
+                    OutlinedTextField(
+                        value = ratioValue,
+                        onValueChange = { new ->
+                            ratioValue = new.filter { it.isDigit() || it == '.' }
+                        },
+                        singleLine = true,
+                        label = { Text("Ratio") },
+                        keyboardOptions =
+                            KeyboardOptions(
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
+                            ),
+                    )
+                }
+                Spacer(Modifier.size(16.dp))
+                Text("Seeding time limit", style = MaterialTheme.typography.titleSmall)
+                LimitMode.entries.forEach { mode ->
+                    LimitModeOption(mode, seedMode == mode) { seedMode = mode }
+                }
+                if (seedMode == LimitMode.CUSTOM) {
+                    OutlinedTextField(
+                        value = seedValue,
+                        onValueChange = { new -> seedValue = new.filter { it.isDigit() } },
+                        singleLine = true,
+                        label = { Text("Minutes") },
+                        keyboardOptions =
+                            KeyboardOptions(
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                            ),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val ratio =
+                        when (ratioMode) {
+                            LimitMode.GLOBAL -> -2f
+                            LimitMode.UNLIMITED -> -1f
+                            LimitMode.CUSTOM -> ratioValue.toFloatOrNull() ?: 0f
+                        }
+                    val minutes =
+                        when (seedMode) {
+                            LimitMode.GLOBAL -> -2L
+                            LimitMode.UNLIMITED -> -1L
+                            LimitMode.CUSTOM -> seedValue.toLongOrNull() ?: 0L
+                        }
+                    onConfirm(ratio, minutes)
+                }
+            ) {
+                Text("OK")
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun LimitModeOption(mode: LimitMode, selected: Boolean, onSelect: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().selectable(selected = selected, onClick = onSelect),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = onSelect)
+        Text(
+            when (mode) {
+                LimitMode.GLOBAL -> "Use global limit"
+                LimitMode.UNLIMITED -> "Unlimited"
+                LimitMode.CUSTOM -> "Custom"
+            }
+        )
+    }
 }
 
 @Composable
