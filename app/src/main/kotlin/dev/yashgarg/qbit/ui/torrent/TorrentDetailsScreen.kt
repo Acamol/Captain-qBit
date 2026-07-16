@@ -63,6 +63,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
+import dev.yashgarg.qbit.ui.server.isPaused
 import dev.yashgarg.qbit.ui.torrent.tabs.FilesTab
 import dev.yashgarg.qbit.ui.torrent.tabs.InfoTab
 import dev.yashgarg.qbit.ui.torrent.tabs.PeersListView
@@ -125,16 +126,25 @@ fun TorrentDetailsScreen(
                                 menuOpen = false
                                 block()
                             }
-                            DropdownMenuItem(
-                                text = { Text("Pause") },
-                                leadingIcon = { Icon(Icons.Filled.Pause, null) },
-                                onClick = { act { viewModel.toggleTorrent(true, torrent.hash) } },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Resume") },
-                                leadingIcon = { Icon(Icons.Filled.PlayArrow, null) },
-                                onClick = { act { viewModel.toggleTorrent(false, torrent.hash) } },
-                            )
+                            // Pause and resume are mutually exclusive — show only the one that
+                            // applies to the torrent's current state.
+                            if (torrent.isPaused()) {
+                                DropdownMenuItem(
+                                    text = { Text("Resume") },
+                                    leadingIcon = { Icon(Icons.Filled.PlayArrow, null) },
+                                    onClick = {
+                                        act { viewModel.toggleTorrent(false, torrent.hash) }
+                                    },
+                                )
+                            } else {
+                                DropdownMenuItem(
+                                    text = { Text("Pause") },
+                                    leadingIcon = { Icon(Icons.Filled.Pause, null) },
+                                    onClick = {
+                                        act { viewModel.toggleTorrent(true, torrent.hash) }
+                                    },
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text("Delete") },
                                 leadingIcon = { Icon(Icons.Filled.Delete, null) },
