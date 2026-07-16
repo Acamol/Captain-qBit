@@ -6,6 +6,9 @@ data class ServerScreenState(
     val dataLoading: Boolean = true,
     val data: MainData? = null,
     val speedLimitMode: Int = 0,
+    /** Global speed limits in bytes/s; 0 = unlimited. */
+    val globalDownloadLimit: Int = 0,
+    val globalUploadLimit: Int = 0,
     val serverName: String? = null,
     val hasError: Boolean = false,
     val error: Throwable? = null,

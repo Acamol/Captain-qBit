@@ -274,6 +274,10 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                     scope.launch { drawerState.close() }
                 },
                 onToggleSpeedLimits = { viewModel.toggleSpeedLimits() },
+                onGlobalLimits = {
+                    scope.launch { drawerState.close() }
+                    serverDialog = ServerDialog.GlobalLimits
+                },
                 onSettings = { appNavigator.navigate(NavCommand.OpenSettings) },
             )
         },

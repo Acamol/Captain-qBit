@@ -169,6 +169,23 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
         return runCatching { client().setTorrentUploadLimit(listOf(hash), limit) }
     }
 
+    /** Global limits are in bytes/s; 0 means unlimited. */
+    suspend fun getGlobalDownloadLimit(): Result<Int, Throwable> {
+        return runCatching { client().getGlobalDownloadLimit() }
+    }
+
+    suspend fun setGlobalDownloadLimit(limit: Int): Result<Unit, Throwable> {
+        return runCatching { client().setGlobalDownloadLimit(limit) }
+    }
+
+    suspend fun getGlobalUploadLimit(): Result<Int, Throwable> {
+        return runCatching { client().getGlobalUploadLimit() }
+    }
+
+    suspend fun setGlobalUploadLimit(limit: Int): Result<Unit, Throwable> {
+        return runCatching { client().setGlobalUploadLimit(limit) }
+    }
+
     suspend fun setForceStart(hash: String, value: Boolean): Result<Unit, Throwable> {
         return runCatching { client().setForceStart(listOf(hash), value) }
     }

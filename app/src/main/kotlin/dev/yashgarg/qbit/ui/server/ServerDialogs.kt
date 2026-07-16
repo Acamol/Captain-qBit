@@ -10,12 +10,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -42,6 +44,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.common.R as CommonR
@@ -83,6 +86,8 @@ sealed interface ServerDialog {
     data object Statistics : ServerDialog
 
     data object SortPicker : ServerDialog
+
+    data object GlobalLimits : ServerDialog
 
     data object ServerPicker : ServerDialog
 
@@ -482,6 +487,62 @@ fun ServerDialogHost(
                         }
                     ) {
                         Text(dirLabel)
+                    }
+                },
+                dismissButton = { TextButton(onClick = dismiss) { Text("Cancel") } },
+            )
+        }
+        ServerDialog.GlobalLimits -> {
+            // Shown in KiB/s (qBittorrent's own unit); blank/zero clears the limit.
+            var dl by remember {
+                mutableStateOf(
+                    if (state.globalDownloadLimit > 0) (state.globalDownloadLimit / 1024).toString()
+                    else ""
+                )
+            }
+            var ul by remember {
+                mutableStateOf(
+                    if (state.globalUploadLimit > 0) (state.globalUploadLimit / 1024).toString()
+                    else ""
+                )
+            }
+            fun toBytes(kib: String): Int =
+                ((kib.toLongOrNull() ?: 0L) * 1024).coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
+            AlertDialog(
+                onDismissRequest = dismiss,
+                title = { Text("Global speed limits") },
+                text = {
+                    Column {
+                        OutlinedTextField(
+                            value = dl,
+                            onValueChange = { new -> dl = new.filter { it.isDigit() } },
+                            singleLine = true,
+                            label = { Text("Download (KiB/s)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        )
+                        Spacer(Modifier.size(12.dp))
+                        OutlinedTextField(
+                            value = ul,
+                            onValueChange = { new -> ul = new.filter { it.isDigit() } },
+                            singleLine = true,
+                            label = { Text("Upload (KiB/s)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        )
+                        Text(
+                            "Leave empty for unlimited",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            viewModel.setGlobalLimits(toBytes(dl), toBytes(ul))
+                            dismiss()
+                        }
+                    ) {
+                        Text("OK")
                     }
                 },
                 dismissButton = { TextButton(onClick = dismiss) { Text("Cancel") } },

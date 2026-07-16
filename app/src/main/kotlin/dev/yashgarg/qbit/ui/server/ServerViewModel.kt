@@ -675,6 +675,31 @@ constructor(
         }
     }
 
+    private fun getGlobalLimits() {
+        viewModelScope.launch {
+            repository.getGlobalDownloadLimit().onOk { dl ->
+                _uiState.update { it.copy(globalDownloadLimit = dl) }
+            }
+            repository.getGlobalUploadLimit().onOk { ul ->
+                _uiState.update { it.copy(globalUploadLimit = ul) }
+            }
+        }
+    }
+
+    /** Limits are in bytes/s; 0 clears the limit (unlimited). */
+    fun setGlobalLimits(downloadBytesPerSec: Int, uploadBytesPerSec: Int) {
+        viewModelScope.launch {
+            val dlOk = repository.setGlobalDownloadLimit(downloadBytesPerSec).get() != null
+            val ulOk = repository.setGlobalUploadLimit(uploadBytesPerSec).get() != null
+            if (dlOk && ulOk) {
+                emitStatus(getString(CommonR.string.status_speed_limit_updated))
+                getGlobalLimits()
+            } else {
+                emitStatus(getString(CommonR.string.status_set_speed_limit_failure))
+            }
+        }
+    }
+
     private fun getSpeedLimitMode(showToast: Boolean = false) {
         viewModelScope.launch {
             repository
@@ -707,6 +732,7 @@ constructor(
 
     private suspend fun syncData() {
         getSpeedLimitMode()
+        getGlobalLimits()
         coroutineScope {
             // Data: keep the last-known list on screen; retry quietly on error. The offline state
             // is

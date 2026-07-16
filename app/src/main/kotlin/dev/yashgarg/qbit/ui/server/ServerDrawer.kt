@@ -59,6 +59,7 @@ fun ServerDrawer(
     onManageTags: () -> Unit,
     onClearFilters: () -> Unit,
     onToggleSpeedLimits: () -> Unit,
+    onGlobalLimits: () -> Unit,
     onSettings: () -> Unit,
 ) {
     val torrents = state.data?.torrents?.values?.toList() ?: emptyList()
@@ -213,6 +214,14 @@ fun ServerDrawer(
                     onCheckedChange = { onToggleSpeedLimits() },
                 )
             }
+            Text(
+                "Global speed limits…",
+                fontSize = 14.sp,
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .combinedClickable(onClick = onGlobalLimits)
+                        .padding(horizontal = 20.dp, vertical = 14.dp),
+            )
             Text(
                 "Settings",
                 fontSize = 14.sp,
