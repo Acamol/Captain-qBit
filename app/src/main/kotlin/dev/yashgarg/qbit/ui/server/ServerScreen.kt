@@ -15,8 +15,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.Sort
@@ -33,6 +35,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -135,6 +138,26 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
     var searchOpen by remember { mutableStateOf(false) }
     var deleteTargets by remember { mutableStateOf<List<String>?>(null) }
     var refreshing by remember { mutableStateOf(false) }
+    // Shared by pull-to-refresh (list and error states) and the error-screen Retry button. The sync
+    // is continuous and its first emission is near-instant, so wait for the next data/error but
+    // hold
+    // the spinner a short minimum (so the pull registers) with a timeout so it can never hang.
+    val doRefresh: () -> Unit = {
+        refreshing = true
+        scope.launch {
+            viewModel.refresh()
+            coroutineScope {
+                launch { delay(600) }
+                launch {
+                    withTimeoutOrNull(15_000) {
+                        merge(viewModel.intent, viewModel.uiState.filter { it.hasError }.map {})
+                            .first()
+                    }
+                }
+            }
+            refreshing = false
+        }
+    }
     // Hash of the single torrent row whose swipe actions are revealed (only one open at a time).
     var openHash by remember { mutableStateOf<String?>(null) }
     val searchFocus = remember { FocusRequester() }
@@ -378,20 +401,41 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                     when {
                         state.hasError -> {
                             val fallback = stringResource(CommonR.string.error)
-                            Column(
-                                modifier = Modifier.align(Alignment.Center).padding(20.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
+                            // Scrollable so pull-to-refresh works on the error screen too (a static
+                            // Column wouldn't feed the pull gesture); the Retry button stays as an
+                            // explicit affordance.
+                            PullToRefreshBox(
+                                isRefreshing = refreshing,
+                                onRefresh = doRefresh,
+                                modifier = Modifier.fillMaxSize(),
                             ) {
-                                androidx.compose.foundation.Image(
-                                    androidx.compose.ui.res.painterResource(R.drawable.sync_error),
-                                    contentDescription = null,
-                                    modifier = Modifier.padding(bottom = 8.dp).size(70.dp),
-                                )
-                                Text(
-                                    state.error?.friendlyMessage(fallback) ?: fallback,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                )
+                                Column(
+                                    modifier =
+                                        Modifier.fillMaxSize()
+                                            .verticalScroll(rememberScrollState())
+                                            .padding(20.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                ) {
+                                    androidx.compose.foundation.Image(
+                                        androidx.compose.ui.res.painterResource(
+                                            R.drawable.sync_error
+                                        ),
+                                        contentDescription = null,
+                                        modifier = Modifier.padding(bottom = 8.dp).size(70.dp),
+                                    )
+                                    Text(
+                                        state.error?.friendlyMessage(fallback) ?: fallback,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    )
+                                    FilledTonalButton(
+                                        onClick = { viewModel.refresh() },
+                                        modifier = Modifier.padding(top = 16.dp),
+                                    ) {
+                                        Text("Retry")
+                                    }
+                                }
                             }
                         }
                         state.dataLoading || torrents == null ->
@@ -415,31 +459,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                         else ->
                             PullToRefreshBox(
                                 isRefreshing = refreshing,
-                                onRefresh = {
-                                    refreshing = true
-                                    scope.launch {
-                                        viewModel.refresh()
-                                        // The sync is continuous and its first emission is near
-                                        // instant, so wait for the next data (or error) but also
-                                        // hold the spinner a short minimum so the pull registers.
-                                        // Timeout so it can never hang.
-                                        coroutineScope {
-                                            launch { delay(600) }
-                                            launch {
-                                                withTimeoutOrNull(15_000) {
-                                                    merge(
-                                                            viewModel.intent,
-                                                            viewModel.uiState
-                                                                .filter { it.hasError }
-                                                                .map {},
-                                                        )
-                                                        .first()
-                                                }
-                                            }
-                                        }
-                                        refreshing = false
-                                    }
-                                },
+                                onRefresh = doRefresh,
                                 modifier = Modifier.fillMaxSize(),
                             ) {
                                 TorrentList(

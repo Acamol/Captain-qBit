@@ -24,6 +24,7 @@ import dev.yashgarg.qbit.utils.friendlyMessage
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.isActive
@@ -706,47 +707,70 @@ constructor(
 
     private suspend fun syncData() {
         getSpeedLimitMode()
-        repository
-            .observeMainData()
-            // A sync error (e.g. the connection dropping while the app was backgrounded or on the
-            // logs screen) used to end the flow, leaving the list stale until a manual refresh.
-            // Surface it once, then keep retrying so syncing resumes on its own.
-            .retryWhen { cause, attempt ->
-                if (attempt == 0L) {
-                    emitStatus(
-                        cause.friendlyMessage(getString(CommonR.string.status_sync_data_failure))
-                    )
-                }
-                _uiState.update { state -> state.copy(hasError = true, error = cause, data = null) }
-                delay(SYNC_RETRY_MS)
-                true
+        coroutineScope {
+            // Data: keep the last-known list on screen; retry quietly on error. The offline state
+            // is
+            // driven by the durable error signal below, not by this flow throwing.
+            launch {
+                repository
+                    .observeMainData()
+                    .retry {
+                        delay(SYNC_RETRY_MS)
+                        true
+                    }
+                    .collectLatest { mainData ->
+                        val categories = mainData.categories.keys.sorted()
+                        val trackers =
+                            mainData.torrents.values
+                                .mapNotNull { t -> t.tracker.takeIf { it.isNotBlank() } }
+                                .mapNotNull { url ->
+                                    Uri.parse(url).host?.takeIf { it.isNotBlank() }
+                                }
+                                .distinct()
+                                .sorted()
+                        val tags =
+                            (mainData.tags + mainData.torrents.values.flatMap { it.tags })
+                                .filter { it.isNotBlank() }
+                                .distinct()
+                                .sorted()
+                        _uiState.update { state ->
+                            state.copy(
+                                dataLoading = false,
+                                data = mainData,
+                                hasError = false,
+                                error = null,
+                                availableCategories = categories,
+                                availableTrackers = trackers,
+                                availableTags = tags,
+                            )
+                        }
+                        _intent.emit(Unit)
+                    }
             }
-            .collectLatest { mainData ->
-                val categories = mainData.categories.keys.sorted()
-                val trackers =
-                    mainData.torrents.values
-                        .mapNotNull { t -> t.tracker.takeIf { it.isNotBlank() } }
-                        .mapNotNull { url -> Uri.parse(url).host?.takeIf { it.isNotBlank() } }
-                        .distinct()
-                        .sorted()
-                val tags =
-                    (mainData.tags + mainData.torrents.values.flatMap { it.tags })
-                        .filter { it.isNotBlank() }
-                        .distinct()
-                        .sorted()
-                _uiState.update { state ->
-                    state.copy(
-                        dataLoading = false,
-                        data = mainData,
-                        hasError = false,
-                        error = null,
-                        availableCategories = categories,
-                        availableTrackers = trackers,
-                        availableTags = tags,
-                    )
+            // Health: a reliable offline signal. If we already have data, keep showing it and just
+            // toast on the transition; only show the full error screen when nothing has loaded yet.
+            launch {
+                var lastError: Throwable? = null
+                repository.observeMainDataError().collect { error ->
+                    _uiState.update { state ->
+                        when {
+                            error == null -> state.copy(hasError = false, error = null)
+                            state.data == null ->
+                                state.copy(hasError = true, error = error, dataLoading = false)
+                            else -> state
+                        }
+                    }
+                    if (error != null && lastError == null && _uiState.value.data != null) {
+                        emitStatus(
+                            error.friendlyMessage(
+                                getString(CommonR.string.status_sync_data_failure)
+                            )
+                        )
+                    }
+                    lastError = error
                 }
-                _intent.emit(Unit)
             }
+        }
     }
 }
 

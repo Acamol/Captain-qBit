@@ -28,6 +28,11 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
         return flow { emitAll(client().observeMainData()) }
     }
 
+    /** Latest MainData sync error (null while reachable); stays set until the next success. */
+    fun observeMainDataError(): Flow<Throwable?> {
+        return flow { emitAll(client().observeMainDataError()) }
+    }
+
     fun observeTorrent(hash: String, waitIfMissing: Boolean): Flow<Torrent> {
         return flow { emitAll(client().observeTorrent(hash, waitIfMissing)) }
     }
