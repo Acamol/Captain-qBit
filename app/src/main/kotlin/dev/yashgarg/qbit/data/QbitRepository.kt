@@ -7,6 +7,9 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import qbittorrent.*
 import qbittorrent.models.LogEntry
 import qbittorrent.models.MainData
@@ -184,6 +187,34 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
 
     suspend fun setGlobalUploadLimit(limit: Int): Result<Unit, Throwable> {
         return runCatching { client().setGlobalUploadLimit(limit) }
+    }
+
+    /**
+     * Alternate speed limits live in the server's app preferences (not the transfer endpoints).
+     * Values are in bytes/s; 0 means unlimited. Returns download-to-upload.
+     */
+    suspend fun getAltSpeedLimits(): Result<Pair<Int, Int>, Throwable> {
+        return runCatching {
+            val prefs = client().getPreferences()
+            val dl = prefs["alt_dl_limit"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+            val ul = prefs["alt_up_limit"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+            dl to ul
+        }
+    }
+
+    suspend fun setAltSpeedLimits(
+        downloadBytesPerSec: Int,
+        uploadBytesPerSec: Int,
+    ): Result<Unit, Throwable> {
+        return runCatching {
+            client()
+                .setPreferences(
+                    buildJsonObject {
+                        put("alt_dl_limit", downloadBytesPerSec)
+                        put("alt_up_limit", uploadBytesPerSec)
+                    }
+                )
+        }
     }
 
     suspend fun setForceStart(hash: String, value: Boolean): Result<Unit, Throwable> {

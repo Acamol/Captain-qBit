@@ -9,6 +9,9 @@ data class ServerScreenState(
     /** Global speed limits in bytes/s; 0 = unlimited. */
     val globalDownloadLimit: Int = 0,
     val globalUploadLimit: Int = 0,
+    /** Alternate speed limits in bytes/s; 0 = unlimited. */
+    val altDownloadLimit: Int = 0,
+    val altUploadLimit: Int = 0,
     val serverName: String? = null,
     val hasError: Boolean = false,
     val error: Throwable? = null,

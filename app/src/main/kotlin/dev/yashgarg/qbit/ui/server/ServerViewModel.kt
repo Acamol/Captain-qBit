@@ -683,6 +683,26 @@ constructor(
             repository.getGlobalUploadLimit().onOk { ul ->
                 _uiState.update { it.copy(globalUploadLimit = ul) }
             }
+            repository.getAltSpeedLimits().onOk { (dl, ul) ->
+                _uiState.update { it.copy(altDownloadLimit = dl, altUploadLimit = ul) }
+            }
+        }
+    }
+
+    /** Alternate limits are in bytes/s; 0 clears the limit (unlimited). */
+    fun setAltLimits(downloadBytesPerSec: Int, uploadBytesPerSec: Int) {
+        viewModelScope.launch {
+            repository
+                .setAltSpeedLimits(downloadBytesPerSec, uploadBytesPerSec)
+                .onOk {
+                    emitStatus(getString(CommonR.string.status_speed_limit_updated))
+                    getGlobalLimits()
+                }
+                .onErr {
+                    emitStatus(
+                        it.friendlyMessage(getString(CommonR.string.status_set_speed_limit_failure))
+                    )
+                }
         }
     }
 

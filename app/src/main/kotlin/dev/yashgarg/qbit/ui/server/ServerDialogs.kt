@@ -89,6 +89,8 @@ sealed interface ServerDialog {
 
     data object GlobalLimits : ServerDialog
 
+    data object AltLimits : ServerDialog
+
     data object ServerPicker : ServerDialog
 
     data class ServerLongPress(val server: ServerConfig) : ServerDialog
@@ -492,62 +494,28 @@ fun ServerDialogHost(
                 dismissButton = { TextButton(onClick = dismiss) { Text("Cancel") } },
             )
         }
-        ServerDialog.GlobalLimits -> {
-            // Shown in KiB/s (qBittorrent's own unit); blank/zero clears the limit.
-            var dl by remember {
-                mutableStateOf(
-                    if (state.globalDownloadLimit > 0) (state.globalDownloadLimit / 1024).toString()
-                    else ""
-                )
-            }
-            var ul by remember {
-                mutableStateOf(
-                    if (state.globalUploadLimit > 0) (state.globalUploadLimit / 1024).toString()
-                    else ""
-                )
-            }
-            fun toBytes(kib: String): Int =
-                ((kib.toLongOrNull() ?: 0L) * 1024).coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
-            AlertDialog(
-                onDismissRequest = dismiss,
-                title = { Text("Global speed limits") },
-                text = {
-                    Column {
-                        OutlinedTextField(
-                            value = dl,
-                            onValueChange = { new -> dl = new.filter { it.isDigit() } },
-                            singleLine = true,
-                            label = { Text("Download (KiB/s)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        )
-                        Spacer(Modifier.size(12.dp))
-                        OutlinedTextField(
-                            value = ul,
-                            onValueChange = { new -> ul = new.filter { it.isDigit() } },
-                            singleLine = true,
-                            label = { Text("Upload (KiB/s)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        )
-                        Text(
-                            "Leave empty for unlimited",
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(top = 8.dp),
-                        )
-                    }
+        ServerDialog.GlobalLimits ->
+            SpeedLimitsDialog(
+                title = "Global speed limits",
+                initialDownloadBytes = state.globalDownloadLimit,
+                initialUploadBytes = state.globalUploadLimit,
+                onConfirm = { dl, ul ->
+                    viewModel.setGlobalLimits(dl, ul)
+                    dismiss()
                 },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            viewModel.setGlobalLimits(toBytes(dl), toBytes(ul))
-                            dismiss()
-                        }
-                    ) {
-                        Text("OK")
-                    }
-                },
-                dismissButton = { TextButton(onClick = dismiss) { Text("Cancel") } },
+                onDismiss = dismiss,
             )
-        }
+        ServerDialog.AltLimits ->
+            SpeedLimitsDialog(
+                title = "Alternate speed limits",
+                initialDownloadBytes = state.altDownloadLimit,
+                initialUploadBytes = state.altUploadLimit,
+                onConfirm = { dl, ul ->
+                    viewModel.setAltLimits(dl, ul)
+                    dismiss()
+                },
+                onDismiss = dismiss,
+            )
         ServerDialog.ServerPicker -> {
             val servers by viewModel.servers.collectAsStateWithLifecycle()
             val activeId by viewModel.activeServerId.collectAsStateWithLifecycle()
@@ -770,6 +738,57 @@ private fun SingleChoiceDialog(
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+/**
+ * Two KiB/s inputs (download/upload) for a pair of speed limits. Values are passed in/out as
+ * bytes/s (0 = unlimited); the fields display and accept KiB/s, matching qBittorrent's own dialogs.
+ */
+@Composable
+private fun SpeedLimitsDialog(
+    title: String,
+    initialDownloadBytes: Int,
+    initialUploadBytes: Int,
+    onConfirm: (downloadBytes: Int, uploadBytes: Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    fun toKib(bytes: Int) = if (bytes > 0) (bytes / 1024).toString() else ""
+    fun toBytes(kib: String): Int =
+        ((kib.toLongOrNull() ?: 0L) * 1024).coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
+    var dl by remember { mutableStateOf(toKib(initialDownloadBytes)) }
+    var ul by remember { mutableStateOf(toKib(initialUploadBytes)) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = dl,
+                    onValueChange = { new -> dl = new.filter { it.isDigit() } },
+                    singleLine = true,
+                    label = { Text("Download (KiB/s)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+                Spacer(Modifier.size(12.dp))
+                OutlinedTextField(
+                    value = ul,
+                    onValueChange = { new -> ul = new.filter { it.isDigit() } },
+                    singleLine = true,
+                    label = { Text("Upload (KiB/s)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+                Text(
+                    "Leave empty for unlimited",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(toBytes(dl), toBytes(ul)) }) { Text("OK") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
 

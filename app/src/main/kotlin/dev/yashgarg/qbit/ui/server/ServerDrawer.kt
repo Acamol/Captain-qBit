@@ -60,6 +60,7 @@ fun ServerDrawer(
     onClearFilters: () -> Unit,
     onToggleSpeedLimits: () -> Unit,
     onGlobalLimits: () -> Unit,
+    onAltLimits: () -> Unit,
     onSettings: () -> Unit,
 ) {
     val torrents = state.data?.torrents?.values?.toList() ?: emptyList()
@@ -208,7 +209,7 @@ fun ServerDrawer(
                         .padding(horizontal = 20.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Alternate speed limits", Modifier.weight(1f))
+                Text("Use alternate speed limits", Modifier.weight(1f))
                 Switch(
                     checked = state.speedLimitMode != 0,
                     onCheckedChange = { onToggleSpeedLimits() },
@@ -220,6 +221,14 @@ fun ServerDrawer(
                 modifier =
                     Modifier.fillMaxWidth()
                         .combinedClickable(onClick = onGlobalLimits)
+                        .padding(horizontal = 20.dp, vertical = 14.dp),
+            )
+            Text(
+                "Alternate speed limits…",
+                fontSize = 14.sp,
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .combinedClickable(onClick = onAltLimits)
                         .padding(horizontal = 20.dp, vertical = 14.dp),
             )
             Text(

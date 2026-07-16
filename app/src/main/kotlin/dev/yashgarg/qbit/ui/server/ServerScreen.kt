@@ -278,6 +278,10 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                     scope.launch { drawerState.close() }
                     serverDialog = ServerDialog.GlobalLimits
                 },
+                onAltLimits = {
+                    scope.launch { drawerState.close() }
+                    serverDialog = ServerDialog.AltLimits
+                },
                 onSettings = { appNavigator.navigate(NavCommand.OpenSettings) },
             )
         },
