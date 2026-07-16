@@ -172,6 +172,34 @@ for _t in _TORRENTS:
 
 TORRENTS = {t["hash"]: t for t in _TORRENTS}
 
+# Test aid: how many times each still-downloading torrent has been resumed. Resuming one twice
+# forces it to complete (see do_POST), so completion notifications can be exercised on demand.
+_resume_counts = {}
+# Progress to restore when a forced-complete torrent is reset back to downloading.
+_orig_progress = {}
+
+
+def _complete_torrent(t):
+    """Force a torrent to a finished/seeding state with a fresh completion timestamp."""
+    _orig_progress[t["hash"]] = t["progress"]
+    t["progress"] = 1.0
+    t["completed"] = t["size"]
+    t["completion_on"] = int(time.time())
+    t["state"] = "uploading"
+    t["dlspeed"] = 0
+    t["eta"] = 0
+
+
+def _reset_torrent(t):
+    """Send a (forced-complete) torrent back to a mid-download state so it can be re-tested."""
+    progress = _orig_progress.pop(t["hash"], 0.42)
+    t["progress"] = progress
+    t["completed"] = int(t["size"] * progress)
+    t["completion_on"] = -1
+    t["state"] = "downloading"
+    t["dlspeed"] = 4 * MiB
+    t["eta"] = 3600
+
 # current global speeds = sum of active torrents
 _DL = sum(t["dlspeed"] for t in _TORRENTS)
 _UP = sum(t["upspeed"] for t in _TORRENTS)
@@ -443,6 +471,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/v2/torrents/delete":
             for h in hashes:
                 TORRENTS.pop(h, None)
+                _resume_counts.pop(h, None)
         elif path in ("/api/v2/torrents/stop", "/api/v2/torrents/pause"):
             for h in hashes:
                 t = TORRENTS.get(h)
@@ -453,7 +482,19 @@ class Handler(BaseHTTPRequestHandler):
         elif path in ("/api/v2/torrents/start", "/api/v2/torrents/resume"):
             for h in hashes:
                 t = TORRENTS.get(h)
-                if t:
+                if not t:
+                    continue
+                # Test aid: resuming the same torrent twice toggles its completion — a downloading
+                # torrent finishes (firing the complete notification) and a forced-complete one goes
+                # back to downloading, so you can re-test on demand (pause+resume it twice each way).
+                _resume_counts[h] = _resume_counts.get(h, 0) + 1
+                if _resume_counts[h] >= 2:
+                    _resume_counts.pop(h, None)
+                    if t["progress"] >= 1.0:
+                        _reset_torrent(t)
+                    else:
+                        _complete_torrent(t)
+                else:
                     t["state"] = "uploading" if t["progress"] >= 1.0 else "downloading"
 
         self._send("Ok.", "text/plain")  # generic success for any other action
