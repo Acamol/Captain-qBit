@@ -71,4 +71,10 @@ data class TorrentProperties(
     @SerialName("up_speed_avg") val upSpeedAvg: Long,
     /** Torrent upload speed (bytes/second) */
     @SerialName("up_speed") val upSpeed: Long,
+    /**
+     * Whether the torrent is private (as flagged in its metadata). Trackers on a private torrent
+     * are fixed by the metadata and cannot be added/edited/removed. Null on older servers that
+     * don't report this field.
+     */
+    @SerialName("is_private") val isPrivate: Boolean? = null,
 )

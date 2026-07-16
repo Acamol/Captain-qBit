@@ -45,6 +45,10 @@ fun TrackersTab(
     modifier: Modifier = Modifier,
 ) {
     val trackers = state.trackers
+    // Private torrents have a fixed tracker list baked into their metadata; qBittorrent rejects any
+    // attempt to add/edit/remove trackers on them. Null means the server didn't report it (older
+    // versions) — leave editing enabled in that case rather than guessing.
+    val isPrivate = state.torrentProperties?.isPrivate == true
 
     val green = colorResource(R.color.green)
     val yellow = colorResource(R.color.yellow)
@@ -53,13 +57,23 @@ fun TrackersTab(
     var dialog by remember { mutableStateOf<TrackerDialog?>(null) }
 
     LazyColumn(modifier.fillMaxSize()) {
-        item {
-            TextButton(
-                onClick = { dialog = TrackerDialog.Add },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = null)
-                Text("Add tracker", modifier = Modifier.padding(start = 8.dp))
+        if (isPrivate) {
+            item {
+                Text(
+                    "Private torrent — trackers are fixed by the torrent and can't be changed.",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                )
+            }
+        } else {
+            item {
+                TextButton(
+                    onClick = { dialog = TrackerDialog.Add },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Text("Add tracker", modifier = Modifier.padding(start = 8.dp))
+                }
             }
         }
 
@@ -86,7 +100,7 @@ fun TrackersTab(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f).padding(vertical = 16.dp),
                 )
-                if (tracker.url.isRealTracker()) {
+                if (!isPrivate && tracker.url.isRealTracker()) {
                     IconButton(onClick = { dialog = TrackerDialog.Edit(tracker.url) }) {
                         Icon(Icons.Filled.Edit, contentDescription = "Edit tracker")
                     }
