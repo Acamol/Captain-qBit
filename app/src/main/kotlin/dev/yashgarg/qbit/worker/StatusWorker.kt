@@ -60,15 +60,34 @@ constructor(
     // alerts (completed / checked). The user can toggle each independently in Settings; the service
     // keeps running while any of them is enabled, and stops itself once all are off.
     private suspend fun getStatus() {
-        val client = clientManager.checkAndGetClient() ?: return
-        // Baseline of the previous poll, keyed by hash, used to detect state transitions. Null
-        // until the first successful torrent fetch so we never alert for the pre-existing state.
+        // Baseline of the previous poll, keyed by hash, for the checked-transition alert. Null
+        // until
+        // the first successful fetch so we never alert for the pre-existing state. (Completion
+        // alerts
+        // don't use this — they compare against a persisted completion_on watermark instead, so
+        // they
+        // survive the worker process being killed and restarted.)
         var previous: Map<String, Torrent>? = null
+        var lastServerId: Int? = null
 
         while (true) {
             val prefs = prefsStore.data.first()
             val eventsOn = prefs.notifyOnComplete || prefs.notifyOnChecked
             if (!prefs.statusNotification && !eventsOn) return
+
+            // Fetch the client each tick so the worker follows a server switch (setActiveServer
+            // rebuilds it); a captured reference would keep polling the old server.
+            val client = clientManager.checkAndGetClient()
+            if (client == null) {
+                delay(REFRESH_INTERVAL_MS)
+                continue
+            }
+            // Drop the recheck baseline when the active server changes so we never compare torrents
+            // across servers.
+            if (prefs.activeServerId != lastServerId) {
+                previous = null
+                lastServerId = prefs.activeServerId
+            }
 
             try {
                 if (prefs.statusNotification) {
@@ -88,9 +107,12 @@ constructor(
                 }
 
                 if (eventsOn) {
-                    val current = client.getTorrents().associateBy(Torrent::hash)
-                    detectEvents(previous, current, prefs)
-                    previous = current
+                    val torrents = client.getTorrents()
+                    if (prefs.notifyOnComplete) notifyCompletions(torrents, prefs)
+                    if (prefs.notifyOnChecked) {
+                        notifyRechecks(previous, torrents.associateBy(Torrent::hash))
+                    }
+                    previous = torrents.associateBy(Torrent::hash)
                 } else {
                     previous = null
                 }
@@ -103,33 +125,45 @@ constructor(
         }
     }
 
-    private fun detectEvents(
-        previous: Map<String, Torrent>?,
-        current: Map<String, Torrent>,
-        prefs: ServerPreferences,
-    ) {
+    /**
+     * Fire a "download complete" alert for any torrent whose completion is newer than the
+     * per-server watermark, then advance (and persist) the watermark. Using qBittorrent's own
+     * `completion_on` timestamp — rather than diffing progress across our polls — means completions
+     * that happen while this worker isn't running are still caught on the next poll, and rechecks
+     * (which don't change completion_on) never re-alert. The watermark is written only when it
+     * moves.
+     */
+    private suspend fun notifyCompletions(torrents: List<Torrent>, prefs: ServerPreferences) {
+        val serverId = prefs.activeServerId
+        // Only actually-complete torrents carry a real completion_on; incomplete ones report -1.
+        val completed = torrents.filter { it.progress >= 1f && it.completedOn > 0 }
+        val newestCompletion = completed.maxOfOrNull { it.completedOn } ?: return
+
+        val watermark = prefs.notifCompletionSeen[serverId]
+        if (watermark == null) {
+            // First time watching this server: adopt current completions as the baseline silently.
+            persistCompletionWatermark(serverId, newestCompletion)
+            return
+        }
+
+        completed
+            .filter { it.completedOn > watermark }
+            .forEach { notifyEvent("complete:${it.hash}".hashCode(), "Download complete", it.name) }
+        if (newestCompletion > watermark) persistCompletionWatermark(serverId, newestCompletion)
+    }
+
+    private suspend fun persistCompletionWatermark(serverId: Int, value: Long) {
+        prefsStore.updateData {
+            it.copy(notifCompletionSeen = it.notifCompletionSeen + (serverId to value))
+        }
+    }
+
+    private fun notifyRechecks(previous: Map<String, Torrent>?, current: Map<String, Torrent>) {
         // First poll (or right after events were toggled on): just establish the baseline.
         if (previous == null) return
-
         current.values.forEach { torrent ->
             val before = previous[torrent.hash] ?: return@forEach
-
-            // Progress climbing to 1.0 signals a finished download — but during a recheck the
-            // reported progress also climbs back to 1.0 as pieces are verified. A real completion
-            // happens while downloading, so ignore the crossing if the torrent was checking.
-            if (
-                prefs.notifyOnComplete &&
-                    !before.state.isChecking() &&
-                    before.progress < 1f &&
-                    torrent.progress >= 1f
-            ) {
-                notifyEvent(
-                    "complete:${torrent.hash}".hashCode(),
-                    "Download complete",
-                    torrent.name,
-                )
-            }
-            if (prefs.notifyOnChecked && before.state.isChecking() && !torrent.state.isChecking()) {
+            if (before.state.isChecking() && !torrent.state.isChecking()) {
                 notifyEvent("checked:${torrent.hash}".hashCode(), "Check complete", torrent.name)
             }
         }
@@ -196,7 +230,8 @@ constructor(
             Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
         /**
-         * (Re)start the monitoring service. REPLACE resets the baseline so no stale alerts fire.
+         * (Re)start the monitoring service. REPLACE resets only the in-memory recheck baseline;
+         * completion alerts use the persisted watermark, so they aren't lost across a restart.
          */
         fun enqueue(context: Context) {
             WorkManager.getInstance(context)

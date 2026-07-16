@@ -39,6 +39,10 @@ data class ServerPreferences(
     val statusNotification: Boolean = true,
     val notifyOnComplete: Boolean = false,
     val notifyOnChecked: Boolean = false,
+    // Newest torrent completion_on (unix seconds) already accounted for by the complete-notifier,
+    // keyed by server id. Lets completion alerts survive the worker process restarting: a torrent
+    // whose completion_on is newer than this still fires. Written only when it advances.
+    val notifCompletionSeen: Map<Int, Long> = emptyMap(),
     // AppCompatDelegate night-mode constant. Defaults to MODE_NIGHT_YES (2) to preserve the
     // app's original dark-only behaviour for existing installs.
     val themeMode: Int = 2,
