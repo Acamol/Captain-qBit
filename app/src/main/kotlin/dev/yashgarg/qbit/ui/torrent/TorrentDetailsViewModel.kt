@@ -387,6 +387,28 @@ constructor(
         }
     }
 
+    /**
+     * Rename a file or folder inside the torrent. qBittorrent renames by path, so keep [item]'s
+     * parent directory and swap only the final segment for [newName]. Files use renameFile, folders
+     * renameFolder. Refreshes the content tree on success.
+     */
+    fun renameContent(item: ContentTreeItem, newName: String) {
+        val hash = requireNotNull(hash)
+        val trimmed = newName.trim()
+        if (trimmed.isEmpty() || trimmed == item.name) return
+        val parent = item.path.substringBeforeLast('/', "")
+        val newPath = if (parent.isEmpty()) trimmed else "$parent/$trimmed"
+        val isFolder = item.item == null
+        launchStatus(
+            successMessage = getString(CommonR.string.status_content_renamed),
+            failureMessage = getString(CommonR.string.status_rename_content_failure),
+            onSuccess = { getContent() },
+        ) {
+            if (isFolder) repository.renameFolder(hash, item.path, newPath)
+            else repository.renameFile(hash, item.path, newPath)
+        }
+    }
+
     private suspend fun getContent() {
         hash
             ?.let { repository.getTorrentFiles(it) }

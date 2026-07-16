@@ -314,7 +314,13 @@ fun TorrentDetailsScreen(
             HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                 when (page) {
                     0 -> InfoTab(state, Modifier.fillMaxSize())
-                    1 -> FilesTab(state, viewModel::setFilePriority, Modifier.fillMaxSize())
+                    1 ->
+                        FilesTab(
+                            state,
+                            viewModel::setFilePriority,
+                            viewModel::renameContent,
+                            Modifier.fillMaxSize(),
+                        )
                     2 ->
                         TrackersTab(
                             state = state,

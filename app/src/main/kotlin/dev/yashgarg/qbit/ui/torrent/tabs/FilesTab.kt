@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -39,12 +40,14 @@ import dev.yashgarg.qbit.utils.rememberCopyToClipboard
 fun FilesTab(
     state: TorrentDetailsState,
     onSetPriority: (List<Int>, Int) -> Unit,
+    onRename: (ContentTreeItem, String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Long-press target: first a small action menu, then a priority or path dialog.
+    // Long-press target: first a small action menu, then a priority / path / rename dialog.
     var menuItem by remember { mutableStateOf<ContentTreeItem?>(null) }
     var priorityItem by remember { mutableStateOf<ContentTreeItem?>(null) }
     var pathItem by remember { mutableStateOf<ContentTreeItem?>(null) }
+    var renameItem by remember { mutableStateOf<ContentTreeItem?>(null) }
 
     FilesListView(
         state = state,
@@ -72,6 +75,10 @@ fun FilesTab(
                     MenuRow(stringResource(CommonR.string.file_menu_path)) {
                         menuItem = null
                         pathItem = item
+                    }
+                    MenuRow(stringResource(CommonR.string.rename)) {
+                        menuItem = null
+                        renameItem = item
                     }
                 }
             },
@@ -147,6 +154,36 @@ fun FilesTab(
                 }
             },
             dismissButton = { TextButton(onClick = { pathItem = null }) { Text("Close") } },
+        )
+    }
+
+    renameItem?.let { item ->
+        var value by remember(item) { mutableStateOf(item.name) }
+        AlertDialog(
+            onDismissRequest = { renameItem = null },
+            title = { Text(if (item.item == null) "Rename folder" else "Rename file") },
+            text = {
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = { value = it },
+                    singleLine = true,
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onRename(item, value)
+                        renameItem = null
+                    }
+                ) {
+                    Text(stringResource(CommonR.string.rename))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { renameItem = null }) {
+                    Text(stringResource(CommonR.string.cancel))
+                }
+            },
         )
     }
 }

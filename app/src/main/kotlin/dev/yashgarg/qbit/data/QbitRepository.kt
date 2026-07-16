@@ -311,6 +311,23 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
         return runCatching { client().getTorrentFiles(hash) }
     }
 
+    /** [oldPath]/[newPath] are relative to the torrent root, "/"-separated. */
+    suspend fun renameFile(
+        hash: String,
+        oldPath: String,
+        newPath: String,
+    ): Result<Unit, Throwable> {
+        return runCatching { client().renameFile(hash, oldPath, newPath) }
+    }
+
+    suspend fun renameFolder(
+        hash: String,
+        oldPath: String,
+        newPath: String,
+    ): Result<Unit, Throwable> {
+        return runCatching { client().renameFolder(hash, oldPath, newPath) }
+    }
+
     /** Priorities: 0 = do not download, 1 = normal, 6 = high, 7 = maximal. */
     suspend fun setFilePriority(
         hash: String,
