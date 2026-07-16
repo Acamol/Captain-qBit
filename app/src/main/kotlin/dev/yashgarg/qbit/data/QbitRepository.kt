@@ -160,6 +160,31 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
         return runCatching { client().toggleSpeedLimitsMode() }
     }
 
+    /** Per-torrent limits are in bytes/s; 0 means unlimited. */
+    suspend fun setTorrentDownloadLimit(hash: String, limit: Long): Result<Unit, Throwable> {
+        return runCatching { client().setTorrentDownloadLimit(listOf(hash), limit) }
+    }
+
+    suspend fun setTorrentUploadLimit(hash: String, limit: Long): Result<Unit, Throwable> {
+        return runCatching { client().setTorrentUploadLimit(listOf(hash), limit) }
+    }
+
+    suspend fun setForceStart(hash: String, value: Boolean): Result<Unit, Throwable> {
+        return runCatching { client().setForceStart(listOf(hash), value) }
+    }
+
+    suspend fun setSuperSeeding(hash: String, value: Boolean): Result<Unit, Throwable> {
+        return runCatching { client().setSuperSeeding(listOf(hash), value) }
+    }
+
+    suspend fun toggleSequentialDownload(hash: String): Result<Unit, Throwable> {
+        return runCatching { client().toggleSequentialDownload(listOf(hash)) }
+    }
+
+    suspend fun toggleFirstLastPriority(hash: String): Result<Unit, Throwable> {
+        return runCatching { client().toggleFirstLastPriority(listOf(hash)) }
+    }
+
     suspend fun recheckTorrents(hashes: List<String>): Result<Unit, Throwable> {
         return runCatching { client().recheckTorrents(hashes) }
     }

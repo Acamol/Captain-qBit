@@ -125,6 +125,67 @@ constructor(
         }
     }
 
+    /** Limits are in bytes/s; 0 clears the limit (unlimited). */
+    fun setDownloadLimit(bytesPerSec: Long) {
+        val hash = requireNotNull(hash)
+        launchStatus(
+            successMessage = getString(CommonR.string.status_speed_limit_updated),
+            failureMessage = getString(CommonR.string.status_set_speed_limit_failure),
+        ) {
+            repository.setTorrentDownloadLimit(hash, bytesPerSec)
+        }
+    }
+
+    fun setUploadLimit(bytesPerSec: Long) {
+        val hash = requireNotNull(hash)
+        launchStatus(
+            successMessage = getString(CommonR.string.status_speed_limit_updated),
+            failureMessage = getString(CommonR.string.status_set_speed_limit_failure),
+        ) {
+            repository.setTorrentUploadLimit(hash, bytesPerSec)
+        }
+    }
+
+    fun setForceStart(value: Boolean) {
+        val hash = requireNotNull(hash)
+        launchStatus(
+            successMessage = getString(CommonR.string.status_torrent_updated),
+            failureMessage = getString(CommonR.string.status_update_torrent_failure),
+        ) {
+            repository.setForceStart(hash, value)
+        }
+    }
+
+    fun setSuperSeeding(value: Boolean) {
+        val hash = requireNotNull(hash)
+        launchStatus(
+            successMessage = getString(CommonR.string.status_torrent_updated),
+            failureMessage = getString(CommonR.string.status_update_torrent_failure),
+        ) {
+            repository.setSuperSeeding(hash, value)
+        }
+    }
+
+    fun toggleSequentialDownload() {
+        val hash = requireNotNull(hash)
+        launchStatus(
+            successMessage = getString(CommonR.string.status_torrent_updated),
+            failureMessage = getString(CommonR.string.status_update_torrent_failure),
+        ) {
+            repository.toggleSequentialDownload(hash)
+        }
+    }
+
+    fun toggleFirstLastPriority() {
+        val hash = requireNotNull(hash)
+        launchStatus(
+            successMessage = getString(CommonR.string.status_torrent_updated),
+            failureMessage = getString(CommonR.string.status_update_torrent_failure),
+        ) {
+            repository.toggleFirstLastPriority(hash)
+        }
+    }
+
     fun setCategory(category: String) {
         launchStatus(
             successMessage = getString(CommonR.string.status_category_set_to, category),

@@ -13,6 +13,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -20,17 +21,23 @@ import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Autorenew
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.FindInPage
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FormatListNumbered
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.LowPriority
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.VerticalAlignBottom
 import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material3.AlertDialog
@@ -222,6 +229,58 @@ fun TorrentDetailsScreen(
                                 leadingIcon = { Icon(Icons.Filled.Folder, null) },
                                 onClick = { act { dialog = DetailDialog.SavePath } },
                             )
+                            DropdownMenuItem(
+                                text = { Text("Download limit…") },
+                                leadingIcon = { Icon(Icons.Filled.Download, null) },
+                                onClick = { act { dialog = DetailDialog.DownloadLimit } },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Upload limit…") },
+                                leadingIcon = { Icon(Icons.Filled.Upload, null) },
+                                onClick = { act { dialog = DetailDialog.UploadLimit } },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Force start") },
+                                leadingIcon = { Icon(Icons.Filled.Bolt, null) },
+                                trailingIcon = {
+                                    Checkbox(checked = torrent.forceStart, onCheckedChange = null)
+                                },
+                                onClick = {
+                                    act { viewModel.setForceStart(!torrent.forceStart) }
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Sequential download") },
+                                leadingIcon = { Icon(Icons.Filled.FormatListNumbered, null) },
+                                trailingIcon = {
+                                    Checkbox(
+                                        checked = torrent.sequentialDownload,
+                                        onCheckedChange = null,
+                                    )
+                                },
+                                onClick = { act { viewModel.toggleSequentialDownload() } },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Download first and last pieces") },
+                                leadingIcon = { Icon(Icons.Filled.Flag, null) },
+                                trailingIcon = {
+                                    Checkbox(
+                                        checked = torrent.firstLastPiecePriority,
+                                        onCheckedChange = null,
+                                    )
+                                },
+                                onClick = { act { viewModel.toggleFirstLastPriority() } },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Super seeding") },
+                                leadingIcon = { Icon(Icons.Filled.CloudUpload, null) },
+                                trailingIcon = {
+                                    Checkbox(checked = torrent.superSeeding, onCheckedChange = null)
+                                },
+                                onClick = {
+                                    act { viewModel.setSuperSeeding(!torrent.superSeeding) }
+                                },
+                            )
                         }
                     }
                 },
@@ -309,6 +368,30 @@ fun TorrentDetailsScreen(
                     onDismiss = { dialog = null },
                 )
             }
+        DetailDialog.DownloadLimit ->
+            if (torrent != null) {
+                SpeedLimitDialog(
+                    title = "Download limit",
+                    currentBytesPerSec = torrent.dlLimit,
+                    onConfirm = {
+                        viewModel.setDownloadLimit(it)
+                        dialog = null
+                    },
+                    onDismiss = { dialog = null },
+                )
+            }
+        DetailDialog.UploadLimit ->
+            if (torrent != null) {
+                SpeedLimitDialog(
+                    title = "Upload limit",
+                    currentBytesPerSec = torrent.uploadLimit,
+                    onConfirm = {
+                        viewModel.setUploadLimit(it)
+                        dialog = null
+                    },
+                    onDismiss = { dialog = null },
+                )
+            }
         DetailDialog.Category ->
             if (torrent != null) {
                 CategoryDialog(
@@ -364,10 +447,51 @@ private enum class DetailDialog {
     Rename,
     QueuePriority,
     SavePath,
+    DownloadLimit,
+    UploadLimit,
     Category,
     CreateCategory,
     Tags,
     CreateTag,
+}
+
+/**
+ * Enter a speed limit in KiB/s (qBittorrent's own unit in the desktop dialog). A blank/zero value
+ * clears the limit. [currentBytesPerSec] is the torrent's current limit in bytes/s (0 or -1 =
+ * unlimited); it's shown converted to KiB/s.
+ */
+@Composable
+private fun SpeedLimitDialog(
+    title: String,
+    currentBytesPerSec: Long,
+    onConfirm: (Long) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val initial = if (currentBytesPerSec > 0) (currentBytesPerSec / 1024).toString() else ""
+    var value by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            OutlinedTextField(
+                value = value,
+                onValueChange = { new -> value = new.filter { it.isDigit() } },
+                singleLine = true,
+                label = { Text("KiB/s") },
+                supportingText = { Text("Leave empty for unlimited") },
+                keyboardOptions =
+                    KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                    ),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(value.toLongOrNull()?.times(1024) ?: 0L) }) {
+                Text("OK")
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 @Composable

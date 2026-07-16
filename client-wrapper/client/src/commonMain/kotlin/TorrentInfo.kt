@@ -113,12 +113,17 @@ suspend fun QBittorrentClient.getTorrentDownloadLimit(
 
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.setTorrentDownloadLimit(
-    hashes: List<String> = QBittorrentClient.allList
+    hashes: List<String> = QBittorrentClient.allList,
+    limit: Long,
 ) {
     http
         .submitForm(
-            "${config.baseUrl}/api/v2/torrents/downloadLimit",
-            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) },
+            "${config.baseUrl}/api/v2/torrents/setDownloadLimit",
+            formParameters =
+                Parameters.build {
+                    append("hashes", hashes.joinToString("|"))
+                    append("limit", limit.toString())
+                },
         )
         .orThrow()
 }
