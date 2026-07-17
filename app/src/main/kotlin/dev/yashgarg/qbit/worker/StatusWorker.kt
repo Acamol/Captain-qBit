@@ -13,7 +13,6 @@ import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
 import androidx.work.ForegroundInfo
-import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
@@ -246,8 +245,12 @@ constructor(
         private const val REFRESH_INTERVAL_MS = 5_000L
         private const val WORK_TAG = "status_update"
 
-        val constraints =
-            Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+        // No network constraint on purpose: the poll loop already tolerates being offline (it
+        // delays and retries each tick). A CONNECTED constraint instead HURT here — a brief drop
+        // during a Wi-Fi<->mobile handoff made WorkManager stop the service, and it couldn't be
+        // restarted from the background (Android 12+ blocks foreground-service starts), so the
+        // notification vanished until the app was reopened.
+        val constraints = Constraints.NONE
 
         /**
          * (Re)start the monitoring service. REPLACE resets only the in-memory recheck baseline;

@@ -30,7 +30,15 @@ interface ClientManager {
 
         fun httpClient(basicAuthCredentials: Pair<String, String>? = null): HttpClient {
             return HttpClient(OkHttp) {
-                install(HttpTimeout) { connectTimeoutMillis = 3000 }
+                install(HttpTimeout) {
+                    connectTimeoutMillis = 3000
+                    // Without a socket timeout, a request reusing a keep-alive connection that died
+                    // during a network handoff (Wi-Fi<->mobile) hangs on the read instead of the
+                    // connect, stalling polling. Failing fast lets OkHttp retry on a fresh
+                    // connection; requestTimeout caps the whole call as a backstop.
+                    socketTimeoutMillis = 10_000
+                    requestTimeoutMillis = 20_000
+                }
                 install(Logging) {
                     logger =
                         object : Logger {
