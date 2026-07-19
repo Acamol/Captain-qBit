@@ -317,7 +317,7 @@ private fun SectionHeaderWithAction(title: String, onAction: () -> Unit) {
             label = "Manage $title",
             icon = Icons.Filled.Edit,
             onClick = onAction,
-            iconModifier = Modifier.width(20.dp),
+            modifier = Modifier.width(20.dp),
             position = TooltipAnchorPosition.Below,
         )
     }

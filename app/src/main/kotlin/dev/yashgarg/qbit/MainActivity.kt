@@ -15,6 +15,7 @@ import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.core.view.WindowCompat
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.Lifecycle
@@ -61,10 +62,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            val dynamicColors by
-                serverPrefsStore.data
-                    .map { it.dynamicColors }
-                    .collectAsStateWithLifecycle(initialValue = false)
+            val dynamicColorsFlow = remember { serverPrefsStore.data.map { it.dynamicColors } }
+            val dynamicColors by dynamicColorsFlow.collectAsStateWithLifecycle(initialValue = false)
             QbitComposeTheme(dynamicColors = dynamicColors) {
                 QbitNavHost(appNavigator = appNavigator, onExitDoubleBack = ::onExitDoubleBack)
 

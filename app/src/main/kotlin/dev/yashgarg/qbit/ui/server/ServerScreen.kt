@@ -346,7 +346,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                                 label = stringResource(CommonR.string.sort),
                                 icon = Icons.AutoMirrored.Filled.Sort,
                                 onClick = { serverDialog = ServerDialog.SortPicker },
-                                iconModifier =
+                                modifier =
                                     Modifier.graphicsLayer { alpha = if (sortActive) 1f else 0.5f },
                             )
                         }
@@ -532,7 +532,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
     )
 
     if (showAddTorrent) {
-        val prefs = viewModel.addTorrentPrefs.value
+        val prefs by viewModel.addTorrentPrefs.collectAsStateWithLifecycle()
         AddTorrentScreen(
             viewModel = viewModel,
             availableCategories = state.availableCategories,
@@ -561,7 +561,7 @@ internal fun TooltipIconButton(
     label: String,
     icon: ImageVector,
     onClick: () -> Unit,
-    iconModifier: Modifier = Modifier,
+    modifier: Modifier = Modifier,
     position: TooltipAnchorPosition = TooltipAnchorPosition.Above,
 ) {
     val tooltipState = rememberTooltipState()
@@ -576,7 +576,7 @@ internal fun TooltipIconButton(
         state = tooltipState,
     ) {
         IconButton(onClick = onClick) {
-            Icon(icon, contentDescription = label, modifier = iconModifier)
+            Icon(icon, contentDescription = label, modifier = modifier)
         }
     }
 }
