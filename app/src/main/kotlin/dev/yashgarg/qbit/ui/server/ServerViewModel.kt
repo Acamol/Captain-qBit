@@ -171,21 +171,10 @@ constructor(
 
     /**
      * Restore [serverId]'s saved filters + sort into the UI state. Servers without a per-server
-     * entry yet fall back to the legacy global values (one-time migration from pre-per-server
-     * builds; those legacy fields go away at 1.0.0).
+     * entry yet start from the defaults.
      */
     private fun applyViewPrefs(prefs: ServerPreferences, serverId: Int) {
-        val v =
-            prefs.serverViewPrefs[serverId]
-                ?: ServerViewPrefs(
-                    sortOptionName = prefs.sortOptionName,
-                    sortDirectionAsc = prefs.sortDirectionAsc,
-                    filterStateName = prefs.filterStateName,
-                    filterCategory = prefs.filterCategory,
-                    filterTracker = prefs.filterTracker,
-                    filterTags = prefs.filterTags,
-                    filterUntagged = prefs.filterUntagged,
-                )
+        val v = prefs.serverViewPrefs[serverId] ?: ServerViewPrefs()
         val option =
             try {
                 SortOption.valueOf(v.sortOptionName)

@@ -16,9 +16,15 @@ object ServerPreferencesSerializer : Serializer<ServerPreferences> {
 
     override val defaultValue = ServerPreferences()
 
+    // ignoreUnknownKeys so a prefs file written by an older install (which still carries fields
+    // since removed, e.g. the pre-per-server global filter/sort keys) decodes instead of throwing
+    // CorruptionException — which would reset every saved preference. Removed keys are simply
+    // dropped on the next write.
+    private val json = Json { ignoreUnknownKeys = true }
+
     override suspend fun readFrom(input: InputStream): ServerPreferences {
         try {
-            return Json.decodeFromString(
+            return json.decodeFromString(
                 ServerPreferences.serializer(),
                 input.readBytes().decodeToString(),
             )
@@ -29,7 +35,7 @@ object ServerPreferencesSerializer : Serializer<ServerPreferences> {
 
     override suspend fun writeTo(t: ServerPreferences, output: OutputStream) {
         withContext(Dispatchers.IO) {
-            output.write(Json.encodeToString(ServerPreferences.serializer(), t).encodeToByteArray())
+            output.write(json.encodeToString(ServerPreferences.serializer(), t).encodeToByteArray())
         }
     }
 }
