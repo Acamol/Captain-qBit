@@ -35,8 +35,12 @@ over its Web API — control your self-hosted server from your phone. Written in
 ### Managing torrents
 - Pause/resume, delete (optionally with data), force recheck, reannounce, and rename
 - Set or create categories, manage tags, toggle Automatic Torrent Management, or change the save path
+- Set the queue priority — move a torrent to the top, up, down, or the bottom of the queue
+- Cap per-torrent download/upload speeds, and set share limits (ratio, seeding time, and inactive seeding time)
+- Toggle force start, sequential download, first/last piece priority, and super seeding
 - Detail view with Info, Files, Trackers, and Peers tabs — browse the file tree, copy full paths,
-  and set per-file download priorities (or skip files entirely)
+  rename files and folders, and set per-file download priorities (or skip files entirely)
+- Add, edit, and remove trackers from the Trackers tab
 - Surfaces the actual failure reason when a torrent errors, instead of a bare "error"
 
 ### Connection & reliability
@@ -48,6 +52,7 @@ over its Web API — control your self-hosted server from your phone. Written in
 ### Servers & settings
 - Save multiple servers and switch the active one from the navigation drawer
 - Manage servers — add, edit, or remove them — from an in-app Settings screen
+- Set global and alternate speed limits, and toggle torrent queueing
 - Light, Dark, or System theme, plus optional Material You dynamic colours
 - Notifications you control: toggle the ongoing status notification, and opt in to alerts
   when a download or a force-recheck finishes
@@ -60,7 +65,8 @@ over its Web API — control your self-hosted server from your phone. Written in
 > normally-signed HTTPS work without any setup.
 
 ## Roadmap
-- **More in-app preferences** — configurable behaviours such as the refresh/polling interval
+- **More in-app preferences** — configurable behaviours such as the data refresh/polling interval and the background-notification update frequency
+- **Alternate speed-limit scheduler** — choose the time window and days when the alternate limits automatically take over
 - **RSS support** — browse RSS feeds, view articles, and manage auto-download rules
 
 ## Support
