@@ -74,8 +74,12 @@ suspend fun QBittorrentClient.getGlobalDownloadLimit(): Int {
 
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.setGlobalDownloadLimit(limit: Int) {
+    // POST form, not GET: qBittorrent 5.x returns 405 for a GET on this setter.
     http
-        .get("${config.baseUrl}/api/v2/transfer/setDownloadLimit") { parameter("limit", limit) }
+        .submitForm(
+            "${config.baseUrl}/api/v2/transfer/setDownloadLimit",
+            formParameters = Parameters.build { append("limit", limit.toString()) },
+        )
         .orThrow()
 }
 
@@ -90,7 +94,11 @@ suspend fun QBittorrentClient.getGlobalUploadLimit(): Int {
 
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.setGlobalUploadLimit(limit: Int) {
+    // POST form, not GET: qBittorrent 5.x returns 405 for a GET on this setter.
     http
-        .get("${config.baseUrl}/api/v2/transfer/setUploadLimit") { parameter("limit", limit) }
+        .submitForm(
+            "${config.baseUrl}/api/v2/transfer/setUploadLimit",
+            formParameters = Parameters.build { append("limit", limit.toString()) },
+        )
         .orThrow()
 }

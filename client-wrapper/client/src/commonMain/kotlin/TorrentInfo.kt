@@ -139,6 +139,9 @@ suspend fun QBittorrentClient.setTorrentShareLimits(
     ratioLimit: Float,
     seedingTimeLimit: Long,
     inactiveSeedingTimeLimit: Long = -2,
+    // "When limit reached" action. -1 = Default (use the global setting, i.e. don't override it).
+    // Required by qBittorrent 5.x; older servers ignore the extra parameter.
+    shareLimitAction: Int = -1,
 ) {
     http
         .submitForm(
@@ -149,6 +152,7 @@ suspend fun QBittorrentClient.setTorrentShareLimits(
                     append("ratioLimit", ratioLimit.toString())
                     append("seedingTimeLimit", seedingTimeLimit.toString())
                     append("inactiveSeedingTimeLimit", inactiveSeedingTimeLimit.toString())
+                    append("shareLimitAction", shareLimitAction.toString())
                 },
         )
         .orThrow()
