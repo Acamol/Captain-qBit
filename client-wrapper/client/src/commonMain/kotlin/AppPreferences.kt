@@ -1,11 +1,10 @@
 package qbittorrent
 
 import io.ktor.client.request.*
+import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 import qbittorrent.internal.bodyOrThrow
 import qbittorrent.internal.orThrow
 import qbittorrent.models.BuildInfo
@@ -18,11 +17,12 @@ suspend fun QBittorrentClient.getPreferences(): JsonObject =
 /** Set one or more qBittorrent application preferences. */
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.setPreferences(prefs: JsonObject) {
+    // qBittorrent reads the settings from a form field named `json`, not a JSON request body.
     http
-        .post("${config.baseUrl}/api/v2/app/setPreferences") {
-            contentType(ContentType.Application.Json)
-            setBody(buildJsonObject { put("json", prefs) })
-        }
+        .submitForm(
+            "${config.baseUrl}/api/v2/app/setPreferences",
+            formParameters = Parameters.build { append("json", prefs.toString()) },
+        )
         .orThrow()
 }
 
