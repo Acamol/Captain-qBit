@@ -9,10 +9,14 @@ import qbittorrent.internal.orThrow
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.addPeers(hashes: List<String>, peers: List<String>) {
     http
-        .get("${config.baseUrl}/api/v2/torrents/addPeers") {
-            parameter("hashes", hashes.joinToString("|"))
-            parameter("peers", peers.joinToString("|"))
-        }
+        .submitForm(
+            "${config.baseUrl}/api/v2/torrents/addPeers",
+            formParameters =
+                Parameters.build {
+                    append("hashes", hashes.joinToString("|"))
+                    append("peers", peers.joinToString("|"))
+                },
+        )
         .orThrow()
 }
 

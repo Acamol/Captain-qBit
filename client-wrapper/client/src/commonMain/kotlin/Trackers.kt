@@ -10,12 +10,20 @@ import qbittorrent.models.TorrentTracker
 
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.editTrackers(hash: String, originalUrl: String, newUrl: String) {
+    // qBittorrent 5.2 renamed the original-URL parameter from `origUrl` to `url`; the docs still
+    // say
+    // `origUrl`. Send both (same value) so it works across versions — qBit ignores the unknown one.
     http
-        .get("${config.baseUrl}/api/v2/torrents/editTracker") {
-            parameter("hash", hash)
-            parameter("origUrl", originalUrl)
-            parameter("newUrl", newUrl)
-        }
+        .submitForm(
+            "${config.baseUrl}/api/v2/torrents/editTracker",
+            formParameters =
+                Parameters.build {
+                    append("hash", hash)
+                    append("origUrl", originalUrl)
+                    append("url", originalUrl)
+                    append("newUrl", newUrl)
+                },
+        )
         .orThrow()
 }
 
@@ -36,10 +44,14 @@ suspend fun QBittorrentClient.addTrackers(hash: String, urls: List<String>) {
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.removeTrackers(hash: String, urls: List<String>) {
     http
-        .get("${config.baseUrl}/api/v2/torrents/removeTrackers") {
-            parameter("hash", hash)
-            parameter("urls", urls.joinToString("|"))
-        }
+        .submitForm(
+            "${config.baseUrl}/api/v2/torrents/removeTrackers",
+            formParameters =
+                Parameters.build {
+                    append("hash", hash)
+                    append("urls", urls.joinToString("|"))
+                },
+        )
         .orThrow()
 }
 

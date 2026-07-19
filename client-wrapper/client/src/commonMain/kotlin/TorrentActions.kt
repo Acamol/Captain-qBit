@@ -201,9 +201,10 @@ suspend fun QBittorrentClient.toggleSequentialDownload(
     hashes: List<String> = QBittorrentClient.allList
 ) {
     http
-        .get("${config.baseUrl}/api/v2/torrents/toggleSequentialDownload") {
-            parameter("hashes", hashes.joinToString("|"))
-        }
+        .submitForm(
+            "${config.baseUrl}/api/v2/torrents/toggleSequentialDownload",
+            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) },
+        )
         .orThrow()
 }
 
@@ -212,9 +213,10 @@ suspend fun QBittorrentClient.toggleFirstLastPriority(
     hashes: List<String> = QBittorrentClient.allList
 ) {
     http
-        .get("${config.baseUrl}/api/v2/torrents/toggleFirstLastPiecePrio") {
-            parameter("hashes", hashes.joinToString("|"))
-        }
+        .submitForm(
+            "${config.baseUrl}/api/v2/torrents/toggleFirstLastPiecePrio",
+            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) },
+        )
         .orThrow()
 }
 
