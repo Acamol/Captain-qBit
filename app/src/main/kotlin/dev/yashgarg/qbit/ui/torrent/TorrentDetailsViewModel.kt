@@ -147,16 +147,23 @@ constructor(
     }
 
     /** ratioLimit/seedingTimeMinutes: -2 = global, -1 = unlimited, else the limit. */
-    fun setShareLimits(ratioLimit: Float, seedingTimeMinutes: Long) {
+    /** All limits: -2 = use global, -1 = no limit, else the value (ratio, or minutes). */
+    fun setShareLimits(
+        ratioLimit: Float,
+        seedingTimeMinutes: Long,
+        inactiveSeedingTimeMinutes: Long,
+    ) {
         val hash = requireNotNull(hash)
-        // Preserve the torrent's current inactive-seeding-time limit — qBittorrent's setShareLimits
-        // sets all three at once, so passing anything else would silently overwrite it.
-        val inactive = _uiState.value.torrent?.inactiveSeedingTimeLimit ?: -2
         launchStatus(
             successMessage = getString(CommonR.string.status_share_limits_updated),
             failureMessage = getString(CommonR.string.status_set_share_limits_failure),
         ) {
-            repository.setTorrentShareLimits(hash, ratioLimit, seedingTimeMinutes, inactive)
+            repository.setTorrentShareLimits(
+                hash,
+                ratioLimit,
+                seedingTimeMinutes,
+                inactiveSeedingTimeMinutes,
+            )
         }
     }
 

@@ -409,8 +409,9 @@ fun TorrentDetailsScreen(
                 ShareLimitDialog(
                     currentRatioLimit = torrent.ratioLimit,
                     currentSeedingTimeLimit = torrent.seedingTimeLimit,
-                    onConfirm = { ratio, minutes ->
-                        viewModel.setShareLimits(ratio, minutes)
+                    currentInactiveSeedingTimeLimit = torrent.inactiveSeedingTimeLimit,
+                    onConfirm = { ratio, minutes, inactiveMinutes ->
+                        viewModel.setShareLimits(ratio, minutes, inactiveMinutes)
                         dialog = null
                     },
                     onDismiss = { dialog = null },
@@ -596,7 +597,9 @@ private enum class LimitMode {
 private fun ShareLimitDialog(
     currentRatioLimit: Float,
     currentSeedingTimeLimit: Long,
-    onConfirm: (ratioLimit: Float, seedingTimeMinutes: Long) -> Unit,
+    currentInactiveSeedingTimeLimit: Long,
+    onConfirm:
+        (ratioLimit: Float, seedingTimeMinutes: Long, inactiveSeedingTimeMinutes: Long) -> Unit,
     onDismiss: () -> Unit,
 ) {
     fun modeOf(v: Double): LimitMode =
@@ -607,11 +610,20 @@ private fun ShareLimitDialog(
         }
     var ratioMode by remember { mutableStateOf(modeOf(currentRatioLimit.toDouble())) }
     var seedMode by remember { mutableStateOf(modeOf(currentSeedingTimeLimit.toDouble())) }
+    var inactiveMode by remember {
+        mutableStateOf(modeOf(currentInactiveSeedingTimeLimit.toDouble()))
+    }
     var ratioValue by remember {
         mutableStateOf(if (currentRatioLimit >= 0) currentRatioLimit.toString() else "")
     }
     var seedValue by remember {
         mutableStateOf(if (currentSeedingTimeLimit >= 0) currentSeedingTimeLimit.toString() else "")
+    }
+    var inactiveValue by remember {
+        mutableStateOf(
+            if (currentInactiveSeedingTimeLimit >= 0) currentInactiveSeedingTimeLimit.toString()
+            else ""
+        )
     }
 
     AlertDialog(
@@ -654,24 +666,45 @@ private fun ShareLimitDialog(
                             ),
                     )
                 }
+                Spacer(Modifier.size(16.dp))
+                Text("Inactive seeding time limit", style = MaterialTheme.typography.titleSmall)
+                LimitMode.entries.forEach { mode ->
+                    LimitModeOption(mode, inactiveMode == mode) { inactiveMode = mode }
+                }
+                if (inactiveMode == LimitMode.CUSTOM) {
+                    OutlinedTextField(
+                        value = inactiveValue,
+                        onValueChange = { new -> inactiveValue = new.filter { it.isDigit() } },
+                        singleLine = true,
+                        label = { Text("Minutes") },
+                        keyboardOptions =
+                            KeyboardOptions(
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                            ),
+                    )
+                }
             }
         },
         confirmButton = {
             TextButton(
                 onClick = {
+                    fun timeOf(mode: LimitMode, value: String): Long =
+                        when (mode) {
+                            LimitMode.GLOBAL -> -2L
+                            LimitMode.UNLIMITED -> -1L
+                            LimitMode.CUSTOM -> value.toLongOrNull() ?: 0L
+                        }
                     val ratio =
                         when (ratioMode) {
                             LimitMode.GLOBAL -> -2f
                             LimitMode.UNLIMITED -> -1f
                             LimitMode.CUSTOM -> ratioValue.toFloatOrNull() ?: 0f
                         }
-                    val minutes =
-                        when (seedMode) {
-                            LimitMode.GLOBAL -> -2L
-                            LimitMode.UNLIMITED -> -1L
-                            LimitMode.CUSTOM -> seedValue.toLongOrNull() ?: 0L
-                        }
-                    onConfirm(ratio, minutes)
+                    onConfirm(
+                        ratio,
+                        timeOf(seedMode, seedValue),
+                        timeOf(inactiveMode, inactiveValue),
+                    )
                 }
             ) {
                 Text("OK")
