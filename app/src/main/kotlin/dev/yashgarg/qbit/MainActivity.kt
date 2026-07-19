@@ -145,6 +145,9 @@ class MainActivity : AppCompatActivity() {
                     ) { status, notify ->
                         status to notify
                     }
+                    // configStatus re-emits EXISTS on config edits / server switches; without this
+                    // the worker gets REPLACE-re-enqueued each time, flickering the notification.
+                    .distinctUntilChanged()
                     .collect { (status, notify) ->
                         when (status) {
                             ConfigStatus.EXISTS -> {

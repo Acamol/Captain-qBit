@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -81,7 +81,9 @@ fun TrackersTab(
             item { Text("No trackers", modifier = Modifier.fillMaxWidth().padding(16.dp)) }
         }
 
-        items(trackers, key = { it.url }) { tracker ->
+        // No stable key: a torrent can report the same tracker URL more than once (duplicated
+        // across tiers), and a duplicate key crashes LazyColumn. Positional is fine for this list.
+        itemsIndexed(trackers) { _, tracker ->
             val color: Color =
                 when (TrackerStatus.statusOf(tracker.status)) {
                     TrackerStatus.CONTACTED_WORKING -> green
