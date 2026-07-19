@@ -753,11 +753,16 @@ private fun SpeedLimitsDialog(
     onConfirm: (downloadBytes: Int, uploadBytes: Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    fun toKib(bytes: Int) = if (bytes > 0) (bytes / 1024).toString() else ""
+    // Display in KiB/s: round to nearest, and never render a real >0 limit as blank (blank means
+    // 0 = unlimited).
+    fun toKib(bytes: Int) =
+        if (bytes > 0) ((bytes + 512) / 1024).coerceAtLeast(1).toString() else ""
     fun toBytes(kib: String): Int =
         ((kib.toLongOrNull() ?: 0L) * 1024).coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
-    var dl by remember { mutableStateOf(toKib(initialDownloadBytes)) }
-    var ul by remember { mutableStateOf(toKib(initialUploadBytes)) }
+    val initialDl = toKib(initialDownloadBytes)
+    val initialUl = toKib(initialUploadBytes)
+    var dl by remember { mutableStateOf(initialDl) }
+    var ul by remember { mutableStateOf(initialUl) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -786,7 +791,17 @@ private fun SpeedLimitsDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(toBytes(dl), toBytes(ul)) }) { Text("OK") }
+            TextButton(
+                onClick = {
+                    // No-op if neither field was edited, so re-opening and confirming never
+                    // rewrites
+                    // (and rounds) limits the user didn't touch.
+                    if (dl != initialDl || ul != initialUl) onConfirm(toBytes(dl), toBytes(ul))
+                    onDismiss()
+                }
+            ) {
+                Text("OK")
+            }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )

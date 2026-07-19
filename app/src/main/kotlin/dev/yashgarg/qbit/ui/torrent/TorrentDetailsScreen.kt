@@ -492,7 +492,11 @@ private fun SpeedLimitDialog(
     onConfirm: (Long) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val initial = if (currentBytesPerSec > 0) (currentBytesPerSec / 1024).toString() else ""
+    // Display in KiB/s (qBittorrent's unit): round to nearest, and never show a real >0 limit as
+    // blank (which would read as "unlimited"). Blank strictly means 0 = unlimited.
+    val initial =
+        if (currentBytesPerSec > 0) ((currentBytesPerSec + 512) / 1024).coerceAtLeast(1).toString()
+        else ""
     var value by remember { mutableStateOf(initial) }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -511,7 +515,14 @@ private fun SpeedLimitDialog(
             )
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(value.toLongOrNull()?.times(1024) ?: 0L) }) {
+            TextButton(
+                onClick = {
+                    // No-op if the field wasn't edited, so re-opening and confirming never rewrites
+                    // (and rounds) a limit the user didn't touch.
+                    if (value != initial) onConfirm(value.toLongOrNull()?.times(1024) ?: 0L)
+                    onDismiss()
+                }
+            ) {
                 Text("OK")
             }
         },
