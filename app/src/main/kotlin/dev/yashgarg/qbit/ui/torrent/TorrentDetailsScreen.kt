@@ -196,9 +196,9 @@ fun TorrentDetailsScreen(
                                 leadingIcon = { Icon(Icons.Filled.DriveFileRenameOutline, null) },
                                 onClick = { act { dialog = DetailDialog.Rename } },
                             )
-                            // Queue-priority moves only do anything when the server has torrent
-                            // queueing enabled; qBittorrent reports priority as -1 otherwise.
-                            if (torrent.priority >= 0) {
+                            // Only when the server has torrent queueing enabled — qBittorrent
+                            // rejects the priority moves (409) otherwise.
+                            if (state.queueingEnabled) {
                                 DropdownMenuItem(
                                     text = { Text("Queue priority") },
                                     leadingIcon = { Icon(Icons.Filled.LowPriority, null) },

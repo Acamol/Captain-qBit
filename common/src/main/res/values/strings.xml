@@ -165,6 +165,9 @@
     <string name="status_speed_limits_disabled">Alternative speed limits are disabled</string>
     <string name="status_speed_limits_enabled">Alternative speed limits are enabled</string>
     <string name="status_toggle_speed_limits_failure">Failed to toggle speed limits</string>
+    <string name="status_queueing_enabled">Torrent queueing enabled</string>
+    <string name="status_queueing_disabled">Torrent queueing disabled</string>
+    <string name="status_set_queueing_failure">Failed to change torrent queueing</string>
     <string name="status_get_speed_limit_mode_failure">Failed to get speed limit mode</string>
     <string name="status_sync_data_failure">Failed to sync data</string>
 

@@ -7,6 +7,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -238,6 +239,19 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
                         put("alt_up_limit", bytesToPrefLimit(uploadBytesPerSec))
                     }
                 )
+        }
+    }
+
+    /** Whether the server has torrent queueing enabled (an app preference). */
+    suspend fun isQueueingEnabled(): Result<Boolean, Throwable> {
+        return runCatching {
+            client().getPreferences()["queueing_enabled"]?.jsonPrimitive?.booleanOrNull ?: false
+        }
+    }
+
+    suspend fun setQueueingEnabled(enabled: Boolean): Result<Unit, Throwable> {
+        return runCatching {
+            client().setPreferences(buildJsonObject { put("queueing_enabled", enabled) })
         }
     }
 

@@ -56,6 +56,13 @@ constructor(
             launch { syncPeers() }
             launch { syncAvailableFilters() }
             launch { getContent() }
+            launch {
+                // Gates the queue-priority actions: qBittorrent rejects them (409) unless queueing
+                // is enabled, and a torrent's priority isn't a reliable signal for that on 5.x.
+                repository.isQueueingEnabled().onOk { enabled ->
+                    _uiState.update { it.copy(queueingEnabled = enabled) }
+                }
+            }
         }
     }
 

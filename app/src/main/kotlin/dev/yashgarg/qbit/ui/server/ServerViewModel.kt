@@ -686,6 +686,51 @@ constructor(
             repository.getAltSpeedLimits().onOk { (dl, ul) ->
                 _uiState.update { it.copy(altDownloadLimit = dl, altUploadLimit = ul) }
             }
+            repository.isQueueingEnabled().onOk { enabled ->
+                // Don't leave the list stuck on the Queued filter if the server has queueing off
+                // (e.g. a filter persisted from a prior session, or queueing toggled off
+                // elsewhere).
+                val clearFilter = !enabled && _uiState.value.selectedFilter == StateFilter.QUEUED
+                _uiState.update {
+                    it.copy(
+                        queueingEnabled = enabled,
+                        selectedFilter = if (clearFilter) StateFilter.ALL else it.selectedFilter,
+                    )
+                }
+                if (clearFilter) persistViewPrefs()
+            }
+        }
+    }
+
+    fun setQueueing(enabled: Boolean) {
+        viewModelScope.launch {
+            repository
+                .setQueueingEnabled(enabled)
+                .onOk {
+                    // Turning queueing off hides the Queued filter; if it's the active one, fall
+                    // back to All so the list isn't stuck on a now-hidden filter.
+                    val clearFilter =
+                        !enabled && _uiState.value.selectedFilter == StateFilter.QUEUED
+                    _uiState.update {
+                        it.copy(
+                            queueingEnabled = enabled,
+                            selectedFilter =
+                                if (clearFilter) StateFilter.ALL else it.selectedFilter,
+                        )
+                    }
+                    if (clearFilter) persistViewPrefs()
+                    emitStatus(
+                        getString(
+                            if (enabled) CommonR.string.status_queueing_enabled
+                            else CommonR.string.status_queueing_disabled
+                        )
+                    )
+                }
+                .onErr {
+                    emitStatus(
+                        it.friendlyMessage(getString(CommonR.string.status_set_queueing_failure))
+                    )
+                }
         }
     }
 
@@ -797,24 +842,33 @@ constructor(
             // toast on the transition; only show the full error screen when nothing has loaded yet.
             launch {
                 var lastError: Throwable? = null
-                repository.observeMainDataError().collect { error ->
-                    _uiState.update { state ->
-                        when {
-                            error == null -> state.copy(hasError = false, error = null)
-                            state.data == null ->
-                                state.copy(hasError = true, error = error, dataLoading = false)
-                            else -> state
+                repository
+                    .observeMainDataError()
+                    // Survive the transient "no active client" throw during a server switch;
+                    // otherwise this collector dies and a dead server's error never surfaces,
+                    // leaving the list stuck on the loading spinner forever.
+                    .retry {
+                        delay(SYNC_RETRY_MS)
+                        true
+                    }
+                    .collect { error ->
+                        _uiState.update { state ->
+                            when {
+                                error == null -> state.copy(hasError = false, error = null)
+                                state.data == null ->
+                                    state.copy(hasError = true, error = error, dataLoading = false)
+                                else -> state
+                            }
                         }
-                    }
-                    if (error != null && lastError == null && _uiState.value.data != null) {
-                        emitStatus(
-                            error.friendlyMessage(
-                                getString(CommonR.string.status_sync_data_failure)
+                        if (error != null && lastError == null && _uiState.value.data != null) {
+                            emitStatus(
+                                error.friendlyMessage(
+                                    getString(CommonR.string.status_sync_data_failure)
+                                )
                             )
-                        )
+                        }
+                        lastError = error
                     }
-                    lastError = error
-                }
             }
         }
     }

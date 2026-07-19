@@ -282,6 +282,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                     scope.launch { drawerState.close() }
                     serverDialog = ServerDialog.AltLimits
                 },
+                onToggleQueueing = { viewModel.setQueueing(!state.queueingEnabled) },
                 onSettings = { appNavigator.navigate(NavCommand.OpenSettings) },
             )
         },
