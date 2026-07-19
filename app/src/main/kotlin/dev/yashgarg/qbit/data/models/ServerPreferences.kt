@@ -47,6 +47,13 @@ data class ServerPreferences(
     // compares each poll against this set and alerts for torrents that have since left it, so
     // recheck alerts survive the worker restarting and don't need a live in-memory baseline.
     val notifCheckingSeen: Map<Int, Set<String>> = emptyMap(),
+    // Set true when a completion/checked notification is turned ON, so the worker's next poll
+    // adopts
+    // the current state as a silent baseline (instead of replaying everything that finished while
+    // the toggle was off). Cleared once consumed. Not set on worker restart, so downtime
+    // completions still alert.
+    val notifCompleteRebaseline: Boolean = false,
+    val notifCheckedRebaseline: Boolean = false,
     // AppCompatDelegate night-mode constant. Defaults to MODE_NIGHT_YES (2) to preserve the
     // app's original dark-only behaviour for existing installs.
     val themeMode: Int = 2,

@@ -128,15 +128,24 @@ constructor(
         val serverId = prefs.activeServerId
         // Only actually-complete torrents carry a real completion_on; incomplete ones report -1.
         val completed = torrents.filter { it.progress >= 1f && it.completedOn > 0 }
-        val newestCompletion = completed.maxOfOrNull { it.completedOn } ?: return
+        val newestCompletion = completed.maxOfOrNull { it.completedOn } ?: 0L
 
-        val watermark = prefs.notifCompletionSeen[serverId]
-        if (watermark == null) {
-            // First time watching this server: adopt current completions as the baseline silently.
-            persistCompletionWatermark(serverId, newestCompletion)
+        // Adopt the current state as a silent baseline when the toggle was just enabled, or the
+        // very
+        // first time we watch this server. This both suppresses completions that predate our
+        // interest and — because the watermark is now written even when nothing is complete yet —
+        // ensures the *next* completion actually alerts.
+        if (prefs.notifCompleteRebaseline || prefs.notifCompletionSeen[serverId] == null) {
+            prefsStore.updateData {
+                it.copy(
+                    notifCompletionSeen = it.notifCompletionSeen + (serverId to newestCompletion),
+                    notifCompleteRebaseline = false,
+                )
+            }
             return
         }
 
+        val watermark = prefs.notifCompletionSeen[serverId] ?: newestCompletion
         completed
             .filter { it.completedOn > watermark }
             .forEach { notifyEvent("complete:${it.hash}".hashCode(), "Download complete", it.name) }
@@ -160,6 +169,19 @@ constructor(
         val serverId = prefs.activeServerId
         val byHash = torrents.associateBy(Torrent::hash)
         val nowChecking = torrents.filter { it.state.isChecking() }.map(Torrent::hash).toSet()
+
+        // Just enabled: adopt the current checking set as a silent baseline so we don't fire for
+        // rechecks that finished while the toggle was off.
+        if (prefs.notifCheckedRebaseline) {
+            prefsStore.updateData {
+                it.copy(
+                    notifCheckingSeen = it.notifCheckingSeen + (serverId to nowChecking),
+                    notifCheckedRebaseline = false,
+                )
+            }
+            return
+        }
+
         val wasChecking = prefs.notifCheckingSeen[serverId] ?: emptySet()
 
         wasChecking.forEach { hash ->
