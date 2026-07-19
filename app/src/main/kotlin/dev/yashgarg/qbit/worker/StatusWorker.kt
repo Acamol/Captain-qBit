@@ -80,8 +80,8 @@ constructor(
                 continue
             }
 
-            try {
-                if (prefs.statusNotification) {
+            if (prefs.statusNotification) {
+                try {
                     val info = client.getGlobalTransferInfo()
                     setForeground(
                         createForegroundInfo(
@@ -89,28 +89,31 @@ constructor(
                             "DL: ${info.dlInfoSpeed.toHumanReadable()}/s | UL: ${info.upInfoSpeed.toHumanReadable()}/s",
                         )
                     )
-                } else {
-                    // Events-only: Android still requires an ongoing notification for the service,
-                    // so show a minimal, min-importance one (no sound/status-bar icon) instead of
-                    // the speed readout.
-                    setForeground(
-                        createForegroundInfo(
-                            "Captain qBit",
-                            "Torrent alerts are on",
-                            minimal = true,
-                        )
-                    )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // Show the server is unreachable rather than freezing the last live readout.
+                    setForeground(createForegroundInfo("Server State • Offline", "Reconnecting…"))
                 }
+            } else {
+                // Events-only: Android still requires an ongoing notification for the service,
+                // so show a minimal, min-importance one (no sound/status-bar icon) instead of
+                // the speed readout.
+                setForeground(
+                    createForegroundInfo("Captain qBit", "Torrent alerts are on", minimal = true)
+                )
+            }
 
-                if (eventsOn) {
+            if (eventsOn) {
+                try {
                     val torrents = client.getTorrents()
                     if (prefs.notifyOnComplete) notifyCompletions(torrents, prefs)
                     if (prefs.notifyOnChecked) notifyRechecks(torrents, prefs)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // Transient error — retry on the next tick.
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                // Transient error — keep the last notification and retry on the next tick.
             }
             delay(REFRESH_INTERVAL_MS)
         }
