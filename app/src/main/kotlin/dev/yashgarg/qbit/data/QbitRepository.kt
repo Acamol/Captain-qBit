@@ -211,9 +211,10 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
     }
 
     /**
-     * Alternate speed limits live in the server's app preferences (not the transfer endpoints) and
-     * are in **KiB/s** there, with -1 meaning "no limit". We convert at this boundary so the rest
-     * of the app can treat every speed limit uniformly as bytes/s where 0 = unlimited. Returns
+     * Alternate speed limits live in the server's app preferences. Despite the API docs' "KiB/s"
+     * wording, on real servers (verified on qBit 5.2.2: a stored 1024 shows as 1 KiB in the WebUI)
+     * these are in **bytes/s** — same unit as the transfer endpoints — with -1 meaning "no limit".
+     * So we only translate the -1 (no limit) <-> 0 (unlimited) sentinel; no KiB conversion. Returns
      * download-to-upload in bytes/s.
      */
     suspend fun getAltSpeedLimits(): Result<Pair<Int, Int>, Throwable> {
@@ -221,7 +222,7 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
             val prefs = client().getPreferences()
             val dl = prefs["alt_dl_limit"]?.jsonPrimitive?.content?.toIntOrNull() ?: -1
             val ul = prefs["alt_up_limit"]?.jsonPrimitive?.content?.toIntOrNull() ?: -1
-            kibPrefToBytes(dl) to kibPrefToBytes(ul)
+            prefLimitToBytes(dl) to prefLimitToBytes(ul)
         }
     }
 
@@ -233,19 +234,18 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
             client()
                 .setPreferences(
                     buildJsonObject {
-                        put("alt_dl_limit", bytesToKibPref(downloadBytesPerSec))
-                        put("alt_up_limit", bytesToKibPref(uploadBytesPerSec))
+                        put("alt_dl_limit", bytesToPrefLimit(downloadBytesPerSec))
+                        put("alt_up_limit", bytesToPrefLimit(uploadBytesPerSec))
                     }
                 )
         }
     }
 
-    // A KiB/s preference (-1 = no limit) as app-side bytes/s (0 = unlimited).
-    private fun kibPrefToBytes(kib: Int): Int = if (kib <= 0) 0 else kib * 1024
+    // Preference limit (-1 = no limit) as app-side bytes/s (0 = unlimited).
+    private fun prefLimitToBytes(pref: Int): Int = if (pref <= 0) 0 else pref
 
-    // App-side bytes/s (0 = unlimited) as a KiB/s preference (-1 = no limit).
-    private fun bytesToKibPref(bytes: Int): Int =
-        if (bytes <= 0) -1 else (bytes / 1024).coerceAtLeast(1)
+    // App-side bytes/s (0 = unlimited) as a preference limit (-1 = no limit).
+    private fun bytesToPrefLimit(bytes: Int): Int = if (bytes <= 0) -1 else bytes
 
     suspend fun setForceStart(hash: String, value: Boolean): Result<Unit, Throwable> {
         return runCatching { client().setForceStart(listOf(hash), value) }
