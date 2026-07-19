@@ -1,0 +1,11 @@
+- Queue priority: move to top, up, down, or bottom
+- Add, edit, and remove trackers
+- Speed limits: per-torrent, global, and alternate
+- Share limits: ratio, seeding, and inactive time
+- Toggle force start, sequential, first/last piece, and super seeding
+- Rename files and folders
+- Torrent queueing on/off toggle
+- Server log viewer
+- Filters and sort saved per server
+- More reliable download and recheck notifications
+- Auto-reconnects across network switches; clearer offline state
