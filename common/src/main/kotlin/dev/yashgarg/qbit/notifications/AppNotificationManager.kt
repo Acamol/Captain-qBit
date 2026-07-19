@@ -40,10 +40,21 @@ object AppNotificationManager {
                     NotificationManager.IMPORTANCE_DEFAULT,
                 )
 
+            // The events-only foreground notification is an Android requirement, not something the
+            // user asked to see, so it sits on a MIN-importance channel: no sound, no status-bar
+            // icon, collapsed to the bottom of the shade.
+            val monitorChannel =
+                NotificationChannel(
+                    context.getString(R.string.monitor_channel_id),
+                    context.getString(R.string.monitor_channel_name),
+                    NotificationManager.IMPORTANCE_MIN,
+                )
+
             val notificationManager =
                 context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(statusChannel)
             notificationManager.createNotificationChannel(eventsChannel)
+            notificationManager.createNotificationChannel(monitorChannel)
         }
     }
 

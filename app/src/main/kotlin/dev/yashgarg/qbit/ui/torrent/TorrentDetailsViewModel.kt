@@ -24,6 +24,14 @@ import qbittorrent.models.LogEntry
 import qbittorrent.models.Torrent
 import qbittorrent.models.TorrentPeer
 
+/** Queue-priority moves, mapped to qBittorrent's topPrio/increasePrio/decreasePrio/bottomPrio. */
+enum class QueueAction {
+    TOP,
+    UP,
+    DOWN,
+    BOTTOM,
+}
+
 @HiltViewModel
 class TorrentDetailsViewModel
 @Inject
@@ -48,6 +56,13 @@ constructor(
             launch { syncPeers() }
             launch { syncAvailableFilters() }
             launch { getContent() }
+            launch {
+                // Gates the queue-priority actions: qBittorrent rejects them (409) unless queueing
+                // is enabled, and a torrent's priority isn't a reliable signal for that on 5.x.
+                repository.isQueueingEnabled().onOk { enabled ->
+                    _uiState.update { it.copy(queueingEnabled = enabled) }
+                }
+            }
         }
     }
 
@@ -99,6 +114,103 @@ constructor(
             failureMessage = getString(CommonR.string.status_rename_torrent_failure),
         ) {
             repository.renameTorrent(torrentHash, torrentName)
+        }
+    }
+
+    fun setQueuePriority(action: QueueAction, hash: String) {
+        val hashes = listOf(hash)
+        launchStatus(
+            successMessage = getString(CommonR.string.status_queue_priority_updated),
+            failureMessage = getString(CommonR.string.status_queue_priority_failure),
+        ) {
+            when (action) {
+                QueueAction.TOP -> repository.maxTorrentPriority(hashes)
+                QueueAction.UP -> repository.increaseTorrentPriority(hashes)
+                QueueAction.DOWN -> repository.decreaseTorrentPriority(hashes)
+                QueueAction.BOTTOM -> repository.minTorrentPriority(hashes)
+            }
+        }
+    }
+
+    /** Limits are in bytes/s; 0 clears the limit (unlimited). */
+    fun setDownloadLimit(bytesPerSec: Long) {
+        val hash = requireNotNull(hash)
+        launchStatus(
+            successMessage = getString(CommonR.string.status_speed_limit_updated),
+            failureMessage = getString(CommonR.string.status_set_speed_limit_failure),
+        ) {
+            repository.setTorrentDownloadLimit(hash, bytesPerSec)
+        }
+    }
+
+    fun setUploadLimit(bytesPerSec: Long) {
+        val hash = requireNotNull(hash)
+        launchStatus(
+            successMessage = getString(CommonR.string.status_speed_limit_updated),
+            failureMessage = getString(CommonR.string.status_set_speed_limit_failure),
+        ) {
+            repository.setTorrentUploadLimit(hash, bytesPerSec)
+        }
+    }
+
+    /** ratioLimit/seedingTimeMinutes: -2 = global, -1 = unlimited, else the limit. */
+    /** All limits: -2 = use global, -1 = no limit, else the value (ratio, or minutes). */
+    fun setShareLimits(
+        ratioLimit: Float,
+        seedingTimeMinutes: Long,
+        inactiveSeedingTimeMinutes: Long,
+    ) {
+        val hash = requireNotNull(hash)
+        launchStatus(
+            successMessage = getString(CommonR.string.status_share_limits_updated),
+            failureMessage = getString(CommonR.string.status_set_share_limits_failure),
+        ) {
+            repository.setTorrentShareLimits(
+                hash,
+                ratioLimit,
+                seedingTimeMinutes,
+                inactiveSeedingTimeMinutes,
+            )
+        }
+    }
+
+    fun setForceStart(value: Boolean) {
+        val hash = requireNotNull(hash)
+        launchStatus(
+            successMessage = getString(CommonR.string.status_torrent_updated),
+            failureMessage = getString(CommonR.string.status_update_torrent_failure),
+        ) {
+            repository.setForceStart(hash, value)
+        }
+    }
+
+    fun setSuperSeeding(value: Boolean) {
+        val hash = requireNotNull(hash)
+        launchStatus(
+            successMessage = getString(CommonR.string.status_torrent_updated),
+            failureMessage = getString(CommonR.string.status_update_torrent_failure),
+        ) {
+            repository.setSuperSeeding(hash, value)
+        }
+    }
+
+    fun toggleSequentialDownload() {
+        val hash = requireNotNull(hash)
+        launchStatus(
+            successMessage = getString(CommonR.string.status_torrent_updated),
+            failureMessage = getString(CommonR.string.status_update_torrent_failure),
+        ) {
+            repository.toggleSequentialDownload(hash)
+        }
+    }
+
+    fun toggleFirstLastPriority() {
+        val hash = requireNotNull(hash)
+        launchStatus(
+            successMessage = getString(CommonR.string.status_torrent_updated),
+            failureMessage = getString(CommonR.string.status_update_torrent_failure),
+        ) {
+            repository.toggleFirstLastPriority(hash)
         }
     }
 
@@ -167,6 +279,50 @@ constructor(
             if (toAdd.isNotEmpty()) repository.addTorrentTags(listOf(hash), toAdd)
             if (toRemove.isNotEmpty()) repository.removeTorrentTags(listOf(hash), toRemove)
             emitStatus(getString(CommonR.string.status_tags_updated))
+        }
+    }
+
+    fun addTracker(urls: List<String>) {
+        val hash = requireNotNull(hash)
+        launchStatus(
+            successMessage = getString(CommonR.string.status_tracker_added),
+            failureMessage = getString(CommonR.string.status_add_tracker_failure),
+            onSuccess = { refreshTrackers() },
+        ) {
+            repository.addTorrentTrackers(hash, urls)
+        }
+    }
+
+    fun editTracker(originalUrl: String, newUrl: String) {
+        val hash = requireNotNull(hash)
+        launchStatus(
+            successMessage = getString(CommonR.string.status_tracker_edited),
+            failureMessage = getString(CommonR.string.status_edit_tracker_failure),
+            onSuccess = { refreshTrackers() },
+        ) {
+            repository.editTorrentTracker(hash, originalUrl, newUrl)
+        }
+    }
+
+    fun removeTracker(url: String) {
+        val hash = requireNotNull(hash)
+        launchStatus(
+            successMessage = getString(CommonR.string.status_tracker_removed),
+            failureMessage = getString(CommonR.string.status_remove_tracker_failure),
+            onSuccess = { refreshTrackers() },
+        ) {
+            repository.removeTorrentTrackers(hash, listOf(url))
+        }
+    }
+
+    /**
+     * Re-fetch trackers after a mutation. The torrent sync flow also refreshes them, but only when
+     * it next emits, so pull them explicitly to reflect the change right away.
+     */
+    private suspend fun refreshTrackers() {
+        val hash = requireNotNull(hash)
+        repository.getTorrentTrackers(hash).onOk { trackers ->
+            _uiState.update { state -> state.copy(trackers = trackers) }
         }
     }
 
@@ -245,6 +401,28 @@ constructor(
             _uiState.update { state ->
                 state.copy(loading = false, error = Exception(it.friendlyMessage()))
             }
+        }
+    }
+
+    /**
+     * Rename a file or folder inside the torrent. qBittorrent renames by path, so keep [item]'s
+     * parent directory and swap only the final segment for [newName]. Files use renameFile, folders
+     * renameFolder. Refreshes the content tree on success.
+     */
+    fun renameContent(item: ContentTreeItem, newName: String) {
+        val hash = requireNotNull(hash)
+        val trimmed = newName.trim()
+        if (trimmed.isEmpty() || trimmed == item.name) return
+        val parent = item.path.substringBeforeLast('/', "")
+        val newPath = if (parent.isEmpty()) trimmed else "$parent/$trimmed"
+        val isFolder = item.item == null
+        launchStatus(
+            successMessage = getString(CommonR.string.status_content_renamed),
+            failureMessage = getString(CommonR.string.status_rename_content_failure),
+            onSuccess = { getContent() },
+        ) {
+            if (isFolder) repository.renameFolder(hash, item.path, newPath)
+            else repository.renameFile(hash, item.path, newPath)
         }
     }
 

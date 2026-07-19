@@ -15,10 +15,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Label
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Close
@@ -27,12 +30,12 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,6 +48,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -75,7 +79,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.fragment.app.FragmentActivity
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.common.R as CommonR
@@ -134,6 +138,26 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
     var searchOpen by remember { mutableStateOf(false) }
     var deleteTargets by remember { mutableStateOf<List<String>?>(null) }
     var refreshing by remember { mutableStateOf(false) }
+    // Shared by pull-to-refresh (list and error states) and the error-screen Retry button. The sync
+    // is continuous and its first emission is near-instant, so wait for the next data/error but
+    // hold
+    // the spinner a short minimum (so the pull registers) with a timeout so it can never hang.
+    val doRefresh: () -> Unit = {
+        refreshing = true
+        scope.launch {
+            viewModel.refresh()
+            coroutineScope {
+                launch { delay(600) }
+                launch {
+                    withTimeoutOrNull(15_000) {
+                        merge(viewModel.intent, viewModel.uiState.filter { it.hasError }.map {})
+                            .first()
+                    }
+                }
+            }
+            refreshing = false
+        }
+    }
     // Hash of the single torrent row whose swipe actions are revealed (only one open at a time).
     var openHash by remember { mutableStateOf<String?>(null) }
     val searchFocus = remember { FocusRequester() }
@@ -229,6 +253,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                 collapsedPaths = collapsedPaths,
                 onServerPicker = { serverDialog = ServerDialog.ServerPicker },
                 onStats = { serverDialog = ServerDialog.Statistics },
+                onLogs = { appNavigator.navigate(NavCommand.OpenLogs) },
                 onFilter = viewModel::setFilter,
                 onCategory = viewModel::setCategory,
                 onCategoryLongPress = { serverDialog = ServerDialog.CategoryLongPress(it) },
@@ -249,6 +274,15 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                     scope.launch { drawerState.close() }
                 },
                 onToggleSpeedLimits = { viewModel.toggleSpeedLimits() },
+                onGlobalLimits = {
+                    scope.launch { drawerState.close() }
+                    serverDialog = ServerDialog.GlobalLimits
+                },
+                onAltLimits = {
+                    scope.launch { drawerState.close() }
+                    serverDialog = ServerDialog.AltLimits
+                },
+                onToggleQueueing = { viewModel.setQueueing(!state.queueingEnabled) },
                 onSettings = { appNavigator.navigate(NavCommand.OpenSettings) },
             )
         },
@@ -310,9 +344,9 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                                     state.sortDirection != SortDirection.ASC
                             TooltipIconButton(
                                 label = stringResource(CommonR.string.sort),
-                                icon = Icons.Filled.Sort,
+                                icon = Icons.AutoMirrored.Filled.Sort,
                                 onClick = { serverDialog = ServerDialog.SortPicker },
-                                iconModifier =
+                                modifier =
                                     Modifier.graphicsLayer { alpha = if (sortActive) 1f else 0.5f },
                             )
                         }
@@ -376,20 +410,41 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                     when {
                         state.hasError -> {
                             val fallback = stringResource(CommonR.string.error)
-                            Column(
-                                modifier = Modifier.align(Alignment.Center).padding(20.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
+                            // Scrollable so pull-to-refresh works on the error screen too (a static
+                            // Column wouldn't feed the pull gesture); the Retry button stays as an
+                            // explicit affordance.
+                            PullToRefreshBox(
+                                isRefreshing = refreshing,
+                                onRefresh = doRefresh,
+                                modifier = Modifier.fillMaxSize(),
                             ) {
-                                androidx.compose.foundation.Image(
-                                    androidx.compose.ui.res.painterResource(R.drawable.sync_error),
-                                    contentDescription = null,
-                                    modifier = Modifier.padding(bottom = 8.dp).size(70.dp),
-                                )
-                                Text(
-                                    state.error?.friendlyMessage(fallback) ?: fallback,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                )
+                                Column(
+                                    modifier =
+                                        Modifier.fillMaxSize()
+                                            .verticalScroll(rememberScrollState())
+                                            .padding(20.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                ) {
+                                    androidx.compose.foundation.Image(
+                                        androidx.compose.ui.res.painterResource(
+                                            R.drawable.sync_error
+                                        ),
+                                        contentDescription = null,
+                                        modifier = Modifier.padding(bottom = 8.dp).size(70.dp),
+                                    )
+                                    Text(
+                                        state.error?.friendlyMessage(fallback) ?: fallback,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    )
+                                    FilledTonalButton(
+                                        onClick = { viewModel.refresh() },
+                                        modifier = Modifier.padding(top = 16.dp),
+                                    ) {
+                                        Text("Retry")
+                                    }
+                                }
                             }
                         }
                         state.dataLoading || torrents == null ->
@@ -413,31 +468,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                         else ->
                             PullToRefreshBox(
                                 isRefreshing = refreshing,
-                                onRefresh = {
-                                    refreshing = true
-                                    scope.launch {
-                                        viewModel.refresh()
-                                        // The sync is continuous and its first emission is near
-                                        // instant, so wait for the next data (or error) but also
-                                        // hold the spinner a short minimum so the pull registers.
-                                        // Timeout so it can never hang.
-                                        coroutineScope {
-                                            launch { delay(600) }
-                                            launch {
-                                                withTimeoutOrNull(15_000) {
-                                                    merge(
-                                                            viewModel.intent,
-                                                            viewModel.uiState
-                                                                .filter { it.hasError }
-                                                                .map {},
-                                                        )
-                                                        .first()
-                                                }
-                                            }
-                                        }
-                                        refreshing = false
-                                    }
-                                },
+                                onRefresh = doRefresh,
                                 modifier = Modifier.fillMaxSize(),
                             ) {
                                 TorrentList(
@@ -501,7 +532,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
     )
 
     if (showAddTorrent) {
-        val prefs = viewModel.addTorrentPrefs.value
+        val prefs by viewModel.addTorrentPrefs.collectAsStateWithLifecycle()
         AddTorrentScreen(
             viewModel = viewModel,
             availableCategories = state.availableCategories,
@@ -526,11 +557,12 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TooltipIconButton(
+internal fun TooltipIconButton(
     label: String,
     icon: ImageVector,
     onClick: () -> Unit,
-    iconModifier: Modifier = Modifier,
+    modifier: Modifier = Modifier,
+    position: TooltipAnchorPosition = TooltipAnchorPosition.Above,
 ) {
     val tooltipState = rememberTooltipState()
     val haptics = LocalHapticFeedback.current
@@ -539,12 +571,12 @@ private fun TooltipIconButton(
         if (tooltipState.isVisible) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
     }
     TooltipBox(
-        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(position),
         tooltip = { PlainTooltip { Text(label) } },
         state = tooltipState,
     ) {
         IconButton(onClick = onClick) {
-            Icon(icon, contentDescription = label, modifier = iconModifier)
+            Icon(icon, contentDescription = label, modifier = modifier)
         }
     }
 }

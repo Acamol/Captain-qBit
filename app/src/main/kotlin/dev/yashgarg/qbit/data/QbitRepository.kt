@@ -7,6 +7,10 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import qbittorrent.*
 import qbittorrent.models.LogEntry
 import qbittorrent.models.MainData
@@ -26,6 +30,11 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
 
     fun observeMainData(): Flow<MainData> {
         return flow { emitAll(client().observeMainData()) }
+    }
+
+    /** Latest MainData sync error (null while reachable); stays set until the next success. */
+    fun observeMainDataError(): Flow<Throwable?> {
+        return flow { emitAll(client().observeMainDataError()) }
     }
 
     fun observeTorrent(hash: String, waitIfMissing: Boolean): Flow<Torrent> {
@@ -155,6 +164,119 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
         return runCatching { client().toggleSpeedLimitsMode() }
     }
 
+    /** Per-torrent limits are in bytes/s; 0 means unlimited. */
+    suspend fun setTorrentDownloadLimit(hash: String, limit: Long): Result<Unit, Throwable> {
+        return runCatching { client().setTorrentDownloadLimit(listOf(hash), limit) }
+    }
+
+    suspend fun setTorrentUploadLimit(hash: String, limit: Long): Result<Unit, Throwable> {
+        return runCatching { client().setTorrentUploadLimit(listOf(hash), limit) }
+    }
+
+    /**
+     * Share limits. For each value: -2 = use the global limit, -1 = no limit, else the limit
+     * ([ratioLimit] as a ratio, [seedingTimeMinutes] in minutes).
+     */
+    suspend fun setTorrentShareLimits(
+        hash: String,
+        ratioLimit: Float,
+        seedingTimeMinutes: Long,
+        inactiveSeedingTimeMinutes: Long,
+    ): Result<Unit, Throwable> {
+        return runCatching {
+            client()
+                .setTorrentShareLimits(
+                    listOf(hash),
+                    ratioLimit,
+                    seedingTimeMinutes,
+                    inactiveSeedingTimeMinutes,
+                )
+        }
+    }
+
+    /** Global limits are in bytes/s; 0 means unlimited. */
+    suspend fun getGlobalDownloadLimit(): Result<Int, Throwable> {
+        return runCatching { client().getGlobalDownloadLimit() }
+    }
+
+    suspend fun setGlobalDownloadLimit(limit: Int): Result<Unit, Throwable> {
+        return runCatching { client().setGlobalDownloadLimit(limit) }
+    }
+
+    suspend fun getGlobalUploadLimit(): Result<Int, Throwable> {
+        return runCatching { client().getGlobalUploadLimit() }
+    }
+
+    suspend fun setGlobalUploadLimit(limit: Int): Result<Unit, Throwable> {
+        return runCatching { client().setGlobalUploadLimit(limit) }
+    }
+
+    /**
+     * Alternate speed limits live in the server's app preferences. Despite the API docs' "KiB/s"
+     * wording, on real servers (verified on qBit 5.2.2: a stored 1024 shows as 1 KiB in the WebUI)
+     * these are in **bytes/s** — same unit as the transfer endpoints — with -1 meaning "no limit".
+     * So we only translate the -1 (no limit) <-> 0 (unlimited) sentinel; no KiB conversion. Returns
+     * download-to-upload in bytes/s.
+     */
+    suspend fun getAltSpeedLimits(): Result<Pair<Int, Int>, Throwable> {
+        return runCatching {
+            val prefs = client().getPreferences()
+            val dl = prefs["alt_dl_limit"]?.jsonPrimitive?.content?.toIntOrNull() ?: -1
+            val ul = prefs["alt_up_limit"]?.jsonPrimitive?.content?.toIntOrNull() ?: -1
+            prefLimitToBytes(dl) to prefLimitToBytes(ul)
+        }
+    }
+
+    suspend fun setAltSpeedLimits(
+        downloadBytesPerSec: Int,
+        uploadBytesPerSec: Int,
+    ): Result<Unit, Throwable> {
+        return runCatching {
+            client()
+                .setPreferences(
+                    buildJsonObject {
+                        put("alt_dl_limit", bytesToPrefLimit(downloadBytesPerSec))
+                        put("alt_up_limit", bytesToPrefLimit(uploadBytesPerSec))
+                    }
+                )
+        }
+    }
+
+    /** Whether the server has torrent queueing enabled (an app preference). */
+    suspend fun isQueueingEnabled(): Result<Boolean, Throwable> {
+        return runCatching {
+            client().getPreferences()["queueing_enabled"]?.jsonPrimitive?.booleanOrNull ?: false
+        }
+    }
+
+    suspend fun setQueueingEnabled(enabled: Boolean): Result<Unit, Throwable> {
+        return runCatching {
+            client().setPreferences(buildJsonObject { put("queueing_enabled", enabled) })
+        }
+    }
+
+    // Preference limit (-1 = no limit) as app-side bytes/s (0 = unlimited).
+    private fun prefLimitToBytes(pref: Int): Int = if (pref <= 0) 0 else pref
+
+    // App-side bytes/s (0 = unlimited) as a preference limit (-1 = no limit).
+    private fun bytesToPrefLimit(bytes: Int): Int = if (bytes <= 0) -1 else bytes
+
+    suspend fun setForceStart(hash: String, value: Boolean): Result<Unit, Throwable> {
+        return runCatching { client().setForceStart(listOf(hash), value) }
+    }
+
+    suspend fun setSuperSeeding(hash: String, value: Boolean): Result<Unit, Throwable> {
+        return runCatching { client().setSuperSeeding(listOf(hash), value) }
+    }
+
+    suspend fun toggleSequentialDownload(hash: String): Result<Unit, Throwable> {
+        return runCatching { client().toggleSequentialDownload(listOf(hash)) }
+    }
+
+    suspend fun toggleFirstLastPriority(hash: String): Result<Unit, Throwable> {
+        return runCatching { client().toggleFirstLastPriority(listOf(hash)) }
+    }
+
     suspend fun recheckTorrents(hashes: List<String>): Result<Unit, Throwable> {
         return runCatching { client().recheckTorrents(hashes) }
     }
@@ -165,6 +287,26 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
 
     suspend fun renameTorrent(hash: String, name: String): Result<Unit, Throwable> {
         return runCatching { client().setTorrentName(hash, name) }
+    }
+
+    /**
+     * Queue-priority actions. These only have an effect when torrent queueing is enabled on the
+     * server; qBittorrent otherwise reports every torrent's priority as -1 and ignores the call.
+     */
+    suspend fun increaseTorrentPriority(hashes: List<String>): Result<Unit, Throwable> {
+        return runCatching { client().increasePriority(hashes) }
+    }
+
+    suspend fun decreaseTorrentPriority(hashes: List<String>): Result<Unit, Throwable> {
+        return runCatching { client().decreasePriority(hashes) }
+    }
+
+    suspend fun maxTorrentPriority(hashes: List<String>): Result<Unit, Throwable> {
+        return runCatching { client().maxPriority(hashes) }
+    }
+
+    suspend fun minTorrentPriority(hashes: List<String>): Result<Unit, Throwable> {
+        return runCatching { client().minPriority(hashes) }
     }
 
     suspend fun banPeers(peers: List<String>): Result<Unit, Throwable> {
@@ -179,8 +321,41 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
         return runCatching { client().getTrackers(hash) ?: emptyList() }
     }
 
+    suspend fun addTorrentTrackers(hash: String, urls: List<String>): Result<Unit, Throwable> {
+        return runCatching { client().addTrackers(hash, urls) }
+    }
+
+    suspend fun editTorrentTracker(
+        hash: String,
+        originalUrl: String,
+        newUrl: String,
+    ): Result<Unit, Throwable> {
+        return runCatching { client().editTrackers(hash, originalUrl, newUrl) }
+    }
+
+    suspend fun removeTorrentTrackers(hash: String, urls: List<String>): Result<Unit, Throwable> {
+        return runCatching { client().removeTrackers(hash, urls) }
+    }
+
     suspend fun getTorrentFiles(hash: String): Result<List<TorrentFile>, Throwable> {
         return runCatching { client().getTorrentFiles(hash) }
+    }
+
+    /** [oldPath]/[newPath] are relative to the torrent root, "/"-separated. */
+    suspend fun renameFile(
+        hash: String,
+        oldPath: String,
+        newPath: String,
+    ): Result<Unit, Throwable> {
+        return runCatching { client().renameFile(hash, oldPath, newPath) }
+    }
+
+    suspend fun renameFolder(
+        hash: String,
+        oldPath: String,
+        newPath: String,
+    ): Result<Unit, Throwable> {
+        return runCatching { client().renameFolder(hash, oldPath, newPath) }
     }
 
     /** Priorities: 0 = do not download, 1 = normal, 6 = high, 7 = maximal. */

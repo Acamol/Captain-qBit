@@ -21,7 +21,7 @@ enum class SortOption(val label: String) {
     CONNECTED_SEEDS("Connected seeds"),
     PEERS("Peers"),
     CONNECTED_PEERS("Connected peers"),
-    PRIORITY("Priority"),
+    PRIORITY("Queue position"),
     CATEGORY("Category"),
     TRACKER("Tracker"),
     ADDED_ON("Added on"),
@@ -37,6 +37,17 @@ enum class SortDirection {
 }
 
 fun List<Torrent>.sortedWith(option: SortOption, direction: SortDirection): List<Torrent> {
+    // Queue position is special: qBittorrent only assigns one to downloading/queued torrents and
+    // reports -1 for everything in seed mode (or when queueing is off). Sorting on the raw value
+    // would sink the whole seeding library above #1. Instead, order the queued torrents by position
+    // and always park the unqueued ones at the bottom, regardless of direction — matching the "#"
+    // column in the desktop client.
+    if (option == SortOption.PRIORITY) {
+        val (queued, unqueued) = partition { it.priority > 0 }
+        val ordered = queued.sortedBy { it.priority }
+        return (if (direction == SortDirection.ASC) ordered else ordered.reversed()) + unqueued
+    }
+
     val comparator: Comparator<Torrent> =
         when (option) {
             SortOption.NAME -> compareBy(String.CASE_INSENSITIVE_ORDER) { it.name }

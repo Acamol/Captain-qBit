@@ -47,17 +47,11 @@ fun ServerPreferences.overlayGroup(group: PrefGroup, src: ServerPreferences): Se
                 notifyOnComplete = src.notifyOnComplete,
                 notifyOnChecked = src.notifyOnChecked,
             )
-        // Filters also covers sorting and add-torrent defaults — the rest of the torrent-list
-        // state.
+        // Filters also covers the per-server sort/filter view state and the add-torrent defaults —
+        // the rest of the torrent-list state.
         PrefGroup.FILTERS ->
             copy(
-                filterStateName = src.filterStateName,
-                filterCategory = src.filterCategory,
-                filterTracker = src.filterTracker,
-                filterTags = src.filterTags,
-                filterUntagged = src.filterUntagged,
-                sortOptionName = src.sortOptionName,
-                sortDirectionAsc = src.sortDirectionAsc,
+                serverViewPrefs = src.serverViewPrefs,
                 addTorrentAutoTmm = src.addTorrentAutoTmm,
                 addTorrentPaused = src.addTorrentPaused,
                 addTorrentCategory = src.addTorrentCategory,

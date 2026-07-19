@@ -17,4 +17,6 @@ data class TorrentDetailsState(
     val errorReason: String? = null,
     val availableCategories: List<String> = emptyList(),
     val availableTags: List<String> = emptyList(),
+    /** Whether the server has torrent queueing enabled (gates the queue-priority actions). */
+    val queueingEnabled: Boolean = false,
 )

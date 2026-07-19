@@ -22,24 +22,25 @@ import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
@@ -91,6 +92,8 @@ fun AddTorrentScreen(
 ) {
     val context = LocalContext.current
     val linkValidator = remember { LinkValidator() }
+    val noFileSelectedMessage = stringResource(CommonR.string.no_file_selected)
+    val clipboardEmptyMessage = stringResource(CommonR.string.clipboard_empty)
 
     var magnetText by rememberSaveable { mutableStateOf(prefillUrl.orEmpty()) }
     var pickedUri by rememberSaveable { mutableStateOf(prefillFileUri) }
@@ -98,7 +101,7 @@ fun AddTorrentScreen(
     var deselected by rememberSaveable(stateSaver = IntSetSaver) { mutableStateOf(emptySet()) }
     var filesUnavailableReason by rememberSaveable { mutableStateOf<Int?>(null) }
     var magnetError by rememberSaveable { mutableStateOf(false) }
-    var selectedTab by rememberSaveable { mutableStateOf(0) }
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var categoryExpanded by rememberSaveable { mutableStateOf(false) }
     var confirmed by rememberSaveable { mutableStateOf(false) }
 
@@ -184,12 +187,7 @@ fun AddTorrentScreen(
                         autoTmm.takeIf { it },
                     )
                 } else {
-                    Toast.makeText(
-                            context,
-                            context.getString(CommonR.string.no_file_selected),
-                            Toast.LENGTH_SHORT,
-                        )
-                        .show()
+                    Toast.makeText(context, noFileSelectedMessage, Toast.LENGTH_SHORT).show()
                     return
                 }
             }
@@ -239,7 +237,7 @@ fun AddTorrentScreen(
             }
         ) { innerPadding ->
             Column(Modifier.fillMaxSize().padding(innerPadding)) {
-                TabRow(selectedTabIndex = selectedTab) {
+                PrimaryTabRow(selectedTabIndex = selectedTab) {
                     Tab(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 },
@@ -280,7 +278,7 @@ fun AddTorrentScreen(
                                 if (text.isEmpty()) {
                                     Toast.makeText(
                                             context,
-                                            context.getString(CommonR.string.clipboard_empty),
+                                            clipboardEmptyMessage,
                                             Toast.LENGTH_SHORT,
                                         )
                                         .show()
@@ -399,7 +397,9 @@ private fun OptionsTab(
                 trailingIcon = {
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
                 },
-                modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryEditable),
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
             )
             val suggestions = categories.filter { it.isNotBlank() }
             if (suggestions.isNotEmpty()) {

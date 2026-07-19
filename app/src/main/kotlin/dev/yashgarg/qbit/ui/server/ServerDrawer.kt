@@ -16,20 +16,28 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,13 +47,14 @@ import androidx.compose.ui.unit.sp
  * sections with absolute per-row counts. Categories with "/" group into a collapsible tree; a path
  * segment that is only a synthetic parent still filters its whole subtree (see [matchesCategory]).
  */
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ServerDrawer(
     state: ServerScreenState,
     collapsedPaths: MutableList<String>,
     onServerPicker: () -> Unit,
     onStats: () -> Unit,
+    onLogs: () -> Unit,
     onFilter: (StateFilter) -> Unit,
     onCategory: (String?) -> Unit,
     onCategoryLongPress: (String) -> Unit,
@@ -57,6 +66,9 @@ fun ServerDrawer(
     onManageTags: () -> Unit,
     onClearFilters: () -> Unit,
     onToggleSpeedLimits: () -> Unit,
+    onGlobalLimits: () -> Unit,
+    onAltLimits: () -> Unit,
+    onToggleQueueing: () -> Unit,
     onSettings: () -> Unit,
 ) {
     val torrents = state.data?.torrents?.values?.toList() ?: emptyList()
@@ -91,23 +103,37 @@ fun ServerDrawer(
                     )
                     Text(" ▾", fontSize = 12.sp)
                 }
-                IconButton(onClick = onStats) {
-                    Icon(Icons.Filled.BarChart, contentDescription = "Statistics")
-                }
+                TooltipIconButton(
+                    label = "Server logs",
+                    icon = Icons.Filled.Description,
+                    onClick = onLogs,
+                    position = TooltipAnchorPosition.Below,
+                )
+                TooltipIconButton(
+                    label = "Statistics",
+                    icon = Icons.Filled.BarChart,
+                    onClick = onStats,
+                    position = TooltipAnchorPosition.Below,
+                )
             }
 
             // Status
             SectionHeader("Status")
-            StateFilter.entries.forEach { filter ->
-                SidebarItem(
-                    text = filter.label,
-                    selected = filter == state.selectedFilter,
-                    count = torrents.count { it.matchesFilter(filter) },
-                    onClick = {
-                        onFilter(if (filter == state.selectedFilter) StateFilter.ALL else filter)
-                    },
-                )
-            }
+            StateFilter.entries
+                // The Queued filter is only meaningful when the server has torrent queueing on.
+                .filter { it != StateFilter.QUEUED || state.queueingEnabled }
+                .forEach { filter ->
+                    SidebarItem(
+                        text = filter.label,
+                        selected = filter == state.selectedFilter,
+                        count = torrents.count { it.matchesFilter(filter) },
+                        onClick = {
+                            onFilter(
+                                if (filter == state.selectedFilter) StateFilter.ALL else filter
+                            )
+                        },
+                    )
+                }
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
 
@@ -189,27 +215,75 @@ fun ServerDrawer(
                 Text("Clear all")
             }
             HorizontalDivider()
-            Row(
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .combinedClickable(onClick = onToggleSpeedLimits)
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            // Long-press any option for a haptic buzz + a tooltip describing what it does.
+            DrawerOption(
+                label = "Use alternate speed limits",
+                description = "Switch between your normal speed limits and the alternate ones.",
+                onClick = onToggleSpeedLimits,
             ) {
-                Text("Alternate speed limits", Modifier.weight(1f))
                 Switch(
                     checked = state.speedLimitMode != 0,
                     onCheckedChange = { onToggleSpeedLimits() },
                 )
             }
-            Text(
-                "Settings",
-                fontSize = 14.sp,
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .combinedClickable(onClick = onSettings)
-                        .padding(horizontal = 20.dp, vertical = 14.dp),
+            DrawerOption(
+                label = "Torrent queueing",
+                description = "Cap how many torrents are active at once; enables queue positions.",
+                onClick = onToggleQueueing,
+            ) {
+                Switch(checked = state.queueingEnabled, onCheckedChange = { onToggleQueueing() })
+            }
+            DrawerOption(
+                label = "Global speed limits…",
+                description = "Set the server-wide download and upload speed limits.",
+                onClick = onGlobalLimits,
             )
+            DrawerOption(
+                label = "Alternate speed limits…",
+                description = "Set the limits used while \"use alternate speed limits\" is on.",
+                onClick = onAltLimits,
+            )
+            DrawerOption(
+                label = "Settings",
+                description = "Open the app's settings.",
+                onClick = onSettings,
+            )
+        }
+    }
+}
+
+/**
+ * A footer option row. Tap runs [onClick]; long-press buzzes and shows a [description] tooltip
+ * (same feel as [TooltipIconButton]). [trailing] is an optional control such as a Switch.
+ */
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@Composable
+private fun DrawerOption(
+    label: String,
+    description: String,
+    onClick: () -> Unit,
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    val tooltipState = rememberTooltipState()
+    val haptics = LocalHapticFeedback.current
+    LaunchedEffect(tooltipState.isVisible) {
+        if (tooltipState.isVisible) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+    }
+    TooltipBox(
+        positionProvider =
+            TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+        tooltip = { PlainTooltip { Text(description) } },
+        state = tooltipState,
+    ) {
+        Row(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .combinedClickable(onClick = onClick)
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(label, Modifier.weight(1f), fontSize = 14.sp)
+            trailing?.invoke()
         }
     }
 }
@@ -225,6 +299,7 @@ private fun SectionHeader(title: String) {
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SectionHeaderWithAction(title: String, onAction: () -> Unit) {
     Row(
@@ -238,9 +313,13 @@ private fun SectionHeaderWithAction(title: String, onAction: () -> Unit) {
             fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f),
         )
-        IconButton(onClick = onAction) {
-            Icon(Icons.Filled.Edit, contentDescription = "Manage $title", Modifier.width(20.dp))
-        }
+        TooltipIconButton(
+            label = "Manage $title",
+            icon = Icons.Filled.Edit,
+            onClick = onAction,
+            modifier = Modifier.width(20.dp),
+            position = TooltipAnchorPosition.Below,
+        )
     }
 }
 

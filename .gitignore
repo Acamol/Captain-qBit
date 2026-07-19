@@ -11,3 +11,5 @@ local.properties
 *.jks
 keystore.properties
 **/build/
+# Scratch/working files (screenshots, notes) — never commit these.
+temp/

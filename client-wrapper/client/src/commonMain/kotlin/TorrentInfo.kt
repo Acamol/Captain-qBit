@@ -4,7 +4,6 @@ import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import kotlin.coroutines.cancellation.CancellationException
-import kotlin.time.Duration
 import qbittorrent.internal.bodyOrThrow
 import qbittorrent.internal.orThrow
 import qbittorrent.models.GlobalTransferInfo
@@ -113,21 +112,36 @@ suspend fun QBittorrentClient.getTorrentDownloadLimit(
 
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.setTorrentDownloadLimit(
-    hashes: List<String> = QBittorrentClient.allList
+    hashes: List<String> = QBittorrentClient.allList,
+    limit: Long,
 ) {
     http
         .submitForm(
-            "${config.baseUrl}/api/v2/torrents/downloadLimit",
-            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) },
+            "${config.baseUrl}/api/v2/torrents/setDownloadLimit",
+            formParameters =
+                Parameters.build {
+                    append("hashes", hashes.joinToString("|"))
+                    append("limit", limit.toString())
+                },
         )
         .orThrow()
 }
 
+/**
+ * Sets a torrent's share limits. For every value: -2 means "use the global limit", -1 means "no
+ * limit", and any other value is the limit itself ([ratioLimit] as a ratio, the time limits in
+ * minutes). [inactiveSeedingTimeLimit] became a required parameter in qBittorrent 4.6; older
+ * servers simply ignore it.
+ */
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.setTorrentShareLimits(
     hashes: List<String> = QBittorrentClient.allList,
     ratioLimit: Float,
-    seedingTimeLimit: Duration,
+    seedingTimeLimit: Long,
+    inactiveSeedingTimeLimit: Long = -2,
+    // "When limit reached" action. -1 = Default (use the global setting, i.e. don't override it).
+    // Required by qBittorrent 5.x; older servers ignore the extra parameter.
+    shareLimitAction: Int = -1,
 ) {
     http
         .submitForm(
@@ -136,7 +150,9 @@ suspend fun QBittorrentClient.setTorrentShareLimits(
                 Parameters.build {
                     append("hashes", hashes.joinToString("|"))
                     append("ratioLimit", ratioLimit.toString())
-                    append("seedingTimeLimit", seedingTimeLimit.inWholeSeconds.toString())
+                    append("seedingTimeLimit", seedingTimeLimit.toString())
+                    append("inactiveSeedingTimeLimit", inactiveSeedingTimeLimit.toString())
+                    append("shareLimitAction", shareLimitAction.toString())
                 },
         )
         .orThrow()

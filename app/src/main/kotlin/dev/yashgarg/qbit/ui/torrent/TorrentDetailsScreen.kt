@@ -13,21 +13,34 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Label
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Autorenew
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.FindInPage
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FormatListNumbered
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.LowPriority
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material.icons.filled.VerticalAlignBottom
+import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
@@ -37,12 +50,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -56,13 +69,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
+import dev.yashgarg.qbit.ui.server.isPaused
 import dev.yashgarg.qbit.ui.torrent.tabs.FilesTab
 import dev.yashgarg.qbit.ui.torrent.tabs.InfoTab
 import dev.yashgarg.qbit.ui.torrent.tabs.PeersListView
@@ -125,16 +140,25 @@ fun TorrentDetailsScreen(
                                 menuOpen = false
                                 block()
                             }
-                            DropdownMenuItem(
-                                text = { Text("Pause") },
-                                leadingIcon = { Icon(Icons.Filled.Pause, null) },
-                                onClick = { act { viewModel.toggleTorrent(true, torrent.hash) } },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Resume") },
-                                leadingIcon = { Icon(Icons.Filled.PlayArrow, null) },
-                                onClick = { act { viewModel.toggleTorrent(false, torrent.hash) } },
-                            )
+                            // Pause and resume are mutually exclusive — show only the one that
+                            // applies to the torrent's current state.
+                            if (torrent.isPaused()) {
+                                DropdownMenuItem(
+                                    text = { Text("Resume") },
+                                    leadingIcon = { Icon(Icons.Filled.PlayArrow, null) },
+                                    onClick = {
+                                        act { viewModel.toggleTorrent(false, torrent.hash) }
+                                    },
+                                )
+                            } else {
+                                DropdownMenuItem(
+                                    text = { Text("Pause") },
+                                    leadingIcon = { Icon(Icons.Filled.Pause, null) },
+                                    onClick = {
+                                        act { viewModel.toggleTorrent(true, torrent.hash) }
+                                    },
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text("Delete") },
                                 leadingIcon = { Icon(Icons.Filled.Delete, null) },
@@ -172,6 +196,15 @@ fun TorrentDetailsScreen(
                                 leadingIcon = { Icon(Icons.Filled.DriveFileRenameOutline, null) },
                                 onClick = { act { dialog = DetailDialog.Rename } },
                             )
+                            // Only when the server has torrent queueing enabled — qBittorrent
+                            // rejects the priority moves (409) otherwise.
+                            if (state.queueingEnabled) {
+                                DropdownMenuItem(
+                                    text = { Text("Queue priority") },
+                                    leadingIcon = { Icon(Icons.Filled.LowPriority, null) },
+                                    onClick = { act { dialog = DetailDialog.QueuePriority } },
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text("Set category") },
                                 leadingIcon = { Icon(Icons.Filled.Category, null) },
@@ -197,6 +230,63 @@ fun TorrentDetailsScreen(
                                 leadingIcon = { Icon(Icons.Filled.Folder, null) },
                                 onClick = { act { dialog = DetailDialog.SavePath } },
                             )
+                            DropdownMenuItem(
+                                text = { Text("Download limit…") },
+                                leadingIcon = { Icon(Icons.Filled.Download, null) },
+                                onClick = { act { dialog = DetailDialog.DownloadLimit } },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Upload limit…") },
+                                leadingIcon = { Icon(Icons.Filled.Upload, null) },
+                                onClick = { act { dialog = DetailDialog.UploadLimit } },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Share limits…") },
+                                leadingIcon = { Icon(Icons.Filled.Share, null) },
+                                onClick = { act { dialog = DetailDialog.ShareLimits } },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Force start") },
+                                leadingIcon = { Icon(Icons.Filled.Bolt, null) },
+                                trailingIcon = {
+                                    Checkbox(checked = torrent.forceStart, onCheckedChange = null)
+                                },
+                                onClick = {
+                                    act { viewModel.setForceStart(!torrent.forceStart) }
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Sequential download") },
+                                leadingIcon = { Icon(Icons.Filled.FormatListNumbered, null) },
+                                trailingIcon = {
+                                    Checkbox(
+                                        checked = torrent.sequentialDownload,
+                                        onCheckedChange = null,
+                                    )
+                                },
+                                onClick = { act { viewModel.toggleSequentialDownload() } },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Download first and last pieces") },
+                                leadingIcon = { Icon(Icons.Filled.Flag, null) },
+                                trailingIcon = {
+                                    Checkbox(
+                                        checked = torrent.firstLastPiecePriority,
+                                        onCheckedChange = null,
+                                    )
+                                },
+                                onClick = { act { viewModel.toggleFirstLastPriority() } },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Super seeding") },
+                                leadingIcon = { Icon(Icons.Filled.CloudUpload, null) },
+                                trailingIcon = {
+                                    Checkbox(checked = torrent.superSeeding, onCheckedChange = null)
+                                },
+                                onClick = {
+                                    act { viewModel.setSuperSeeding(!torrent.superSeeding) }
+                                },
+                            )
                         }
                     }
                 },
@@ -212,7 +302,7 @@ fun TorrentDetailsScreen(
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                 )
             }
-            TabRow(selectedTabIndex = pagerState.currentPage) {
+            PrimaryTabRow(selectedTabIndex = pagerState.currentPage) {
                 TAB_TITLES.forEachIndexed { index, title ->
                     Tab(
                         selected = pagerState.currentPage == index,
@@ -224,8 +314,21 @@ fun TorrentDetailsScreen(
             HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                 when (page) {
                     0 -> InfoTab(state, Modifier.fillMaxSize())
-                    1 -> FilesTab(state, viewModel::setFilePriority, Modifier.fillMaxSize())
-                    2 -> TrackersTab(state, Modifier.fillMaxSize())
+                    1 ->
+                        FilesTab(
+                            state,
+                            viewModel::setFilePriority,
+                            viewModel::renameContent,
+                            Modifier.fillMaxSize(),
+                        )
+                    2 ->
+                        TrackersTab(
+                            state = state,
+                            onAddTrackers = viewModel::addTracker,
+                            onEditTracker = viewModel::editTracker,
+                            onRemoveTracker = viewModel::removeTracker,
+                            modifier = Modifier.fillMaxSize(),
+                        )
                     else -> PeersListView(state, Modifier.fillMaxSize(), viewModel::banPeer)
                 }
             }
@@ -255,6 +358,16 @@ fun TorrentDetailsScreen(
                     onDismiss = { dialog = null },
                 )
             }
+        DetailDialog.QueuePriority ->
+            if (torrent != null) {
+                QueuePriorityDialog(
+                    onSelect = { action ->
+                        viewModel.setQueuePriority(action, torrent.hash)
+                        dialog = null
+                    },
+                    onDismiss = { dialog = null },
+                )
+            }
         DetailDialog.SavePath ->
             if (torrent != null) {
                 TextInputDialog(
@@ -262,6 +375,43 @@ fun TorrentDetailsScreen(
                     initial = state.torrentProperties?.savePath ?: torrent.savePath,
                     onConfirm = {
                         viewModel.setSavePath(it)
+                        dialog = null
+                    },
+                    onDismiss = { dialog = null },
+                )
+            }
+        DetailDialog.DownloadLimit ->
+            if (torrent != null) {
+                SpeedLimitDialog(
+                    title = "Download limit",
+                    currentBytesPerSec = torrent.dlLimit,
+                    onConfirm = {
+                        viewModel.setDownloadLimit(it)
+                        dialog = null
+                    },
+                    onDismiss = { dialog = null },
+                )
+            }
+        DetailDialog.UploadLimit ->
+            if (torrent != null) {
+                SpeedLimitDialog(
+                    title = "Upload limit",
+                    currentBytesPerSec = torrent.uploadLimit,
+                    onConfirm = {
+                        viewModel.setUploadLimit(it)
+                        dialog = null
+                    },
+                    onDismiss = { dialog = null },
+                )
+            }
+        DetailDialog.ShareLimits ->
+            if (torrent != null) {
+                ShareLimitDialog(
+                    currentRatioLimit = torrent.ratioLimit,
+                    currentSeedingTimeLimit = torrent.seedingTimeLimit,
+                    currentInactiveSeedingTimeLimit = torrent.inactiveSeedingTimeLimit,
+                    onConfirm = { ratio, minutes, inactiveMinutes ->
+                        viewModel.setShareLimits(ratio, minutes, inactiveMinutes)
                         dialog = null
                     },
                     onDismiss = { dialog = null },
@@ -320,11 +470,65 @@ fun TorrentDetailsScreen(
 private enum class DetailDialog {
     Delete,
     Rename,
+    QueuePriority,
     SavePath,
+    DownloadLimit,
+    UploadLimit,
+    ShareLimits,
     Category,
     CreateCategory,
     Tags,
     CreateTag,
+}
+
+/**
+ * Enter a speed limit in KiB/s (qBittorrent's own unit in the desktop dialog). A blank/zero value
+ * clears the limit. [currentBytesPerSec] is the torrent's current limit in bytes/s (0 or -1 =
+ * unlimited); it's shown converted to KiB/s.
+ */
+@Composable
+private fun SpeedLimitDialog(
+    title: String,
+    currentBytesPerSec: Long,
+    onConfirm: (Long) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    // Display in KiB/s (qBittorrent's unit): round to nearest, and never show a real >0 limit as
+    // blank (which would read as "unlimited"). Blank strictly means 0 = unlimited.
+    val initial =
+        if (currentBytesPerSec > 0) ((currentBytesPerSec + 512) / 1024).coerceAtLeast(1).toString()
+        else ""
+    var value by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            OutlinedTextField(
+                value = value,
+                onValueChange = { new -> value = new.filter { it.isDigit() } },
+                singleLine = true,
+                label = { Text("KiB/s") },
+                supportingText = { Text("Leave empty for unlimited") },
+                keyboardOptions =
+                    KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                    ),
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    // No-op if the field wasn't edited, so re-opening and confirming never rewrites
+                    // (and rounds) a limit the user didn't touch.
+                    if (value != initial) onConfirm(value.toLongOrNull()?.times(1024) ?: 0L)
+                    onDismiss()
+                }
+            ) {
+                Text("OK")
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 @Composable
@@ -346,6 +550,185 @@ private fun DeleteDialog(onConfirm: (Boolean) -> Unit, onDismiss: () -> Unit) {
         confirmButton = { TextButton(onClick = { onConfirm(deleteFiles) }) { Text("Delete") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
+}
+
+@Composable
+private fun QueuePriorityDialog(onSelect: (QueueAction) -> Unit, onDismiss: () -> Unit) {
+    @Composable
+    fun Option(icon: ImageVector, label: String, action: QueueAction) {
+        Row(
+            modifier =
+                Modifier.fillMaxWidth().clickable { onSelect(action) }.padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(icon, contentDescription = null)
+            Spacer(Modifier.size(16.dp))
+            Text(label)
+        }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Queue priority") },
+        text = {
+            Column {
+                Option(Icons.Filled.VerticalAlignTop, "Move to top", QueueAction.TOP)
+                Option(Icons.Filled.ArrowUpward, "Move up", QueueAction.UP)
+                Option(Icons.Filled.ArrowDownward, "Move down", QueueAction.DOWN)
+                Option(Icons.Filled.VerticalAlignBottom, "Move to bottom", QueueAction.BOTTOM)
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+private enum class LimitMode {
+    GLOBAL,
+    UNLIMITED,
+    CUSTOM,
+}
+
+/**
+ * Share-limit editor. qBittorrent encodes each limit as -2 (use global), -1 (no limit), or a real
+ * value, so each row is a Global/Unlimited/Custom choice with a value field shown only for Custom.
+ * [currentSeedingTimeLimit] is in minutes.
+ */
+@Composable
+private fun ShareLimitDialog(
+    currentRatioLimit: Float,
+    currentSeedingTimeLimit: Long,
+    currentInactiveSeedingTimeLimit: Long,
+    onConfirm:
+        (ratioLimit: Float, seedingTimeMinutes: Long, inactiveSeedingTimeMinutes: Long) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    fun modeOf(v: Double): LimitMode =
+        when {
+            v <= -2.0 -> LimitMode.GLOBAL
+            v < 0.0 -> LimitMode.UNLIMITED
+            else -> LimitMode.CUSTOM
+        }
+    var ratioMode by remember { mutableStateOf(modeOf(currentRatioLimit.toDouble())) }
+    var seedMode by remember { mutableStateOf(modeOf(currentSeedingTimeLimit.toDouble())) }
+    var inactiveMode by remember {
+        mutableStateOf(modeOf(currentInactiveSeedingTimeLimit.toDouble()))
+    }
+    var ratioValue by remember {
+        mutableStateOf(if (currentRatioLimit >= 0) currentRatioLimit.toString() else "")
+    }
+    var seedValue by remember {
+        mutableStateOf(if (currentSeedingTimeLimit >= 0) currentSeedingTimeLimit.toString() else "")
+    }
+    var inactiveValue by remember {
+        mutableStateOf(
+            if (currentInactiveSeedingTimeLimit >= 0) currentInactiveSeedingTimeLimit.toString()
+            else ""
+        )
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Share limits") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text("Ratio limit", style = MaterialTheme.typography.titleSmall)
+                LimitMode.entries.forEach { mode ->
+                    LimitModeOption(mode, ratioMode == mode) { ratioMode = mode }
+                }
+                if (ratioMode == LimitMode.CUSTOM) {
+                    OutlinedTextField(
+                        value = ratioValue,
+                        onValueChange = { new ->
+                            ratioValue = new.filter { it.isDigit() || it == '.' }
+                        },
+                        singleLine = true,
+                        label = { Text("Ratio") },
+                        keyboardOptions =
+                            KeyboardOptions(
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
+                            ),
+                    )
+                }
+                Spacer(Modifier.size(16.dp))
+                Text("Seeding time limit", style = MaterialTheme.typography.titleSmall)
+                LimitMode.entries.forEach { mode ->
+                    LimitModeOption(mode, seedMode == mode) { seedMode = mode }
+                }
+                if (seedMode == LimitMode.CUSTOM) {
+                    OutlinedTextField(
+                        value = seedValue,
+                        onValueChange = { new -> seedValue = new.filter { it.isDigit() } },
+                        singleLine = true,
+                        label = { Text("Minutes") },
+                        keyboardOptions =
+                            KeyboardOptions(
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                            ),
+                    )
+                }
+                Spacer(Modifier.size(16.dp))
+                Text("Inactive seeding time limit", style = MaterialTheme.typography.titleSmall)
+                LimitMode.entries.forEach { mode ->
+                    LimitModeOption(mode, inactiveMode == mode) { inactiveMode = mode }
+                }
+                if (inactiveMode == LimitMode.CUSTOM) {
+                    OutlinedTextField(
+                        value = inactiveValue,
+                        onValueChange = { new -> inactiveValue = new.filter { it.isDigit() } },
+                        singleLine = true,
+                        label = { Text("Minutes") },
+                        keyboardOptions =
+                            KeyboardOptions(
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                            ),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    fun timeOf(mode: LimitMode, value: String): Long =
+                        when (mode) {
+                            LimitMode.GLOBAL -> -2L
+                            LimitMode.UNLIMITED -> -1L
+                            LimitMode.CUSTOM -> value.toLongOrNull() ?: 0L
+                        }
+                    val ratio =
+                        when (ratioMode) {
+                            LimitMode.GLOBAL -> -2f
+                            LimitMode.UNLIMITED -> -1f
+                            LimitMode.CUSTOM -> ratioValue.toFloatOrNull() ?: 0f
+                        }
+                    onConfirm(
+                        ratio,
+                        timeOf(seedMode, seedValue),
+                        timeOf(inactiveMode, inactiveValue),
+                    )
+                }
+            ) {
+                Text("OK")
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun LimitModeOption(mode: LimitMode, selected: Boolean, onSelect: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().selectable(selected = selected, onClick = onSelect),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = onSelect)
+        Text(
+            when (mode) {
+                LimitMode.GLOBAL -> "Use global limit"
+                LimitMode.UNLIMITED -> "Unlimited"
+                LimitMode.CUSTOM -> "Custom"
+            }
+        )
+    }
 }
 
 @Composable

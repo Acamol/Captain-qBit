@@ -10,12 +10,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -42,6 +44,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.common.R as CommonR
@@ -83,6 +86,10 @@ sealed interface ServerDialog {
     data object Statistics : ServerDialog
 
     data object SortPicker : ServerDialog
+
+    data object GlobalLimits : ServerDialog
+
+    data object AltLimits : ServerDialog
 
     data object ServerPicker : ServerDialog
 
@@ -487,6 +494,28 @@ fun ServerDialogHost(
                 dismissButton = { TextButton(onClick = dismiss) { Text("Cancel") } },
             )
         }
+        ServerDialog.GlobalLimits ->
+            SpeedLimitsDialog(
+                title = "Global speed limits",
+                initialDownloadBytes = state.globalDownloadLimit,
+                initialUploadBytes = state.globalUploadLimit,
+                onConfirm = { dl, ul ->
+                    viewModel.setGlobalLimits(dl, ul)
+                    dismiss()
+                },
+                onDismiss = dismiss,
+            )
+        ServerDialog.AltLimits ->
+            SpeedLimitsDialog(
+                title = "Alternate speed limits",
+                initialDownloadBytes = state.altDownloadLimit,
+                initialUploadBytes = state.altUploadLimit,
+                onConfirm = { dl, ul ->
+                    viewModel.setAltLimits(dl, ul)
+                    dismiss()
+                },
+                onDismiss = dismiss,
+            )
         ServerDialog.ServerPicker -> {
             val servers by viewModel.servers.collectAsStateWithLifecycle()
             val activeId by viewModel.activeServerId.collectAsStateWithLifecycle()
@@ -709,6 +738,72 @@ private fun SingleChoiceDialog(
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+/**
+ * Two KiB/s inputs (download/upload) for a pair of speed limits. Values are passed in/out as
+ * bytes/s (0 = unlimited); the fields display and accept KiB/s, matching qBittorrent's own dialogs.
+ */
+@Composable
+private fun SpeedLimitsDialog(
+    title: String,
+    initialDownloadBytes: Int,
+    initialUploadBytes: Int,
+    onConfirm: (downloadBytes: Int, uploadBytes: Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    // Display in KiB/s: round to nearest, and never render a real >0 limit as blank (blank means
+    // 0 = unlimited).
+    fun toKib(bytes: Int) =
+        if (bytes > 0) ((bytes + 512) / 1024).coerceAtLeast(1).toString() else ""
+    fun toBytes(kib: String): Int =
+        ((kib.toLongOrNull() ?: 0L) * 1024).coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
+    val initialDl = toKib(initialDownloadBytes)
+    val initialUl = toKib(initialUploadBytes)
+    var dl by remember { mutableStateOf(initialDl) }
+    var ul by remember { mutableStateOf(initialUl) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = dl,
+                    onValueChange = { new -> dl = new.filter { it.isDigit() } },
+                    singleLine = true,
+                    label = { Text("Download (KiB/s)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+                Spacer(Modifier.size(12.dp))
+                OutlinedTextField(
+                    value = ul,
+                    onValueChange = { new -> ul = new.filter { it.isDigit() } },
+                    singleLine = true,
+                    label = { Text("Upload (KiB/s)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+                Text(
+                    "Leave empty for unlimited",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    // No-op if neither field was edited, so re-opening and confirming never
+                    // rewrites
+                    // (and rounds) limits the user didn't touch.
+                    if (dl != initialDl || ul != initialUl) onConfirm(toBytes(dl), toBytes(ul))
+                    onDismiss()
+                }
+            ) {
+                Text("OK")
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
 

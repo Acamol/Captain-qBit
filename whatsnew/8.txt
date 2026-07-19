@@ -1,0 +1,13 @@
+- Queue priority: move a torrent to the top, up, down, or the bottom of the queue
+- Manage trackers from the Trackers tab — add, edit, and remove (disabled on private torrents, as qBittorrent requires)
+- Speed limits everywhere: per-torrent download/upload caps, global caps, and alternate caps
+- Per-torrent share limits: ratio, seeding time, and inactive seeding time, each with a "use global / unlimited / custom" choice
+- Advanced per-torrent toggles: force start, sequential download, first/last piece priority, and super seeding
+- Rename files and folders directly from the Files tab
+- Torrent queueing on/off toggle, which also gates the queue actions and the Queued filter
+- Filters and sort are now remembered per server, instead of shared across all of them
+- View the server log, with pull-to-refresh
+- More reliable download and recheck notifications, plus a quiet events-only notification
+- Survives Wi-Fi ↔ mobile network switches, reconnecting automatically instead of getting stuck on a stale connection
+- Clearer handling when the server is unreachable: the list recovers on reconnect and the status notification shows an offline state instead of stale data
+- Long-press the drawer's server options for a description, with haptic feedback

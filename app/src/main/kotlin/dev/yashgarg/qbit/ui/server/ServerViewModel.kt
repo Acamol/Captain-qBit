@@ -7,7 +7,6 @@ import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.get
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
-import com.github.michaelbull.result.runCatching
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.yashgarg.qbit.common.R as CommonR
@@ -17,6 +16,7 @@ import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.models.ContentTreeItem
 import dev.yashgarg.qbit.data.models.ServerConfig
 import dev.yashgarg.qbit.data.models.ServerPreferences
+import dev.yashgarg.qbit.data.models.ServerViewPrefs
 import dev.yashgarg.qbit.ui.common.StatusViewModel
 import dev.yashgarg.qbit.utils.TorrentFileParser
 import dev.yashgarg.qbit.utils.TransformUtil
@@ -24,6 +24,7 @@ import dev.yashgarg.qbit.utils.friendlyMessage
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.isActive
@@ -137,30 +138,7 @@ constructor(
     init {
         syncJob = viewModelScope.launch {
             val prefs = prefsStore.data.first()
-            val option =
-                try {
-                    SortOption.valueOf(prefs.sortOptionName)
-                } catch (e: Exception) {
-                    SortOption.NAME
-                }
-            val direction = if (prefs.sortDirectionAsc) SortDirection.ASC else SortDirection.DESC
-            val filter =
-                try {
-                    StateFilter.valueOf(prefs.filterStateName)
-                } catch (e: Exception) {
-                    StateFilter.ALL
-                }
-            _uiState.update {
-                it.copy(
-                    sortOption = option,
-                    sortDirection = direction,
-                    selectedFilter = filter,
-                    selectedCategory = prefs.filterCategory,
-                    selectedTracker = prefs.filterTracker,
-                    selectedTags = prefs.filterTags,
-                    filterUntagged = prefs.filterUntagged,
-                )
-            }
+            applyViewPrefs(prefs, prefs.activeServerId)
             syncData()
         }
 
@@ -175,54 +153,70 @@ constructor(
                 .collect { active -> _uiState.update { it.copy(serverName = active?.serverName) } }
         }
 
-        // On a real server switch, drop the current sync + filters and repopulate for the new
-        // server (per-server prefs aren't stored yet, so each server starts from a clean slate).
+        // On a real server switch, drop the current sync and restore the target server's own
+        // saved filters + sort (each server remembers its own view).
         viewModelScope.launch {
             prefsStore.data
                 .map { it.activeServerId }
                 .distinctUntilChanged()
                 .drop(1)
-                .collect {
+                .collect { newId ->
                     syncJob?.cancel()
-                    _uiState.update { state ->
-                        state.copy(
-                            dataLoading = true,
-                            data = null,
-                            selectedFilter = StateFilter.ALL,
-                            selectedCategory = null,
-                            selectedTracker = null,
-                            selectedTags = emptySet(),
-                            filterUntagged = false,
-                            searchQuery = "",
-                        )
-                    }
-                    saveFilterPrefs()
+                    _uiState.update { it.copy(dataLoading = true, data = null, searchQuery = "") }
+                    applyViewPrefs(prefsStore.data.first(), newId)
                     syncJob = viewModelScope.launch { syncData() }
                 }
         }
     }
 
-    private fun saveSortPrefs(option: SortOption, direction: SortDirection) {
-        viewModelScope.launch {
-            prefsStore.updateData {
-                it.copy(
-                    sortOptionName = option.name,
-                    sortDirectionAsc = direction == SortDirection.ASC,
-                )
+    /**
+     * Restore [serverId]'s saved filters + sort into the UI state. Servers without a per-server
+     * entry yet start from the defaults.
+     */
+    private fun applyViewPrefs(prefs: ServerPreferences, serverId: Int) {
+        val v = prefs.serverViewPrefs[serverId] ?: ServerViewPrefs()
+        val option =
+            try {
+                SortOption.valueOf(v.sortOptionName)
+            } catch (e: Exception) {
+                SortOption.NAME
             }
+        val filter =
+            try {
+                StateFilter.valueOf(v.filterStateName)
+            } catch (e: Exception) {
+                StateFilter.ALL
+            }
+        _uiState.update { state ->
+            state.copy(
+                sortOption = option,
+                sortDirection = if (v.sortDirectionAsc) SortDirection.ASC else SortDirection.DESC,
+                selectedFilter = filter,
+                selectedCategory = v.filterCategory,
+                selectedTracker = v.filterTracker,
+                selectedTags = v.filterTags,
+                filterUntagged = v.filterUntagged,
+            )
         }
     }
 
-    private fun saveFilterPrefs() {
-        val state = _uiState.value
+    /** Persist the current filters + sort against the active server id. */
+    private fun persistViewPrefs() {
+        val s = _uiState.value
         viewModelScope.launch {
-            prefsStore.updateData {
-                it.copy(
-                    filterStateName = state.selectedFilter.name,
-                    filterCategory = state.selectedCategory,
-                    filterTracker = state.selectedTracker,
-                    filterTags = state.selectedTags,
-                    filterUntagged = state.filterUntagged,
+            prefsStore.updateData { prefs ->
+                val entry =
+                    ServerViewPrefs(
+                        sortOptionName = s.sortOption.name,
+                        sortDirectionAsc = s.sortDirection == SortDirection.ASC,
+                        filterStateName = s.selectedFilter.name,
+                        filterCategory = s.selectedCategory,
+                        filterTracker = s.selectedTracker,
+                        filterTags = s.selectedTags,
+                        filterUntagged = s.filterUntagged,
+                    )
+                prefs.copy(
+                    serverViewPrefs = prefs.serverViewPrefs + (prefs.activeServerId to entry)
                 )
             }
         }
@@ -528,7 +522,7 @@ constructor(
             failureMessage = getString(CommonR.string.status_delete_tags_failure),
             onSuccess = {
                 _uiState.update { it.copy(selectedTags = it.selectedTags - tags.toSet()) }
-                saveFilterPrefs()
+                persistViewPrefs()
             },
         ) {
             repository.deleteTags(tags)
@@ -585,7 +579,7 @@ constructor(
     }
 
     fun setSort(option: SortOption) {
-        val newState = _uiState.updateAndGet { state ->
+        _uiState.update { state ->
             val newDirection =
                 if (state.sortOption == option) {
                     if (state.sortDirection == SortDirection.ASC) SortDirection.DESC
@@ -595,18 +589,18 @@ constructor(
                 }
             state.copy(sortOption = option, sortDirection = newDirection)
         }
-        saveSortPrefs(newState.sortOption, newState.sortDirection)
+        persistViewPrefs()
     }
 
     fun toggleSortDirection() {
-        val newState = _uiState.updateAndGet { state ->
+        _uiState.update { state ->
             state.copy(
                 sortDirection =
                     if (state.sortDirection == SortDirection.ASC) SortDirection.DESC
                     else SortDirection.ASC
             )
         }
-        saveSortPrefs(newState.sortOption, newState.sortDirection)
+        persistViewPrefs()
     }
 
     fun setSearchQuery(query: String) {
@@ -615,17 +609,17 @@ constructor(
 
     fun setCategory(category: String?) {
         _uiState.update { state -> state.copy(selectedCategory = category) }
-        saveFilterPrefs()
+        persistViewPrefs()
     }
 
     fun setFilter(filter: StateFilter) {
         _uiState.update { state -> state.copy(selectedFilter = filter) }
-        saveFilterPrefs()
+        persistViewPrefs()
     }
 
     fun setTracker(tracker: String?) {
         _uiState.update { state -> state.copy(selectedTracker = tracker) }
-        saveFilterPrefs()
+        persistViewPrefs()
     }
 
     fun toggleTag(tag: String) {
@@ -634,12 +628,12 @@ constructor(
             if (tags.contains(tag)) tags.remove(tag) else tags.add(tag)
             state.copy(selectedTags = tags, filterUntagged = false)
         }
-        saveFilterPrefs()
+        persistViewPrefs()
     }
 
     fun setFilterUntagged(untagged: Boolean) {
         _uiState.update { it.copy(filterUntagged = untagged, selectedTags = emptySet()) }
-        saveFilterPrefs()
+        persistViewPrefs()
     }
 
     fun clearFilters() {
@@ -652,7 +646,7 @@ constructor(
                 filterUntagged = false,
             )
         }
-        saveFilterPrefs()
+        persistViewPrefs()
     }
 
     fun toggleSpeedLimits() {
@@ -667,6 +661,96 @@ constructor(
                         )
                     )
                 }
+        }
+    }
+
+    private fun getGlobalLimits() {
+        viewModelScope.launch {
+            repository.getGlobalDownloadLimit().onOk { dl ->
+                _uiState.update { it.copy(globalDownloadLimit = dl) }
+            }
+            repository.getGlobalUploadLimit().onOk { ul ->
+                _uiState.update { it.copy(globalUploadLimit = ul) }
+            }
+            repository.getAltSpeedLimits().onOk { (dl, ul) ->
+                _uiState.update { it.copy(altDownloadLimit = dl, altUploadLimit = ul) }
+            }
+            repository.isQueueingEnabled().onOk { enabled ->
+                // Don't leave the list stuck on the Queued filter if the server has queueing off
+                // (e.g. a filter persisted from a prior session, or queueing toggled off
+                // elsewhere).
+                val clearFilter = !enabled && _uiState.value.selectedFilter == StateFilter.QUEUED
+                _uiState.update {
+                    it.copy(
+                        queueingEnabled = enabled,
+                        selectedFilter = if (clearFilter) StateFilter.ALL else it.selectedFilter,
+                    )
+                }
+                if (clearFilter) persistViewPrefs()
+            }
+        }
+    }
+
+    fun setQueueing(enabled: Boolean) {
+        viewModelScope.launch {
+            repository
+                .setQueueingEnabled(enabled)
+                .onOk {
+                    // Turning queueing off hides the Queued filter; if it's the active one, fall
+                    // back to All so the list isn't stuck on a now-hidden filter.
+                    val clearFilter =
+                        !enabled && _uiState.value.selectedFilter == StateFilter.QUEUED
+                    _uiState.update {
+                        it.copy(
+                            queueingEnabled = enabled,
+                            selectedFilter =
+                                if (clearFilter) StateFilter.ALL else it.selectedFilter,
+                        )
+                    }
+                    if (clearFilter) persistViewPrefs()
+                    emitStatus(
+                        getString(
+                            if (enabled) CommonR.string.status_queueing_enabled
+                            else CommonR.string.status_queueing_disabled
+                        )
+                    )
+                }
+                .onErr {
+                    emitStatus(
+                        it.friendlyMessage(getString(CommonR.string.status_set_queueing_failure))
+                    )
+                }
+        }
+    }
+
+    /** Alternate limits are in bytes/s; 0 clears the limit (unlimited). */
+    fun setAltLimits(downloadBytesPerSec: Int, uploadBytesPerSec: Int) {
+        viewModelScope.launch {
+            repository
+                .setAltSpeedLimits(downloadBytesPerSec, uploadBytesPerSec)
+                .onOk {
+                    emitStatus(getString(CommonR.string.status_speed_limit_updated))
+                    getGlobalLimits()
+                }
+                .onErr {
+                    emitStatus(
+                        it.friendlyMessage(getString(CommonR.string.status_set_speed_limit_failure))
+                    )
+                }
+        }
+    }
+
+    /** Limits are in bytes/s; 0 clears the limit (unlimited). */
+    fun setGlobalLimits(downloadBytesPerSec: Int, uploadBytesPerSec: Int) {
+        viewModelScope.launch {
+            val dlOk = repository.setGlobalDownloadLimit(downloadBytesPerSec).get() != null
+            val ulOk = repository.setGlobalUploadLimit(uploadBytesPerSec).get() != null
+            if (dlOk && ulOk) {
+                emitStatus(getString(CommonR.string.status_speed_limit_updated))
+                getGlobalLimits()
+            } else {
+                emitStatus(getString(CommonR.string.status_set_speed_limit_failure))
+            }
         }
     }
 
@@ -702,42 +786,79 @@ constructor(
 
     private suspend fun syncData() {
         getSpeedLimitMode()
-        val result = runCatching {
-            repository
-                .observeMainData()
-                .catch { e ->
-                    _uiState.update { state -> state.copy(hasError = true, error = e, data = null) }
-                }
-                .collectLatest { mainData ->
-                    val categories = mainData.categories.keys.sorted()
-                    val trackers =
-                        mainData.torrents.values
-                            .mapNotNull { t -> t.tracker.takeIf { it.isNotBlank() } }
-                            .mapNotNull { url -> Uri.parse(url).host?.takeIf { it.isNotBlank() } }
-                            .distinct()
-                            .sorted()
-                    val tags =
-                        (mainData.tags + mainData.torrents.values.flatMap { it.tags })
-                            .filter { it.isNotBlank() }
-                            .distinct()
-                            .sorted()
-                    _uiState.update { state ->
-                        state.copy(
-                            dataLoading = false,
-                            data = mainData,
-                            hasError = false,
-                            error = null,
-                            availableCategories = categories,
-                            availableTrackers = trackers,
-                            availableTags = tags,
-                        )
+        getGlobalLimits()
+        coroutineScope {
+            // Data: keep the last-known list on screen; retry quietly on error. The offline state
+            // is
+            // driven by the durable error signal below, not by this flow throwing.
+            launch {
+                repository
+                    .observeMainData()
+                    .retry {
+                        delay(SYNC_RETRY_MS)
+                        true
                     }
-                    _intent.emit(Unit)
-                }
-        }
-
-        result.onErr {
-            emitStatus(it.friendlyMessage(getString(CommonR.string.status_sync_data_failure)))
+                    .collectLatest { mainData ->
+                        val categories = mainData.categories.keys.sorted()
+                        val trackers =
+                            mainData.torrents.values
+                                .mapNotNull { t -> t.tracker.takeIf { it.isNotBlank() } }
+                                .mapNotNull { url ->
+                                    Uri.parse(url).host?.takeIf { it.isNotBlank() }
+                                }
+                                .distinct()
+                                .sorted()
+                        val tags =
+                            (mainData.tags + mainData.torrents.values.flatMap { it.tags })
+                                .filter { it.isNotBlank() }
+                                .distinct()
+                                .sorted()
+                        _uiState.update { state ->
+                            state.copy(
+                                dataLoading = false,
+                                data = mainData,
+                                hasError = false,
+                                error = null,
+                                availableCategories = categories,
+                                availableTrackers = trackers,
+                                availableTags = tags,
+                            )
+                        }
+                        _intent.emit(Unit)
+                    }
+            }
+            // Health: a reliable offline signal. If we already have data, keep showing it and just
+            // toast on the transition; only show the full error screen when nothing has loaded yet.
+            launch {
+                var lastError: Throwable? = null
+                repository
+                    .observeMainDataError()
+                    // Survive the transient "no active client" throw during a server switch;
+                    // otherwise this collector dies and a dead server's error never surfaces,
+                    // leaving the list stuck on the loading spinner forever.
+                    .retry {
+                        delay(SYNC_RETRY_MS)
+                        true
+                    }
+                    .collect { error ->
+                        _uiState.update { state ->
+                            when {
+                                error == null -> state.copy(hasError = false, error = null)
+                                state.data == null ->
+                                    state.copy(hasError = true, error = error, dataLoading = false)
+                                else -> state
+                            }
+                        }
+                        if (error != null && lastError == null && _uiState.value.data != null) {
+                            emitStatus(
+                                error.friendlyMessage(
+                                    getString(CommonR.string.status_sync_data_failure)
+                                )
+                            )
+                        }
+                        lastError = error
+                    }
+            }
         }
     }
 }
@@ -757,6 +878,7 @@ private sealed interface PendingSource {
     data class Magnet(val url: String, val hash: String) : PendingSource
 }
 
+private const val SYNC_RETRY_MS = 5000L
 private const val METADATA_POLL_MS = 1500L
 private const val METADATA_MAX_ATTEMPTS = 80
 private const val FILE_POLL_ATTEMPTS = 20

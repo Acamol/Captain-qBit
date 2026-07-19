@@ -52,10 +52,25 @@ class SettingsViewModel @Inject constructor(private val prefsStore: DataStore<Se
     }
 
     fun setNotifyOnComplete(enabled: Boolean) {
-        viewModelScope.launch { prefsStore.updateData { it.copy(notifyOnComplete = enabled) } }
+        viewModelScope.launch {
+            prefsStore.updateData {
+                it.copy(
+                    notifyOnComplete = enabled,
+                    // Enabling: tell the worker to re-baseline so past completions aren't replayed.
+                    notifCompleteRebaseline = enabled || it.notifCompleteRebaseline,
+                )
+            }
+        }
     }
 
     fun setNotifyOnChecked(enabled: Boolean) {
-        viewModelScope.launch { prefsStore.updateData { it.copy(notifyOnChecked = enabled) } }
+        viewModelScope.launch {
+            prefsStore.updateData {
+                it.copy(
+                    notifyOnChecked = enabled,
+                    notifCheckedRebaseline = enabled || it.notifCheckedRebaseline,
+                )
+            }
+        }
     }
 }

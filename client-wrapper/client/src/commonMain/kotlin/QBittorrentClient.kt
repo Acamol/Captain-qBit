@@ -182,6 +182,13 @@ class QBittorrentClient(
     }
 
     /**
+     * The current [observeMainData] sync error, or null while the server is reachable. Stays set
+     * until the next successful poll, so observers can reflect an offline state reliably (the data
+     * flow itself keeps the last-known [MainData] through transient failures).
+     */
+    fun observeMainDataError(): StateFlow<Throwable?> = mainDataSync.observeError()
+
+    /**
      * Emits the latest [Torrent] data for the [hash]. If the torrent is removed or not found, the
      * flow will complete unless [waitIfMissing] is true.
      *

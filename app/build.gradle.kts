@@ -47,7 +47,8 @@ abstract class SyncChangelogAssets : DefaultTask() {
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val source: DirectoryProperty
 
-    // Full in-app notes overlaid on top of the fastlane summary; optional (older versions have none).
+    // Full in-app notes overlaid on top of the fastlane summary; optional (older versions have
+    // none).
     @get:InputDirectory
     @get:Optional
     @get:PathSensitive(PathSensitivity.RELATIVE)
@@ -71,7 +72,8 @@ abstract class SyncChangelogAssets : DefaultTask() {
         // F-Droid keeps the short fastlane summary.
         val full = fullSource.orNull?.asFile
         if (full != null && full.isDirectory) {
-            full.listFiles { file -> file.extension == "txt" }
+            full
+                .listFiles { file -> file.extension == "txt" }
                 ?.forEach { file -> file.copyTo(dest.resolve(file.name), overwrite = true) }
         }
     }
@@ -87,8 +89,8 @@ android {
         applicationId = "dev.acamol.qbit"
         minSdk = 28
         targetSdk = 35
-        versionCode = 7
-        versionName = "0.7.0"
+        versionCode = 8
+        versionName = "1.0.0"
 
         multiDexEnabled = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -188,7 +190,7 @@ androidComponents {
     }
 }
 
-base.archivesName.set("dev.acamol.qbit-0.7.0-$commitHash")
+base.archivesName.set("dev.acamol.qbit-1.0.0-$commitHash")
 
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 

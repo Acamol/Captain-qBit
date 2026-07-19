@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationCompat.Action
 import androidx.datastore.core.DataStore
 import androidx.hilt.work.HiltWorker
@@ -12,7 +13,6 @@ import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
 import androidx.work.ForegroundInfo
-import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
@@ -21,6 +21,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import dev.yashgarg.qbit.MainActivity
 import dev.yashgarg.qbit.R
+import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.models.ServerPreferences
 import dev.yashgarg.qbit.notifications.AppNotificationManager
@@ -42,9 +43,15 @@ constructor(
     private val prefsStore: DataStore<ServerPreferences>,
 ) : CoroutineWorker(appContext, workerParams) {
 
-    // Lets WorkManager start this as an expedited foreground service right away.
+    // Lets WorkManager start this as an expedited foreground service right away. Pick the channel
+    // up front from the user's prefs so an events-only user never even briefly sees the louder
+    // status notification.
     override suspend fun getForegroundInfo(): ForegroundInfo =
-        createForegroundInfo("Connecting…", "")
+        if (prefsStore.data.first().statusNotification) {
+            createForegroundInfo("Connecting…", "")
+        } else {
+            createForegroundInfo("Captain qBit", "Torrent alerts are on", minimal = true)
+        }
 
     override suspend fun doWork(): Result {
         // Promote to a foreground service immediately, while the app is still likely in the
@@ -60,18 +67,21 @@ constructor(
     // alerts (completed / checked). The user can toggle each independently in Settings; the service
     // keeps running while any of them is enabled, and stops itself once all are off.
     private suspend fun getStatus() {
-        val client = clientManager.checkAndGetClient() ?: return
-        // Baseline of the previous poll, keyed by hash, used to detect state transitions. Null
-        // until the first successful torrent fetch so we never alert for the pre-existing state.
-        var previous: Map<String, Torrent>? = null
-
         while (true) {
             val prefs = prefsStore.data.first()
             val eventsOn = prefs.notifyOnComplete || prefs.notifyOnChecked
             if (!prefs.statusNotification && !eventsOn) return
 
-            try {
-                if (prefs.statusNotification) {
+            // Fetch the client each tick so the worker follows a server switch (setActiveServer
+            // rebuilds it); a captured reference would keep polling the old server.
+            val client = clientManager.checkAndGetClient()
+            if (client == null) {
+                delay(REFRESH_INTERVAL_MS)
+                continue
+            }
+
+            if (prefs.statusNotification) {
+                try {
                     val info = client.getGlobalTransferInfo()
                     setForeground(
                         createForegroundInfo(
@@ -79,58 +89,114 @@ constructor(
                             "DL: ${info.dlInfoSpeed.toHumanReadable()}/s | UL: ${info.upInfoSpeed.toHumanReadable()}/s",
                         )
                     )
-                } else {
-                    // Events-only: Android still requires an ongoing notification for the service,
-                    // so show a low-key one instead of the speed readout.
-                    setForeground(
-                        createForegroundInfo("Captain qBit", "Watching for torrent events")
-                    )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // Show the server is unreachable rather than freezing the last live readout.
+                    setForeground(createForegroundInfo("Server State • Offline", "Reconnecting…"))
                 }
+            } else {
+                // Events-only: Android still requires an ongoing notification for the service,
+                // so show a minimal, min-importance one (no sound/status-bar icon) instead of
+                // the speed readout.
+                setForeground(
+                    createForegroundInfo("Captain qBit", "Torrent alerts are on", minimal = true)
+                )
+            }
 
-                if (eventsOn) {
-                    val current = client.getTorrents().associateBy(Torrent::hash)
-                    detectEvents(previous, current, prefs)
-                    previous = current
-                } else {
-                    previous = null
+            if (eventsOn) {
+                try {
+                    val torrents = client.getTorrents()
+                    if (prefs.notifyOnComplete) notifyCompletions(torrents, prefs)
+                    if (prefs.notifyOnChecked) notifyRechecks(torrents, prefs)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // Transient error — retry on the next tick.
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                // Transient error — keep the last notification and retry on the next tick.
             }
             delay(REFRESH_INTERVAL_MS)
         }
     }
 
-    private fun detectEvents(
-        previous: Map<String, Torrent>?,
-        current: Map<String, Torrent>,
-        prefs: ServerPreferences,
-    ) {
-        // First poll (or right after events were toggled on): just establish the baseline.
-        if (previous == null) return
+    /**
+     * Fire a "download complete" alert for any torrent whose completion is newer than the
+     * per-server watermark, then advance (and persist) the watermark. Using qBittorrent's own
+     * `completion_on` timestamp — rather than diffing progress across our polls — means completions
+     * that happen while this worker isn't running are still caught on the next poll, and rechecks
+     * (which don't change completion_on) never re-alert. The watermark is written only when it
+     * moves.
+     */
+    private suspend fun notifyCompletions(torrents: List<Torrent>, prefs: ServerPreferences) {
+        val serverId = prefs.activeServerId
+        // Only actually-complete torrents carry a real completion_on; incomplete ones report -1.
+        val completed = torrents.filter { it.progress >= 1f && it.completedOn > 0 }
+        val newestCompletion = completed.maxOfOrNull { it.completedOn } ?: 0L
 
-        current.values.forEach { torrent ->
-            val before = previous[torrent.hash] ?: return@forEach
-
-            // Progress climbing to 1.0 signals a finished download — but during a recheck the
-            // reported progress also climbs back to 1.0 as pieces are verified. A real completion
-            // happens while downloading, so ignore the crossing if the torrent was checking.
-            if (
-                prefs.notifyOnComplete &&
-                    !before.state.isChecking() &&
-                    before.progress < 1f &&
-                    torrent.progress >= 1f
-            ) {
-                notifyEvent(
-                    "complete:${torrent.hash}".hashCode(),
-                    "Download complete",
-                    torrent.name,
+        // Adopt the current state as a silent baseline when the toggle was just enabled, or the
+        // very
+        // first time we watch this server. This both suppresses completions that predate our
+        // interest and — because the watermark is now written even when nothing is complete yet —
+        // ensures the *next* completion actually alerts.
+        if (prefs.notifCompleteRebaseline || prefs.notifCompletionSeen[serverId] == null) {
+            prefsStore.updateData {
+                it.copy(
+                    notifCompletionSeen = it.notifCompletionSeen + (serverId to newestCompletion),
+                    notifCompleteRebaseline = false,
                 )
             }
-            if (prefs.notifyOnChecked && before.state.isChecking() && !torrent.state.isChecking()) {
-                notifyEvent("checked:${torrent.hash}".hashCode(), "Check complete", torrent.name)
+            return
+        }
+
+        val watermark = prefs.notifCompletionSeen[serverId] ?: newestCompletion
+        completed
+            .filter { it.completedOn > watermark }
+            .forEach { notifyEvent("complete:${it.hash}".hashCode(), "Download complete", it.name) }
+        if (newestCompletion > watermark) persistCompletionWatermark(serverId, newestCompletion)
+    }
+
+    private suspend fun persistCompletionWatermark(serverId: Int, value: Long) {
+        prefsStore.updateData {
+            it.copy(notifCompletionSeen = it.notifCompletionSeen + (serverId to value))
+        }
+    }
+
+    /**
+     * Fire a "check complete" alert for any torrent that was being checked as of the last poll but
+     * no longer is. The set of currently-checking hashes is persisted per server (like the
+     * completion watermark), so this survives the worker restarting and never needs a live
+     * in-memory baseline. A torrent already done when we first watch is never in the set, so it
+     * doesn't alert; one caught mid-check is recorded and alerts once it finishes.
+     */
+    private suspend fun notifyRechecks(torrents: List<Torrent>, prefs: ServerPreferences) {
+        val serverId = prefs.activeServerId
+        val byHash = torrents.associateBy(Torrent::hash)
+        val nowChecking = torrents.filter { it.state.isChecking() }.map(Torrent::hash).toSet()
+
+        // Just enabled: adopt the current checking set as a silent baseline so we don't fire for
+        // rechecks that finished while the toggle was off.
+        if (prefs.notifCheckedRebaseline) {
+            prefsStore.updateData {
+                it.copy(
+                    notifCheckingSeen = it.notifCheckingSeen + (serverId to nowChecking),
+                    notifCheckedRebaseline = false,
+                )
+            }
+            return
+        }
+
+        val wasChecking = prefs.notifCheckingSeen[serverId] ?: emptySet()
+
+        wasChecking.forEach { hash ->
+            if (hash !in nowChecking) {
+                byHash[hash]?.let {
+                    notifyEvent("checked:$hash".hashCode(), "Check complete", it.name)
+                }
+            }
+        }
+        if (nowChecking != wasChecking) {
+            prefsStore.updateData {
+                it.copy(notifCheckingSeen = it.notifCheckingSeen + (serverId to nowChecking))
             }
         }
     }
@@ -158,7 +224,11 @@ constructor(
             this == Torrent.State.CHECKING_DL ||
             this == Torrent.State.CHECKING_RESUME_DATA
 
-    private fun createForegroundInfo(title: String, text: String): ForegroundInfo {
+    private fun createForegroundInfo(
+        title: String,
+        text: String,
+        minimal: Boolean = false,
+    ): ForegroundInfo {
         val closeIntent = WorkManager.getInstance(applicationContext).createCancelPendingIntent(id)
         val intent =
             Intent(applicationContext, MainActivity::class.java).apply {
@@ -166,15 +236,23 @@ constructor(
             }
         val pendingIntent =
             PendingIntent.getActivity(applicationContext, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+        val channelId =
+            applicationContext.getString(
+                if (minimal) CommonR.string.monitor_channel_id else CommonR.string.status_channel_id
+            )
         val notification =
             AppNotificationManager.createNotification(
                 applicationContext,
                 title,
                 text,
                 R.drawable.ic_stat_qbit,
-                true,
-                listOf(Action(null, "Close", closeIntent)),
-                pendingIntent,
+                persistent = true,
+                actions = listOf(Action(null, "Close", closeIntent)),
+                contentIntent = pendingIntent,
+                channelId = channelId,
+                priority =
+                    if (minimal) NotificationCompat.PRIORITY_MIN
+                    else NotificationCompat.PRIORITY_LOW,
             )
         // Android 10+ requires declaring a foreground service type for setForeground(). From
         // Android 14 we use specialUse: this monitor runs as long as the user keeps it enabled,
@@ -192,11 +270,16 @@ constructor(
         private const val REFRESH_INTERVAL_MS = 5_000L
         private const val WORK_TAG = "status_update"
 
-        val constraints =
-            Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+        // No network constraint on purpose: the poll loop already tolerates being offline (it
+        // delays and retries each tick). A CONNECTED constraint instead HURT here — a brief drop
+        // during a Wi-Fi<->mobile handoff made WorkManager stop the service, and it couldn't be
+        // restarted from the background (Android 12+ blocks foreground-service starts), so the
+        // notification vanished until the app was reopened.
+        val constraints = Constraints.NONE
 
         /**
-         * (Re)start the monitoring service. REPLACE resets the baseline so no stale alerts fire.
+         * (Re)start the monitoring service. REPLACE resets only the in-memory recheck baseline;
+         * completion alerts use the persisted watermark, so they aren't lost across a restart.
          */
         fun enqueue(context: Context) {
             WorkManager.getInstance(context)

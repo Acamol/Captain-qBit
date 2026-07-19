@@ -70,6 +70,11 @@ data class Torrent(
     @SerialName("save_path") val savePath: String,
     /**  */
     @SerialName("seeding_time_limit") val seedingTimeLimit: Long,
+    /**
+     * Max seeding time (minutes) with no activity before the torrent is stopped. -2 = use global,
+     * -1 = no limit. Added in qBittorrent 4.6; -2 (use global) on older servers that omit it.
+     */
+    @SerialName("inactive_seeding_time_limit") val inactiveSeedingTimeLimit: Long = -2,
     /** Time (Unix Epoch) when this torrent was last seen complete */
     @SerialName("seen_complete") val seenCompleted: Long,
     /** True if sequential download is enabled */

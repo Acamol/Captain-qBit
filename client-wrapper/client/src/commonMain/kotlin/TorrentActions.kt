@@ -201,9 +201,10 @@ suspend fun QBittorrentClient.toggleSequentialDownload(
     hashes: List<String> = QBittorrentClient.allList
 ) {
     http
-        .get("${config.baseUrl}/api/v2/torrents/toggleSequentialDownload") {
-            parameter("hashes", hashes.joinToString("|"))
-        }
+        .submitForm(
+            "${config.baseUrl}/api/v2/torrents/toggleSequentialDownload",
+            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) },
+        )
         .orThrow()
 }
 
@@ -212,9 +213,10 @@ suspend fun QBittorrentClient.toggleFirstLastPriority(
     hashes: List<String> = QBittorrentClient.allList
 ) {
     http
-        .get("${config.baseUrl}/api/v2/torrents/toggleFirstLastPiecePrio") {
-            parameter("hashes", hashes.joinToString("|"))
-        }
+        .submitForm(
+            "${config.baseUrl}/api/v2/torrents/toggleFirstLastPiecePrio",
+            formParameters = Parameters.build { append("hashes", hashes.joinToString("|")) },
+        )
         .orThrow()
 }
 
@@ -252,24 +254,38 @@ suspend fun QBittorrentClient.setSuperSeeding(
         .orThrow()
 }
 
+/**
+ * Renames a file within a torrent. qBittorrent identifies the file by its current path relative to
+ * the torrent root ([oldPath], e.g. "dir/old.mkv") and moves it to [newPath]; both use "/" as the
+ * separator. Replaced the pre-4.2.1 id/name form, which qBittorrent removed.
+ */
 @Throws(QBittorrentException::class, CancellationException::class)
-suspend fun QBittorrentClient.renameFile(hash: String, id: Int, newName: String) {
+suspend fun QBittorrentClient.renameFile(hash: String, oldPath: String, newPath: String) {
     http
-        .get("${config.baseUrl}/api/v2/torrents/renameFile") {
-            parameter("hash", hash)
-            parameter("id", id)
-            parameter("name", newName)
-        }
+        .submitForm(
+            "${config.baseUrl}/api/v2/torrents/renameFile",
+            formParameters =
+                Parameters.build {
+                    append("hash", hash)
+                    append("oldPath", oldPath)
+                    append("newPath", newPath)
+                },
+        )
         .orThrow()
 }
 
+/** Renames a folder within a torrent by its path relative to the torrent root. See [renameFile]. */
 @Throws(QBittorrentException::class, CancellationException::class)
-suspend fun QBittorrentClient.renameFolder(hash: String, id: Int, newName: String) {
+suspend fun QBittorrentClient.renameFolder(hash: String, oldPath: String, newPath: String) {
     http
-        .get("${config.baseUrl}/api/v2/torrents/renameFolder") {
-            parameter("hash", hash)
-            parameter("id", id)
-            parameter("name", newName)
-        }
+        .submitForm(
+            "${config.baseUrl}/api/v2/torrents/renameFolder",
+            formParameters =
+                Parameters.build {
+                    append("hash", hash)
+                    append("oldPath", oldPath)
+                    append("newPath", newPath)
+                },
+        )
         .orThrow()
 }

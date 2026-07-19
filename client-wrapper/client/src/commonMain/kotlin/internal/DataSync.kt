@@ -34,6 +34,11 @@ internal abstract class DataSync<T>(
 
     private val serializer = serializer(requireNotNull(typeInfo.kotlinType))
     private val state = MutableStateFlow<DataStatePair<T>>(null to null)
+    // Durable last-poll error: set on a failed fetch, cleared on the next success. Unlike the
+    // transient error carried in [state] (reset almost immediately, so a conflating collector can
+    // miss it), this stays set while the endpoint is unreachable, so observers can reliably show an
+    // offline state.
+    private val syncError = MutableStateFlow<Throwable?>(null)
     private val isSyncingState =
         state.subscriptionCount.map { it > 0 }.stateIn(syncScope, Eagerly, false)
     private val atomicSyncRid = AtomicReference(0L)
@@ -59,6 +64,9 @@ internal abstract class DataSync<T>(
         return state
     }
 
+    /** Latest sync error, or null while the endpoint is reachable. Cleared on the next success. */
+    fun observeError(): StateFlow<Throwable?> = syncError
+
     fun close() {
         syncLoopJob.cancel()
     }
@@ -75,6 +83,7 @@ internal abstract class DataSync<T>(
                         fetchData(syncRid).bodyOrThrow<T>(typeInfo) to null
                     }
                 }
+            syncError.value = null
 
             delay(config.syncInterval)
 
@@ -85,6 +94,7 @@ internal abstract class DataSync<T>(
 
                 // Fetch the next MainData patch and merge into existing model, remove any error
                 state.value = mainDataJson.applyPatch(fetchData(++syncRid).bodyOrThrow()) to null
+                syncError.value = null
 
                 delay(config.syncInterval)
             }
@@ -92,6 +102,7 @@ internal abstract class DataSync<T>(
             // Failed to fetch patch, keep current MainData and add the error
             println("DataSync: sync failed for $endpointUrl: ${e.message}")
             val qbEx = if (e is QBittorrentException) e else QBittorrentException(e)
+            syncError.value = qbEx
             state.update { (mainData, _) -> mainData to qbEx }
             yield()
             // Active state subscribers have seen the error, clear it
