@@ -1,7 +1,10 @@
 package dev.yashgarg.qbit.ui.common
 
 import android.content.Context
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.onErr
@@ -43,5 +46,16 @@ abstract class StatusViewModel(private val context: Context) : ViewModel() {
                 }
                 .onErr { _status.emit(it.friendlyMessage(failureMessage)) }
         }
+    }
+
+    /**
+     * Runs [block] only while the app process is at least [Lifecycle.State.STARTED] — i.e. actually
+     * visible — cancelling it when the app backgrounds and restarting it when it returns. Screens
+     * whose ViewModel outlives normal navigation (e.g. a permanent root screen) would otherwise
+     * keep polling the server indefinitely in the background: Navigation Compose doesn't clear a
+     * screen's ViewModel just because the Activity does.
+     */
+    protected suspend fun syncWhileForeground(block: suspend () -> Unit) {
+        ProcessLifecycleOwner.get().lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { block() }
     }
 }

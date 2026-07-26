@@ -52,9 +52,9 @@ constructor(
     init {
         Log.d("TorrentDetailsViewModel", "TorrentHash: $hash")
         viewModelScope.launch {
-            launch { syncTorrentFlow() }
-            launch { syncPeers() }
-            launch { syncAvailableFilters() }
+            launch { syncWhileForeground { syncTorrentFlow() } }
+            launch { syncWhileForeground { syncPeers() } }
+            launch { syncWhileForeground { syncAvailableFilters() } }
             launch { getContent() }
             launch {
                 // Gates the queue-priority actions: qBittorrent rejects them (409) unless queueing

@@ -201,6 +201,7 @@ dependencies {
     implementation(libs.androidx.datastore)
     implementation(libs.androidx.swiperefreshlayout)
     implementation(libs.androidx.lifecycle.ktx)
+    implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.lifecycle.viewmodel)
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)

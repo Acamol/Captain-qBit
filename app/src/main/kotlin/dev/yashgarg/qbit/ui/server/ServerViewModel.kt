@@ -146,7 +146,7 @@ constructor(
         syncJob = viewModelScope.launch {
             val prefs = prefsStore.data.first()
             applyViewPrefs(prefs, prefs.activeServerId)
-            syncData()
+            syncWhileForeground { syncData() }
         }
 
         // Reflect the active server's name in the UI.
@@ -171,7 +171,7 @@ constructor(
                     syncJob?.cancel()
                     _uiState.update { it.copy(dataLoading = true, data = null, searchQuery = "") }
                     applyViewPrefs(prefsStore.data.first(), newId)
-                    syncJob = viewModelScope.launch { syncData() }
+                    syncJob = viewModelScope.launch { syncWhileForeground { syncData() } }
                 }
         }
     }
@@ -231,7 +231,7 @@ constructor(
 
     fun refresh() {
         syncJob?.cancel()
-        syncJob = viewModelScope.launch { syncData() }
+        syncJob = viewModelScope.launch { syncWhileForeground { syncData() } }
     }
 
     fun addTorrentUrl(
