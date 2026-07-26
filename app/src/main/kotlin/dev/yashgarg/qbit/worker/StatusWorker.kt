@@ -151,7 +151,14 @@ constructor(
         val watermark = prefs.notifCompletionSeen[serverId] ?: newestCompletion
         completed
             .filter { it.completedOn > watermark }
-            .forEach { notifyEvent("complete:${it.hash}".hashCode(), "Download complete", it.name) }
+            .forEach {
+                notifyEvent(
+                    "complete:${it.hash}".hashCode(),
+                    "Download complete",
+                    it.name,
+                    torrentHash = it.hash,
+                )
+            }
         if (newestCompletion > watermark) persistCompletionWatermark(serverId, newestCompletion)
     }
 
@@ -201,10 +208,11 @@ constructor(
         }
     }
 
-    private fun notifyEvent(id: Int, title: String, content: String) {
+    private fun notifyEvent(id: Int, title: String, content: String, torrentHash: String? = null) {
         val intent =
             Intent(applicationContext, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                if (torrentHash != null) putExtra(MainActivity.EXTRA_TORRENT_HASH, torrentHash)
             }
         val pendingIntent =
             PendingIntent.getActivity(applicationContext, id, intent, PendingIntent.FLAG_IMMUTABLE)
