@@ -28,6 +28,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import dagger.hilt.android.AndroidEntryPoint
 import dev.yashgarg.qbit.data.manager.ClientManager
+import dev.yashgarg.qbit.data.manager.PendingTorrentIntent
 import dev.yashgarg.qbit.data.models.ConfigStatus
 import dev.yashgarg.qbit.data.models.ServerPreferences
 import dev.yashgarg.qbit.notifications.AppNotificationManager
@@ -58,6 +59,7 @@ class MainActivity : AppCompatActivity() {
     @Inject lateinit var clientManager: ClientManager
     @Inject lateinit var serverPrefsStore: DataStore<ServerPreferences>
     @Inject lateinit var appNavigator: AppNavigator
+    @Inject lateinit var pendingTorrentIntent: PendingTorrentIntent
 
     private val backupViewModel by viewModels<BackupViewModel>()
     private val whatsNewViewModel by viewModels<WhatsNewViewModel>()
@@ -197,6 +199,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         handleBackupIntent(intent)
+        handleTorrentViewIntent(intent)
     }
 
     // singleInstance: an already-running task receives opened files here rather than in onCreate.
@@ -204,12 +207,20 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleBackupIntent(intent)
-        // super.onNewIntent delivered a torrent to ServerFragment's listener; handleBackupIntent
-        // clears the data for .cqb files, so remaining VIEW data means a torrent. Bring the list
+        // handleBackupIntent clears the data for .cqb files, so remaining VIEW data means a
+        // torrent. Hand its URI to ServerScreen (via PendingTorrentIntent) and bring the list
         // forward so its add dialog can surface.
-        if (intent.action == Intent.ACTION_VIEW && intent.data != null) {
+        if (handleTorrentViewIntent(intent)) {
             appNavigator.navigate(NavCommand.PopToServer)
         }
+    }
+
+    /** Offers a non-backup VIEW intent's URI to [pendingTorrentIntent]. Returns true if it did. */
+    private fun handleTorrentViewIntent(intent: Intent): Boolean {
+        val uri = intent.data
+        if (intent.action != Intent.ACTION_VIEW || uri == null) return false
+        pendingTorrentIntent.offer(uri.toString())
+        return true
     }
 
     // "Press back twice to exit" at the navigation root (invoked by QbitNavHost's BackHandler).
