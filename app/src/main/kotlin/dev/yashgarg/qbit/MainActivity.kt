@@ -14,8 +14,12 @@ import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.Lifecycle
@@ -29,18 +33,24 @@ import dev.yashgarg.qbit.data.models.ServerPreferences
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.ui.backup.BackupDialogs
 import dev.yashgarg.qbit.ui.backup.BackupViewModel
+import dev.yashgarg.qbit.ui.crash.CrashReportDialog
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.ui.navigation.QbitNavHost
 import dev.yashgarg.qbit.ui.theme.QbitComposeTheme
 import dev.yashgarg.qbit.ui.whatsnew.WhatsNewDialog
 import dev.yashgarg.qbit.ui.whatsnew.WhatsNewViewModel
+import dev.yashgarg.qbit.utils.CrashHandler
+import dev.yashgarg.qbit.utils.GitHubIssueLink
+import dev.yashgarg.qbit.utils.rememberCopyToClipboard
 import dev.yashgarg.qbit.worker.StatusWorker
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -73,6 +83,29 @@ class MainActivity : AppCompatActivity() {
                         versionName = whatsNew.versionName,
                         entries = whatsNew.entries,
                         onDismiss = whatsNewViewModel::dismiss,
+                    )
+                }
+
+                var crashReport by remember { mutableStateOf<String?>(null) }
+                LaunchedEffect(Unit) {
+                    crashReport =
+                        withContext(Dispatchers.IO) {
+                            CrashHandler.consumePendingReport(applicationContext)
+                        }
+                }
+                crashReport?.let { report ->
+                    val copyToClipboard = rememberCopyToClipboard()
+                    CrashReportDialog(
+                        report = report,
+                        onDismiss = { crashReport = null },
+                        onCopy = {
+                            copyToClipboard("Crash report", report, "Crash report copied")
+                        },
+                        onReportIssue = {
+                            startActivity(
+                                Intent(Intent.ACTION_VIEW, GitHubIssueLink.url(report).toUri())
+                            )
+                        },
                     )
                 }
             }
