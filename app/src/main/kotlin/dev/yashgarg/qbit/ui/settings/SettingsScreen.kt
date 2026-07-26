@@ -64,6 +64,18 @@ private val THEME_OPTIONS =
 private fun themeLabel(mode: Int): String =
     THEME_OPTIONS.firstOrNull { it.first == mode }?.second ?: "System default"
 
+private val INTERVAL_OPTIONS =
+    listOf(
+        5_000L to "5 seconds",
+        10_000L to "10 seconds",
+        30_000L to "30 seconds",
+        60_000L to "1 minute",
+        300_000L to "5 minutes",
+    )
+
+private fun intervalLabel(ms: Long): String =
+    INTERVAL_OPTIONS.firstOrNull { it.first == ms }?.second ?: "5 seconds"
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -79,8 +91,14 @@ fun SettingsScreen(
     val statusNotif by viewModel.statusNotification.collectAsStateWithLifecycle()
     val notifyComplete by viewModel.notifyOnComplete.collectAsStateWithLifecycle()
     val notifyChecked by viewModel.notifyOnChecked.collectAsStateWithLifecycle()
+    val statusRefreshIntervalMs by viewModel.statusRefreshIntervalMs.collectAsStateWithLifecycle()
+    val eventPollIntervalMs by viewModel.eventPollIntervalMs.collectAsStateWithLifecycle()
+    val syncIntervalMs by viewModel.syncIntervalMs.collectAsStateWithLifecycle()
 
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showStatusIntervalDialog by remember { mutableStateOf(false) }
+    var showEventIntervalDialog by remember { mutableStateOf(false) }
+    var showSyncIntervalDialog by remember { mutableStateOf(false) }
     var pendingExport by remember { mutableStateOf<PendingExport?>(null) }
 
     val notifPermissionLauncher =
@@ -229,6 +247,24 @@ fun SettingsScreen(
                 viewModel.setNotifyOnChecked(it)
                 applyNotificationPrefs(statusNotif, notifyComplete, it)
             }
+            ClickableRow(
+                title = "Notification refresh interval",
+                subtitle = intervalLabel(statusRefreshIntervalMs),
+                onClick = { showStatusIntervalDialog = true },
+            )
+            ClickableRow(
+                title = "Torrent alert check interval",
+                subtitle = intervalLabel(eventPollIntervalMs),
+                onClick = { showEventIntervalDialog = true },
+            )
+
+            HorizontalDivider()
+            SectionHeader("Sync")
+            ClickableRow(
+                title = "Torrent list refresh interval",
+                subtitle = intervalLabel(syncIntervalMs),
+                onClick = { showSyncIntervalDialog = true },
+            )
 
             HorizontalDivider()
             SectionHeader("Backup")
@@ -281,6 +317,45 @@ fun SettingsScreen(
             },
         )
     }
+
+    if (showStatusIntervalDialog) {
+        IntervalDialog(
+            title = "Notification refresh interval",
+            description =
+                "How often the notification updates its transfer speeds. Longer saves battery.",
+            selected = statusRefreshIntervalMs,
+            onSelect = {
+                viewModel.setStatusRefreshIntervalMs(it)
+                // Restarts the already-running worker so it picks up the new interval right
+                // away, instead of only after its current (possibly minutes-long) sleep ends.
+                applyNotificationPrefs(statusNotif, notifyComplete, notifyChecked)
+            },
+            onDismiss = { showStatusIntervalDialog = false },
+        )
+    }
+    if (showEventIntervalDialog) {
+        IntervalDialog(
+            title = "Torrent alert check interval",
+            description =
+                "How often finished/rechecked torrents are checked. Longer delays alerts but saves battery.",
+            selected = eventPollIntervalMs,
+            onSelect = {
+                viewModel.setEventPollIntervalMs(it)
+                applyNotificationPrefs(statusNotif, notifyComplete, notifyChecked)
+            },
+            onDismiss = { showEventIntervalDialog = false },
+        )
+    }
+    if (showSyncIntervalDialog) {
+        IntervalDialog(
+            title = "Torrent list refresh interval",
+            description =
+                "How often the open torrent list refreshes. Longer saves battery and data.",
+            selected = syncIntervalMs,
+            onSelect = viewModel::setSyncIntervalMs,
+            onDismiss = { showSyncIntervalDialog = false },
+        )
+    }
 }
 
 /** The selection + passphrase, held until the user picks an export destination. */
@@ -290,6 +365,53 @@ private data class PendingExport(
     val prefGroups: Set<dev.yashgarg.qbit.data.backup.PrefGroup>,
     val includeCategoryColors: Boolean,
 )
+
+@Composable
+private fun IntervalDialog(
+    title: String,
+    description: String,
+    selected: Long,
+    onSelect: (Long) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column {
+                Text(
+                    description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 12.dp),
+                )
+                INTERVAL_OPTIONS.forEach { (ms, label) ->
+                    Row(
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .clickable {
+                                    onSelect(ms)
+                                    onDismiss()
+                                }
+                                .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = selected == ms,
+                            onClick = {
+                                onSelect(ms)
+                                onDismiss()
+                            },
+                        )
+                        Spacer(Modifier.size(12.dp))
+                        Text(label)
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
 
 @Composable
 private fun SectionHeader(text: String) {

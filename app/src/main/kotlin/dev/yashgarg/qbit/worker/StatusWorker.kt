@@ -63,10 +63,14 @@ constructor(
         return Result.success()
     }
 
-    // Polls on a single interval to serve both the ongoing status notification and torrent-event
-    // alerts (completed / checked). The user can toggle each independently in Settings; the service
-    // keeps running while any of them is enabled, and stops itself once all are off.
+    // Serves both the ongoing status notification and torrent-event alerts (completed / checked)
+    // out of a single loop, but on independent, user-configurable cadences (statusRefreshIntervalMs
+    // / eventPollIntervalMs) — so slowing the speed readout down for battery doesn't also delay
+    // completion alerts. The user can toggle each independently in Settings; the service keeps
+    // running while any of them is enabled, and stops itself once all are off.
     private suspend fun getStatus() {
+        var lastStatusFetch = 0L
+        var lastEventFetch = 0L
         while (true) {
             val prefs = prefsStore.data.first()
             val eventsOn = prefs.notifyOnComplete || prefs.notifyOnChecked
@@ -76,24 +80,32 @@ constructor(
             // rebuilds it); a captured reference would keep polling the old server.
             val client = clientManager.checkAndGetClient()
             if (client == null) {
-                delay(REFRESH_INTERVAL_MS)
+                delay(RECONNECT_RETRY_MS)
                 continue
             }
 
+            val now = System.currentTimeMillis()
+
             if (prefs.statusNotification) {
-                try {
-                    val info = client.getGlobalTransferInfo()
-                    setForeground(
-                        createForegroundInfo(
-                            "Server State • Connected",
-                            "DL: ${info.dlInfoSpeed.toHumanReadable()}/s | UL: ${info.upInfoSpeed.toHumanReadable()}/s",
+                if (now - lastStatusFetch >= prefs.statusRefreshIntervalMs) {
+                    try {
+                        val info = client.getGlobalTransferInfo()
+                        setForeground(
+                            createForegroundInfo(
+                                "Server State • Connected",
+                                "DL: ${info.dlInfoSpeed.toHumanReadable()}/s | UL: ${info.upInfoSpeed.toHumanReadable()}/s",
+                            )
                         )
-                    )
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    // Show the server is unreachable rather than freezing the last live readout.
-                    setForeground(createForegroundInfo("Server State • Offline", "Reconnecting…"))
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        // Show the server is unreachable rather than freezing the last live
+                        // readout.
+                        setForeground(
+                            createForegroundInfo("Server State • Offline", "Reconnecting…")
+                        )
+                    }
+                    lastStatusFetch = now
                 }
             } else {
                 // Events-only: Android still requires an ongoing notification for the service,
@@ -104,7 +116,7 @@ constructor(
                 )
             }
 
-            if (eventsOn) {
+            if (eventsOn && now - lastEventFetch >= prefs.eventPollIntervalMs) {
                 try {
                     val torrents = client.getTorrents()
                     if (prefs.notifyOnComplete) notifyCompletions(torrents, prefs)
@@ -114,8 +126,19 @@ constructor(
                 } catch (e: Exception) {
                     // Transient error — retry on the next tick.
                 }
+                lastEventFetch = now
             }
-            delay(REFRESH_INTERVAL_MS)
+
+            // Tick at the finer-grained of the two active cadences; each branch above only does
+            // its own (network-hitting) work once its own interval has actually elapsed.
+            val nextTick =
+                listOfNotNull(
+                        prefs.statusRefreshIntervalMs.takeIf { prefs.statusNotification },
+                        prefs.eventPollIntervalMs.takeIf { eventsOn },
+                    )
+                    .min()
+                    .coerceAtLeast(MIN_TICK_MS)
+            delay(nextTick)
         }
     }
 
@@ -275,7 +298,11 @@ constructor(
     }
 
     companion object {
-        private const val REFRESH_INTERVAL_MS = 5_000L
+        // Retry cadence while the client can't be reached at all; unrelated to the
+        // user-configurable
+        // statusRefreshIntervalMs / eventPollIntervalMs, which only apply once a client exists.
+        private const val RECONNECT_RETRY_MS = 5_000L
+        private const val MIN_TICK_MS = 1_000L
         private const val WORK_TAG = "status_update"
 
         // No network constraint on purpose: the poll loop already tolerates being offline (it

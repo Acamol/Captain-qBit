@@ -12,7 +12,6 @@ import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.header
 import io.ktor.http.HttpHeaders
-import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.flow.SharedFlow
 import qbittorrent.QBittorrentClient
 
@@ -26,7 +25,6 @@ interface ClientManager {
 
     companion object {
         const val tag = "ClientManager"
-        val syncInterval = 5.seconds
 
         fun httpClient(basicAuthCredentials: Pair<String, String>? = null): HttpClient {
             return HttpClient(OkHttp) {

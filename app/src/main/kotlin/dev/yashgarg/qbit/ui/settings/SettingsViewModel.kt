@@ -39,6 +39,21 @@ class SettingsViewModel @Inject constructor(private val prefsStore: DataStore<Se
             .map { it.notifyOnChecked }
             .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    val statusRefreshIntervalMs: StateFlow<Long> =
+        prefsStore.data
+            .map { it.statusRefreshIntervalMs }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, 5_000L)
+
+    val eventPollIntervalMs: StateFlow<Long> =
+        prefsStore.data
+            .map { it.eventPollIntervalMs }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, 5_000L)
+
+    val syncIntervalMs: StateFlow<Long> =
+        prefsStore.data
+            .map { it.syncIntervalMs }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, 5_000L)
+
     fun setDynamicColors(enabled: Boolean) {
         viewModelScope.launch { prefsStore.updateData { it.copy(dynamicColors = enabled) } }
     }
@@ -72,5 +87,17 @@ class SettingsViewModel @Inject constructor(private val prefsStore: DataStore<Se
                 )
             }
         }
+    }
+
+    fun setStatusRefreshIntervalMs(ms: Long) {
+        viewModelScope.launch { prefsStore.updateData { it.copy(statusRefreshIntervalMs = ms) } }
+    }
+
+    fun setEventPollIntervalMs(ms: Long) {
+        viewModelScope.launch { prefsStore.updateData { it.copy(eventPollIntervalMs = ms) } }
+    }
+
+    fun setSyncIntervalMs(ms: Long) {
+        viewModelScope.launch { prefsStore.updateData { it.copy(syncIntervalMs = ms) } }
     }
 }
