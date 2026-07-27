@@ -17,6 +17,9 @@ import androidx.navigation.navArgument
 import dev.yashgarg.qbit.ui.config.ConfigScreen
 import dev.yashgarg.qbit.ui.home.HomeScreen
 import dev.yashgarg.qbit.ui.logs.LogsScreen
+import dev.yashgarg.qbit.ui.rss.RssArticlesScreen
+import dev.yashgarg.qbit.ui.rss.RssRuleEditorScreen
+import dev.yashgarg.qbit.ui.rss.RssScreen
 import dev.yashgarg.qbit.ui.server.ServerScreen
 import dev.yashgarg.qbit.ui.serverlist.ServerListScreen
 import dev.yashgarg.qbit.ui.settings.SettingsScreen
@@ -68,6 +71,31 @@ fun QbitNavHost(
         composable(Routes.SETTINGS) { SettingsScreen(appNavigator = appNavigator) }
         composable(Routes.VERSION) { VersionScreen(appNavigator = appNavigator) }
         composable(Routes.LOGS) { LogsScreen(appNavigator = appNavigator) }
+        composable(Routes.RSS) { RssScreen(appNavigator = appNavigator) }
+
+        composable(
+            route = Routes.RSS_ARTICLES_PATTERN,
+            arguments = listOf(navArgument(Routes.ARG_RSS_ITEM_PATH) { type = NavType.StringType }),
+        ) {
+            // itemPath reaches RssViewModel via the destination's SavedStateHandle.
+            RssArticlesScreen(appNavigator = appNavigator)
+        }
+
+        composable(
+            route = Routes.RSS_RULE_EDITOR_PATTERN,
+            arguments =
+                listOf(
+                    navArgument(Routes.ARG_RSS_RULE_NAME) {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                ),
+        ) {
+            // ruleName (null = new rule) reaches RssViewModel via the destination's
+            // SavedStateHandle.
+            RssRuleEditorScreen(appNavigator = appNavigator)
+        }
 
         composable(
             route = Routes.CONFIG_PATTERN,
@@ -116,6 +144,9 @@ private fun NavController.execute(command: NavCommand) {
         NavCommand.OpenServerList -> navigate(Routes.SERVERS)
         NavCommand.OpenVersion -> navigate(Routes.VERSION)
         NavCommand.OpenLogs -> navigate(Routes.LOGS)
+        NavCommand.OpenRss -> navigate(Routes.RSS)
+        is NavCommand.OpenRssArticles -> navigate(Routes.rssArticles(command.itemPath))
+        is NavCommand.OpenRssRuleEditor -> navigate(Routes.rssRuleEditor(command.ruleName))
         NavCommand.Back -> {
             if (!navigateUp()) popBackStack()
         }
