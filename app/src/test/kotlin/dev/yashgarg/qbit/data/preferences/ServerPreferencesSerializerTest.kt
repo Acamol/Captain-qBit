@@ -41,6 +41,27 @@ class ServerPreferencesSerializerTest {
         assertEquals(3, prefs.activeServerId)
         assertEquals(1, prefs.themeMode)
         assertEquals(7, prefs.lastSeenVersionCode)
+        // Fields added after this install's prefs were written fall back to their defaults.
+        assertEquals(5_000L, prefs.statusRefreshIntervalMs)
+        assertEquals(5_000L, prefs.eventPollIntervalMs)
+        assertEquals(5_000L, prefs.syncIntervalMs)
+    }
+
+    /** The configurable poll intervals round-trip like any other preference. */
+    @Test
+    fun `round-trips custom poll intervals`() = runTest {
+        val original =
+            ServerPreferences(
+                statusRefreshIntervalMs = 60_000L,
+                eventPollIntervalMs = 10_000L,
+                syncIntervalMs = 30_000L,
+            )
+
+        val out = ByteArrayOutputStream()
+        ServerPreferencesSerializer.writeTo(original, out)
+        val restored = ServerPreferencesSerializer.readFrom(out.toByteArray().inputStream())
+
+        assertEquals(original, restored)
     }
 
     /** A written prefs file reads back equal and no longer carries the removed keys. */

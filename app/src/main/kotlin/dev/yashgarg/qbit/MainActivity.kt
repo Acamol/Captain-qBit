@@ -14,8 +14,12 @@ import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.Lifecycle
@@ -24,23 +28,30 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import dagger.hilt.android.AndroidEntryPoint
 import dev.yashgarg.qbit.data.manager.ClientManager
+import dev.yashgarg.qbit.data.manager.PendingTorrentIntent
 import dev.yashgarg.qbit.data.models.ConfigStatus
 import dev.yashgarg.qbit.data.models.ServerPreferences
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.ui.backup.BackupDialogs
 import dev.yashgarg.qbit.ui.backup.BackupViewModel
+import dev.yashgarg.qbit.ui.crash.CrashReportDialog
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.ui.navigation.QbitNavHost
 import dev.yashgarg.qbit.ui.theme.QbitComposeTheme
 import dev.yashgarg.qbit.ui.whatsnew.WhatsNewDialog
 import dev.yashgarg.qbit.ui.whatsnew.WhatsNewViewModel
+import dev.yashgarg.qbit.utils.CrashHandler
+import dev.yashgarg.qbit.utils.GitHubIssueLink
+import dev.yashgarg.qbit.utils.rememberCopyToClipboard
 import dev.yashgarg.qbit.worker.StatusWorker
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -48,6 +59,7 @@ class MainActivity : AppCompatActivity() {
     @Inject lateinit var clientManager: ClientManager
     @Inject lateinit var serverPrefsStore: DataStore<ServerPreferences>
     @Inject lateinit var appNavigator: AppNavigator
+    @Inject lateinit var pendingTorrentIntent: PendingTorrentIntent
 
     private val backupViewModel by viewModels<BackupViewModel>()
     private val whatsNewViewModel by viewModels<WhatsNewViewModel>()
@@ -56,6 +68,10 @@ class MainActivity : AppCompatActivity() {
     // Land on the torrent list once when a server exists; don't re-route on later config-status
     // replays (e.g. resume).
     private var navigatedToServer = false
+    // A "download complete" notification tap arriving before a server exists (or before the
+    // RESUMED collector below has run) — applied once OpenServerAsRoot has actually fired, so it
+    // can't be wiped out by that command's own popUpTo.
+    private var pendingNotificationHash: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -73,6 +89,29 @@ class MainActivity : AppCompatActivity() {
                         versionName = whatsNew.versionName,
                         entries = whatsNew.entries,
                         onDismiss = whatsNewViewModel::dismiss,
+                    )
+                }
+
+                var crashReport by remember { mutableStateOf<String?>(null) }
+                LaunchedEffect(Unit) {
+                    crashReport =
+                        withContext(Dispatchers.IO) {
+                            CrashHandler.consumePendingReport(applicationContext)
+                        }
+                }
+                crashReport?.let { report ->
+                    val copyToClipboard = rememberCopyToClipboard()
+                    CrashReportDialog(
+                        report = report,
+                        onDismiss = { crashReport = null },
+                        onCopy = {
+                            copyToClipboard("Crash report", report, "Crash report copied")
+                        },
+                        onReportIssue = {
+                            startActivity(
+                                Intent(Intent.ACTION_VIEW, GitHubIssueLink.url(report).toUri())
+                            )
+                        },
                     )
                 }
             }
@@ -154,6 +193,13 @@ class MainActivity : AppCompatActivity() {
                                 if (!navigatedToServer) {
                                     navigatedToServer = true
                                     appNavigator.navigate(NavCommand.OpenServerAsRoot)
+                                    // Must queue behind OpenServerAsRoot, not race it — that
+                                    // command's popUpTo would otherwise wipe out a torrent
+                                    // navigation sent first.
+                                    pendingNotificationHash?.let { hash ->
+                                        pendingNotificationHash = null
+                                        appNavigator.navigate(NavCommand.OpenTorrent(hash))
+                                    }
                                 }
                             }
                             ConfigStatus.DOES_NOT_EXIST ->
@@ -164,6 +210,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         handleBackupIntent(intent)
+        handleTorrentViewIntent(intent)
+        pendingNotificationHash = intent.getStringExtra(EXTRA_TORRENT_HASH)
     }
 
     // singleInstance: an already-running task receives opened files here rather than in onCreate.
@@ -171,12 +219,23 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleBackupIntent(intent)
-        // super.onNewIntent delivered a torrent to ServerFragment's listener; handleBackupIntent
-        // clears the data for .cqb files, so remaining VIEW data means a torrent. Bring the list
+        // handleBackupIntent clears the data for .cqb files, so remaining VIEW data means a
+        // torrent. Hand its URI to ServerScreen (via PendingTorrentIntent) and bring the list
         // forward so its add dialog can surface.
-        if (intent.action == Intent.ACTION_VIEW && intent.data != null) {
+        if (handleTorrentViewIntent(intent)) {
             appNavigator.navigate(NavCommand.PopToServer)
         }
+        // Notification taps never reach here: notifyEvent()'s PendingIntent sets
+        // FLAG_ACTIVITY_CLEAR_TASK, which always destroys and recreates this singleInstance
+        // activity — so EXTRA_TORRENT_HASH is only ever read in onCreate.
+    }
+
+    /** Offers a non-backup VIEW intent's URI to [pendingTorrentIntent]. Returns true if it did. */
+    private fun handleTorrentViewIntent(intent: Intent): Boolean {
+        val uri = intent.data
+        if (intent.action != Intent.ACTION_VIEW || uri == null) return false
+        pendingTorrentIntent.offer(uri.toString())
+        return true
     }
 
     // "Press back twice to exit" at the navigation root (invoked by QbitNavHost's BackHandler).
@@ -248,7 +307,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     companion object {
-        const val TORRENT_INTENT_KEY = "torrent_intent"
+        /** Extra key for the torrent hash carried by a "download complete" notification's tap. */
+        const val EXTRA_TORRENT_HASH = "torrent_hash"
         private const val EXIT_CONFIRMATION_WINDOW_MS = 2000L
     }
 }

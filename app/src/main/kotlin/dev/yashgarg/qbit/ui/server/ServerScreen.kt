@@ -1,6 +1,5 @@
 package dev.yashgarg.qbit.ui.server
 
-import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
@@ -78,7 +77,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import androidx.fragment.app.FragmentActivity
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.R
@@ -111,7 +109,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 @Composable
 fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltViewModel()) {
     val context = LocalContext.current
-    val activity = context as FragmentActivity
     val scope = rememberCoroutineScope()
     val keyboard = LocalSoftwareKeyboardController.current
 
@@ -202,26 +199,17 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
         }
     }
 
-    // Cold-start VIEW intent (magnet/.torrent from another app); the .cqb backup case is consumed
-    // by
-    // MainActivity. Handle once, then clear so a recomposition/return doesn't re-add it.
+    // Torrent-file/magnet VIEW intents (cold start or already-running), handed off by MainActivity
+    // via PendingTorrentIntent rather than read directly off the Activity's Intent — a StateFlow
+    // replays its latest value to this collector however late it subscribes, so it can't race
+    // MainActivity's onCreate/onNewIntent. The .cqb backup case is consumed by MainActivity itself.
     LaunchedEffect(Unit) {
-        activity.intent?.let { launch ->
-            if (launch.action == Intent.ACTION_VIEW && launch.data != null) {
-                handleAddIntent(launch.data.toString())
-                launch.data = null
+        viewModel.pendingTorrentUri.collect { uri ->
+            if (uri != null) {
+                handleAddIntent(uri)
+                viewModel.consumePendingTorrentUri()
             }
         }
-    }
-
-    // Running-app VIEW intents.
-    androidx.compose.runtime.DisposableEffect(Unit) {
-        val listener =
-            androidx.core.util.Consumer<Intent> { intent ->
-                intent.data?.let { handleAddIntent(it.toString()) }
-            }
-        activity.addOnNewIntentListener(listener)
-        onDispose { activity.removeOnNewIntentListener(listener) }
     }
 
     LaunchedEffect(Unit) {

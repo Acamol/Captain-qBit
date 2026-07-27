@@ -161,7 +161,6 @@ class FakeClientManager : ClientManager {
     override suspend fun checkAndGetClient() =
         QBittorrentClient(
             baseUrl = "http://localhost",
-            syncInterval = ClientManager.syncInterval,
             httpClient = HttpClient(mockEngine()),
             dispatcher = Dispatchers.Default,
         )

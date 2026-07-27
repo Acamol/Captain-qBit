@@ -89,8 +89,8 @@ android {
         applicationId = "dev.acamol.qbit"
         minSdk = 28
         targetSdk = 35
-        versionCode = 8
-        versionName = "1.0.0"
+        versionCode = 9
+        versionName = "1.1.0"
 
         multiDexEnabled = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -190,7 +190,7 @@ androidComponents {
     }
 }
 
-base.archivesName.set("dev.acamol.qbit-1.0.0-$commitHash")
+base.archivesName.set("dev.acamol.qbit-1.1.0-$commitHash")
 
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 
@@ -201,6 +201,7 @@ dependencies {
     implementation(libs.androidx.datastore)
     implementation(libs.androidx.swiperefreshlayout)
     implementation(libs.androidx.lifecycle.ktx)
+    implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.lifecycle.viewmodel)
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)

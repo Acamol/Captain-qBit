@@ -13,6 +13,7 @@ import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.QbitRepository
 import dev.yashgarg.qbit.data.daos.ConfigDao
 import dev.yashgarg.qbit.data.manager.ClientManager
+import dev.yashgarg.qbit.data.manager.PendingTorrentIntent
 import dev.yashgarg.qbit.data.models.ContentTreeItem
 import dev.yashgarg.qbit.data.models.ServerConfig
 import dev.yashgarg.qbit.data.models.ServerPreferences
@@ -40,10 +41,16 @@ constructor(
     private val prefsStore: DataStore<ServerPreferences>,
     private val configDao: ConfigDao,
     private val clientManager: ClientManager,
+    private val pendingTorrentIntent: PendingTorrentIntent,
     @ApplicationContext context: Context,
 ) : StatusViewModel(context) {
     private val _uiState = MutableStateFlow(ServerScreenState())
     val uiState = _uiState.asStateFlow()
+
+    /** A torrent-file/magnet URI handed off by [MainActivity][dev.yashgarg.qbit.MainActivity]. */
+    val pendingTorrentUri: StateFlow<String?> = pendingTorrentIntent.uri
+
+    fun consumePendingTorrentUri() = pendingTorrentIntent.consume()
 
     /** All saved servers, for the drawer switcher. */
     val servers: StateFlow<List<ServerConfig>> =
@@ -139,7 +146,7 @@ constructor(
         syncJob = viewModelScope.launch {
             val prefs = prefsStore.data.first()
             applyViewPrefs(prefs, prefs.activeServerId)
-            syncData()
+            syncWhileForeground { syncData() }
         }
 
         // Reflect the active server's name in the UI.
@@ -164,7 +171,7 @@ constructor(
                     syncJob?.cancel()
                     _uiState.update { it.copy(dataLoading = true, data = null, searchQuery = "") }
                     applyViewPrefs(prefsStore.data.first(), newId)
-                    syncJob = viewModelScope.launch { syncData() }
+                    syncJob = viewModelScope.launch { syncWhileForeground { syncData() } }
                 }
         }
     }
@@ -224,7 +231,7 @@ constructor(
 
     fun refresh() {
         syncJob?.cancel()
-        syncJob = viewModelScope.launch { syncData() }
+        syncJob = viewModelScope.launch { syncWhileForeground { syncData() } }
     }
 
     fun addTorrentUrl(

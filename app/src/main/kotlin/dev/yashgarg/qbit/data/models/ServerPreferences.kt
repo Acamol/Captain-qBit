@@ -51,4 +51,14 @@ data class ServerPreferences(
     // Highest versionCode whose "What's New" has been shown. 0 = never recorded (fresh install),
     // so the dialog is skipped on first run and only appears after an upgrade.
     val lastSeenVersionCode: Int = 0,
+    // How often StatusWorker re-fetches global transfer speeds for the status notification, in
+    // milliseconds. Independent of eventPollIntervalMs so completion/recheck alerts can stay
+    // prompt even when this is slowed down for battery.
+    val statusRefreshIntervalMs: Long = 5_000L,
+    // How often StatusWorker polls the torrent list to detect completions/rechecks, in
+    // milliseconds.
+    val eventPollIntervalMs: Long = 5_000L,
+    // How often the live torrent-list sync (while a server screen is open) polls the server, in
+    // milliseconds.
+    val syncIntervalMs: Long = 5_000L,
 )

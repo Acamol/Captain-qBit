@@ -13,6 +13,7 @@ import dev.yashgarg.qbit.data.models.ServerPreferences
 import dev.yashgarg.qbit.di.ApplicationScope
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -39,13 +40,15 @@ constructor(
         coroutineScope.launch { observeActiveServer() }
     }
 
-    // Rebuild the client whenever the set of configs OR the active server changes. Only the
-    // activeServerId slice of the prefs is observed, so speed/filter pref writes don't churn it.
+    // Rebuild the client whenever the set of configs, the active server, OR the sync interval
+    // changes. Only that slice of the prefs is observed, so unrelated pref writes don't churn it.
     private suspend fun observeActiveServer() {
         withContext(Dispatchers.IO) {
             combine(
                     configDao.getConfigs(),
-                    prefsStore.data.map { it.activeServerId }.distinctUntilChanged(),
+                    prefsStore.data
+                        .map { it.activeServerId to it.syncIntervalMs }
+                        .distinctUntilChanged(),
                 ) { configs, _ ->
                     configs
                 }
@@ -89,6 +92,7 @@ constructor(
                 val config = requireNotNull(resolveActiveConfig()) { "No server config" }
                 val port = if (config.port != null) ":${config.port}" else ""
                 val path = config.path ?: ""
+                val syncIntervalMs = prefsStore.data.first().syncIntervalMs
 
                 val basicAuth =
                     if (
@@ -105,7 +109,7 @@ constructor(
                         "${config.connectionType.toString().lowercase()}://${config.baseUrl}$port$path",
                         config.username,
                         CryptoManager.decrypt(config.password) ?: config.password,
-                        syncInterval = ClientManager.syncInterval,
+                        syncInterval = syncIntervalMs.milliseconds,
                         httpClient = ClientManager.httpClient(basicAuth),
                         dispatcher = Dispatchers.Default,
                     )

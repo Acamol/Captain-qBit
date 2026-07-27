@@ -44,6 +44,7 @@ import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.ui.whatsnew.ChangelogAssets
 import dev.yashgarg.qbit.ui.whatsnew.WhatsNewDialog
+import dev.yashgarg.qbit.utils.GitHubIssueLink
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -151,10 +152,7 @@ fun AboutView(state: VersionState, modifier: Modifier = Modifier) {
         )
         Text(
             text = "Report an issue",
-            modifier =
-                Modifier.padding(vertical = 8.dp).clickable {
-                    open("https://github.com/Acamol/Captain-qBit/issues")
-                },
+            modifier = Modifier.padding(vertical = 8.dp).clickable { open(GitHubIssueLink.url()) },
             style = linkStyle,
         )
         Text(
