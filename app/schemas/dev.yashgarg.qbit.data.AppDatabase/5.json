@@ -1,0 +1,81 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 5,
+    "identityHash": "74d61f2d9452fde7086f6b8549a0a550",
+    "entities": [
+      {
+        "tableName": "configs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`config_id` INTEGER NOT NULL, `serverName` TEXT NOT NULL, `baseUrl` TEXT NOT NULL, `port` INTEGER, `path` TEXT, `username` TEXT NOT NULL, `password` TEXT NOT NULL, `connectionType` TEXT NOT NULL, `basicAuthUsername` TEXT, `basicAuthPassword` TEXT, PRIMARY KEY(`config_id`))",
+        "fields": [
+          {
+            "fieldPath": "configId",
+            "columnName": "config_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "serverName",
+            "columnName": "serverName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "baseUrl",
+            "columnName": "baseUrl",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "port",
+            "columnName": "port",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "path",
+            "columnName": "path",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "username",
+            "columnName": "username",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "password",
+            "columnName": "password",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "connectionType",
+            "columnName": "connectionType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "basicAuthUsername",
+            "columnName": "basicAuthUsername",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "basicAuthPassword",
+            "columnName": "basicAuthPassword",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "config_id"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '74d61f2d9452fde7086f6b8549a0a550')"
+    ]
+  }
+}
