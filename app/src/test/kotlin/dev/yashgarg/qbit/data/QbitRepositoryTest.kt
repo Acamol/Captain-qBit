@@ -1,5 +1,6 @@
 package dev.yashgarg.qbit.data
 
+import com.github.michaelbull.result.get
 import dev.yashgarg.qbit.Constants
 import dev.yashgarg.qbit.FakeClientManager
 import dev.yashgarg.qbit.MainDispatcherRule
@@ -46,5 +47,29 @@ class QbitRepositoryTest {
 
         val data = repository.observeMainData().first()
         assertFalse(data.torrents.containsKey(Constants.magnetHash))
+    }
+
+    @Test
+    fun `rss items load as an empty tree before any feed is added`() = runTest {
+        val result = repository.getRssItems()
+        assertTrue(result.isOk)
+        assertTrue(result.get().orEmpty().isEmpty())
+    }
+
+    @Test
+    fun `adding an rss feed is reflected in the next items fetch`() = runTest {
+        assertTrue(repository.addRssFeed("https://example.org/feed.xml").isOk)
+
+        val items = repository.getRssItems().get().orEmpty()
+        assertTrue(items.any { it.name == "Test Feed" })
+    }
+
+    @Test
+    fun `setting an rss rule is reflected in the next rules fetch`() = runTest {
+        val rule = qbittorrent.models.RssRule(mustContain = "1080p")
+        assertTrue(repository.setRssRule("test-rule", rule).isOk)
+
+        val rules = repository.getRssRules().get().orEmpty()
+        assertTrue(rules["test-rule"]?.mustContain == "1080p")
     }
 }
