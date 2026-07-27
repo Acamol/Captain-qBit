@@ -14,6 +14,8 @@ import kotlinx.serialization.json.put
 import qbittorrent.*
 import qbittorrent.models.LogEntry
 import qbittorrent.models.MainData
+import qbittorrent.models.RssItem
+import qbittorrent.models.RssRule
 import qbittorrent.models.Torrent
 import qbittorrent.models.TorrentFile
 import qbittorrent.models.TorrentPeers
@@ -365,5 +367,58 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
         priority: Int,
     ): Result<Unit, Throwable> {
         return runCatching { client().setFilePriority(hash, ids, priority) }
+    }
+
+    suspend fun getRssItems(): Result<List<RssItem>, Throwable> {
+        return runCatching { client().getRssItems() }
+    }
+
+    suspend fun addRssFolder(path: String): Result<Unit, Throwable> {
+        return runCatching { client().addRssFolder(path) }
+    }
+
+    suspend fun addRssFeed(url: String, path: String? = null): Result<Unit, Throwable> {
+        return runCatching { client().addRssFeed(url, path) }
+    }
+
+    suspend fun removeRssItem(itemPath: String): Result<Unit, Throwable> {
+        return runCatching { client().removeRssItem(itemPath) }
+    }
+
+    suspend fun moveRssItem(itemPath: String, destPath: String): Result<Unit, Throwable> {
+        return runCatching { client().moveRssItem(itemPath, destPath) }
+    }
+
+    suspend fun markRssItemAsRead(
+        itemPath: String,
+        articleId: String? = null,
+    ): Result<Unit, Throwable> {
+        return runCatching { client().markRssItemAsRead(itemPath, articleId) }
+    }
+
+    suspend fun refreshRssItem(itemPath: String): Result<Unit, Throwable> {
+        return runCatching { client().refreshRssItem(itemPath) }
+    }
+
+    suspend fun getRssRules(): Result<Map<String, RssRule>, Throwable> {
+        return runCatching { client().getRssRules() }
+    }
+
+    suspend fun setRssRule(ruleName: String, rule: RssRule): Result<Unit, Throwable> {
+        return runCatching { client().setRssRule(ruleName, rule) }
+    }
+
+    suspend fun renameRssRule(ruleName: String, newRuleName: String): Result<Unit, Throwable> {
+        return runCatching { client().renameRssRule(ruleName, newRuleName) }
+    }
+
+    suspend fun removeRssRule(ruleName: String): Result<Unit, Throwable> {
+        return runCatching { client().removeRssRule(ruleName) }
+    }
+
+    suspend fun getRssMatchingArticles(
+        ruleName: String
+    ): Result<Map<String, List<String>>, Throwable> {
+        return runCatching { client().getRssMatchingArticles(ruleName) }
     }
 }
