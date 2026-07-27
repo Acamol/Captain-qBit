@@ -1,0 +1,5 @@
+- Fixed a background battery drain from polling after the app was closed
+- New: configurable notification/list refresh rates in Settings to save battery
+- Tapping a "download complete" notification now opens that torrent directly
+- Fixed: opening a torrent file from another app could silently do nothing on the first try
+- On-device crash reports, with an optional pre-filled GitHub issue link

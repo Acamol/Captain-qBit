@@ -1,0 +1,5 @@
+- Fixed a real background battery drain: the torrent list kept polling the server even after the app was closed or the screen was off
+- New Settings section for poll intervals: choose how often the status notification refreshes, how often completion/recheck alerts are checked, and how often the open torrent list refreshes — longer intervals save battery
+- Tapping a "download complete" notification now opens that torrent's details instead of just launching the app
+- Fixed: opening a .torrent file or magnet link from another app could silently do nothing the first time, needing a second try
+- On-device crash reporting: if the app crashes, review the report on next launch and optionally attach it to a new GitHub issue — nothing is ever sent automatically
