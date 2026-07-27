@@ -69,6 +69,7 @@ fun ServerDrawer(
     onGlobalLimits: () -> Unit,
     onAltLimits: () -> Unit,
     onToggleQueueing: () -> Unit,
+    onRss: () -> Unit,
     onSettings: () -> Unit,
 ) {
     val torrents = state.data?.torrents?.values?.toList() ?: emptyList()
@@ -242,6 +243,11 @@ fun ServerDrawer(
                 label = "Alternate speed limits…",
                 description = "Set the limits used while \"use alternate speed limits\" is on.",
                 onClick = onAltLimits,
+            )
+            DrawerOption(
+                label = "RSS feeds",
+                description = "Browse RSS feeds and manage auto-download rules.",
+                onClick = onRss,
             )
             DrawerOption(
                 label = "Settings",
