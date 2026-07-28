@@ -24,9 +24,8 @@ import dev.yashgarg.qbit.ui.compose.theme.SpaceGrotesk
  *
  * Colors are Compose-native: when [dynamicColors] is on (and the device supports it, API 31+) the
  * Material You wallpaper palette is used directly; otherwise the app's brand [appColorScheme] built
- * from the `theme_*` color resources. This replaces the old runtime bridge that mirrored the XML
- * theme's attributes via `MaterialColors`, so a dynamic-color toggle no longer needs an activity
- * recreate — the theme just recomposes.
+ * from the `theme_*` color resources. Because color resolution happens directly in composition, a
+ * dynamic-color toggle needs no activity recreate — the theme just recomposes.
  */
 @Composable
 fun QbitComposeTheme(dynamicColors: Boolean = false, content: @Composable () -> Unit) {
