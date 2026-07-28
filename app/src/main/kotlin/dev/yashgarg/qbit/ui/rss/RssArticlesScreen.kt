@@ -17,9 +17,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.MarkEmailRead
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
@@ -27,11 +29,13 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -50,6 +54,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
+import dev.yashgarg.qbit.ui.server.TooltipIconButton
 import qbittorrent.models.RssArticle
 import qbittorrent.models.RssFeed
 import qbittorrent.models.RssFolder
@@ -64,6 +69,8 @@ fun RssArticlesScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hilt
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     var confirmAddArticle by remember { mutableStateOf<RssArticle?>(null) }
+    var searchOpen by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) { viewModel.status.collect { snackbarHostState.showSnackbar(it) } }
 
@@ -77,55 +84,103 @@ fun RssArticlesScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hilt
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.refreshItem(itemPath) }) {
-                        Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
-                    }
-                    IconButton(onClick = { viewModel.markAsRead(itemPath) }) {
-                        Icon(Icons.Filled.MarkEmailRead, contentDescription = "Mark all as read")
-                    }
+                    TooltipIconButton(
+                        label = if (searchOpen) "Close search" else "Search",
+                        icon = if (searchOpen) Icons.Filled.Close else Icons.Filled.Search,
+                        onClick = {
+                            searchOpen = !searchOpen
+                            if (!searchOpen) query = ""
+                        },
+                        position = TooltipAnchorPosition.Below,
+                    )
+                    TooltipIconButton(
+                        label = "Refresh",
+                        icon = Icons.Filled.Refresh,
+                        onClick = { viewModel.refreshItem(itemPath) },
+                        position = TooltipAnchorPosition.Below,
+                    )
+                    TooltipIconButton(
+                        label = "Mark all as read",
+                        icon = Icons.Filled.MarkEmailRead,
+                        onClick = { viewModel.markAsRead(itemPath) },
+                        position = TooltipAnchorPosition.Below,
+                    )
                 },
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
-        when {
-            feed == null ->
-                CircularProgressIndicator(
-                    modifier = Modifier.fillMaxSize().padding(padding).padding(48.dp)
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            if (searchOpen) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                    placeholder = { Text("Search articles") },
+                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                    trailingIcon = {
+                        if (query.isNotEmpty()) {
+                            IconButton(onClick = { query = "" }) {
+                                Icon(Icons.Filled.Close, contentDescription = "Clear")
+                            }
+                        }
+                    },
+                    singleLine = true,
                 )
-            feed.articles.isEmpty() ->
-                Box(Modifier.fillMaxSize().padding(padding)) {
-                    Text(
-                        "No articles yet",
-                        Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = 32.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            else ->
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(padding),
-                    contentPadding = PaddingValues(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    items(feed.articles, key = { it.id }) { article ->
-                        ArticleCard(
-                            article = article,
-                            onOpen = {
-                                viewModel.markAsRead(itemPath, article.id)
-                                if (article.link.isNotBlank()) {
-                                    context.startActivity(
-                                        Intent(Intent.ACTION_VIEW, article.link.toUri())
-                                    )
-                                }
-                            },
-                            onAddTorrent =
-                                if (!article.torrentURL.isNullOrBlank()) {
-                                    { confirmAddArticle = article }
-                                } else null,
+            }
+            val filtered =
+                if (feed == null) emptyList()
+                else if (query.isBlank()) feed.articles
+                else feed.articles.filter { it.title.contains(query.trim(), ignoreCase = true) }
+            when {
+                feed == null -> CircularProgressIndicator(Modifier.fillMaxSize().padding(48.dp))
+                feed.articles.isEmpty() ->
+                    Box(Modifier.fillMaxSize()) {
+                        Text(
+                            "No articles yet",
+                            Modifier.align(Alignment.Center)
+                                .fillMaxWidth()
+                                .padding(horizontal = 32.dp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
                         )
                     }
-                }
+                filtered.isEmpty() ->
+                    Box(Modifier.fillMaxSize()) {
+                        Text(
+                            "No matching articles",
+                            Modifier.align(Alignment.Center)
+                                .fillMaxWidth()
+                                .padding(horizontal = 32.dp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                else ->
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(filtered, key = { it.id }) { article ->
+                            ArticleCard(
+                                article = article,
+                                onOpen = {
+                                    viewModel.markAsRead(itemPath, article.id)
+                                    if (article.link.isNotBlank()) {
+                                        context.startActivity(
+                                            Intent(Intent.ACTION_VIEW, article.link.toUri())
+                                        )
+                                    }
+                                },
+                                onAddTorrent =
+                                    if (!article.torrentURL.isNullOrBlank()) {
+                                        { confirmAddArticle = article }
+                                    } else null,
+                            )
+                        }
+                    }
+            }
         }
     }
 
