@@ -1,0 +1,2 @@
+- Fixed: opening a torrent file or magnet link from another app while the torrent list was already showing could flash open the Add Torrent dialog and immediately close it, silently dropping the torrent
+- Hardened encrypted-backup restore to always honor the backup's own encryption settings rather than the app's current default
