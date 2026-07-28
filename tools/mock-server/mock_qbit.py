@@ -266,6 +266,14 @@ TRANSFER_INFO = {
     "connection_status": "connected",
 }
 
+# ---- app preferences (alt speed limits, queueing, RSS refresh interval) --
+PREFERENCES = {
+    "alt_dl_limit": -1,
+    "alt_up_limit": -1,
+    "queueing_enabled": False,
+    "rss_refresh_interval": 30,
+}
+
 # ---- torrent details data (files/properties/trackers) --------------------
 _MULTI_FILE = "Blender Open Movies Pack"
 
@@ -698,6 +706,8 @@ class Handler(BaseHTTPRequestHandler):
                 RSS_RULES[new_name] = RSS_RULES.pop(old_name)
         elif path == "/api/v2/rss/removeRule":
             RSS_RULES.pop(form.get("ruleName", [""])[0], None)
+        elif path == "/api/v2/app/setPreferences":
+            PREFERENCES.update(json.loads(form.get("json", ["{}"])[0]))
 
         self._send("Ok.", "text/plain")  # generic success for any other action
 
@@ -714,6 +724,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send("v4.6.0", "text/plain")
         elif path == "/api/v2/app/webapiVersion":
             self._send("2.9.3", "text/plain")
+        elif path == "/api/v2/app/preferences":
+            self._send(json.dumps(PREFERENCES))
         elif path == "/api/v2/torrents/properties":
             self._send(json.dumps(properties_for((qs.get("hash") or [""])[0])))
         elif path == "/api/v2/torrents/files":

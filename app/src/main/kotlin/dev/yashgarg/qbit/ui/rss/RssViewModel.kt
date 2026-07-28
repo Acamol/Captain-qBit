@@ -44,6 +44,11 @@ constructor(
 
     init {
         load(refresh = false)
+        viewModelScope.launch {
+            repository.getRssRefreshInterval().onOk { minutes ->
+                _uiState.update { it.copy(refreshIntervalMinutes = minutes) }
+            }
+        }
         // Categories/tags for the rule editor's pickers, same source TorrentDetailsViewModel uses.
         viewModelScope.launch {
             repository
@@ -61,6 +66,20 @@ constructor(
     }
 
     fun refresh() = load(refresh = true)
+
+    fun toggleSort() {
+        _uiState.update { it.copy(sortDescending = !it.sortDescending) }
+    }
+
+    fun setRefreshInterval(minutes: Int) {
+        launchStatus(
+            successMessage = getString(CommonR.string.status_rss_interval_updated),
+            failureMessage = getString(CommonR.string.status_rss_interval_update_failure),
+            onSuccess = { _uiState.update { it.copy(refreshIntervalMinutes = minutes) } },
+        ) {
+            repository.setRssRefreshInterval(minutes)
+        }
+    }
 
     private fun load(refresh: Boolean) {
         viewModelScope.launch {
@@ -113,13 +132,17 @@ constructor(
         }
     }
 
+    /** No success toast - drag-to-move already shows the item in its new spot. */
     fun moveItem(itemPath: String, destPath: String) {
-        launchStatus(
-            successMessage = getString(CommonR.string.status_rss_item_moved),
-            failureMessage = getString(CommonR.string.status_rss_move_item_failure),
-            onSuccess = { refresh() },
-        ) {
-            repository.moveRssItem(itemPath, destPath)
+        viewModelScope.launch {
+            repository
+                .moveRssItem(itemPath, destPath)
+                .onOk { refresh() }
+                .onErr {
+                    emitStatus(
+                        it.friendlyMessage(getString(CommonR.string.status_rss_move_item_failure))
+                    )
+                }
         }
     }
 

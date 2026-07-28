@@ -552,6 +552,7 @@ internal fun TooltipIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     position: TooltipAnchorPosition = TooltipAnchorPosition.Above,
+    enabled: Boolean = true,
 ) {
     val tooltipState = rememberTooltipState()
     val haptics = LocalHapticFeedback.current
@@ -564,7 +565,7 @@ internal fun TooltipIconButton(
         tooltip = { PlainTooltip { Text(label) } },
         state = tooltipState,
     ) {
-        IconButton(onClick = onClick) {
+        IconButton(onClick = onClick, enabled = enabled) {
             Icon(icon, contentDescription = label, modifier = modifier)
         }
     }

@@ -421,4 +421,18 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
     ): Result<Map<String, List<String>>, Throwable> {
         return runCatching { client().getRssMatchingArticles(ruleName) }
     }
+
+    /** Minutes between automatic RSS refreshes - a single global setting, not per-feed. */
+    suspend fun getRssRefreshInterval(): Result<Int, Throwable> {
+        return runCatching {
+            client().getPreferences()["rss_refresh_interval"]?.jsonPrimitive?.content?.toIntOrNull()
+                ?: 30
+        }
+    }
+
+    suspend fun setRssRefreshInterval(minutes: Int): Result<Unit, Throwable> {
+        return runCatching {
+            client().setPreferences(buildJsonObject { put("rss_refresh_interval", minutes) })
+        }
+    }
 }
