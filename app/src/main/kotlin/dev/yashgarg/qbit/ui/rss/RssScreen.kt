@@ -50,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -253,8 +254,9 @@ private fun FeedsTab(
             state.items.isEmpty() ->
                 Text(
                     "No RSS feeds yet — tap + to add one",
-                    Modifier.align(Alignment.Center),
+                    Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = 32.dp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
                 )
             else ->
                 RssFeedTreeView(
@@ -277,8 +279,9 @@ private fun RulesTab(
         Box(Modifier.fillMaxSize()) {
             Text(
                 "No auto-download rules yet — tap + to add one",
-                Modifier.align(Alignment.Center),
+                Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = 32.dp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
             )
         }
         return

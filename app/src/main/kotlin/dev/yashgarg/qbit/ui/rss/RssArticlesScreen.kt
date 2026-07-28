@@ -4,6 +4,7 @@ import android.content.Intent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -42,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -92,11 +94,12 @@ fun RssArticlesScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hilt
                     modifier = Modifier.fillMaxSize().padding(padding).padding(48.dp)
                 )
             feed.articles.isEmpty() ->
-                Column(Modifier.fillMaxSize().padding(padding)) {
+                Box(Modifier.fillMaxSize().padding(padding)) {
                     Text(
                         "No articles yet",
-                        Modifier.fillMaxWidth().padding(24.dp),
+                        Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = 32.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
                     )
                 }
             else ->
