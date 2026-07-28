@@ -246,9 +246,13 @@ constructor(
             val editing = serverId >= 0
             val wasEmpty = configDao.maxConfigId() == -1
             val newId = if (editing) serverId else configDao.maxConfigId() + 1
+            val position =
+                if (editing) configDao.getConfigById(serverId)?.position ?: 0
+                else configDao.maxPosition() + 1
             val config =
                 ServerConfig(
                     configId = newId,
+                    position = position,
                     serverName = serverName.trim(),
                     baseUrl = serverHost.trim(),
                     port = if (port.isEmpty()) null else port.trim().toInt(),

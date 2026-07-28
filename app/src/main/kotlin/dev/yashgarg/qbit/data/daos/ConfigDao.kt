@@ -9,7 +9,8 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ConfigDao {
-    @Query("SELECT * FROM configs") fun getConfigs(): Flow<List<ServerConfig>>
+    @Query("SELECT * FROM configs ORDER BY position ASC, config_id ASC")
+    fun getConfigs(): Flow<List<ServerConfig>>
 
     @Query("SELECT * FROM configs WHERE config_id = :index")
     fun getConfigAtIndex(index: Int = 0): ServerConfig?
@@ -17,6 +18,11 @@ interface ConfigDao {
     @Query("SELECT * FROM configs WHERE config_id = :id") fun getConfigById(id: Int): ServerConfig?
 
     @Query("SELECT COALESCE(MAX(config_id), -1) FROM configs") fun maxConfigId(): Int
+
+    @Query("SELECT COALESCE(MAX(position), -1) FROM configs") fun maxPosition(): Int
+
+    @Query("UPDATE configs SET position = :position WHERE config_id = :id")
+    fun updatePosition(id: Int, position: Int)
 
     @Query("DELETE FROM configs WHERE config_id = :id") fun deleteConfig(id: Int)
 

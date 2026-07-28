@@ -10,7 +10,7 @@ import dev.yashgarg.qbit.data.models.ServerConfig
 
 @Database(
     entities = [ServerConfig::class],
-    version = 5,
+    version = 6,
     autoMigrations = [AutoMigration(from = 2, to = 3)],
     exportSchema = true,
 )
@@ -53,6 +53,19 @@ val MIGRATION_4_5 =
 
                 execSQL("ALTER TABLE configsTmp RENAME TO configs")
             }
+        }
+    }
+
+// Adds the position column backing drag-to-reorder, backfilled from each row's existing
+// config_id order (the implicit order the list used before this column existed).
+val MIGRATION_5_6 =
+    object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE configs ADD COLUMN position INTEGER NOT NULL DEFAULT 0")
+            db.execSQL(
+                "UPDATE configs SET position = " +
+                    "(SELECT COUNT(*) FROM configs AS c2 WHERE c2.config_id < configs.config_id)"
+            )
         }
     }
 

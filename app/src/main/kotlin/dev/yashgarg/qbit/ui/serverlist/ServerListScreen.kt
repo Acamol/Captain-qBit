@@ -1,9 +1,12 @@
 package dev.yashgarg.qbit.ui.serverlist
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,7 +17,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -29,20 +34,30 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.data.models.ServerConfig
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,9 +69,13 @@ fun ServerListScreen(
     val activeServerId by viewModel.activeServerId.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        viewModel.status.collect { snackbarHostState.showSnackbar(it) }
-    }
+    LaunchedEffect(Unit) { viewModel.status.collect { snackbarHostState.showSnackbar(it) } }
+
+    val haptics = LocalHapticFeedback.current
+    val dragState = remember { ServerDragState(haptics) }
+    // Only substitute the reordered snapshot while a drag is live - otherwise just render the
+    // repository's own order directly, so unrelated list changes (add/delete) show up immediately.
+    val displayServers = if (dragState.draggedId != null) dragState.items else servers
 
     var pendingDelete by remember { mutableStateOf<ServerConfig?>(null) }
 
@@ -81,12 +100,24 @@ fun ServerListScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
-            items(servers, key = { it.configId }) { server ->
+            items(displayServers, key = { it.configId }) { server ->
+                val isDragged = server.configId == dragState.draggedId
                 ServerRow(
                     server = server,
                     active = server.configId == activeServerId,
+                    offsetY = if (isDragged) dragState.dragOffsetY else 0f,
+                    dragged = isDragged,
                     onClick = { appNavigator.navigate(NavCommand.OpenConfig(server.configId)) },
                     onDelete = { pendingDelete = server },
+                    onRowHeightMeasured = { dragState.rowHeightPx = it },
+                    onDragStart = { dragState.start(server.configId, servers) },
+                    onDrag = { dragState.drag(it) },
+                    onDragEnd = {
+                        dragState.end { newOrder ->
+                            viewModel.reorderServers(newOrder.map { it.configId })
+                        }
+                    },
+                    onDragCancel = { dragState.cancel() },
                 )
                 HorizontalDivider()
             }
@@ -94,7 +125,7 @@ fun ServerListScreen(
     }
 
     pendingDelete?.let { server ->
-        androidx.compose.material3.AlertDialog(
+        AlertDialog(
             onDismissRequest = { pendingDelete = null },
             title = { Text("Delete \"${server.serverName}\"?") },
             text = { Text("This removes the saved server from the app.") },
@@ -113,15 +144,86 @@ fun ServerListScreen(
     }
 }
 
+/**
+ * Drives a drag-to-reorder gesture over the flat server list. Unlike the RSS feed tree, there's no
+ * nesting to resolve - dragging just walks [items] up/down by whole rows, ticking a haptic each
+ * time the dragged row crosses into a new slot, and [end] hands the resulting order back to
+ * persist.
+ */
+private class ServerDragState(private val haptics: HapticFeedback) {
+    var items by mutableStateOf<List<ServerConfig>>(emptyList())
+        private set
+
+    var draggedId by mutableStateOf<Int?>(null)
+        private set
+
+    var dragOffsetY by mutableFloatStateOf(0f)
+        private set
+
+    var rowHeightPx = 0f
+
+    fun start(id: Int, current: List<ServerConfig>) {
+        items = current
+        draggedId = id
+        dragOffsetY = 0f
+    }
+
+    fun drag(deltaY: Float) {
+        val id = draggedId ?: return
+        dragOffsetY += deltaY
+        val height = rowHeightPx
+        if (height <= 0f) return
+        val currentIndex = items.indexOfFirst { it.configId == id }
+        if (currentIndex < 0) return
+        val shift = (dragOffsetY / height).roundToInt()
+        if (shift == 0) return
+        val newIndex = (currentIndex + shift).coerceIn(0, items.lastIndex)
+        if (newIndex != currentIndex) {
+            items = items.toMutableList().apply { add(newIndex, removeAt(currentIndex)) }
+            dragOffsetY -= shift * height
+            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        }
+    }
+
+    fun end(onReorder: (List<ServerConfig>) -> Unit) {
+        val wasDragging = draggedId != null
+        draggedId = null
+        dragOffsetY = 0f
+        if (wasDragging) onReorder(items)
+    }
+
+    fun cancel() {
+        draggedId = null
+        dragOffsetY = 0f
+    }
+}
+
 @Composable
 private fun ServerRow(
     server: ServerConfig,
     active: Boolean,
+    offsetY: Float,
+    dragged: Boolean,
     onClick: () -> Unit,
     onDelete: () -> Unit,
+    onRowHeightMeasured: (Float) -> Unit,
+    onDragStart: () -> Unit,
+    onDrag: (Float) -> Unit,
+    onDragEnd: () -> Unit,
+    onDragCancel: () -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(16.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .zIndex(if (dragged) 1f else 0f)
+                .graphicsLayer { translationY = offsetY }
+                .let {
+                    if (dragged) it.background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    else it
+                }
+                .onSizeChanged { onRowHeightMeasured(it.height.toFloat()) }
+                .clickable(onClick = onClick)
+                .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -144,7 +246,7 @@ private fun ServerRow(
                 modifier = Modifier.size(10.dp).clip(CircleShape),
                 color = MaterialTheme.colorScheme.primary,
             ) {}
-            androidx.compose.foundation.layout.Spacer(Modifier.size(8.dp))
+            Spacer(Modifier.size(8.dp))
         }
         IconButton(onClick = onDelete) {
             Icon(
@@ -153,6 +255,23 @@ private fun ServerRow(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        Icon(
+            Icons.Filled.DragHandle,
+            contentDescription = "Drag to reorder",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier =
+                Modifier.pointerInput(server.configId) {
+                    detectDragGestures(
+                        onDragStart = { onDragStart() },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            onDrag(dragAmount.y)
+                        },
+                        onDragEnd = { onDragEnd() },
+                        onDragCancel = { onDragCancel() },
+                    )
+                },
+        )
     }
 }
 
