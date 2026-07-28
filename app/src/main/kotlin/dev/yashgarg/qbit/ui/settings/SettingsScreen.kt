@@ -1,7 +1,10 @@
 package dev.yashgarg.qbit.ui.settings
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
 import android.os.Build
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -34,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,9 +45,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.ui.backup.BackupDialogs
@@ -101,9 +109,29 @@ fun SettingsScreen(
     var showSyncIntervalDialog by remember { mutableStateOf(false) }
     var pendingExport by remember { mutableStateOf<PendingExport?>(null) }
 
+    // Re-checked on resume so coming back from the system notification settings screen (via the
+    // banner below) reflects the change immediately, not just on next screen open.
+    var notificationsEnabled by remember {
+        mutableStateOf(AppNotificationManager.notificationsEnabled(context))
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                notificationsEnabled = AppNotificationManager.notificationsEnabled(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    // Only worth flagging if the user actually wants one of these to show something.
+    val notificationsBlocked =
+        !notificationsEnabled && (statusNotif || notifyComplete || notifyChecked)
+
     val notifPermissionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) StatusWorker.enqueue(context)
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
+            notificationsEnabled = AppNotificationManager.notificationsEnabled(context)
+            if (notificationsEnabled) StatusWorker.enqueue(context)
         }
 
     fun applyNotificationPrefs(status: Boolean, complete: Boolean, checked: Boolean) {
@@ -111,10 +139,15 @@ fun SettingsScreen(
             StatusWorker.cancel(context)
             return
         }
-        if (AppNotificationManager.checkPermission(context)) {
-            StatusWorker.enqueue(context)
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        when {
+            AppNotificationManager.notificationsEnabled(context) -> StatusWorker.enqueue(context)
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                !AppNotificationManager.checkPermission(context) ->
+                notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            // Runtime permission is already granted (or this is pre-33, which has none) but
+            // notifications are still blocked at the app level - no system dialog can fix that,
+            // only the notification settings screen can, same as the banner below.
+            else -> openAppNotificationSettings(context)
         }
     }
 
@@ -223,10 +256,16 @@ fun SettingsScreen(
 
             HorizontalDivider()
             SectionHeader("Notifications")
+            if (notificationsBlocked) {
+                NotificationsBlockedBanner(
+                    onOpenSettings = { openAppNotificationSettings(context) }
+                )
+            }
             SwitchRow(
                 "Status notification",
                 statusNotif,
                 subtitle = "Ongoing notification showing current transfer speeds",
+                enabled = !notificationsBlocked,
             ) {
                 viewModel.setStatusNotification(it)
                 applyNotificationPrefs(it, notifyComplete, notifyChecked)
@@ -235,6 +274,7 @@ fun SettingsScreen(
                 "Notify on complete",
                 notifyComplete,
                 subtitle = "Alert when a torrent finishes downloading",
+                enabled = !notificationsBlocked,
             ) {
                 viewModel.setNotifyOnComplete(it)
                 applyNotificationPrefs(statusNotif, it, notifyChecked)
@@ -243,6 +283,7 @@ fun SettingsScreen(
                 "Notify on checked",
                 notifyChecked,
                 subtitle = "Alert when a torrent finishes rechecking",
+                enabled = !notificationsBlocked,
             ) {
                 viewModel.setNotifyOnChecked(it)
                 applyNotificationPrefs(statusNotif, notifyComplete, it)
@@ -413,6 +454,36 @@ private fun IntervalDialog(
     )
 }
 
+private fun openAppNotificationSettings(context: Context) {
+    context.startActivity(
+        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+    )
+}
+
+@Composable
+private fun NotificationsBlockedBanner(onOpenSettings: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                "Notifications are blocked",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.error,
+            )
+            Text(
+                "These switches won't show anything until notifications are re-enabled for this " +
+                    "app in system settings.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        TextButton(onClick = onOpenSettings) { Text("Open settings") }
+    }
+}
+
 @Composable
 private fun SectionHeader(text: String) {
     Text(
@@ -445,10 +516,15 @@ private fun SwitchRow(
     title: String,
     checked: Boolean,
     subtitle: String? = null,
+    enabled: Boolean = true,
     onChange: (Boolean) -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable { onChange(!checked) }.padding(16.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .alpha(if (enabled) 1f else 0.38f)
+                .clickable(enabled = enabled) { onChange(!checked) }
+                .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(
@@ -464,6 +540,6 @@ private fun SwitchRow(
                 )
             }
         }
-        Switch(checked = checked, onCheckedChange = onChange)
+        Switch(checked = checked, onCheckedChange = onChange, enabled = enabled)
     }
 }

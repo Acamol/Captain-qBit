@@ -9,9 +9,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
-import androidx.activity.result.ActivityResultLauncher
 import androidx.annotation.DrawableRes
-import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -65,14 +63,13 @@ object AppNotificationManager {
         } else true
     }
 
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    fun requestPermission(context: Context, permissionLauncher: ActivityResultLauncher<String>) {
-        val hasPermission = checkPermission(context)
-
-        if (!hasPermission) {
-            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
-    }
+    /**
+     * Whether the user will actually see anything we post - unlike [checkPermission] (which only
+     * reflects the API 33+ runtime permission), this also catches the app-level "notifications off"
+     * switch a user can flip in system settings on any API level.
+     */
+    fun notificationsEnabled(context: Context): Boolean =
+        NotificationManagerCompat.from(context).areNotificationsEnabled()
 
     fun createNotification(
         context: Context,

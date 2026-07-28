@@ -75,6 +75,11 @@ constructor(
             val prefs = prefsStore.data.first()
             val eventsOn = prefs.notifyOnComplete || prefs.notifyOnChecked
             if (!prefs.statusNotification && !eventsOn) return
+            // Re-checked every tick (not just at start) so blocking notifications mid-session -
+            // e.g. via system Settings, without touching the app - stops this loop's polling and
+            // releases the foreground service on its very next iteration, rather than only when
+            // something external (app foreground, a Settings toggle) happens to re-enqueue.
+            if (!AppNotificationManager.notificationsEnabled(applicationContext)) return
 
             // Fetch the client each tick so the worker follows a server switch (setActiveServer
             // rebuilds it); a captured reference would keep polling the old server.

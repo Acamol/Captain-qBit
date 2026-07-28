@@ -30,6 +30,9 @@ data class ServerPreferences(
     val statusNotification: Boolean = true,
     val notifyOnComplete: Boolean = false,
     val notifyOnChecked: Boolean = false,
+    // Set once the notification-permission rationale dialog has been answered (either way), so it
+    // only ever shows once per install rather than nagging on every launch.
+    val notificationPermissionAsked: Boolean = false,
     // Newest torrent completion_on (unix seconds) already accounted for by the complete-notifier,
     // keyed by server id. Lets completion alerts survive the worker process restarting: a torrent
     // whose completion_on is newer than this still fires. Written only when it advances.
