@@ -3,7 +3,9 @@ package cafe.adriel.bonsai.core
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -30,6 +32,8 @@ import cafe.adriel.bonsai.core.tree.extension.SelectableTree
 typealias OnNodeClick<T> = ((Node<T>) -> Unit)?
 
 typealias NodeIcon<T> = @Composable (Node<T>) -> Painter?
+
+typealias NodeColor<T> = @Composable (Node<T>) -> Color
 
 @Immutable
 @ConsistentCopyVisibility
@@ -59,6 +63,9 @@ data class BonsaiStyle<T>(
     val nodeExpandedIconColorFilter: ColorFilter? = nodeCollapsedIconColorFilter,
     val nodeNameStartPadding: Dp = 0.dp,
     val nodeNameTextStyle: TextStyle = DefaultNodeTextStyle,
+    val nodeSpacing: Dp = 1.dp,
+    val nodeBackgroundColor: NodeColor<T> = { Color.Unspecified },
+    val nodeOffsetY: @Composable (Node<T>) -> Float = { 0f },
 ) {
 
     companion object {
@@ -75,6 +82,7 @@ fun <T> Bonsai(
     onDoubleClick: OnNodeClick<T> = tree::onNodeClick,
     onLongClick: OnNodeClick<T> = tree::toggleSelection,
     style: BonsaiStyle<T> = BonsaiStyle(),
+    lazyListState: LazyListState = rememberLazyListState(),
 ) {
     val scope =
         remember(tree) {
@@ -89,7 +97,7 @@ fun <T> Bonsai(
         }
 
     with(scope) {
-        LazyColumn(modifier = modifier.fillMaxSize()) {
+        LazyColumn(state = lazyListState, modifier = modifier.fillMaxSize()) {
             items(tree.nodes, { it.key }) { node -> Node(node) }
         }
     }
