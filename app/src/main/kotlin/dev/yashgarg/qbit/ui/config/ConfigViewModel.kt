@@ -258,7 +258,6 @@ constructor(
                     connectionType =
                         if (connectionType.trim() == "http") ConnectionType.HTTP
                         else ConnectionType.HTTPS,
-                    trustSelfSigned = false,
                     basicAuthUsername = basicAuthUsername?.trim()?.ifEmpty { null },
                     basicAuthPassword =
                         CryptoManager.encrypt(basicAuthPassword?.trim()?.ifEmpty { null }),

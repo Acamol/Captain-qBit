@@ -102,7 +102,14 @@ private fun NavController.execute(command: NavCommand) {
                 launchSingleTop = true
             }
         NavCommand.PopToServer -> {
-            if (!popBackStack(Routes.SERVER, inclusive = false)) navigate(Routes.SERVER)
+            // popBackStack(SERVER, inclusive = false) returns false both when SERVER isn't in the
+            // back stack AND when we're already sitting on it (nothing above it to pop) — the
+            // latter must not fall through to navigate(SERVER), which would push a redundant new
+            // instance and wipe out any state (e.g. an add-torrent dialog just opened by this same
+            // intent) that the current instance holds.
+            if (currentDestination?.route != Routes.SERVER) {
+                if (!popBackStack(Routes.SERVER, inclusive = false)) navigate(Routes.SERVER)
+            }
         }
         is NavCommand.OpenTorrent -> navigate(Routes.torrentDetails(command.hash))
         NavCommand.OpenSettings -> navigate(Routes.SETTINGS)

@@ -13,51 +13,22 @@ A modern Android app for managing a [qBittorrent](https://www.qbittorrent.org/) 
 over its Web API — control your self-hosted server from your phone. Written in Kotlin.
 
 ## Features
-
-### Torrent list
-- Live global and per-torrent download/upload speeds, progress, and ETA
-- Sort by name, size, progress, speed, ETA, ratio, date added, and more — tap again to reverse
-- Search torrents by name from a collapsible search bar
-- Filter by status, categories, tags, or trackers from a slide-in sidebar matching the qBittorrent desktop layout — active filters shown as dismissible chips
-- Categories containing `/` are grouped into a collapsible tree (like folders)
-- Each torrent shows its category and tags as chips, with a customisable colour per category
-- Select multiple torrents to bulk-set category or tags, pause/resume, or delete them in one action
-- Colour-coded status matching the qBittorrent Web UI (downloading, seeding, stopped, errored…)
-
-### Adding torrents
-- Add via magnet links or `.torrent` files, or open them from other apps
-- Choose a category (pick an existing one or create a new one on the spot), set a save path,
-  start paused, or enable Automatic Torrent Management
-- Choose which files to download before adding — the file tree is read instantly from a
-  `.torrent`, or fetched over the network for a magnet
-- Detects duplicates before adding, so you don't re-add a torrent you already have
-
-### Managing torrents
-- Pause/resume, delete (optionally with data), force recheck, reannounce, and rename
-- Set or create categories, manage tags, toggle Automatic Torrent Management, or change the save path
-- Set the queue priority — move a torrent to the top, up, down, or the bottom of the queue
-- Cap per-torrent download/upload speeds, and set share limits (ratio, seeding time, and inactive seeding time)
-- Toggle force start, sequential download, first/last piece priority, and super seeding
-- Detail view with Info, Files, Trackers, and Peers tabs — browse the file tree, copy full paths,
-  rename files and folders, and set per-file download priorities (or skip files entirely)
-- Add, edit, and remove trackers from the Trackers tab
-- Surfaces the actual failure reason when a torrent errors, instead of a bare "error"
-
-### Connection & reliability
-- Works with qBittorrent 4.x and 5.x
-- Optional HTTP Basic Auth for servers behind a reverse proxy
-- Short, readable messages for network errors
-- Optional status notification showing connection state and current speeds
-
-### Servers & settings
-- Save multiple servers and switch the active one from the navigation drawer
-- Manage servers — add, edit, or remove them — from an in-app Settings screen
-- Set global and alternate speed limits, and toggle torrent queueing
+- Free, open source, and respects your privacy — no ads, no tracking, no account
+- Live torrent list with real-time speeds, progress, and ETA — sort, search, and filter by
+  status, category, tag, or tracker
+- Add via magnet links or `.torrent` files — straight from your browser or file manager — with
+  per-file selection before you commit
+- Full remote control: pause, resume, delete, recheck, and set queue priority or share limits,
+  right from your phone
+- Detailed per-torrent view with a browsable file tree, trackers, and live peer info
+- Manage multiple servers, with encrypted backup/restore of your whole setup
 - Light, Dark, or System theme, plus optional Material You dynamic colours
-- Notifications you control: toggle the ongoing status notification, and opt in to alerts
-  when a download or a force-recheck finishes
-- Encrypted backup — export and import all your servers and settings as a passphrase-protected file
-- About screen with app version and project links
+- Smart notifications that jump straight to a finished download, with battery-friendly refresh
+  rates you control
+- Works with qBittorrent 4.x and 5.x over HTTP or HTTPS (including self-signed certs), with
+  optional HTTP Basic Auth for servers behind a reverse proxy
+
+See the [F-Droid listing](https://f-droid.org/packages/dev.acamol.qbit/) for the full feature list.
 
 > **Self-signed HTTPS:** certificates are validated properly (no blanket "trust everything"
 > option). To use a self-signed cert, install it on your device via **Settings → Security →
@@ -65,7 +36,6 @@ over its Web API — control your self-hosted server from your phone. Written in
 > normally-signed HTTPS work without any setup.
 
 ## Roadmap
-- **More in-app preferences** — configurable behaviours such as the data refresh/polling interval and the background-notification update frequency
 - **Alternate speed-limit scheduler** — choose the time window and days when the alternate limits automatically take over
 - **RSS support** — browse RSS feeds, view articles, and manage auto-download rules
 
