@@ -14,7 +14,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -86,9 +85,11 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
     var rule by remember { mutableStateOf(existing ?: RssRule()) }
     var prefilled by remember { mutableStateOf(false) }
     var showFeedPicker by remember { mutableStateOf(false) }
-    var showCategoryPicker by remember { mutableStateOf(false) }
+    var categoryExpanded by remember { mutableStateOf(false) }
     var showRemoveConfirm by remember { mutableStateOf(false) }
     var contentLayoutExpanded by remember { mutableStateOf(false) }
+    var loadingMatches by remember { mutableStateOf(false) }
+    var testResult by remember { mutableStateOf<Map<String, List<String>>?>(null) }
 
     LaunchedEffect(existing) {
         if (existing != null && !prefilled) {
@@ -160,10 +161,21 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
                 value = rule.episodeFilter,
                 onValueChange = { rule = rule.copy(episodeFilter = it) },
                 label = { Text("Episode filter") },
+                supportingText = {
+                    Text(
+                        "Format: 1x01;1x02-03;1x05- (season x episode, ranges allowed); blank matches every episode"
+                    )
+                },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            SwitchRow("Smart episode filter", rule.smartFilter) {
+            SwitchRow(
+                "Smart episode filter",
+                rule.smartFilter,
+                subtitle =
+                    "Remembers the last episode this rule matched and only alerts on newer " +
+                        "ones, so you don't have to keep updating the episode filter as a show airs",
+            ) {
                 rule = rule.copy(smartFilter = it)
             }
             OutlinedTextField(
@@ -202,20 +214,40 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
                 }
             }
 
-            OutlinedTextField(
-                value = rule.assignedCategory,
-                onValueChange = { rule = rule.copy(assignedCategory = it) },
-                label = { Text("Category") },
-                singleLine = true,
-                trailingIcon = {
-                    if (state.availableCategories.isNotEmpty()) {
-                        IconButton(onClick = { showCategoryPicker = true }) {
-                            Icon(Icons.Filled.Category, contentDescription = "Pick category")
+            ExposedDropdownMenuBox(
+                expanded = categoryExpanded,
+                onExpandedChange = { categoryExpanded = it },
+            ) {
+                OutlinedTextField(
+                    value = rule.assignedCategory,
+                    onValueChange = { rule = rule.copy(assignedCategory = it) },
+                    label = { Text("Category (pick or type a new one)") },
+                    singleLine = true,
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
+                    },
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
+                )
+                val suggestions = state.availableCategories.filter { it.isNotBlank() }
+                if (suggestions.isNotEmpty()) {
+                    ExposedDropdownMenu(
+                        expanded = categoryExpanded,
+                        onDismissRequest = { categoryExpanded = false },
+                    ) {
+                        suggestions.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    rule = rule.copy(assignedCategory = option)
+                                    categoryExpanded = false
+                                },
+                            )
                         }
                     }
-                },
-                modifier = Modifier.fillMaxWidth(),
-            )
+                }
+            }
             OutlinedTextField(
                 value = rule.savePath,
                 onValueChange = { rule = rule.copy(savePath = it) },
@@ -263,6 +295,27 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
                 Text("Affected feeds (${rule.affectedFeeds.size} of ${allFeeds.size})")
             }
 
+            if (editingName != null) {
+                OutlinedButton(
+                    onClick = {
+                        loadingMatches = true
+                        viewModel.loadMatchingArticles(editingName) { result ->
+                            loadingMatches = false
+                            testResult = result
+                        }
+                    },
+                    enabled = !loadingMatches,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(if (loadingMatches) "Loading…" else "View matching articles")
+                }
+                Text(
+                    "Reflects the last saved version of this rule, not any unsaved edits above.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
             Button(
                 onClick = { viewModel.setRule(name.trim(), rule) },
                 enabled = name.isNotBlank(),
@@ -285,14 +338,39 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
         )
     }
 
-    if (showCategoryPicker) {
-        CategoryPickerDialog(
-            categories = state.availableCategories,
-            onSelect = {
-                rule = rule.copy(assignedCategory = it)
-                showCategoryPicker = false
+    testResult?.let { matches ->
+        val nonEmpty = matches.filterValues { it.isNotEmpty() }
+        val totalMatches = nonEmpty.values.sumOf { it.size }
+        AlertDialog(
+            onDismissRequest = { testResult = null },
+            title = {
+                Text(
+                    if (totalMatches == 0) "No matches yet" else "$totalMatches matching article(s)"
+                )
             },
-            onDismiss = { showCategoryPicker = false },
+            text = {
+                if (totalMatches == 0) {
+                    Text(
+                        "This rule hasn't matched any article currently cached in its affected " +
+                            "feeds."
+                    )
+                } else {
+                    Column(
+                        Modifier.verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        nonEmpty.forEach { (feedUrl, titles) ->
+                            val feedName =
+                                allFeeds.firstOrNull { it.url == feedUrl }?.name ?: feedUrl
+                            Text(feedName, style = MaterialTheme.typography.titleSmall)
+                            titles.forEach { title ->
+                                Text("• $title", style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { testResult = null }) { Text("Close") } },
         )
     }
 
@@ -319,12 +397,26 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
 }
 
 @Composable
-private fun SwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+private fun SwitchRow(
+    label: String,
+    checked: Boolean,
+    subtitle: String? = null,
+    onCheckedChange: (Boolean) -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth().clickable { onCheckedChange(!checked) },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, modifier = Modifier.weight(1f))
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(label)
+            if (subtitle != null) {
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
         Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
@@ -370,33 +462,6 @@ private fun FeedPickerDialog(
         confirmButton = {
             TextButton(onClick = { onApply(checked.value.toList()) }) { Text("OK") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-    )
-}
-
-@Composable
-private fun CategoryPickerDialog(
-    categories: List<String>,
-    onSelect: (String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Category") },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                categories.forEach { category ->
-                    Text(
-                        category,
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .clickable { onSelect(category) }
-                                .padding(vertical = 10.dp),
-                    )
-                }
-            }
-        },
-        confirmButton = {},
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
