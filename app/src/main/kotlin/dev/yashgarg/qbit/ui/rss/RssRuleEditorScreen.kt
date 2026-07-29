@@ -30,6 +30,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -90,6 +92,7 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
     var contentLayoutExpanded by remember { mutableStateOf(false) }
     var loadingMatches by remember { mutableStateOf(false) }
     var testResult by remember { mutableStateOf<Map<String, List<String>>?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(existing) {
         if (existing != null && !prefilled) {
@@ -98,9 +101,14 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
         }
     }
 
+    // Only actually shown for a failed save - a successful one navigates back immediately below,
+    // so there's no active collector left on this screen to display it.
+    LaunchedEffect(Unit) { viewModel.status.collect { snackbarHostState.showSnackbar(it) } }
+
     val allFeeds = remember(state.items) { state.items.flattenFeeds() }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(if (editingName != null) "Edit rule" else "New rule") },
@@ -120,7 +128,7 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
                     }
                 },
             )
-        }
+        },
     ) { padding ->
         Column(
             modifier =
@@ -317,7 +325,11 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
             }
 
             Button(
-                onClick = { viewModel.setRule(name.trim(), rule) },
+                onClick = {
+                    viewModel.setRule(name.trim(), rule) {
+                        appNavigator.navigate(NavCommand.Back)
+                    }
+                },
                 enabled = name.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -339,38 +351,10 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
     }
 
     testResult?.let { matches ->
-        val nonEmpty = matches.filterValues { it.isNotEmpty() }
-        val totalMatches = nonEmpty.values.sumOf { it.size }
-        AlertDialog(
-            onDismissRequest = { testResult = null },
-            title = {
-                Text(
-                    if (totalMatches == 0) "No matches yet" else "$totalMatches matching article(s)"
-                )
-            },
-            text = {
-                if (totalMatches == 0) {
-                    Text(
-                        "This rule hasn't matched any article currently cached in its affected " +
-                            "feeds."
-                    )
-                } else {
-                    Column(
-                        Modifier.verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        nonEmpty.forEach { (feedUrl, titles) ->
-                            val feedName =
-                                allFeeds.firstOrNull { it.url == feedUrl }?.name ?: feedUrl
-                            Text(feedName, style = MaterialTheme.typography.titleSmall)
-                            titles.forEach { title ->
-                                Text("• $title", style = MaterialTheme.typography.bodyMedium)
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = { TextButton(onClick = { testResult = null }) { Text("Close") } },
+        MatchingArticlesResultDialog(
+            matches = matches,
+            feeds = allFeeds,
+            onDismiss = { testResult = null },
         )
     }
 
@@ -419,6 +403,42 @@ private fun SwitchRow(
         }
         Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
+}
+
+/** Shared by the rule editor's own button and the Rules list's per-row action. */
+@Composable
+fun MatchingArticlesResultDialog(
+    matches: Map<String, List<String>>,
+    feeds: List<qbittorrent.models.RssFeed>,
+    onDismiss: () -> Unit,
+) {
+    val nonEmpty = matches.filterValues { it.isNotEmpty() }
+    val totalMatches = nonEmpty.values.sumOf { it.size }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(if (totalMatches == 0) "No matches yet" else "$totalMatches matching article(s)")
+        },
+        text = {
+            if (totalMatches == 0) {
+                Text("This rule hasn't matched any article currently cached in its affected feeds.")
+            } else {
+                Column(
+                    Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    nonEmpty.forEach { (feedUrl, titles) ->
+                        val feedName = feeds.firstOrNull { it.url == feedUrl }?.name ?: feedUrl
+                        Text(feedName, style = MaterialTheme.typography.titleSmall)
+                        titles.forEach { title ->
+                            Text("• $title", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+    )
 }
 
 @Composable

@@ -170,11 +170,15 @@ constructor(
         }
     }
 
-    fun setRule(ruleName: String, rule: RssRule) {
+    /** [onSaved] fires only on success - the rule editor uses it to navigate back. */
+    fun setRule(ruleName: String, rule: RssRule, onSaved: () -> Unit = {}) {
         launchStatus(
             successMessage = getString(CommonR.string.status_rss_rule_saved),
             failureMessage = getString(CommonR.string.status_rss_save_rule_failure),
-            onSuccess = { refresh() },
+            onSuccess = {
+                refresh()
+                onSaved()
+            },
         ) {
             repository.setRssRule(ruleName, rule)
         }

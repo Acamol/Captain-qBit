@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.MarkEmailRead
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -54,6 +55,7 @@ import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -69,6 +71,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.ui.compose.RssFeedTreeView
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
@@ -92,8 +97,22 @@ fun RssScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewMode
 
     var addMenuOpen by remember { mutableStateOf(false) }
     var dialog by remember { mutableStateOf<RssDialog?>(null) }
+    var matchingArticles by remember { mutableStateOf<Map<String, List<String>>?>(null) }
 
     LaunchedEffect(Unit) { viewModel.status.collect { snackbarHostState.showSnackbar(it) } }
+
+    // This screen's ViewModel is scoped to its own nav back-stack entry and stays alive (with
+    // whatever it last loaded) while the rule editor or a feed's articles screen is on top - so
+    // saving/removing a rule elsewhere wouldn't otherwise be reflected here until a manual
+    // refresh. Re-fetching on every resume (not just the first) picks that up automatically.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.refresh()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     Scaffold(
         topBar = {
@@ -203,10 +222,21 @@ fun RssScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewMode
                             onToggleEnabled = { name, rule ->
                                 viewModel.setRule(name, rule.copy(enabled = !rule.enabled))
                             },
+                            onViewMatches = { name ->
+                                viewModel.loadMatchingArticles(name) { matchingArticles = it }
+                            },
                         )
                 }
             }
         }
+    }
+
+    matchingArticles?.let { matches ->
+        MatchingArticlesResultDialog(
+            matches = matches,
+            feeds = state.items.flattenFeeds(),
+            onDismiss = { matchingArticles = null },
+        )
     }
 
     when (val d = dialog) {
@@ -350,11 +380,13 @@ private fun FeedsTab(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RulesTab(
     state: RssState,
     onRuleClick: (String) -> Unit,
     onToggleEnabled: (String, RssRule) -> Unit,
+    onViewMatches: (String) -> Unit,
 ) {
     if (state.rules.isEmpty()) {
         Box(Modifier.fillMaxSize()) {
@@ -383,6 +415,12 @@ private fun RulesTab(
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Medium,
+                    )
+                    TooltipIconButton(
+                        label = "View matching articles",
+                        icon = Icons.Filled.Visibility,
+                        onClick = { onViewMatches(name) },
+                        position = TooltipAnchorPosition.Below,
                     )
                     Switch(
                         checked = rule.enabled,
