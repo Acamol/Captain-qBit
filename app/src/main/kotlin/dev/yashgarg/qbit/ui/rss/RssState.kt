@@ -29,6 +29,12 @@ private val MAGNET_HASH_REGEX = Regex("urn:btih:([A-Fa-f0-9]{40})")
  * The torrent info-hash embedded in this article's magnet link, lowercased - null if
  * [RssArticle.torrentURL] isn't a magnet URI, or its hash isn't in the (far more common) 40-char
  * hex form this can compare directly against [qbittorrent.models.Torrent.hash].
+ *
+ * Deliberately doesn't fall back to downloading and parsing a `.torrent`-file link to derive the
+ * hash: many private trackers count that download itself as a "grab" against the user's account
+ * (ratio, per-link single-use tokens, etc.), so silently fetching one just to populate an "already
+ * added" indicator isn't an acceptable trade-off. Articles with a `.torrent`-file link simply can't
+ * show that indicator.
  */
 fun RssArticle.magnetHash(): String? = torrentURL?.let {
     MAGNET_HASH_REGEX.find(it)?.groupValues?.get(1)?.lowercase()
