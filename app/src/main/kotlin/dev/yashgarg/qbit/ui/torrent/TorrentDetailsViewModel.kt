@@ -4,10 +4,10 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.github.michaelbull.result.coroutines.runSuspendCatching
 import com.github.michaelbull.result.get
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
-import com.github.michaelbull.result.runCatching
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.yashgarg.qbit.common.R as CommonR
@@ -378,7 +378,7 @@ constructor(
 
     private suspend fun syncTorrentFlow() {
         val hash = requireNotNull(hash)
-        val result = runCatching {
+        val result = runSuspendCatching {
             repository.observeTorrent(hash, false).collectLatest { info ->
                 val props = repository.getTorrentProperties(hash)
                 val trackers = repository.getTorrentTrackers(hash)
@@ -481,7 +481,7 @@ constructor(
     }
 
     private suspend fun syncPeers() {
-        val result = runCatching {
+        val result = runSuspendCatching {
             repository
                 .observeTorrentPeers(requireNotNull(hash))
                 .catch {

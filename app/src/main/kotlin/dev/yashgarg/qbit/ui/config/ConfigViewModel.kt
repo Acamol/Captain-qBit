@@ -4,7 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.Result
-import com.github.michaelbull.result.runCatching
+import com.github.michaelbull.result.coroutines.runSuspendCatching
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.yashgarg.qbit.data.daos.ConfigDao
 import dev.yashgarg.qbit.data.manager.ClientManager
@@ -279,7 +279,7 @@ constructor(
         basicAuthUsername: String?,
         basicAuthPassword: String?,
     ): Result<String, Throwable> {
-        return runCatching {
+        return runSuspendCatching {
             val basicAuth =
                 if (!basicAuthUsername.isNullOrEmpty() && !basicAuthPassword.isNullOrEmpty()) {
                     basicAuthUsername to basicAuthPassword

@@ -1,7 +1,7 @@
 package dev.yashgarg.qbit.data
 
 import com.github.michaelbull.result.Result
-import com.github.michaelbull.result.runCatching
+import com.github.michaelbull.result.coroutines.runSuspendCatching
 import dev.yashgarg.qbit.data.manager.ClientManager
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
@@ -48,11 +48,11 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
     }
 
     suspend fun getApiVersion(): Result<String, Throwable> {
-        return runCatching { client().getApiVersion() }
+        return runSuspendCatching { client().getApiVersion() }
     }
 
     suspend fun getVersion(): Result<String, Throwable> {
-        return runCatching { client().getVersion() }
+        return runSuspendCatching { client().getVersion() }
     }
 
     suspend fun addTorrentUrl(
@@ -62,7 +62,7 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
         paused: Boolean? = null,
         autoTmm: Boolean? = null,
     ): Result<Unit, Throwable> {
-        return runCatching {
+        return runSuspendCatching {
             client().addTorrent {
                 urls.add(url)
                 this.category = category
@@ -80,7 +80,7 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
         paused: Boolean? = null,
         autoTmm: Boolean? = null,
     ): Result<Unit, Throwable> {
-        return runCatching {
+        return runSuspendCatching {
             client().addTorrent {
                 rawTorrents["torrent_file"] = bytes
                 this.category = category
@@ -95,42 +95,42 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
         hashes: List<String>,
         category: String,
     ): Result<Unit, Throwable> {
-        return runCatching { client().setTorrentCategory(hashes, category) }
+        return runSuspendCatching { client().setTorrentCategory(hashes, category) }
     }
 
     suspend fun createCategory(name: String, savePath: String = ""): Result<Unit, Throwable> {
-        return runCatching { client().createCategory(name, savePath) }
+        return runSuspendCatching { client().createCategory(name, savePath) }
     }
 
     suspend fun setTorrentLocation(hash: String, path: String): Result<Unit, Throwable> {
-        return runCatching { client().setTorrentLocation(listOf(hash), path) }
+        return runSuspendCatching { client().setTorrentLocation(listOf(hash), path) }
     }
 
     suspend fun setAutoTorrentManagement(hash: String, enabled: Boolean): Result<Unit, Throwable> {
-        return runCatching { client().setAutoTorrentManagement(listOf(hash), enabled) }
+        return runSuspendCatching { client().setAutoTorrentManagement(listOf(hash), enabled) }
     }
 
     suspend fun addTorrentTags(hashes: List<String>, tags: List<String>): Result<Unit, Throwable> {
-        return runCatching { client().addTorrentTags(hashes, tags) }
+        return runSuspendCatching { client().addTorrentTags(hashes, tags) }
     }
 
     suspend fun removeTorrentTags(
         hashes: List<String>,
         tags: List<String>,
     ): Result<Unit, Throwable> {
-        return runCatching { client().removeTorrentTags(hashes, tags) }
+        return runSuspendCatching { client().removeTorrentTags(hashes, tags) }
     }
 
     suspend fun createTags(tags: List<String>): Result<Unit, Throwable> {
-        return runCatching { client().createTags(tags) }
+        return runSuspendCatching { client().createTags(tags) }
     }
 
     suspend fun deleteTags(tags: List<String>): Result<Unit, Throwable> {
-        return runCatching { client().deleteTags(tags) }
+        return runSuspendCatching { client().deleteTags(tags) }
     }
 
     suspend fun deleteCategories(names: List<String>): Result<Unit, Throwable> {
-        return runCatching { client().removeCategories(names) }
+        return runSuspendCatching { client().removeCategories(names) }
     }
 
     /**
@@ -138,41 +138,41 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
      * no endpoint to rename a category's identifier.
      */
     suspend fun editCategory(name: String, savePath: String): Result<Unit, Throwable> {
-        return runCatching { client().editCategory(name, savePath) }
+        return runSuspendCatching { client().editCategory(name, savePath) }
     }
 
     suspend fun removeTorrents(
         hashes: List<String>,
         deleteFiles: Boolean = false,
     ): Result<Unit, Throwable> {
-        return runCatching { client().deleteTorrents(hashes, deleteFiles) }
+        return runSuspendCatching { client().deleteTorrents(hashes, deleteFiles) }
     }
 
     suspend fun getLogs(): Result<List<LogEntry>, Throwable> {
-        return runCatching { client().getLogs() }
+        return runSuspendCatching { client().getLogs() }
     }
 
     suspend fun toggleTorrentsState(hashes: List<String>, pause: Boolean): Result<Unit, Throwable> {
-        return runCatching {
+        return runSuspendCatching {
             if (pause) client().pauseTorrents(hashes) else client().resumeTorrents(hashes)
         }
     }
 
     suspend fun getSpeedLimitMode(): Result<Int, Throwable> {
-        return runCatching { client().getSpeedLimitsMode() }
+        return runSuspendCatching { client().getSpeedLimitsMode() }
     }
 
     suspend fun toggleSpeedLimitsMode(): Result<Unit, Throwable> {
-        return runCatching { client().toggleSpeedLimitsMode() }
+        return runSuspendCatching { client().toggleSpeedLimitsMode() }
     }
 
     /** Per-torrent limits are in bytes/s; 0 means unlimited. */
     suspend fun setTorrentDownloadLimit(hash: String, limit: Long): Result<Unit, Throwable> {
-        return runCatching { client().setTorrentDownloadLimit(listOf(hash), limit) }
+        return runSuspendCatching { client().setTorrentDownloadLimit(listOf(hash), limit) }
     }
 
     suspend fun setTorrentUploadLimit(hash: String, limit: Long): Result<Unit, Throwable> {
-        return runCatching { client().setTorrentUploadLimit(listOf(hash), limit) }
+        return runSuspendCatching { client().setTorrentUploadLimit(listOf(hash), limit) }
     }
 
     /**
@@ -185,7 +185,7 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
         seedingTimeMinutes: Long,
         inactiveSeedingTimeMinutes: Long,
     ): Result<Unit, Throwable> {
-        return runCatching {
+        return runSuspendCatching {
             client()
                 .setTorrentShareLimits(
                     listOf(hash),
@@ -198,19 +198,19 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
 
     /** Global limits are in bytes/s; 0 means unlimited. */
     suspend fun getGlobalDownloadLimit(): Result<Int, Throwable> {
-        return runCatching { client().getGlobalDownloadLimit() }
+        return runSuspendCatching { client().getGlobalDownloadLimit() }
     }
 
     suspend fun setGlobalDownloadLimit(limit: Int): Result<Unit, Throwable> {
-        return runCatching { client().setGlobalDownloadLimit(limit) }
+        return runSuspendCatching { client().setGlobalDownloadLimit(limit) }
     }
 
     suspend fun getGlobalUploadLimit(): Result<Int, Throwable> {
-        return runCatching { client().getGlobalUploadLimit() }
+        return runSuspendCatching { client().getGlobalUploadLimit() }
     }
 
     suspend fun setGlobalUploadLimit(limit: Int): Result<Unit, Throwable> {
-        return runCatching { client().setGlobalUploadLimit(limit) }
+        return runSuspendCatching { client().setGlobalUploadLimit(limit) }
     }
 
     /**
@@ -221,7 +221,7 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
      * download-to-upload in bytes/s.
      */
     suspend fun getAltSpeedLimits(): Result<Pair<Int, Int>, Throwable> {
-        return runCatching {
+        return runSuspendCatching {
             val prefs = client().getPreferences()
             val dl = prefs["alt_dl_limit"]?.jsonPrimitive?.content?.toIntOrNull() ?: -1
             val ul = prefs["alt_up_limit"]?.jsonPrimitive?.content?.toIntOrNull() ?: -1
@@ -233,7 +233,7 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
         downloadBytesPerSec: Int,
         uploadBytesPerSec: Int,
     ): Result<Unit, Throwable> {
-        return runCatching {
+        return runSuspendCatching {
             client()
                 .setPreferences(
                     buildJsonObject {
@@ -246,13 +246,13 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
 
     /** Whether the server has torrent queueing enabled (an app preference). */
     suspend fun isQueueingEnabled(): Result<Boolean, Throwable> {
-        return runCatching {
+        return runSuspendCatching {
             client().getPreferences()["queueing_enabled"]?.jsonPrimitive?.booleanOrNull ?: false
         }
     }
 
     suspend fun setQueueingEnabled(enabled: Boolean): Result<Unit, Throwable> {
-        return runCatching {
+        return runSuspendCatching {
             client().setPreferences(buildJsonObject { put("queueing_enabled", enabled) })
         }
     }
@@ -261,11 +261,11 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
      * Whether newly added torrents default to Auto Torrent Management (a global server setting).
      */
     suspend fun getAutoTmmEnabled(): Result<Boolean, Throwable> {
-        return runCatching { client().getAutoTmmEnabled() }
+        return runSuspendCatching { client().getAutoTmmEnabled() }
     }
 
     suspend fun setAutoTmmEnabled(enabled: Boolean): Result<Unit, Throwable> {
-        return runCatching { client().setAutoTmmEnabled(enabled) }
+        return runSuspendCatching { client().setAutoTmmEnabled(enabled) }
     }
 
     // Preference limit (-1 = no limit) as app-side bytes/s (0 = unlimited).
@@ -275,31 +275,31 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
     private fun bytesToPrefLimit(bytes: Int): Int = if (bytes <= 0) -1 else bytes
 
     suspend fun setForceStart(hash: String, value: Boolean): Result<Unit, Throwable> {
-        return runCatching { client().setForceStart(listOf(hash), value) }
+        return runSuspendCatching { client().setForceStart(listOf(hash), value) }
     }
 
     suspend fun setSuperSeeding(hash: String, value: Boolean): Result<Unit, Throwable> {
-        return runCatching { client().setSuperSeeding(listOf(hash), value) }
+        return runSuspendCatching { client().setSuperSeeding(listOf(hash), value) }
     }
 
     suspend fun toggleSequentialDownload(hash: String): Result<Unit, Throwable> {
-        return runCatching { client().toggleSequentialDownload(listOf(hash)) }
+        return runSuspendCatching { client().toggleSequentialDownload(listOf(hash)) }
     }
 
     suspend fun toggleFirstLastPriority(hash: String): Result<Unit, Throwable> {
-        return runCatching { client().toggleFirstLastPriority(listOf(hash)) }
+        return runSuspendCatching { client().toggleFirstLastPriority(listOf(hash)) }
     }
 
     suspend fun recheckTorrents(hashes: List<String>): Result<Unit, Throwable> {
-        return runCatching { client().recheckTorrents(hashes) }
+        return runSuspendCatching { client().recheckTorrents(hashes) }
     }
 
     suspend fun reannounceTorrents(hashes: List<String>): Result<Unit, Throwable> {
-        return runCatching { client().reannounceTorrents(hashes) }
+        return runSuspendCatching { client().reannounceTorrents(hashes) }
     }
 
     suspend fun renameTorrent(hash: String, name: String): Result<Unit, Throwable> {
-        return runCatching { client().setTorrentName(hash, name) }
+        return runSuspendCatching { client().setTorrentName(hash, name) }
     }
 
     /**
@@ -307,35 +307,35 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
      * server; qBittorrent otherwise reports every torrent's priority as -1 and ignores the call.
      */
     suspend fun increaseTorrentPriority(hashes: List<String>): Result<Unit, Throwable> {
-        return runCatching { client().increasePriority(hashes) }
+        return runSuspendCatching { client().increasePriority(hashes) }
     }
 
     suspend fun decreaseTorrentPriority(hashes: List<String>): Result<Unit, Throwable> {
-        return runCatching { client().decreasePriority(hashes) }
+        return runSuspendCatching { client().decreasePriority(hashes) }
     }
 
     suspend fun maxTorrentPriority(hashes: List<String>): Result<Unit, Throwable> {
-        return runCatching { client().maxPriority(hashes) }
+        return runSuspendCatching { client().maxPriority(hashes) }
     }
 
     suspend fun minTorrentPriority(hashes: List<String>): Result<Unit, Throwable> {
-        return runCatching { client().minPriority(hashes) }
+        return runSuspendCatching { client().minPriority(hashes) }
     }
 
     suspend fun banPeers(peers: List<String>): Result<Unit, Throwable> {
-        return runCatching { client().banPeers(peers) }
+        return runSuspendCatching { client().banPeers(peers) }
     }
 
     suspend fun getTorrentProperties(hash: String): Result<TorrentProperties, Throwable> {
-        return runCatching { client().getTorrentProperties(hash) }
+        return runSuspendCatching { client().getTorrentProperties(hash) }
     }
 
     suspend fun getTorrentTrackers(hash: String): Result<List<TorrentTracker>, Throwable> {
-        return runCatching { client().getTrackers(hash) ?: emptyList() }
+        return runSuspendCatching { client().getTrackers(hash) ?: emptyList() }
     }
 
     suspend fun addTorrentTrackers(hash: String, urls: List<String>): Result<Unit, Throwable> {
-        return runCatching { client().addTrackers(hash, urls) }
+        return runSuspendCatching { client().addTrackers(hash, urls) }
     }
 
     suspend fun editTorrentTracker(
@@ -343,15 +343,15 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
         originalUrl: String,
         newUrl: String,
     ): Result<Unit, Throwable> {
-        return runCatching { client().editTrackers(hash, originalUrl, newUrl) }
+        return runSuspendCatching { client().editTrackers(hash, originalUrl, newUrl) }
     }
 
     suspend fun removeTorrentTrackers(hash: String, urls: List<String>): Result<Unit, Throwable> {
-        return runCatching { client().removeTrackers(hash, urls) }
+        return runSuspendCatching { client().removeTrackers(hash, urls) }
     }
 
     suspend fun getTorrentFiles(hash: String): Result<List<TorrentFile>, Throwable> {
-        return runCatching { client().getTorrentFiles(hash) }
+        return runSuspendCatching { client().getTorrentFiles(hash) }
     }
 
     /** [oldPath]/[newPath] are relative to the torrent root, "/"-separated. */
@@ -360,7 +360,7 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
         oldPath: String,
         newPath: String,
     ): Result<Unit, Throwable> {
-        return runCatching { client().renameFile(hash, oldPath, newPath) }
+        return runSuspendCatching { client().renameFile(hash, oldPath, newPath) }
     }
 
     suspend fun renameFolder(
@@ -368,7 +368,7 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
         oldPath: String,
         newPath: String,
     ): Result<Unit, Throwable> {
-        return runCatching { client().renameFolder(hash, oldPath, newPath) }
+        return runSuspendCatching { client().renameFolder(hash, oldPath, newPath) }
     }
 
     /** Priorities: 0 = do not download, 1 = normal, 6 = high, 7 = maximal. */
@@ -377,69 +377,69 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
         ids: List<Int>,
         priority: Int,
     ): Result<Unit, Throwable> {
-        return runCatching { client().setFilePriority(hash, ids, priority) }
+        return runSuspendCatching { client().setFilePriority(hash, ids, priority) }
     }
 
     suspend fun getRssItems(): Result<List<RssItem>, Throwable> {
-        return runCatching { client().getRssItems() }
+        return runSuspendCatching { client().getRssItems() }
     }
 
     suspend fun addRssFolder(path: String): Result<Unit, Throwable> {
-        return runCatching { client().addRssFolder(path) }
+        return runSuspendCatching { client().addRssFolder(path) }
     }
 
     suspend fun addRssFeed(url: String, path: String? = null): Result<Unit, Throwable> {
-        return runCatching { client().addRssFeed(url, path) }
+        return runSuspendCatching { client().addRssFeed(url, path) }
     }
 
     suspend fun removeRssItem(itemPath: String): Result<Unit, Throwable> {
-        return runCatching { client().removeRssItem(itemPath) }
+        return runSuspendCatching { client().removeRssItem(itemPath) }
     }
 
     suspend fun moveRssItem(itemPath: String, destPath: String): Result<Unit, Throwable> {
-        return runCatching { client().moveRssItem(itemPath, destPath) }
+        return runSuspendCatching { client().moveRssItem(itemPath, destPath) }
     }
 
     suspend fun markRssItemAsRead(
         itemPath: String,
         articleId: String? = null,
     ): Result<Unit, Throwable> {
-        return runCatching { client().markRssItemAsRead(itemPath, articleId) }
+        return runSuspendCatching { client().markRssItemAsRead(itemPath, articleId) }
     }
 
     suspend fun refreshRssItem(itemPath: String): Result<Unit, Throwable> {
-        return runCatching { client().refreshRssItem(itemPath) }
+        return runSuspendCatching { client().refreshRssItem(itemPath) }
     }
 
     suspend fun getRssRules(): Result<Map<String, RssRule>, Throwable> {
-        return runCatching { client().getRssRules() }
+        return runSuspendCatching { client().getRssRules() }
     }
 
     suspend fun setRssRule(ruleName: String, rule: RssRule): Result<Unit, Throwable> {
-        return runCatching { client().setRssRule(ruleName, rule) }
+        return runSuspendCatching { client().setRssRule(ruleName, rule) }
     }
 
     suspend fun renameRssRule(ruleName: String, newRuleName: String): Result<Unit, Throwable> {
-        return runCatching { client().renameRssRule(ruleName, newRuleName) }
+        return runSuspendCatching { client().renameRssRule(ruleName, newRuleName) }
     }
 
     suspend fun removeRssRule(ruleName: String): Result<Unit, Throwable> {
-        return runCatching { client().removeRssRule(ruleName) }
+        return runSuspendCatching { client().removeRssRule(ruleName) }
     }
 
     suspend fun getRssMatchingArticles(
         ruleName: String
     ): Result<Map<String, List<String>>, Throwable> {
-        return runCatching { client().getRssMatchingArticles(ruleName) }
+        return runSuspendCatching { client().getRssMatchingArticles(ruleName) }
     }
 
     /** Minutes between automatic RSS refreshes - a single global setting, not per-feed. */
     suspend fun getRssRefreshInterval(): Result<Int, Throwable> {
-        return runCatching { client().getRssRefreshIntervalMinutes() }
+        return runSuspendCatching { client().getRssRefreshIntervalMinutes() }
     }
 
     suspend fun setRssRefreshInterval(minutes: Int): Result<Unit, Throwable> {
-        return runCatching {
+        return runSuspendCatching {
             client().setPreferences(buildJsonObject { put("rss_refresh_interval", minutes) })
         }
     }

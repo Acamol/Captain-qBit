@@ -236,6 +236,7 @@ dependencies {
 
     debugImplementation(libs.tools.leakcanary)
     implementation(libs.tools.kotlin.result)
+    implementation(libs.tools.kotlin.result.coroutines)
     implementation(libs.tools.cascade)
     implementation(libs.tools.lottie)
     debugImplementation(libs.tools.whatthestack)
