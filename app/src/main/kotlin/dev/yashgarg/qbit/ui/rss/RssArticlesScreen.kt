@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.MarkEmailRead
@@ -163,8 +164,12 @@ fun RssArticlesScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hilt
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         items(filtered, key = { it.id }) { article ->
+                            val alreadyAdded =
+                                article.magnetHash()?.let { it in uiState.existingTorrentHashes } ==
+                                    true
                             ArticleCard(
                                 article = article,
+                                alreadyAdded = alreadyAdded,
                                 onOpen = {
                                     viewModel.markAsRead(itemPath, article.id)
                                     if (article.link.isNotBlank()) {
@@ -174,7 +179,7 @@ fun RssArticlesScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hilt
                                     }
                                 },
                                 onAddTorrent =
-                                    if (!article.torrentURL.isNullOrBlank()) {
+                                    if (!article.torrentURL.isNullOrBlank() && !alreadyAdded) {
                                         { confirmAddArticle = article }
                                     } else null,
                             )
@@ -208,7 +213,12 @@ fun RssArticlesScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hilt
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ArticleCard(article: RssArticle, onOpen: () -> Unit, onAddTorrent: (() -> Unit)?) {
+private fun ArticleCard(
+    article: RssArticle,
+    alreadyAdded: Boolean,
+    onOpen: () -> Unit,
+    onAddTorrent: (() -> Unit)?,
+) {
     ElevatedCard(modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onOpen)) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -224,10 +234,18 @@ private fun ArticleCard(article: RssArticle, onOpen: () -> Unit, onAddTorrent: (
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            if (onAddTorrent != null) {
-                IconButton(onClick = onAddTorrent) {
-                    Icon(Icons.Filled.Download, contentDescription = "Add torrent")
-                }
+            when {
+                onAddTorrent != null ->
+                    IconButton(onClick = onAddTorrent) {
+                        Icon(Icons.Filled.Download, contentDescription = "Add torrent")
+                    }
+                alreadyAdded ->
+                    Icon(
+                        Icons.Filled.CheckCircle,
+                        contentDescription = "Already added",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(12.dp).size(24.dp),
+                    )
             }
         }
     }

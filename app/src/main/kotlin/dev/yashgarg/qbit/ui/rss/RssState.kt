@@ -1,5 +1,6 @@
 package dev.yashgarg.qbit.ui.rss
 
+import qbittorrent.models.RssArticle
 import qbittorrent.models.RssFeed
 import qbittorrent.models.RssFolder
 import qbittorrent.models.RssItem
@@ -15,7 +16,23 @@ data class RssState(
     val refreshIntervalMinutes: Int = 30,
     val availableCategories: List<String> = emptyList(),
     val availableTags: List<String> = emptyList(),
+    /**
+     * Hashes of torrents already added to the active server, lowercased - compare against
+     * [RssArticle.magnetHash].
+     */
+    val existingTorrentHashes: Set<String> = emptySet(),
 )
+
+private val MAGNET_HASH_REGEX = Regex("urn:btih:([A-Fa-f0-9]{40})")
+
+/**
+ * The torrent info-hash embedded in this article's magnet link, lowercased - null if
+ * [RssArticle.torrentURL] isn't a magnet URI, or its hash isn't in the (far more common) 40-char
+ * hex form this can compare directly against [qbittorrent.models.Torrent.hash].
+ */
+fun RssArticle.magnetHash(): String? = torrentURL?.let {
+    MAGNET_HASH_REGEX.find(it)?.groupValues?.get(1)?.lowercase()
+}
 
 /** Every feed in the tree, depth-first - used by the rule editor's "affected feeds" picker. */
 fun List<RssItem>.flattenFeeds(): List<RssFeed> = flatMap { item ->

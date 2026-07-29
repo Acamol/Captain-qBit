@@ -49,7 +49,8 @@ constructor(
                 _uiState.update { it.copy(refreshIntervalMinutes = minutes) }
             }
         }
-        // Categories/tags for the rule editor's pickers, same source TorrentDetailsViewModel uses.
+        // Categories/tags for the rule editor's pickers, and already-added torrent hashes for the
+        // articles screen's "already added" indicator - same source TorrentDetailsViewModel uses.
         viewModelScope.launch {
             repository
                 .observeMainData()
@@ -59,6 +60,8 @@ constructor(
                         it.copy(
                             availableCategories = mainData.categories.keys.sorted(),
                             availableTags = mainData.tags.sorted(),
+                            existingTorrentHashes =
+                                mainData.torrents.keys.map(String::lowercase).toSet(),
                         )
                     }
                 }
