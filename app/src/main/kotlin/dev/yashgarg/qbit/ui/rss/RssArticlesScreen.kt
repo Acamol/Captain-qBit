@@ -19,8 +19,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.MarkEmailRead
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
@@ -102,7 +102,7 @@ fun RssArticlesScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hilt
                     )
                     TooltipIconButton(
                         label = "Mark all as read",
-                        icon = Icons.Filled.MarkEmailRead,
+                        icon = Icons.Filled.DoneAll,
                         onClick = { viewModel.markAsRead(itemPath) },
                         position = TooltipAnchorPosition.Below,
                     )

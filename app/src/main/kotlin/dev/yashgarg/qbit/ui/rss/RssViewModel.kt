@@ -3,6 +3,8 @@ package dev.yashgarg.qbit.ui.rss
 import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.github.michaelbull.result.Err
+import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -157,6 +159,26 @@ constructor(
             onSuccess = { refresh() },
         ) {
             repository.markRssItemAsRead(itemPath, articleId)
+        }
+    }
+
+    /**
+     * Marks every feed as read individually, rather than trusting a single call against the tree
+     * root or a folder to recurse - not reliably true of every qBittorrent version, and the mock
+     * server used for manual testing doesn't recurse either. Best-effort: a failure on one feed
+     * doesn't stop the rest from being marked.
+     */
+    fun markAllAsRead() {
+        launchStatus(
+            successMessage = getString(CommonR.string.status_rss_marked_read),
+            failureMessage = getString(CommonR.string.status_rss_mark_read_failure),
+            onSuccess = { refresh() },
+        ) {
+            var firstError: Throwable? = null
+            _uiState.value.items.flattenFeeds().forEach { feed ->
+                repository.markRssItemAsRead(feed.path).onErr { firstError = firstError ?: it }
+            }
+            firstError?.let { Err(it) } ?: Ok(Unit)
         }
     }
 

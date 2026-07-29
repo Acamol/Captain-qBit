@@ -25,7 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.MarkEmailRead
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Schedule
@@ -148,6 +148,12 @@ fun RssScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewMode
                                 Modifier.graphicsLayer(
                                     scaleY = if (state.sortDescending) -1f else 1f
                                 ),
+                        )
+                        TooltipIconButton(
+                            label = "Mark all as read",
+                            icon = Icons.Filled.DoneAll,
+                            onClick = { viewModel.markAllAsRead() },
+                            position = TooltipAnchorPosition.Below,
                         )
                         TooltipIconButton(
                             label = "Add",
@@ -536,7 +542,7 @@ private fun FeedActionsDialog(
         text = {
             Column {
                 ActionOption(Icons.Filled.Refresh, "Refresh", onRefresh)
-                ActionOption(Icons.Filled.MarkEmailRead, "Mark all as read", onMarkAllRead)
+                ActionOption(Icons.Filled.DoneAll, "Mark all as read", onMarkAllRead)
                 ActionOption(
                     Icons.AutoMirrored.Filled.DriveFileMove,
                     "Move to folder",
