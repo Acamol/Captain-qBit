@@ -96,6 +96,7 @@ fun SettingsScreen(
 
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val dynamicColors by viewModel.dynamicColors.collectAsStateWithLifecycle()
+    val autoTmmEnabled by viewModel.autoTmmEnabled.collectAsStateWithLifecycle()
     val statusNotif by viewModel.statusNotification.collectAsStateWithLifecycle()
     val notifyComplete by viewModel.notifyOnComplete.collectAsStateWithLifecycle()
     val notifyChecked by viewModel.notifyOnChecked.collectAsStateWithLifecycle()
@@ -238,6 +239,15 @@ fun SettingsScreen(
                 title = "Servers",
                 onClick = { appNavigator.navigate(NavCommand.OpenServerList) },
             )
+            SwitchRow(
+                "Automatic Torrent Management by default",
+                autoTmmEnabled,
+                subtitle =
+                    "qBittorrent's own default for new torrents added outside this app's " +
+                        "add-torrent screen, e.g. via RSS rules",
+            ) {
+                viewModel.setAutoTmmEnabled(it)
+            }
 
             HorizontalDivider()
             SectionHeader("Appearance")

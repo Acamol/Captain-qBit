@@ -3,18 +3,45 @@ package dev.yashgarg.qbit.ui.settings
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.michaelbull.result.onOk
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.yashgarg.qbit.data.QbitRepository
 import dev.yashgarg.qbit.data.models.ServerPreferences
 import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 @HiltViewModel
-class SettingsViewModel @Inject constructor(private val prefsStore: DataStore<ServerPreferences>) :
-    ViewModel() {
+class SettingsViewModel
+@Inject
+constructor(
+    private val prefsStore: DataStore<ServerPreferences>,
+    private val repository: QbitRepository,
+) : ViewModel() {
+
+    private val _autoTmmEnabled = MutableStateFlow(false)
+
+    /**
+     * qBittorrent's own global default Auto Torrent Management setting (server-side, not local).
+     */
+    val autoTmmEnabled: StateFlow<Boolean> = _autoTmmEnabled.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            repository.getAutoTmmEnabled().onOk { _autoTmmEnabled.value = it }
+        }
+    }
+
+    fun setAutoTmmEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            repository.setAutoTmmEnabled(enabled).onOk { _autoTmmEnabled.value = enabled }
+        }
+    }
 
     val dynamicColors: StateFlow<Boolean> =
         prefsStore.data

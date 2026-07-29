@@ -257,6 +257,17 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
         }
     }
 
+    /**
+     * Whether newly added torrents default to Auto Torrent Management (a global server setting).
+     */
+    suspend fun getAutoTmmEnabled(): Result<Boolean, Throwable> {
+        return runCatching { client().getAutoTmmEnabled() }
+    }
+
+    suspend fun setAutoTmmEnabled(enabled: Boolean): Result<Unit, Throwable> {
+        return runCatching { client().setAutoTmmEnabled(enabled) }
+    }
+
     // Preference limit (-1 = no limit) as app-side bytes/s (0 = unlimited).
     private fun prefLimitToBytes(pref: Int): Int = if (pref <= 0) 0 else pref
 
