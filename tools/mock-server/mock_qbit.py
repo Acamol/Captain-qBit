@@ -588,10 +588,34 @@ def rss_mark_as_read(item_path, article_id):
             article["isRead"] = True
 
 
+_rss_refresh_counts = {}
+
+
 def rss_refresh_item(item_path):
     item = _rss_find(item_path)
-    if item and "lastBuildDate" in item:
+    if not item:
+        return
+    if "lastBuildDate" in item:
         item["lastBuildDate"] = time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime())
+    # Test aid: each manual refresh of a feed injects one new synthetic article, so RSS
+    # "new article" notifications can be exercised on demand from the app's own Refresh
+    # action - mirrors resuming a torrent twice to force completion, above - with no code
+    # edits or server restart needed.
+    if "articles" in item:
+        _rss_refresh_counts[item_path] = _rss_refresh_counts.get(item_path, 0) + 1
+        n = _rss_refresh_counts[item_path]
+        item["articles"].insert(
+            0,
+            {
+                "id": f"test-refresh-{item_path}-{n}",
+                "date": time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime()),
+                "title": f"TEST - refreshed article #{n}",
+                "link": "https://example.org/test-article",
+                "description": "Injected by a manual feed refresh, for testing RSS notifications.",
+                "torrentURL": "https://example.org/torrents/test-refresh.torrent",
+                "isRead": False,
+            },
+        )
 
 
 def _rss_all_feeds(node=None):
