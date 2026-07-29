@@ -76,6 +76,8 @@ class MainActivity : AppCompatActivity() {
     // RESUMED collector below has run) — applied once OpenServerAsRoot has actually fired, so it
     // can't be wiped out by that command's own popUpTo.
     private var pendingNotificationHash: String? = null
+    // Same idea, for a "new RSS articles" notification tap.
+    private var pendingNotificationRssPath: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -248,7 +250,10 @@ class MainActivity : AppCompatActivity() {
                         clientManager.configStatus,
                         serverPrefsStore.data
                             .map {
-                                it.statusNotification || it.notifyOnComplete || it.notifyOnChecked
+                                it.statusNotification ||
+                                    it.notifyOnComplete ||
+                                    it.notifyOnChecked ||
+                                    it.notifyOnNewRssArticles
                             }
                             .distinctUntilChanged(),
                     ) { status, notify ->
@@ -261,15 +266,23 @@ class MainActivity : AppCompatActivity() {
                         when (status) {
                             ConfigStatus.EXISTS -> {
                                 launchWorkManager(notify)
+                                Log.i(
+                                    ClientManager.tag,
+                                    "Config exists (navigatedToServer=$navigatedToServer)",
+                                )
                                 if (!navigatedToServer) {
                                     navigatedToServer = true
                                     appNavigator.navigate(NavCommand.OpenServerAsRoot)
                                     // Must queue behind OpenServerAsRoot, not race it — that
-                                    // command's popUpTo would otherwise wipe out a torrent
+                                    // command's popUpTo would otherwise wipe out a torrent/RSS
                                     // navigation sent first.
                                     pendingNotificationHash?.let { hash ->
                                         pendingNotificationHash = null
                                         appNavigator.navigate(NavCommand.OpenTorrent(hash))
+                                    }
+                                    pendingNotificationRssPath?.let { path ->
+                                        pendingNotificationRssPath = null
+                                        appNavigator.navigate(NavCommand.OpenRssArticles(path))
                                     }
                                 }
                             }
@@ -283,6 +296,7 @@ class MainActivity : AppCompatActivity() {
         handleBackupIntent(intent)
         handleTorrentViewIntent(intent)
         pendingNotificationHash = intent.getStringExtra(EXTRA_TORRENT_HASH)
+        pendingNotificationRssPath = intent.getStringExtra(EXTRA_RSS_ITEM_PATH)
     }
 
     // singleInstance: an already-running task receives opened files here rather than in onCreate.
@@ -298,7 +312,7 @@ class MainActivity : AppCompatActivity() {
         }
         // Notification taps never reach here: notifyEvent()'s PendingIntent sets
         // FLAG_ACTIVITY_CLEAR_TASK, which always destroys and recreates this singleInstance
-        // activity — so EXTRA_TORRENT_HASH is only ever read in onCreate.
+        // activity — so EXTRA_TORRENT_HASH/EXTRA_RSS_ITEM_PATH are only ever read in onCreate.
     }
 
     /** Offers a non-backup VIEW intent's URI to [pendingTorrentIntent]. Returns true if it did. */
@@ -366,6 +380,10 @@ class MainActivity : AppCompatActivity() {
     companion object {
         /** Extra key for the torrent hash carried by a "download complete" notification's tap. */
         const val EXTRA_TORRENT_HASH = "torrent_hash"
+        /**
+         * Extra key for the feed's item path carried by a "new RSS articles" notification's tap.
+         */
+        const val EXTRA_RSS_ITEM_PATH = "rss_item_path"
         private const val EXIT_CONFIRMATION_WINDOW_MS = 2000L
     }
 }

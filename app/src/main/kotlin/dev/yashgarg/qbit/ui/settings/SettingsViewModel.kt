@@ -39,6 +39,11 @@ class SettingsViewModel @Inject constructor(private val prefsStore: DataStore<Se
             .map { it.notifyOnChecked }
             .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    val notifyOnNewRssArticles: StateFlow<Boolean> =
+        prefsStore.data
+            .map { it.notifyOnNewRssArticles }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     val statusRefreshIntervalMs: StateFlow<Long> =
         prefsStore.data
             .map { it.statusRefreshIntervalMs }
@@ -84,6 +89,17 @@ class SettingsViewModel @Inject constructor(private val prefsStore: DataStore<Se
                 it.copy(
                     notifyOnChecked = enabled,
                     notifCheckedRebaseline = enabled || it.notifCheckedRebaseline,
+                )
+            }
+        }
+    }
+
+    fun setNotifyOnNewRssArticles(enabled: Boolean) {
+        viewModelScope.launch {
+            prefsStore.updateData {
+                it.copy(
+                    notifyOnNewRssArticles = enabled,
+                    notifRssRebaseline = enabled || it.notifRssRebaseline,
                 )
             }
         }

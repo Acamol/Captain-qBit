@@ -99,6 +99,7 @@ fun SettingsScreen(
     val statusNotif by viewModel.statusNotification.collectAsStateWithLifecycle()
     val notifyComplete by viewModel.notifyOnComplete.collectAsStateWithLifecycle()
     val notifyChecked by viewModel.notifyOnChecked.collectAsStateWithLifecycle()
+    val notifyRssUpdates by viewModel.notifyOnNewRssArticles.collectAsStateWithLifecycle()
     val statusRefreshIntervalMs by viewModel.statusRefreshIntervalMs.collectAsStateWithLifecycle()
     val eventPollIntervalMs by viewModel.eventPollIntervalMs.collectAsStateWithLifecycle()
     val syncIntervalMs by viewModel.syncIntervalMs.collectAsStateWithLifecycle()
@@ -126,7 +127,8 @@ fun SettingsScreen(
     }
     // Only worth flagging if the user actually wants one of these to show something.
     val notificationsBlocked =
-        !notificationsEnabled && (statusNotif || notifyComplete || notifyChecked)
+        !notificationsEnabled &&
+            (statusNotif || notifyComplete || notifyChecked || notifyRssUpdates)
 
     val notifPermissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
@@ -134,8 +136,8 @@ fun SettingsScreen(
             if (notificationsEnabled) StatusWorker.enqueue(context)
         }
 
-    fun applyNotificationPrefs(status: Boolean, complete: Boolean, checked: Boolean) {
-        if (!(status || complete || checked)) {
+    fun applyNotificationPrefs(status: Boolean, complete: Boolean, checked: Boolean, rss: Boolean) {
+        if (!(status || complete || checked || rss)) {
             StatusWorker.cancel(context)
             return
         }
@@ -268,7 +270,7 @@ fun SettingsScreen(
                 enabled = !notificationsBlocked,
             ) {
                 viewModel.setStatusNotification(it)
-                applyNotificationPrefs(it, notifyComplete, notifyChecked)
+                applyNotificationPrefs(it, notifyComplete, notifyChecked, notifyRssUpdates)
             }
             SwitchRow(
                 "Notify on complete",
@@ -277,7 +279,7 @@ fun SettingsScreen(
                 enabled = !notificationsBlocked,
             ) {
                 viewModel.setNotifyOnComplete(it)
-                applyNotificationPrefs(statusNotif, it, notifyChecked)
+                applyNotificationPrefs(statusNotif, it, notifyChecked, notifyRssUpdates)
             }
             SwitchRow(
                 "Notify on checked",
@@ -286,7 +288,18 @@ fun SettingsScreen(
                 enabled = !notificationsBlocked,
             ) {
                 viewModel.setNotifyOnChecked(it)
-                applyNotificationPrefs(statusNotif, notifyComplete, it)
+                applyNotificationPrefs(statusNotif, notifyComplete, it, notifyRssUpdates)
+            }
+            SwitchRow(
+                "Notify on new RSS articles",
+                notifyRssUpdates,
+                subtitle =
+                    "Alert when a feed gets new articles - checked as often as the RSS " +
+                        "screen's own feed refresh interval",
+                enabled = !notificationsBlocked,
+            ) {
+                viewModel.setNotifyOnNewRssArticles(it)
+                applyNotificationPrefs(statusNotif, notifyComplete, notifyChecked, it)
             }
             ClickableRow(
                 title = "Notification refresh interval",
@@ -369,7 +382,7 @@ fun SettingsScreen(
                 viewModel.setStatusRefreshIntervalMs(it)
                 // Restarts the already-running worker so it picks up the new interval right
                 // away, instead of only after its current (possibly minutes-long) sleep ends.
-                applyNotificationPrefs(statusNotif, notifyComplete, notifyChecked)
+                applyNotificationPrefs(statusNotif, notifyComplete, notifyChecked, notifyRssUpdates)
             },
             onDismiss = { showStatusIntervalDialog = false },
         )
@@ -382,7 +395,7 @@ fun SettingsScreen(
             selected = eventPollIntervalMs,
             onSelect = {
                 viewModel.setEventPollIntervalMs(it)
-                applyNotificationPrefs(statusNotif, notifyComplete, notifyChecked)
+                applyNotificationPrefs(statusNotif, notifyComplete, notifyChecked, notifyRssUpdates)
             },
             onDismiss = { showEventIntervalDialog = false },
         )

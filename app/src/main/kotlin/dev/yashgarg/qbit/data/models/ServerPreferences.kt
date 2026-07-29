@@ -48,6 +48,15 @@ data class ServerPreferences(
     // completions still alert.
     val notifCompleteRebaseline: Boolean = false,
     val notifCheckedRebaseline: Boolean = false,
+    val notifyOnNewRssArticles: Boolean = false,
+    // Article ids already accounted for by the RSS notifier, keyed by "$serverId|$feedPath" (a
+    // feed path alone isn't unique across servers). Ids for articles no longer present in a feed's
+    // current fetch are dropped on the next poll, so this stays bounded by each feed's own
+    // (server-capped) article list instead of growing forever.
+    val notifRssArticleSeen: Map<String, Set<String>> = emptyMap(),
+    // Set true when the RSS notification is turned ON, so the worker's next poll adopts every
+    // feed's current article set as a silent baseline instead of alerting for the whole backlog.
+    val notifRssRebaseline: Boolean = false,
     // AppCompatDelegate night-mode constant. Defaults to MODE_NIGHT_YES (2) to preserve the
     // app's original dark-only behaviour for existing installs.
     val themeMode: Int = 2,

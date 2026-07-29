@@ -6,6 +6,7 @@ import io.ktor.http.*
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import qbittorrent.internal.bodyOrThrow
 import qbittorrent.internal.orThrow
 import qbittorrent.models.RssItem
@@ -142,3 +143,13 @@ suspend fun QBittorrentClient.getRssMatchingArticles(ruleName: String): Map<Stri
         .get("${config.baseUrl}/api/v2/rss/matchingArticles") { parameter("ruleName", ruleName) }
         .bodyOrThrow()
 }
+
+/**
+ * Minutes between qBittorrent's own automatic RSS feed refreshes - a single global server setting,
+ * not per-feed. Anything that wants to know how often feed data can actually change (e.g. a "check
+ * for new articles" poll) should use this rather than an independent interval, since polling faster
+ * than the server itself refreshes just re-reads the same cached articles.
+ */
+@Throws(QBittorrentException::class, CancellationException::class)
+suspend fun QBittorrentClient.getRssRefreshIntervalMinutes(): Int =
+    getPreferences()["rss_refresh_interval"]?.jsonPrimitive?.content?.toIntOrNull() ?: 30

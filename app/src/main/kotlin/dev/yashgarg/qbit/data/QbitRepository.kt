@@ -424,10 +424,7 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
 
     /** Minutes between automatic RSS refreshes - a single global setting, not per-feed. */
     suspend fun getRssRefreshInterval(): Result<Int, Throwable> {
-        return runCatching {
-            client().getPreferences()["rss_refresh_interval"]?.jsonPrimitive?.content?.toIntOrNull()
-                ?: 30
-        }
+        return runCatching { client().getRssRefreshIntervalMinutes() }
     }
 
     suspend fun setRssRefreshInterval(minutes: Int): Result<Unit, Throwable> {
