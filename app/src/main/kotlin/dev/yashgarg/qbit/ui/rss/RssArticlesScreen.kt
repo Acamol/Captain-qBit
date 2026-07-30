@@ -128,7 +128,7 @@ fun RssArticlesScreen(
                     value = query,
                     onValueChange = { query = it },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                    placeholder = { Text("Search articles") },
+                    placeholder = { Text("Search articles (all words, any order)") },
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                     trailingIcon = {
                         if (query.isNotEmpty()) {
@@ -143,7 +143,7 @@ fun RssArticlesScreen(
             val filtered =
                 if (feed == null) emptyList()
                 else if (query.isBlank()) feed.articles
-                else feed.articles.filter { it.title.contains(query.trim(), ignoreCase = true) }
+                else feed.articles.filter { matchesQuery(it.title, query) }
             PullToRefreshBox(
                 isRefreshing = uiState.refreshing,
                 onRefresh = { viewModel.refreshItem(itemPath) },
@@ -305,6 +305,16 @@ private fun ArticleCard(
             }
         }
     }
+}
+
+/**
+ * AND-of-words, order-independent, case-insensitive - the same semantics as a single line of an RSS
+ * rule's "Must contain" field (words are ANDed; only OR-across-lines doesn't apply to a single-line
+ * search box).
+ */
+private fun matchesQuery(title: String, query: String): Boolean {
+    val words = query.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+    return words.all { title.contains(it, ignoreCase = true) }
 }
 
 private fun findFeed(items: List<RssItem>, path: String): RssFeed? {
