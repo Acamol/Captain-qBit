@@ -268,6 +268,24 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
         return runSuspendCatching { client().setAutoTmmEnabled(enabled) }
     }
 
+    /** Whether the server fetches RSS feeds at all - distinct from per-rule auto-downloading. */
+    suspend fun getRssProcessingEnabled(): Result<Boolean, Throwable> {
+        return runSuspendCatching { client().getRssProcessingEnabled() }
+    }
+
+    suspend fun setRssProcessingEnabled(enabled: Boolean): Result<Unit, Throwable> {
+        return runSuspendCatching { client().setRssProcessingEnabled(enabled) }
+    }
+
+    /** Whether matching RSS rules auto-download torrents - distinct from fetching the feeds. */
+    suspend fun getRssAutoDownloadingEnabled(): Result<Boolean, Throwable> {
+        return runSuspendCatching { client().getRssAutoDownloadingEnabled() }
+    }
+
+    suspend fun setRssAutoDownloadingEnabled(enabled: Boolean): Result<Unit, Throwable> {
+        return runSuspendCatching { client().setRssAutoDownloadingEnabled(enabled) }
+    }
+
     // Preference limit (-1 = no limit) as app-side bytes/s (0 = unlimited).
     private fun prefLimitToBytes(pref: Int): Int = if (pref <= 0) 0 else pref
 

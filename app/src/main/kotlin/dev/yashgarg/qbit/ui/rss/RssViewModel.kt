@@ -51,6 +51,16 @@ constructor(
                 _uiState.update { it.copy(refreshIntervalMinutes = minutes) }
             }
         }
+        viewModelScope.launch {
+            repository.getRssProcessingEnabled().onOk { enabled ->
+                _uiState.update { it.copy(rssProcessingEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            repository.getRssAutoDownloadingEnabled().onOk { enabled ->
+                _uiState.update { it.copy(rssAutoDownloadingEnabled = enabled) }
+            }
+        }
         // Categories/tags for the rule editor's pickers, and already-added torrent hashes for the
         // articles screen's "already added" indicator - same source TorrentDetailsViewModel uses.
         viewModelScope.launch {
@@ -71,6 +81,26 @@ constructor(
     }
 
     fun refresh() = load(refresh = true)
+
+    fun setRssProcessingEnabled(enabled: Boolean) {
+        launchStatus(
+            successMessage = getString(CommonR.string.status_rss_processing_updated),
+            failureMessage = getString(CommonR.string.status_rss_processing_update_failure),
+            onSuccess = { _uiState.update { it.copy(rssProcessingEnabled = enabled) } },
+        ) {
+            repository.setRssProcessingEnabled(enabled)
+        }
+    }
+
+    fun setRssAutoDownloadingEnabled(enabled: Boolean) {
+        launchStatus(
+            successMessage = getString(CommonR.string.status_rss_auto_downloading_updated),
+            failureMessage = getString(CommonR.string.status_rss_auto_downloading_update_failure),
+            onSuccess = { _uiState.update { it.copy(rssAutoDownloadingEnabled = enabled) } },
+        ) {
+            repository.setRssAutoDownloadingEnabled(enabled)
+        }
+    }
 
     fun toggleSort() {
         _uiState.update { it.copy(sortDescending = !it.sortDescending) }

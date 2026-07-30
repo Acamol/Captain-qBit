@@ -14,6 +14,13 @@ data class RssState(
     val sortDescending: Boolean = false,
     val rules: Map<String, RssRule> = emptyMap(),
     val refreshIntervalMinutes: Int = 30,
+    /**
+     * qBittorrent's own switch for fetching RSS feeds at all - defaults true to avoid a false
+     * warning flash before the real value loads.
+     */
+    val rssProcessingEnabled: Boolean = true,
+    /** qBittorrent's own switch for RSS rules auto-downloading matches - same load-flicker note. */
+    val rssAutoDownloadingEnabled: Boolean = true,
     val availableCategories: List<String> = emptyList(),
     val availableTags: List<String> = emptyList(),
     /**

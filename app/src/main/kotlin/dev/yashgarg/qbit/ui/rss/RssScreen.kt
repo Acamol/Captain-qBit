@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -47,6 +49,7 @@ import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -205,6 +208,20 @@ fun RssScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewMode
                     )
                 }
             }
+            when {
+                !state.rssProcessingEnabled ->
+                    RssWarningBanner(
+                        message = "RSS fetching is disabled on the server - feeds won't update.",
+                        onEnable = { viewModel.setRssProcessingEnabled(true) },
+                    )
+                pagerState.currentPage == 1 && !state.rssAutoDownloadingEnabled ->
+                    RssWarningBanner(
+                        message =
+                            "RSS auto-downloading is disabled on the server - matching rules " +
+                                "won't download torrents.",
+                        onEnable = { viewModel.setRssAutoDownloadingEnabled(true) },
+                    )
+            }
             Spacer(Modifier.height(12.dp))
             HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                 when (page) {
@@ -338,6 +355,31 @@ private sealed interface RssDialog {
     data class MoveItem(val item: RssItem) : RssDialog
 
     data object RefreshInterval : RssDialog
+}
+
+@Composable
+private fun RssWarningBanner(message: String, onEnable: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        color = MaterialTheme.colorScheme.errorContainer,
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Filled.Warning,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                message,
+                modifier = Modifier.weight(1f),
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            TextButton(onClick = onEnable) { Text("Enable") }
+        }
+    }
 }
 
 @Composable

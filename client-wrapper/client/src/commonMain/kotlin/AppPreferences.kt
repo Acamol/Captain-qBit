@@ -120,3 +120,23 @@ suspend fun QBittorrentClient.getAutoTmmEnabled(): Boolean =
 suspend fun QBittorrentClient.setAutoTmmEnabled(enabled: Boolean) {
     setPreferences(buildJsonObject { put("auto_tmm_enabled", enabled) })
 }
+
+/** Whether the server fetches RSS feeds at all - distinct from per-rule auto-downloading. */
+@Throws(QBittorrentException::class, CancellationException::class)
+suspend fun QBittorrentClient.getRssProcessingEnabled(): Boolean =
+    getPreferences()["rss_processing_enabled"]?.jsonPrimitive?.booleanOrNull ?: false
+
+@Throws(QBittorrentException::class, CancellationException::class)
+suspend fun QBittorrentClient.setRssProcessingEnabled(enabled: Boolean) {
+    setPreferences(buildJsonObject { put("rss_processing_enabled", enabled) })
+}
+
+/** Whether matching RSS rules auto-download torrents - distinct from fetching the feeds. */
+@Throws(QBittorrentException::class, CancellationException::class)
+suspend fun QBittorrentClient.getRssAutoDownloadingEnabled(): Boolean =
+    getPreferences()["rss_auto_downloading_enabled"]?.jsonPrimitive?.booleanOrNull ?: false
+
+@Throws(QBittorrentException::class, CancellationException::class)
+suspend fun QBittorrentClient.setRssAutoDownloadingEnabled(enabled: Boolean) {
+    setPreferences(buildJsonObject { put("rss_auto_downloading_enabled", enabled) })
+}

@@ -236,4 +236,10 @@
     <string name="status_rss_add_torrent_failure">Failed to add torrent</string>
     <string name="status_rss_interval_updated">Refresh interval updated</string>
     <string name="status_rss_interval_update_failure">Failed to update refresh interval</string>
+    <string name="status_rss_processing_updated">RSS fetching updated</string>
+    <string name="status_rss_processing_update_failure">Failed to update RSS fetching</string>
+    <string name="status_rss_auto_downloading_updated">RSS auto-downloading updated</string>
+    <string name="status_rss_auto_downloading_update_failure">
+        Failed to update RSS auto-downloading
+    </string>
 </resources>
