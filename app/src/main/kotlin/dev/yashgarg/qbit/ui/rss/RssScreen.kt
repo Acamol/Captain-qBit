@@ -239,6 +239,7 @@ fun RssScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewMode
                     else ->
                         RulesTab(
                             state = state,
+                            onRefresh = viewModel::refresh,
                             onRuleClick = {
                                 appNavigator.navigate(NavCommand.OpenRssRuleEditor(it))
                             },
@@ -432,50 +433,58 @@ private fun FeedsTab(
 @Composable
 private fun RulesTab(
     state: RssState,
+    onRefresh: () -> Unit,
     onRuleClick: (String) -> Unit,
     onToggleEnabled: (String, RssRule) -> Unit,
     onViewMatches: (String) -> Unit,
 ) {
-    if (state.rules.isEmpty()) {
-        Box(Modifier.fillMaxSize()) {
-            Text(
-                "No auto-download rules yet — tap + to add one",
-                Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = 32.dp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
+    PullToRefreshBox(
+        isRefreshing = state.refreshing,
+        onRefresh = onRefresh,
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        if (state.rules.isEmpty()) {
+            Box(Modifier.fillMaxSize()) {
+                Text(
+                    "No auto-download rules yet — tap + to add one",
+                    Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = 32.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+            return@PullToRefreshBox
         }
-        return
-    }
-    val sortedRules = remember(state.rules) { state.rules.entries.sortedBy { it.key.lowercase() } }
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 4.dp)) {
-        items(sortedRules, key = { it.key }) { (name, rule) ->
-            Column {
-                Row(
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .clickable { onRuleClick(name) }
-                            .padding(horizontal = 20.dp, vertical = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        name,
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    TooltipIconButton(
-                        label = "View matching articles",
-                        icon = Icons.Filled.Visibility,
-                        onClick = { onViewMatches(name) },
-                        position = TooltipAnchorPosition.Below,
-                    )
-                    Switch(
-                        checked = rule.enabled,
-                        onCheckedChange = { onToggleEnabled(name, rule) },
-                    )
+        val sortedRules =
+            remember(state.rules) { state.rules.entries.sortedBy { it.key.lowercase() } }
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 4.dp)) {
+            items(sortedRules, key = { it.key }) { (name, rule) ->
+                Column {
+                    Row(
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .clickable { onRuleClick(name) }
+                                .padding(horizontal = 20.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            name,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        TooltipIconButton(
+                            label = "View matching articles",
+                            icon = Icons.Filled.Visibility,
+                            onClick = { onViewMatches(name) },
+                            position = TooltipAnchorPosition.Below,
+                        )
+                        Switch(
+                            checked = rule.enabled,
+                            onCheckedChange = { onToggleEnabled(name, rule) },
+                        )
+                    }
+                    HorizontalDivider()
                 }
-                HorizontalDivider()
             }
         }
     }
