@@ -360,7 +360,7 @@ private sealed interface RssDialog {
 @Composable
 private fun RssWarningBanner(message: String, onEnable: () -> Unit) {
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         color = MaterialTheme.colorScheme.errorContainer,
         shape = MaterialTheme.shapes.medium,
     ) {
