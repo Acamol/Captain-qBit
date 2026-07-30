@@ -671,17 +671,8 @@ constructor(
         }
     }
 
-    private fun getGlobalLimits() {
+    private fun getQueueingState() {
         viewModelScope.launch {
-            repository.getGlobalDownloadLimit().onOk { dl ->
-                _uiState.update { it.copy(globalDownloadLimit = dl) }
-            }
-            repository.getGlobalUploadLimit().onOk { ul ->
-                _uiState.update { it.copy(globalUploadLimit = ul) }
-            }
-            repository.getAltSpeedLimits().onOk { (dl, ul) ->
-                _uiState.update { it.copy(altDownloadLimit = dl, altUploadLimit = ul) }
-            }
             repository.isQueueingEnabled().onOk { enabled ->
                 // Don't leave the list stuck on the Queued filter if the server has queueing off
                 // (e.g. a filter persisted from a prior session, or queueing toggled off
@@ -694,69 +685,6 @@ constructor(
                     )
                 }
                 if (clearFilter) persistViewPrefs()
-            }
-        }
-    }
-
-    fun setQueueing(enabled: Boolean) {
-        viewModelScope.launch {
-            repository
-                .setQueueingEnabled(enabled)
-                .onOk {
-                    // Turning queueing off hides the Queued filter; if it's the active one, fall
-                    // back to All so the list isn't stuck on a now-hidden filter.
-                    val clearFilter =
-                        !enabled && _uiState.value.selectedFilter == StateFilter.QUEUED
-                    _uiState.update {
-                        it.copy(
-                            queueingEnabled = enabled,
-                            selectedFilter =
-                                if (clearFilter) StateFilter.ALL else it.selectedFilter,
-                        )
-                    }
-                    if (clearFilter) persistViewPrefs()
-                    emitStatus(
-                        getString(
-                            if (enabled) CommonR.string.status_queueing_enabled
-                            else CommonR.string.status_queueing_disabled
-                        )
-                    )
-                }
-                .onErr {
-                    emitStatus(
-                        it.friendlyMessage(getString(CommonR.string.status_set_queueing_failure))
-                    )
-                }
-        }
-    }
-
-    /** Alternate limits are in bytes/s; 0 clears the limit (unlimited). */
-    fun setAltLimits(downloadBytesPerSec: Int, uploadBytesPerSec: Int) {
-        viewModelScope.launch {
-            repository
-                .setAltSpeedLimits(downloadBytesPerSec, uploadBytesPerSec)
-                .onOk {
-                    emitStatus(getString(CommonR.string.status_speed_limit_updated))
-                    getGlobalLimits()
-                }
-                .onErr {
-                    emitStatus(
-                        it.friendlyMessage(getString(CommonR.string.status_set_speed_limit_failure))
-                    )
-                }
-        }
-    }
-
-    /** Limits are in bytes/s; 0 clears the limit (unlimited). */
-    fun setGlobalLimits(downloadBytesPerSec: Int, uploadBytesPerSec: Int) {
-        viewModelScope.launch {
-            val dlOk = repository.setGlobalDownloadLimit(downloadBytesPerSec).get() != null
-            val ulOk = repository.setGlobalUploadLimit(uploadBytesPerSec).get() != null
-            if (dlOk && ulOk) {
-                emitStatus(getString(CommonR.string.status_speed_limit_updated))
-                getGlobalLimits()
-            } else {
-                emitStatus(getString(CommonR.string.status_set_speed_limit_failure))
             }
         }
     }
@@ -793,7 +721,7 @@ constructor(
 
     private suspend fun syncData() {
         getSpeedLimitMode()
-        getGlobalLimits()
+        getQueueingState()
         coroutineScope {
             // Data: keep the last-known list on screen; retry quietly on error. The offline state
             // is

@@ -58,6 +58,7 @@ import dev.yashgarg.qbit.ui.backup.BackupDialogs
 import dev.yashgarg.qbit.ui.backup.BackupViewModel
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
+import dev.yashgarg.qbit.ui.server.SpeedLimitsDialog
 import dev.yashgarg.qbit.worker.StatusWorker
 
 private val BACKUP_MIME_TYPES = arrayOf("application/json", "application/octet-stream", "*/*")
@@ -97,6 +98,15 @@ fun SettingsScreen(
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val dynamicColors by viewModel.dynamicColors.collectAsStateWithLifecycle()
     val autoTmmEnabled by viewModel.autoTmmEnabled.collectAsStateWithLifecycle()
+    val rssProcessingEnabled by viewModel.rssProcessingEnabled.collectAsStateWithLifecycle()
+    val rssAutoDownloadingEnabled by
+        viewModel.rssAutoDownloadingEnabled.collectAsStateWithLifecycle()
+    val queueingEnabled by viewModel.queueingEnabled.collectAsStateWithLifecycle()
+    val speedLimitMode by viewModel.speedLimitMode.collectAsStateWithLifecycle()
+    val globalDownloadLimit by viewModel.globalDownloadLimit.collectAsStateWithLifecycle()
+    val globalUploadLimit by viewModel.globalUploadLimit.collectAsStateWithLifecycle()
+    val altDownloadLimit by viewModel.altDownloadLimit.collectAsStateWithLifecycle()
+    val altUploadLimit by viewModel.altUploadLimit.collectAsStateWithLifecycle()
     val statusNotif by viewModel.statusNotification.collectAsStateWithLifecycle()
     val notifyComplete by viewModel.notifyOnComplete.collectAsStateWithLifecycle()
     val notifyChecked by viewModel.notifyOnChecked.collectAsStateWithLifecycle()
@@ -109,6 +119,8 @@ fun SettingsScreen(
     var showStatusIntervalDialog by remember { mutableStateOf(false) }
     var showEventIntervalDialog by remember { mutableStateOf(false) }
     var showSyncIntervalDialog by remember { mutableStateOf(false) }
+    var showGlobalLimitsDialog by remember { mutableStateOf(false) }
+    var showAltLimitsDialog by remember { mutableStateOf(false) }
     var pendingExport by remember { mutableStateOf<PendingExport?>(null) }
 
     // Re-checked on resume so coming back from the system notification settings screen (via the
@@ -239,14 +251,59 @@ fun SettingsScreen(
                 title = "Servers",
                 onClick = { appNavigator.navigate(NavCommand.OpenServerList) },
             )
+
+            HorizontalDivider()
+            SectionHeader("Server")
+            Text(
+                "Settings on the connected qBittorrent server, not this app",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+            )
             SwitchRow(
                 "Automatic Torrent Management by default",
                 autoTmmEnabled,
-                subtitle =
-                    "qBittorrent's own default for new torrents added outside this app's " +
-                        "add-torrent screen, e.g. via RSS rules",
+                subtitle = "Applies to torrents added outside this app, e.g. via RSS rules",
             ) {
                 viewModel.setAutoTmmEnabled(it)
+            }
+            SwitchRow(
+                "Fetch RSS feeds",
+                rssProcessingEnabled,
+                subtitle = "Feeds won't update at all while this is off",
+            ) {
+                viewModel.setRssProcessingEnabled(it)
+            }
+            SwitchRow(
+                "Auto-download matching RSS articles",
+                rssAutoDownloadingEnabled,
+                subtitle = "Lets RSS rules download torrents automatically",
+            ) {
+                viewModel.setRssAutoDownloadingEnabled(it)
+            }
+            SwitchRow(
+                "Use alternate speed limits",
+                speedLimitMode != 0,
+                subtitle = "Switch between your normal speed limits and the alternate ones",
+            ) {
+                viewModel.toggleSpeedLimits()
+            }
+            ClickableRow(
+                title = "Global speed limits",
+                subtitle = "Set the server-wide download and upload speed limits",
+                onClick = { showGlobalLimitsDialog = true },
+            )
+            ClickableRow(
+                title = "Alternate speed limits",
+                subtitle = "Set the limits used while \"use alternate speed limits\" is on",
+                onClick = { showAltLimitsDialog = true },
+            )
+            SwitchRow(
+                "Torrent queueing",
+                queueingEnabled,
+                subtitle = "Cap how many torrents are active at once; enables queue positions",
+            ) {
+                viewModel.setQueueingEnabled(it)
             }
 
             HorizontalDivider()
@@ -418,6 +475,24 @@ fun SettingsScreen(
             selected = syncIntervalMs,
             onSelect = viewModel::setSyncIntervalMs,
             onDismiss = { showSyncIntervalDialog = false },
+        )
+    }
+    if (showGlobalLimitsDialog) {
+        SpeedLimitsDialog(
+            title = "Global speed limits",
+            initialDownloadBytes = globalDownloadLimit,
+            initialUploadBytes = globalUploadLimit,
+            onConfirm = { dl, ul -> viewModel.setGlobalLimits(dl, ul) },
+            onDismiss = { showGlobalLimitsDialog = false },
+        )
+    }
+    if (showAltLimitsDialog) {
+        SpeedLimitsDialog(
+            title = "Alternate speed limits",
+            initialDownloadBytes = altDownloadLimit,
+            initialUploadBytes = altUploadLimit,
+            onConfirm = { dl, ul -> viewModel.setAltLimits(dl, ul) },
+            onDismiss = { showAltLimitsDialog = false },
         )
     }
 }

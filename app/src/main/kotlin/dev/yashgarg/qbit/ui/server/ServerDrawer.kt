@@ -66,9 +66,6 @@ fun ServerDrawer(
     onManageTags: () -> Unit,
     onClearFilters: () -> Unit,
     onToggleSpeedLimits: () -> Unit,
-    onGlobalLimits: () -> Unit,
-    onAltLimits: () -> Unit,
-    onToggleQueueing: () -> Unit,
     onRss: () -> Unit,
     onSettings: () -> Unit,
 ) {
@@ -227,23 +224,6 @@ fun ServerDrawer(
                     onCheckedChange = { onToggleSpeedLimits() },
                 )
             }
-            DrawerOption(
-                label = "Torrent queueing",
-                description = "Cap how many torrents are active at once; enables queue positions.",
-                onClick = onToggleQueueing,
-            ) {
-                Switch(checked = state.queueingEnabled, onCheckedChange = { onToggleQueueing() })
-            }
-            DrawerOption(
-                label = "Global speed limits…",
-                description = "Set the server-wide download and upload speed limits.",
-                onClick = onGlobalLimits,
-            )
-            DrawerOption(
-                label = "Alternate speed limits…",
-                description = "Set the limits used while \"use alternate speed limits\" is on.",
-                onClick = onAltLimits,
-            )
             DrawerOption(
                 label = "RSS feeds",
                 description = "Browse RSS feeds and manage auto-download rules.",

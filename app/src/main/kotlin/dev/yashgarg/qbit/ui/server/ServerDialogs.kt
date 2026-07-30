@@ -87,10 +87,6 @@ sealed interface ServerDialog {
 
     data object SortPicker : ServerDialog
 
-    data object GlobalLimits : ServerDialog
-
-    data object AltLimits : ServerDialog
-
     data object ServerPicker : ServerDialog
 
     data class ServerLongPress(val server: ServerConfig) : ServerDialog
@@ -494,28 +490,6 @@ fun ServerDialogHost(
                 dismissButton = { TextButton(onClick = dismiss) { Text("Cancel") } },
             )
         }
-        ServerDialog.GlobalLimits ->
-            SpeedLimitsDialog(
-                title = "Global speed limits",
-                initialDownloadBytes = state.globalDownloadLimit,
-                initialUploadBytes = state.globalUploadLimit,
-                onConfirm = { dl, ul ->
-                    viewModel.setGlobalLimits(dl, ul)
-                    dismiss()
-                },
-                onDismiss = dismiss,
-            )
-        ServerDialog.AltLimits ->
-            SpeedLimitsDialog(
-                title = "Alternate speed limits",
-                initialDownloadBytes = state.altDownloadLimit,
-                initialUploadBytes = state.altUploadLimit,
-                onConfirm = { dl, ul ->
-                    viewModel.setAltLimits(dl, ul)
-                    dismiss()
-                },
-                onDismiss = dismiss,
-            )
         ServerDialog.ServerPicker -> {
             val servers by viewModel.servers.collectAsStateWithLifecycle()
             val activeId by viewModel.activeServerId.collectAsStateWithLifecycle()
@@ -746,7 +720,7 @@ private fun SingleChoiceDialog(
  * bytes/s (0 = unlimited); the fields display and accept KiB/s, matching qBittorrent's own dialogs.
  */
 @Composable
-private fun SpeedLimitsDialog(
+internal fun SpeedLimitsDialog(
     title: String,
     initialDownloadBytes: Int,
     initialUploadBytes: Int,
