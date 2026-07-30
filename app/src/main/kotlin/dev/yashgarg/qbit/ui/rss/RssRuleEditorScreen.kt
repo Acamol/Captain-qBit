@@ -6,8 +6,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.KeyboardOptions
@@ -423,14 +426,16 @@ fun MatchingArticlesResultDialog(
             if (totalMatches == 0) {
                 Text("This rule hasn't matched any article currently cached in its affected feeds.")
             } else {
-                Column(
-                    Modifier.verticalScroll(rememberScrollState()),
+                // A loosely-filtered rule spanning many feeds can match hundreds of articles -
+                // LazyColumn only composes the rows actually scrolled into view.
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 400.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     nonEmpty.forEach { (feedUrl, titles) ->
                         val feedName = feeds.firstOrNull { it.url == feedUrl }?.name ?: feedUrl
-                        Text(feedName, style = MaterialTheme.typography.titleSmall)
-                        titles.forEach { title ->
+                        item { Text(feedName, style = MaterialTheme.typography.titleSmall) }
+                        items(titles) { title ->
                             Text("• $title", style = MaterialTheme.typography.bodyMedium)
                         }
                     }
