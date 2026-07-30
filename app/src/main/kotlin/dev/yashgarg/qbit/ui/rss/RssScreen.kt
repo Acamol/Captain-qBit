@@ -634,7 +634,7 @@ private fun FolderActionsDialog(
 
 /** A single global setting (not per-feed - qBittorrent has no per-feed refresh interval). */
 @Composable
-private fun RefreshIntervalDialog(
+internal fun RefreshIntervalDialog(
     currentMinutes: Int,
     onConfirm: (minutes: Int) -> Unit,
     onDismiss: () -> Unit,

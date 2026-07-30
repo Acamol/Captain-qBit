@@ -58,6 +58,7 @@ import dev.yashgarg.qbit.ui.backup.BackupDialogs
 import dev.yashgarg.qbit.ui.backup.BackupViewModel
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
+import dev.yashgarg.qbit.ui.rss.RefreshIntervalDialog
 import dev.yashgarg.qbit.ui.server.SpeedLimitsDialog
 import dev.yashgarg.qbit.worker.StatusWorker
 
@@ -98,6 +99,8 @@ fun SettingsScreen(
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val dynamicColors by viewModel.dynamicColors.collectAsStateWithLifecycle()
     val autoTmmEnabled by viewModel.autoTmmEnabled.collectAsStateWithLifecycle()
+    val rssRefreshIntervalMinutes by
+        viewModel.rssRefreshIntervalMinutes.collectAsStateWithLifecycle()
     val rssProcessingEnabled by viewModel.rssProcessingEnabled.collectAsStateWithLifecycle()
     val rssAutoDownloadingEnabled by
         viewModel.rssAutoDownloadingEnabled.collectAsStateWithLifecycle()
@@ -121,6 +124,7 @@ fun SettingsScreen(
     var showSyncIntervalDialog by remember { mutableStateOf(false) }
     var showGlobalLimitsDialog by remember { mutableStateOf(false) }
     var showAltLimitsDialog by remember { mutableStateOf(false) }
+    var showRssIntervalDialog by remember { mutableStateOf(false) }
     var pendingExport by remember { mutableStateOf<PendingExport?>(null) }
 
     // Re-checked on resume so coming back from the system notification settings screen (via the
@@ -267,6 +271,11 @@ fun SettingsScreen(
             ) {
                 viewModel.setAutoTmmEnabled(it)
             }
+            ClickableRow(
+                title = "RSS refresh interval",
+                subtitle = "$rssRefreshIntervalMinutes min",
+                onClick = { showRssIntervalDialog = true },
+            )
             SwitchRow(
                 "Fetch RSS feeds",
                 rssProcessingEnabled,
@@ -493,6 +502,16 @@ fun SettingsScreen(
             initialUploadBytes = altUploadLimit,
             onConfirm = { dl, ul -> viewModel.setAltLimits(dl, ul) },
             onDismiss = { showAltLimitsDialog = false },
+        )
+    }
+    if (showRssIntervalDialog) {
+        RefreshIntervalDialog(
+            currentMinutes = rssRefreshIntervalMinutes,
+            onConfirm = {
+                viewModel.setRssRefreshInterval(it)
+                showRssIntervalDialog = false
+            },
+            onDismiss = { showRssIntervalDialog = false },
         )
     }
 }

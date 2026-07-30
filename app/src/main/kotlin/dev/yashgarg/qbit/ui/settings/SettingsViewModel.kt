@@ -44,6 +44,25 @@ constructor(
         }
     }
 
+    private val _rssRefreshIntervalMinutes = MutableStateFlow(30)
+
+    /** How often qBittorrent itself re-fetches RSS feeds, in minutes (server-side, not local). */
+    val rssRefreshIntervalMinutes: StateFlow<Int> = _rssRefreshIntervalMinutes.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            repository.getRssRefreshInterval().onOk { _rssRefreshIntervalMinutes.value = it }
+        }
+    }
+
+    fun setRssRefreshInterval(minutes: Int) {
+        viewModelScope.launch {
+            repository.setRssRefreshInterval(minutes).onOk {
+                _rssRefreshIntervalMinutes.value = minutes
+            }
+        }
+    }
+
     private val _rssProcessingEnabled = MutableStateFlow(false)
 
     /** Whether qBittorrent fetches RSS feeds at all (server-side, not local). */
