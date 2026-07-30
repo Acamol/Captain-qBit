@@ -17,6 +17,7 @@ import dev.yashgarg.qbit.ui.common.StatusViewModel
 import dev.yashgarg.qbit.utils.TransformUtil
 import dev.yashgarg.qbit.utils.friendlyMessage
 import javax.inject.Inject
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -376,23 +377,48 @@ constructor(
             }
     }
 
+    /**
+     * waitIfMissing=true because the very first [observeMainData]-derived snapshot a fresh
+     * subscriber sees can be a few seconds stale (it's the shared sync's current cache, not a
+     * guaranteed-fresh fetch) - e.g. opening this screen from a notification tap right after the
+     * torrent was added/completed. With waitIfMissing=false, takeWhile bails out permanently on
+     * that first stale snapshot alone, leaving the screen stuck loading forever with no error. The
+     * timeout below is the backstop for a hash that's genuinely gone (or never existed).
+     */
     private suspend fun syncTorrentFlow() {
         val hash = requireNotNull(hash)
         val result = runSuspendCatching {
-            repository.observeTorrent(hash, false).collectLatest { info ->
-                val props = repository.getTorrentProperties(hash)
-                val trackers = repository.getTorrentTrackers(hash)
-                val errorReason = errorReasonFor(info)
+            coroutineScope {
+                var found = false
+                val timeoutJob = launch {
+                    delay(TORRENT_LOOKUP_TIMEOUT_MS)
+                    if (!found) {
+                        _uiState.update { state ->
+                            state.copy(
+                                loading = false,
+                                error =
+                                    Exception(getString(CommonR.string.status_torrent_not_found)),
+                            )
+                        }
+                    }
+                }
+                repository.observeTorrent(hash, waitIfMissing = true).collectLatest { info ->
+                    found = true
+                    timeoutJob.cancel()
+                    val props = repository.getTorrentProperties(hash)
+                    val trackers = repository.getTorrentTrackers(hash)
+                    val errorReason = errorReasonFor(info)
 
-                _uiState.update { state ->
-                    state.copy(
-                        loading = false,
-                        torrent = info,
-                        error = null,
-                        errorReason = errorReason,
-                        trackers = trackers.get() ?: emptyList(),
-                        torrentProperties = props.get(),
-                    )
+                    _uiState.update { state ->
+                        state.copy(
+                            loading = false,
+                            torrent = info,
+                            error = null,
+                            errorReason = errorReason,
+                            trackers = trackers.get() ?: emptyList(),
+                            torrentProperties = props.get(),
+                        )
+                    }
                 }
             }
         }
@@ -504,5 +530,9 @@ constructor(
                 state.copy(peersLoading = false, error = Exception(it.friendlyMessage()))
             }
         }
+    }
+
+    private companion object {
+        const val TORRENT_LOOKUP_TIMEOUT_MS = 20_000L
     }
 }
