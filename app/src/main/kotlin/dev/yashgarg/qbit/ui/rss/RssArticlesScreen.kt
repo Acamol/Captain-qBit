@@ -1,6 +1,7 @@
 package dev.yashgarg.qbit.ui.rss
 
 import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -35,9 +37,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -53,9 +55,12 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.yashgarg.qbit.ui.dialogs.AddTorrentScreen
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
+import dev.yashgarg.qbit.ui.server.ServerViewModel
 import dev.yashgarg.qbit.ui.server.TooltipIconButton
+import java.io.File
 import qbittorrent.models.RssArticle
 import qbittorrent.models.RssFeed
 import qbittorrent.models.RssFolder
@@ -63,13 +68,19 @@ import qbittorrent.models.RssItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RssArticlesScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewModel()) {
+fun RssArticlesScreen(
+    appNavigator: AppNavigator,
+    viewModel: RssViewModel = hiltViewModel(),
+    serverViewModel: ServerViewModel = hiltViewModel(),
+) {
     val itemPath = viewModel.itemPath.orEmpty()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val addTorrentPrefs by serverViewModel.addTorrentPrefs.collectAsStateWithLifecycle()
     val feed = remember(uiState.items, itemPath) { findFeed(uiState.items, itemPath) }
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
-    var confirmAddArticle by remember { mutableStateOf<RssArticle?>(null) }
+    var pendingAdd by remember { mutableStateOf<PendingAdd?>(null) }
+    var fetchingArticle by remember { mutableStateOf<RssArticle?>(null) }
     var searchOpen by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
 
@@ -133,83 +144,128 @@ fun RssArticlesScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hilt
                 if (feed == null) emptyList()
                 else if (query.isBlank()) feed.articles
                 else feed.articles.filter { it.title.contains(query.trim(), ignoreCase = true) }
-            when {
-                feed == null -> CircularProgressIndicator(Modifier.fillMaxSize().padding(48.dp))
-                feed.articles.isEmpty() ->
-                    Box(Modifier.fillMaxSize()) {
-                        Text(
-                            "No articles yet",
-                            Modifier.align(Alignment.Center)
-                                .fillMaxWidth()
-                                .padding(horizontal = 32.dp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
-                filtered.isEmpty() ->
-                    Box(Modifier.fillMaxSize()) {
-                        Text(
-                            "No matching articles",
-                            Modifier.align(Alignment.Center)
-                                .fillMaxWidth()
-                                .padding(horizontal = 32.dp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
-                else ->
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        items(filtered, key = { it.id }) { article ->
-                            val alreadyAdded =
-                                article.magnetHash()?.let { it in uiState.existingTorrentHashes } ==
-                                    true
-                            ArticleCard(
-                                article = article,
-                                alreadyAdded = alreadyAdded,
-                                onOpen = {
-                                    viewModel.markAsRead(itemPath, article.id)
-                                    if (article.link.isNotBlank()) {
-                                        context.startActivity(
-                                            Intent(Intent.ACTION_VIEW, article.link.toUri())
-                                        )
-                                    }
-                                },
-                                onAddTorrent =
-                                    if (!article.torrentURL.isNullOrBlank() && !alreadyAdded) {
-                                        { confirmAddArticle = article }
-                                    } else null,
+            PullToRefreshBox(
+                isRefreshing = uiState.refreshing,
+                onRefresh = { viewModel.refreshItem(itemPath) },
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                when {
+                    feed == null -> CircularProgressIndicator(Modifier.fillMaxSize().padding(48.dp))
+                    feed.articles.isEmpty() ->
+                        Box(Modifier.fillMaxSize()) {
+                            Text(
+                                "No articles yet",
+                                Modifier.align(Alignment.Center)
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 32.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
                             )
                         }
-                    }
+                    filtered.isEmpty() ->
+                        Box(Modifier.fillMaxSize()) {
+                            Text(
+                                "No matching articles",
+                                Modifier.align(Alignment.Center)
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 32.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    else ->
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            items(filtered, key = { it.id }) { article ->
+                                val alreadyAdded =
+                                    article.magnetHash()?.let {
+                                        it in uiState.existingTorrentHashes
+                                    } == true
+                                ArticleCard(
+                                    article = article,
+                                    alreadyAdded = alreadyAdded,
+                                    onOpen = {
+                                        viewModel.markAsRead(itemPath, article.id)
+                                        if (article.link.isNotBlank()) {
+                                            context.startActivity(
+                                                Intent(Intent.ACTION_VIEW, article.link.toUri())
+                                            )
+                                        }
+                                    },
+                                    onAddTorrent =
+                                        if (!article.torrentURL.isNullOrBlank() && !alreadyAdded) {
+                                            {
+                                                val url = requireNotNull(article.torrentURL)
+                                                if (url.startsWith("magnet:")) {
+                                                    pendingAdd =
+                                                        PendingAdd(
+                                                            prefillUrl = url,
+                                                            prefillFileUri = null,
+                                                        )
+                                                } else {
+                                                    fetchingArticle = article
+                                                    viewModel.fetchTorrentBytes(url) { bytes ->
+                                                        fetchingArticle = null
+                                                        if (bytes != null) {
+                                                            val file =
+                                                                File.createTempFile(
+                                                                    "rss-",
+                                                                    ".torrent",
+                                                                    context.cacheDir,
+                                                                )
+                                                            file.writeBytes(bytes)
+                                                            pendingAdd =
+                                                                PendingAdd(
+                                                                    prefillUrl = null,
+                                                                    prefillFileUri =
+                                                                        Uri.fromFile(file)
+                                                                            .toString(),
+                                                                )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        } else null,
+                                )
+                            }
+                        }
+                }
             }
         }
     }
 
-    confirmAddArticle?.let { article ->
+    if (fetchingArticle != null) {
         AlertDialog(
-            onDismissRequest = { confirmAddArticle = null },
-            title = { Text("Add torrent?") },
-            text = { Text(article.title) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.addTorrentFromArticle(requireNotNull(article.torrentURL))
-                        confirmAddArticle = null
-                    }
-                ) {
-                    Text("Add")
+            onDismissRequest = {},
+            confirmButton = {},
+            text = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(Modifier.size(20.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Text("Fetching torrent file…")
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmAddArticle = null }) { Text("Cancel") }
             },
         )
     }
+
+    pendingAdd?.let { pending ->
+        AddTorrentScreen(
+            viewModel = serverViewModel,
+            availableCategories = uiState.availableCategories,
+            defaultAutoTmm = addTorrentPrefs.addTorrentAutoTmm,
+            defaultPaused = addTorrentPrefs.addTorrentPaused,
+            defaultCategory = addTorrentPrefs.addTorrentCategory,
+            prefillUrl = pending.prefillUrl,
+            prefillFileUri = pending.prefillFileUri,
+            onDismiss = { pendingAdd = null },
+        )
+    }
 }
+
+private data class PendingAdd(val prefillUrl: String?, val prefillFileUri: String?)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

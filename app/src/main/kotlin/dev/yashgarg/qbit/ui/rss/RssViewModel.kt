@@ -5,15 +5,19 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.coroutines.runSuspendCatching
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.QbitRepository
+import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.ui.common.StatusViewModel
 import dev.yashgarg.qbit.ui.navigation.Routes
 import dev.yashgarg.qbit.utils.friendlyMessage
+import io.ktor.client.call.body
+import io.ktor.client.request.get
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -269,13 +273,25 @@ constructor(
         }
     }
 
-    /** Adds a torrent straight from an article's enclosure link, using server defaults. */
-    fun addTorrentFromArticle(torrentUrl: String) {
-        launchStatus(
-            successMessage = getString(CommonR.string.status_rss_torrent_added),
-            failureMessage = getString(CommonR.string.status_rss_add_torrent_failure),
-        ) {
-            repository.addTorrentUrl(torrentUrl)
+    /**
+     * Fetches an article's `.torrent`-file link ourselves, rather than handing the URL to the
+     * qBittorrent server to fetch - so the add screen's Files tab can preview it before adding, and
+     * so a tracker's single-use download link is only ever fetched once (the add itself then
+     * uploads these same bytes instead of re-requesting the URL). [onResult] gets the bytes, or
+     * null on failure (a status toast is already emitted in that case).
+     */
+    fun fetchTorrentBytes(url: String, onResult: (ByteArray?) -> Unit) {
+        viewModelScope.launch {
+            runSuspendCatching { ClientManager.httpClient().use { it.get(url).body<ByteArray>() } }
+                .onOk(onResult)
+                .onErr {
+                    emitStatus(
+                        it.friendlyMessage(
+                            getString(CommonR.string.status_rss_fetch_torrent_failure)
+                        )
+                    )
+                    onResult(null)
+                }
         }
     }
 }
