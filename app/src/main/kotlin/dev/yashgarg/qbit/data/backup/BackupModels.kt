@@ -46,6 +46,10 @@ fun ServerPreferences.overlayGroup(group: PrefGroup, src: ServerPreferences): Se
                 statusNotification = src.statusNotification,
                 notifyOnComplete = src.notifyOnComplete,
                 notifyOnChecked = src.notifyOnChecked,
+                notifyOnNewRssArticles = src.notifyOnNewRssArticles,
+                statusRefreshIntervalMs = src.statusRefreshIntervalMs,
+                eventPollIntervalMs = src.eventPollIntervalMs,
+                syncIntervalMs = src.syncIntervalMs,
             )
         // Filters also covers the per-server sort/filter view state and the add-torrent defaults —
         // the rest of the torrent-list state.
