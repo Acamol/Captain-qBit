@@ -63,20 +63,25 @@ constructor(
         }
         // Categories/tags for the rule editor's pickers, and already-added torrent hashes for the
         // articles screen's "already added" indicator - same source TorrentDetailsViewModel uses.
+        // Wrapped in syncWhileForeground since this ViewModel (like the main list's) outlives
+        // normal navigation - without it, this would keep polling the server in the background
+        // indefinitely once the RSS screen had been opened even once.
         viewModelScope.launch {
-            repository
-                .observeMainData()
-                .catch { /* non-fatal, ignore */ }
-                .collectLatest { mainData ->
-                    _uiState.update {
-                        it.copy(
-                            availableCategories = mainData.categories.keys.sorted(),
-                            availableTags = mainData.tags.sorted(),
-                            existingTorrentHashes =
-                                mainData.torrents.keys.map(String::lowercase).toSet(),
-                        )
+            syncWhileForeground {
+                repository
+                    .observeMainData()
+                    .catch { /* non-fatal, ignore */ }
+                    .collectLatest { mainData ->
+                        _uiState.update {
+                            it.copy(
+                                availableCategories = mainData.categories.keys.sorted(),
+                                availableTags = mainData.tags.sorted(),
+                                existingTorrentHashes =
+                                    mainData.torrents.keys.map(String::lowercase).toSet(),
+                            )
+                        }
                     }
-                }
+            }
         }
     }
 
