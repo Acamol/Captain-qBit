@@ -9,11 +9,11 @@
     <string name="restore_from_backup">שיחזור מגיבוי</string>
     <string name="error">משהו השתבש</string>
     <string name="no_queue">התור ריק</string>
-    <string name="invalid_username">יש להזין שם משתמש</string>
-    <string name="invalid_password">יש להזין סיסמה</string>
-    <string name="invalid_type">יש לבחור ערך</string>
+    <string name="invalid_username">נא להזין שם משתמש</string>
+    <string name="invalid_password">נא להזין סיסמה</string>
+    <string name="invalid_type">נא לבחור ערך</string>
     <string name="invalid_url">נא להזין כתובת מארח תקינה</string>
     <string name="invalid_port">נא להזין מספר פורט תקין</string>
-    <string name="invalid_name">יש להזין שם</string>
+    <string name="invalid_name">נא להזין שם</string>
     <string name="about">אודות</string>
 </resources>
