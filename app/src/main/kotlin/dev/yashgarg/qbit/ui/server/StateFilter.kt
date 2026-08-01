@@ -1,26 +1,28 @@
 package dev.yashgarg.qbit.ui.server
 
 import android.net.Uri
+import androidx.annotation.StringRes
+import dev.yashgarg.qbit.common.R
 import qbittorrent.models.Torrent
 
 // The Status filters, matching qBittorrent's own sidebar set and order, plus a "Queued" filter for
 // the torrents that currently hold a queue position.
-enum class StateFilter(val label: String) {
-    ALL("All"),
-    DOWNLOADING("Downloading"),
-    QUEUED("Queued"),
-    SEEDING("Seeding"),
-    COMPLETED("Completed"),
-    RUNNING("Running"),
-    STOPPED("Stopped"),
-    ACTIVE("Active"),
-    INACTIVE("Inactive"),
-    STALLED("Stalled"),
-    STALLED_UPLOADING("Stalled uploading"),
-    STALLED_DOWNLOADING("Stalled downloading"),
-    CHECKING("Checking"),
-    MOVING("Moving"),
-    ERRORED("Errored"),
+enum class StateFilter(@StringRes val labelRes: Int) {
+    ALL(R.string.all_label),
+    DOWNLOADING(R.string.filter_downloading),
+    QUEUED(R.string.filter_queued),
+    SEEDING(R.string.seeding),
+    COMPLETED(R.string.completed),
+    RUNNING(R.string.filter_running),
+    STOPPED(R.string.stopped),
+    ACTIVE(R.string.filter_active),
+    INACTIVE(R.string.filter_inactive),
+    STALLED(R.string.stalled),
+    STALLED_UPLOADING(R.string.filter_stalled_uploading),
+    STALLED_DOWNLOADING(R.string.filter_stalled_downloading),
+    CHECKING(R.string.state_checking),
+    MOVING(R.string.state_moving),
+    ERRORED(R.string.state_errored),
 }
 
 private val downloadingStates =

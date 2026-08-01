@@ -139,21 +139,33 @@ fun FilesTab(
         val copy = rememberCopyToClipboard()
         val fullPath =
             state.torrentProperties?.savePath?.let { joinPath(it, item.path) } ?: item.path
+        val copiedToClipboardMessage = stringResource(CommonR.string.clipboard_copied)
         AlertDialog(
             onDismissRequest = { pathItem = null },
-            title = { Text(if (item.item == null) "Folder path" else "File path") },
+            title = {
+                Text(
+                    stringResource(
+                        if (item.item == null) CommonR.string.folder_path_title
+                        else CommonR.string.file_path_title
+                    )
+                )
+            },
             text = { Text(fullPath) },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        copy("content-path", fullPath, "Copied to clipboard")
+                        copy("content-path", fullPath, copiedToClipboardMessage)
                         pathItem = null
                     }
                 ) {
-                    Text("Copy")
+                    Text(stringResource(CommonR.string.copy_action))
                 }
             },
-            dismissButton = { TextButton(onClick = { pathItem = null }) { Text("Close") } },
+            dismissButton = {
+                TextButton(onClick = { pathItem = null }) {
+                    Text(stringResource(CommonR.string.close_action))
+                }
+            },
         )
     }
 
@@ -161,7 +173,14 @@ fun FilesTab(
         var value by remember(item) { mutableStateOf(item.name) }
         AlertDialog(
             onDismissRequest = { renameItem = null },
-            title = { Text(if (item.item == null) "Rename folder" else "Rename file") },
+            title = {
+                Text(
+                    stringResource(
+                        if (item.item == null) CommonR.string.rename_folder_title
+                        else CommonR.string.rename_file_title
+                    )
+                )
+            },
             text = {
                 OutlinedTextField(
                     value = value,
@@ -206,7 +225,7 @@ fun FilesListView(
     if (state.contentLoading) {
         CenterLinearLoading(modifier, R.color.md_theme_dark_seed)
     } else if (state.contentTree.isEmpty()) {
-        Center(modifier) { Text("No content found") }
+        Center(modifier) { Text(stringResource(CommonR.string.no_content_found)) }
     } else {
         TorrentContentTreeView(modifier, state.contentTree, onNodeLongClick, onToggleDownload)
     }

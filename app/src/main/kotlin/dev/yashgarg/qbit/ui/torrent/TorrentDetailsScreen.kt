@@ -72,10 +72,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.yashgarg.qbit.common.R
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.ui.server.isPaused
@@ -86,23 +88,30 @@ import dev.yashgarg.qbit.ui.torrent.tabs.TrackersTab
 import dev.yashgarg.qbit.utils.rememberCopyToClipboard
 import kotlinx.coroutines.launch
 
-private val TAB_TITLES = listOf("General", "Files", "Trackers", "Peers")
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TorrentDetailsScreen(
     appNavigator: AppNavigator,
     viewModel: TorrentDetailsViewModel = hiltViewModel(),
 ) {
+    val tabTitles =
+        listOf(
+            stringResource(R.string.tab_general),
+            stringResource(R.string.tab_files),
+            stringResource(R.string.tab_trackers),
+            stringResource(R.string.peers),
+        )
     val copy = rememberCopyToClipboard()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val torrent = state.torrent
     val snackbarHostState = remember { SnackbarHostState() }
-    val pagerState = rememberPagerState(pageCount = { TAB_TITLES.size })
+    val pagerState = rememberPagerState(pageCount = { tabTitles.size })
     val scope = rememberCoroutineScope()
 
     var menuOpen by remember { mutableStateOf(false) }
     var dialog by remember { mutableStateOf<DetailDialog?>(null) }
+    val copiedNameMessage = stringResource(R.string.status_copied_name)
+    val copiedToClipboardMessage = stringResource(R.string.clipboard_copied)
 
     LaunchedEffect(Unit) { viewModel.status.collect { snackbarHostState.showSnackbar(it) } }
     LaunchedEffect(Unit) { viewModel.removed.collect { appNavigator.navigate(NavCommand.Back) } }
@@ -120,7 +129,7 @@ fun TorrentDetailsScreen(
                             Modifier.basicMarquee().pointerInput(torrent?.name) {
                                 detectTapGestures(
                                     onLongPress = {
-                                        torrent?.let { copy("name", it.name, "Copied name") }
+                                        torrent?.let { copy("name", it.name, copiedNameMessage) }
                                     }
                                 )
                             },
@@ -128,13 +137,20 @@ fun TorrentDetailsScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = { appNavigator.navigate(NavCommand.Back) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.content_description_back),
+                        )
                     }
                 },
                 actions = {
                     if (torrent != null) {
                         IconButton(onClick = { menuOpen = true }) {
-                            Icon(Icons.Filled.MoreVert, contentDescription = "More")
+                            Icon(
+                                Icons.Filled.MoreVert,
+                                contentDescription =
+                                    stringResource(R.string.content_description_more),
+                            )
                         }
                         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                             fun act(block: () -> Unit) {
@@ -145,7 +161,7 @@ fun TorrentDetailsScreen(
                             // applies to the torrent's current state.
                             if (torrent.isPaused()) {
                                 DropdownMenuItem(
-                                    text = { Text("Resume") },
+                                    text = { Text(stringResource(R.string.resume)) },
                                     leadingIcon = { Icon(Icons.Filled.PlayArrow, null) },
                                     onClick = {
                                         act { viewModel.toggleTorrent(false, torrent.hash) }
@@ -153,7 +169,7 @@ fun TorrentDetailsScreen(
                                 )
                             } else {
                                 DropdownMenuItem(
-                                    text = { Text("Pause") },
+                                    text = { Text(stringResource(R.string.pause_action)) },
                                     leadingIcon = { Icon(Icons.Filled.Pause, null) },
                                     onClick = {
                                         act { viewModel.toggleTorrent(true, torrent.hash) }
@@ -161,7 +177,7 @@ fun TorrentDetailsScreen(
                                 )
                             }
                             DropdownMenuItem(
-                                text = { Text("Delete") },
+                                text = { Text(stringResource(R.string.delete)) },
                                 leadingIcon = { Icon(Icons.Filled.Delete, null) },
                                 onClick = { act { dialog = DetailDialog.Delete } },
                             )
@@ -169,31 +185,31 @@ fun TorrentDetailsScreen(
                             // rare case where one isn't available yet (e.g. metadata not fetched).
                             if (torrent.magnetUri.isNotBlank()) {
                                 DropdownMenuItem(
-                                    text = { Text("Copy magnet link") },
+                                    text = { Text(stringResource(R.string.copy_magnet_link)) },
                                     leadingIcon = { Icon(Icons.Filled.Link, null) },
                                     onClick = {
                                         act {
                                             copy(
                                                 "magnet",
                                                 torrent.magnetUri,
-                                                "Copied to clipboard",
+                                                copiedToClipboardMessage,
                                             )
                                         }
                                     },
                                 )
                             }
                             DropdownMenuItem(
-                                text = { Text("Force recheck") },
+                                text = { Text(stringResource(R.string.force_recheck)) },
                                 leadingIcon = { Icon(Icons.Filled.FindInPage, null) },
                                 onClick = { act { viewModel.forceRecheck(torrent.hash) } },
                             )
                             DropdownMenuItem(
-                                text = { Text("Force reannounce") },
+                                text = { Text(stringResource(R.string.force_reannounce)) },
                                 leadingIcon = { Icon(Icons.Filled.Campaign, null) },
                                 onClick = { act { viewModel.forceReannounce(torrent.hash) } },
                             )
                             DropdownMenuItem(
-                                text = { Text("Rename") },
+                                text = { Text(stringResource(R.string.rename)) },
                                 leadingIcon = { Icon(Icons.Filled.DriveFileRenameOutline, null) },
                                 onClick = { act { dialog = DetailDialog.Rename } },
                             )
@@ -201,23 +217,23 @@ fun TorrentDetailsScreen(
                             // rejects the priority moves (409) otherwise.
                             if (state.queueingEnabled) {
                                 DropdownMenuItem(
-                                    text = { Text("Queue priority") },
+                                    text = { Text(stringResource(R.string.queue_priority)) },
                                     leadingIcon = { Icon(Icons.Filled.LowPriority, null) },
                                     onClick = { act { dialog = DetailDialog.QueuePriority } },
                                 )
                             }
                             DropdownMenuItem(
-                                text = { Text("Set category") },
+                                text = { Text(stringResource(R.string.set_category)) },
                                 leadingIcon = { Icon(Icons.Filled.Category, null) },
                                 onClick = { act { dialog = DetailDialog.Category } },
                             )
                             DropdownMenuItem(
-                                text = { Text("Set tags") },
+                                text = { Text(stringResource(R.string.set_tags)) },
                                 leadingIcon = { Icon(Icons.AutoMirrored.Filled.Label, null) },
                                 onClick = { act { dialog = DetailDialog.Tags } },
                             )
                             DropdownMenuItem(
-                                text = { Text("Automatic management") },
+                                text = { Text(stringResource(R.string.automatic_management)) },
                                 leadingIcon = { Icon(Icons.Filled.Autorenew, null) },
                                 trailingIcon = {
                                     Checkbox(checked = torrent.autoTmm, onCheckedChange = null)
@@ -227,27 +243,27 @@ fun TorrentDetailsScreen(
                                 },
                             )
                             DropdownMenuItem(
-                                text = { Text("Set save path…") },
+                                text = { Text(stringResource(R.string.menu_set_save_path)) },
                                 leadingIcon = { Icon(Icons.Filled.Folder, null) },
                                 onClick = { act { dialog = DetailDialog.SavePath } },
                             )
                             DropdownMenuItem(
-                                text = { Text("Download limit…") },
+                                text = { Text(stringResource(R.string.menu_download_limit)) },
                                 leadingIcon = { Icon(Icons.Filled.Download, null) },
                                 onClick = { act { dialog = DetailDialog.DownloadLimit } },
                             )
                             DropdownMenuItem(
-                                text = { Text("Upload limit…") },
+                                text = { Text(stringResource(R.string.menu_upload_limit)) },
                                 leadingIcon = { Icon(Icons.Filled.Upload, null) },
                                 onClick = { act { dialog = DetailDialog.UploadLimit } },
                             )
                             DropdownMenuItem(
-                                text = { Text("Share limits…") },
+                                text = { Text(stringResource(R.string.menu_share_limits)) },
                                 leadingIcon = { Icon(Icons.Filled.Share, null) },
                                 onClick = { act { dialog = DetailDialog.ShareLimits } },
                             )
                             DropdownMenuItem(
-                                text = { Text("Force start") },
+                                text = { Text(stringResource(R.string.force_start)) },
                                 leadingIcon = { Icon(Icons.Filled.Bolt, null) },
                                 trailingIcon = {
                                     Checkbox(checked = torrent.forceStart, onCheckedChange = null)
@@ -257,7 +273,7 @@ fun TorrentDetailsScreen(
                                 },
                             )
                             DropdownMenuItem(
-                                text = { Text("Sequential download") },
+                                text = { Text(stringResource(R.string.sequential_download)) },
                                 leadingIcon = { Icon(Icons.Filled.FormatListNumbered, null) },
                                 trailingIcon = {
                                     Checkbox(
@@ -268,7 +284,9 @@ fun TorrentDetailsScreen(
                                 onClick = { act { viewModel.toggleSequentialDownload() } },
                             )
                             DropdownMenuItem(
-                                text = { Text("Download first and last pieces") },
+                                text = {
+                                    Text(stringResource(R.string.download_first_last_pieces))
+                                },
                                 leadingIcon = { Icon(Icons.Filled.Flag, null) },
                                 trailingIcon = {
                                     Checkbox(
@@ -279,7 +297,7 @@ fun TorrentDetailsScreen(
                                 onClick = { act { viewModel.toggleFirstLastPriority() } },
                             )
                             DropdownMenuItem(
-                                text = { Text("Super seeding") },
+                                text = { Text(stringResource(R.string.super_seeding)) },
                                 leadingIcon = { Icon(Icons.Filled.CloudUpload, null) },
                                 trailingIcon = {
                                     Checkbox(checked = torrent.superSeeding, onCheckedChange = null)
@@ -304,7 +322,7 @@ fun TorrentDetailsScreen(
                 )
             }
             PrimaryTabRow(selectedTabIndex = pagerState.currentPage) {
-                TAB_TITLES.forEachIndexed { index, title ->
+                tabTitles.forEachIndexed { index, title ->
                     Tab(
                         selected = pagerState.currentPage == index,
                         onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
@@ -350,7 +368,7 @@ fun TorrentDetailsScreen(
         DetailDialog.Rename ->
             if (torrent != null) {
                 TextInputDialog(
-                    title = "Rename torrent",
+                    title = stringResource(R.string.rename_torrent_title),
                     initial = torrent.name,
                     onConfirm = {
                         viewModel.renameTorrent(it, torrent.hash)
@@ -372,7 +390,7 @@ fun TorrentDetailsScreen(
         DetailDialog.SavePath ->
             if (torrent != null) {
                 TextInputDialog(
-                    title = "Save path",
+                    title = stringResource(R.string.save_path_hint),
                     initial = state.torrentProperties?.savePath ?: torrent.savePath,
                     onConfirm = {
                         viewModel.setSavePath(it)
@@ -384,7 +402,7 @@ fun TorrentDetailsScreen(
         DetailDialog.DownloadLimit ->
             if (torrent != null) {
                 SpeedLimitDialog(
-                    title = "Download limit",
+                    title = stringResource(R.string.download_limit_title),
                     currentBytesPerSec = torrent.dlLimit,
                     onConfirm = {
                         viewModel.setDownloadLimit(it)
@@ -396,7 +414,7 @@ fun TorrentDetailsScreen(
         DetailDialog.UploadLimit ->
             if (torrent != null) {
                 SpeedLimitDialog(
-                    title = "Upload limit",
+                    title = stringResource(R.string.upload_limit_title),
                     currentBytesPerSec = torrent.uploadLimit,
                     onConfirm = {
                         viewModel.setUploadLimit(it)
@@ -433,7 +451,7 @@ fun TorrentDetailsScreen(
             }
         DetailDialog.CreateCategory ->
             TextInputDialog(
-                title = "New category",
+                title = stringResource(R.string.new_category_title),
                 initial = "",
                 onConfirm = {
                     if (it.isNotBlank()) viewModel.createCategory(it)
@@ -456,7 +474,7 @@ fun TorrentDetailsScreen(
             }
         DetailDialog.CreateTag ->
             TextInputDialog(
-                title = "New tag",
+                title = stringResource(R.string.new_tag_title),
                 initial = "",
                 onConfirm = {
                     if (it.isNotBlank()) viewModel.setTags(listOf(it), emptyList())
@@ -508,8 +526,8 @@ private fun SpeedLimitDialog(
                 value = value,
                 onValueChange = { new -> value = new.filter { it.isDigit() } },
                 singleLine = true,
-                label = { Text("KiB/s") },
-                supportingText = { Text("Leave empty for unlimited") },
+                label = { Text(stringResource(R.string.unit_kib_per_sec)) },
+                supportingText = { Text(stringResource(R.string.leave_empty_for_unlimited)) },
                 keyboardOptions =
                     KeyboardOptions(
                         keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
@@ -525,10 +543,12 @@ private fun SpeedLimitDialog(
                     onDismiss()
                 }
             ) {
-                Text("OK")
+                Text(stringResource(R.string.ok))
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        },
     )
 }
 
@@ -537,7 +557,7 @@ private fun DeleteDialog(onConfirm: (Boolean) -> Unit, onDismiss: () -> Unit) {
     var deleteFiles by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Delete torrent?") },
+        title = { Text(stringResource(R.string.confirm_delete_torrent_title)) },
         text = {
             Row(
                 modifier = Modifier.fillMaxWidth().clickable { deleteFiles = !deleteFiles },
@@ -545,11 +565,17 @@ private fun DeleteDialog(onConfirm: (Boolean) -> Unit, onDismiss: () -> Unit) {
             ) {
                 Checkbox(checked = deleteFiles, onCheckedChange = { deleteFiles = it })
                 Spacer(Modifier.size(8.dp))
-                Text("Also delete files on disk")
+                Text(stringResource(R.string.also_delete_files_on_disk))
             }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(deleteFiles) }) { Text("Delete") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(deleteFiles) }) {
+                Text(stringResource(R.string.delete))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        },
     )
 }
 
@@ -569,17 +595,31 @@ private fun QueuePriorityDialog(onSelect: (QueueAction) -> Unit, onDismiss: () -
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Queue priority") },
+        title = { Text(stringResource(R.string.queue_priority)) },
         text = {
             Column {
-                Option(Icons.Filled.VerticalAlignTop, "Move to top", QueueAction.TOP)
-                Option(Icons.Filled.ArrowUpward, "Move up", QueueAction.UP)
-                Option(Icons.Filled.ArrowDownward, "Move down", QueueAction.DOWN)
-                Option(Icons.Filled.VerticalAlignBottom, "Move to bottom", QueueAction.BOTTOM)
+                Option(
+                    Icons.Filled.VerticalAlignTop,
+                    stringResource(R.string.move_to_top),
+                    QueueAction.TOP,
+                )
+                Option(Icons.Filled.ArrowUpward, stringResource(R.string.move_up), QueueAction.UP)
+                Option(
+                    Icons.Filled.ArrowDownward,
+                    stringResource(R.string.move_down),
+                    QueueAction.DOWN,
+                )
+                Option(
+                    Icons.Filled.VerticalAlignBottom,
+                    stringResource(R.string.move_to_bottom),
+                    QueueAction.BOTTOM,
+                )
             }
         },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        },
     )
 }
 
@@ -629,10 +669,13 @@ private fun ShareLimitDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Share limits") },
+        title = { Text(stringResource(R.string.share_limits_title)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                Text("Ratio limit", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    stringResource(R.string.ratio_limit_label),
+                    style = MaterialTheme.typography.titleSmall,
+                )
                 LimitMode.entries.forEach { mode ->
                     LimitModeOption(mode, ratioMode == mode) { ratioMode = mode }
                 }
@@ -643,7 +686,7 @@ private fun ShareLimitDialog(
                             ratioValue = new.filter { it.isDigit() || it == '.' }
                         },
                         singleLine = true,
-                        label = { Text("Ratio") },
+                        label = { Text(stringResource(R.string.ratio)) },
                         keyboardOptions =
                             KeyboardOptions(
                                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
@@ -651,7 +694,10 @@ private fun ShareLimitDialog(
                     )
                 }
                 Spacer(Modifier.size(16.dp))
-                Text("Seeding time limit", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    stringResource(R.string.seeding_time_limit_label),
+                    style = MaterialTheme.typography.titleSmall,
+                )
                 LimitMode.entries.forEach { mode ->
                     LimitModeOption(mode, seedMode == mode) { seedMode = mode }
                 }
@@ -660,7 +706,7 @@ private fun ShareLimitDialog(
                         value = seedValue,
                         onValueChange = { new -> seedValue = new.filter { it.isDigit() } },
                         singleLine = true,
-                        label = { Text("Minutes") },
+                        label = { Text(stringResource(R.string.minutes_label)) },
                         keyboardOptions =
                             KeyboardOptions(
                                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
@@ -668,7 +714,10 @@ private fun ShareLimitDialog(
                     )
                 }
                 Spacer(Modifier.size(16.dp))
-                Text("Inactive seeding time limit", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    stringResource(R.string.inactive_seeding_time_limit_label),
+                    style = MaterialTheme.typography.titleSmall,
+                )
                 LimitMode.entries.forEach { mode ->
                     LimitModeOption(mode, inactiveMode == mode) { inactiveMode = mode }
                 }
@@ -677,7 +726,7 @@ private fun ShareLimitDialog(
                         value = inactiveValue,
                         onValueChange = { new -> inactiveValue = new.filter { it.isDigit() } },
                         singleLine = true,
-                        label = { Text("Minutes") },
+                        label = { Text(stringResource(R.string.minutes_label)) },
                         keyboardOptions =
                             KeyboardOptions(
                                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
@@ -708,10 +757,12 @@ private fun ShareLimitDialog(
                     )
                 }
             ) {
-                Text("OK")
+                Text(stringResource(R.string.ok))
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        },
     )
 }
 
@@ -723,11 +774,13 @@ private fun LimitModeOption(mode: LimitMode, selected: Boolean, onSelect: () -> 
     ) {
         RadioButton(selected = selected, onClick = onSelect)
         Text(
-            when (mode) {
-                LimitMode.GLOBAL -> "Use global limit"
-                LimitMode.UNLIMITED -> "Unlimited"
-                LimitMode.CUSTOM -> "Custom"
-            }
+            stringResource(
+                when (mode) {
+                    LimitMode.GLOBAL -> R.string.use_global_limit
+                    LimitMode.UNLIMITED -> R.string.unlimited
+                    LimitMode.CUSTOM -> R.string.custom_label
+                }
+            )
         )
     }
 }
@@ -746,8 +799,12 @@ private fun TextInputDialog(
         text = {
             OutlinedTextField(value = value, onValueChange = { value = it }, singleLine = true)
         },
-        confirmButton = { TextButton(onClick = { onConfirm(value) }) { Text("OK") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(value) }) { Text(stringResource(R.string.ok)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        },
     )
 }
 
@@ -760,9 +817,10 @@ private fun CategoryDialog(
     onDismiss: () -> Unit,
 ) {
     val options = listOf("") + categories
+    val noneLabel = stringResource(R.string.none_option)
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Set category") },
+        title = { Text(stringResource(R.string.set_category)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 options.forEach { option ->
@@ -778,13 +836,17 @@ private fun CategoryDialog(
                     ) {
                         RadioButton(selected = option == current, onClick = { onSelect(option) })
                         Spacer(Modifier.size(12.dp))
-                        Text(option.ifBlank { "None" })
+                        Text(option.ifBlank { noneLabel })
                     }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onNew) { Text("New…") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = {
+            TextButton(onClick = onNew) { Text(stringResource(R.string.new_ellipsis)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        },
     )
 }
 
@@ -807,7 +869,7 @@ private fun TagsDialog(
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Set tags") },
+        title = { Text(stringResource(R.string.set_tags)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 tags.forEach { tag ->
@@ -834,9 +896,11 @@ private fun TagsDialog(
                     onApply(toAdd, toRemove)
                 }
             ) {
-                Text("OK")
+                Text(stringResource(R.string.ok))
             }
         },
-        dismissButton = { TextButton(onClick = onNew) { Text("New tag…") } },
+        dismissButton = {
+            TextButton(onClick = onNew) { Text(stringResource(R.string.new_tag_ellipsis)) }
+        },
     )
 }

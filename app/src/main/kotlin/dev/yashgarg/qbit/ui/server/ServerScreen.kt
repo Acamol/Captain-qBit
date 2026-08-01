@@ -111,6 +111,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val keyboard = LocalSoftwareKeyboardController.current
+    val torrentAlreadyExistsMessage = stringResource(CommonR.string.torrent_already_exists)
 
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val torrents by viewModel.sortedTorrents.collectAsStateWithLifecycle()
@@ -191,7 +192,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                     }
             val existing = viewModel.uiState.value.data?.torrents?.keys.orEmpty()
             if (incomingHash != null && existing.contains(incomingHash)) {
-                Toast.makeText(context, "Torrent already exists", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, torrentAlreadyExistsMessage, Toast.LENGTH_SHORT).show()
                 return@launch
             }
             if (isLink) openTorrentDialog(prefillUrl = uri)
@@ -275,47 +276,47 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                     modifier = Modifier.imePadding(),
                     actions = {
                         TooltipIconButton(
-                            label = "Filters",
+                            label = stringResource(CommonR.string.filters_label),
                             icon = Icons.Filled.Menu,
                             onClick = { scope.launch { drawerState.open() } },
                         )
                         if (hasSelection) {
                             TooltipIconButton(
-                                label = "Pause",
+                                label = stringResource(CommonR.string.pause_action),
                                 icon = Icons.Filled.Pause,
                                 onClick = {
                                     viewModel.toggleTorrentsState(true, selected.toList())
                                 },
                             )
                             TooltipIconButton(
-                                label = "Resume",
+                                label = stringResource(CommonR.string.resume),
                                 icon = Icons.Filled.PlayArrow,
                                 onClick = {
                                     viewModel.toggleTorrentsState(false, selected.toList())
                                 },
                             )
                             TooltipIconButton(
-                                label = "Category",
+                                label = stringResource(CommonR.string.category),
                                 icon = Icons.Filled.Category,
                                 onClick = {
                                     serverDialog = ServerDialog.BulkCategory(selected.toList())
                                 },
                             )
                             TooltipIconButton(
-                                label = "Tags",
+                                label = stringResource(CommonR.string.tags_section_title),
                                 icon = Icons.AutoMirrored.Filled.Label,
                                 onClick = {
                                     serverDialog = ServerDialog.BulkTags(selected.toList())
                                 },
                             )
                             TooltipIconButton(
-                                label = "Delete",
+                                label = stringResource(CommonR.string.delete),
                                 icon = Icons.Filled.Delete,
                                 onClick = { deleteTargets = selected.toList() },
                             )
                         } else {
                             TooltipIconButton(
-                                label = "Search",
+                                label = stringResource(CommonR.string.content_description_search),
                                 icon = Icons.Filled.Search,
                                 onClick = { searchOpen = !searchOpen },
                             )
@@ -346,7 +347,12 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                 val serverState = state.data?.serverState
                 if (!state.hasError && !state.dataLoading && serverState != null) {
                     Text(
-                        "↓ ${serverState.dlInfoSpeed.toHumanReadable()}/s  ↑ ${serverState.upInfoSpeed.toHumanReadable()}/s   ${serverState.freeSpace.toHumanReadable()} free",
+                        stringResource(
+                            CommonR.string.status_speed_free_space,
+                            serverState.dlInfoSpeed.toHumanReadable(),
+                            serverState.upInfoSpeed.toHumanReadable(),
+                            serverState.freeSpace.toHumanReadable(),
+                        ),
                         style = MaterialTheme.typography.labelSmall,
                         modifier =
                             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp),
@@ -357,7 +363,9 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                     TextField(
                         value = state.searchQuery,
                         onValueChange = viewModel::setSearchQuery,
-                        placeholder = { Text("Search") },
+                        placeholder = {
+                            Text(stringResource(CommonR.string.content_description_search))
+                        },
                         singleLine = true,
                         leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                         trailingIcon = {
@@ -367,7 +375,13 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                                     viewModel.setSearchQuery("")
                                 }
                             ) {
-                                Icon(Icons.Filled.Close, contentDescription = "Close search")
+                                Icon(
+                                    Icons.Filled.Close,
+                                    contentDescription =
+                                        stringResource(
+                                            CommonR.string.content_description_close_search
+                                        ),
+                                )
                             }
                         },
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
@@ -422,7 +436,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                                         onClick = { viewModel.refresh() },
                                         modifier = Modifier.padding(top = 16.dp),
                                     ) {
-                                        Text("Retry")
+                                        Text(stringResource(CommonR.string.retry_action))
                                     }
                                 }
                             }
@@ -479,12 +493,16 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { deleteTargets = null },
             title = {
-                Text(if (targets.size > 1) "Remove ${targets.size} torrents" else "Remove torrent")
+                Text(
+                    if (targets.size > 1)
+                        stringResource(CommonR.string.remove_torrents_count, targets.size)
+                    else stringResource(CommonR.string.remove_torrent_singular)
+                )
             },
             text = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = deleteFiles, onCheckedChange = { deleteFiles = it })
-                    Text("Also delete the files on disk")
+                    Text(stringResource(CommonR.string.also_delete_the_files_on_disk))
                 }
             },
             confirmButton = {
@@ -495,11 +513,13 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                         deleteTargets = null
                     }
                 ) {
-                    Text("Remove")
+                    Text(stringResource(CommonR.string.remove_action))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { deleteTargets = null }) { Text("Cancel") }
+                TextButton(onClick = { deleteTargets = null }) {
+                    Text(stringResource(CommonR.string.cancel))
+                }
             },
         )
     }
@@ -604,12 +624,18 @@ private fun TorrentList(
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun FilterChips(state: ServerScreenState, viewModel: ServerViewModel) {
+    val untaggedLabel = stringResource(CommonR.string.untagged_label)
     val chips = buildList {
         if (state.selectedFilter != StateFilter.ALL)
-            add(state.selectedFilter.label to { viewModel.setFilter(StateFilter.ALL) })
+            add(
+                stringResource(state.selectedFilter.labelRes) to
+                    {
+                        viewModel.setFilter(StateFilter.ALL)
+                    }
+            )
         state.selectedCategory?.let { c -> add(c to { viewModel.setCategory(null) }) }
         state.selectedTracker?.let { t -> add(t to { viewModel.setTracker(null) }) }
-        if (state.filterUntagged) add("Untagged" to { viewModel.setFilterUntagged(false) })
+        if (state.filterUntagged) add(untaggedLabel to { viewModel.setFilterUntagged(false) })
         state.selectedTags.forEach { tag -> add("#$tag" to { viewModel.toggleTag(tag) }) }
     }
     if (chips.isEmpty()) return

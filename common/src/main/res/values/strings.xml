@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Captain qBit</string>
+    <string name="app_name" translatable="false">Captain qBit</string>
     <string name="add_server">Add server</string>
     <string name="edit_server">Edit server</string>
     <string name="server_settings">Server settings</string>
@@ -121,6 +121,411 @@
     <string name="edit">Edit</string>
     <string name="edit_category_title">Edit category</string>
     <string name="save_path_hint">Save path</string>
+    <string name="ok">OK</string>
+    <string name="unlimited">Unlimited</string>
+    <string name="none_option">None</string>
+    <string name="custom_label">Custom</string>
+    <string name="content_description_back">Back</string>
+    <string name="content_description_more">More</string>
+    <string name="clipboard_copied">Copied to clipboard</string>
+
+    <!-- Torrent details screen -->
+    <string name="resume">Resume</string>
+    <string name="pause_action">Pause</string>
+    <string name="copy_magnet_link">Copy magnet link</string>
+    <string name="status_copied_name">Copied name</string>
+    <string name="force_recheck">Force recheck</string>
+    <string name="force_reannounce">Force reannounce</string>
+    <string name="queue_priority">Queue priority</string>
+    <string name="set_category">Set category</string>
+    <string name="set_tags">Set tags</string>
+    <string name="automatic_management">Automatic management</string>
+    <string name="force_start">Force start</string>
+    <string name="sequential_download">Sequential download</string>
+    <string name="download_first_last_pieces">Download first and last pieces</string>
+    <string name="super_seeding">Super seeding</string>
+    <string name="menu_set_save_path">Set save path…</string>
+    <string name="menu_download_limit">Download limit…</string>
+    <string name="menu_upload_limit">Upload limit…</string>
+    <string name="menu_share_limits">Share limits…</string>
+    <string name="download_limit_title">Download limit</string>
+    <string name="upload_limit_title">Upload limit</string>
+    <string name="share_limits_title">Share limits</string>
+    <string name="tab_general">General</string>
+    <string name="tab_trackers">Trackers</string>
+    <string name="unit_kib_per_sec">KiB/s</string>
+    <string name="leave_empty_for_unlimited">Leave empty for unlimited</string>
+    <string name="confirm_delete_torrent_title">Delete torrent?</string>
+    <string name="also_delete_files_on_disk">Also delete files on disk</string>
+    <string name="move_to_top">Move to top</string>
+    <string name="move_up">Move up</string>
+    <string name="move_down">Move down</string>
+    <string name="move_to_bottom">Move to bottom</string>
+    <string name="ratio_limit_label">Ratio limit</string>
+    <string name="seeding_time_limit_label">Seeding time limit</string>
+    <string name="inactive_seeding_time_limit_label">Inactive seeding time limit</string>
+    <string name="minutes_label">Minutes</string>
+    <string name="use_global_limit">Use global limit</string>
+    <string name="new_category_title">New category</string>
+    <string name="new_ellipsis">New…</string>
+    <string name="new_tag_title">New tag</string>
+    <string name="new_tag_ellipsis">New tag…</string>
+    <string name="apply">Apply</string>
+    <string name="create_action">Create</string>
+    <string name="close_action">Close</string>
+    <string name="tag_name_label">Tag name</string>
+    <string name="tag_already_exists">Tag already exists</string>
+    <string name="manage_tags_title">Manage tags</string>
+    <string name="no_tags_yet">No tags yet</string>
+    <string name="manage_categories_title">Manage categories</string>
+    <string name="content_description_edit_named">Edit %1$s</string>
+    <string name="content_description_delete_named">Delete %1$s</string>
+    <string name="category_name_label">Category name</string>
+    <string name="category_already_exists">Category already exists</string>
+    <string name="color_label">Color</string>
+    <string name="confirm_delete_named_title">Delete %1$s?</string>
+    <string name="category_color_title">Category color</string>
+    <string name="servers_title">Servers</string>
+    <string name="sort_by_title">Sort by</string>
+    <string name="ascending_label">Ascending</string>
+    <string name="descending_label">Descending</string>
+
+    <!-- Statistics dialog -->
+    <string name="statistics_title">Statistics</string>
+    <string name="stat_header_user">User statistics</string>
+    <string name="stat_all_time_upload">All-time upload</string>
+    <string name="stat_all_time_download">All-time download</string>
+    <string name="stat_all_time_share_ratio">All-time share ratio</string>
+    <string name="stat_session_waste">Session waste</string>
+    <string name="connected_peers">Connected peers</string>
+    <string name="stat_header_cache">Cache statistics</string>
+    <string name="stat_read_cache_hits">Read cache hits</string>
+    <string name="stat_total_buffer_size">Total buffer size</string>
+    <string name="stat_header_performance">Performance statistics</string>
+    <string name="stat_write_cache_overload">Write cache overload</string>
+    <string name="stat_read_cache_overload">Read cache overload</string>
+    <string name="stat_queued_io_jobs">Queued I/O jobs</string>
+    <string name="stat_average_time_in_queue">Average time in queue</string>
+    <string name="value_ms">%1$d ms</string>
+    <string name="stat_total_queued_size">Total queued size</string>
+
+    <!-- Sort options -->
+    <string name="sort_name">Name</string>
+    <string name="sort_size">Size</string>
+    <string name="sort_total_size">Total size</string>
+    <string name="sort_progress">Progress</string>
+    <string name="sort_download_speed">Download speed</string>
+    <string name="sort_upload_speed">Upload speed</string>
+    <string name="sort_downloaded_session">Downloaded (session)</string>
+    <string name="sort_uploaded_session">Uploaded (session)</string>
+    <string name="sort_remaining">Remaining</string>
+    <string name="sort_availability">Availability</string>
+    <string name="sort_connected_seeds">Connected seeds</string>
+    <string name="sort_queue_position">Queue position</string>
+    <string name="sort_tracker">Tracker</string>
+    <string name="sort_added_on">Added on</string>
+    <string name="sort_completed_on">Completed on</string>
+    <string name="sort_last_activity">Last activity</string>
+    <string name="sort_time_active">Time active</string>
+    <string name="sort_seeding_time">Seeding time</string>
+    <string name="download_kib_per_sec">Download (KiB/s)</string>
+    <string name="upload_kib_per_sec">Upload (KiB/s)</string>
+
+    <!-- RSS screen -->
+    <string name="rss_title">RSS</string>
+    <string name="tab_feeds">Feeds</string>
+    <string name="tab_rules">Rules</string>
+    <string name="refresh_action">Refresh</string>
+    <string name="refresh_interval_action">Refresh interval</string>
+    <string name="sort_ascending_action">Sort ascending</string>
+    <string name="sort_descending_action">Sort descending</string>
+    <string name="mark_all_as_read">Mark all as read</string>
+    <string name="add_feed_title">Add feed</string>
+    <string name="add_folder_menu_item">Add folder</string>
+    <string name="new_rule_action">New rule</string>
+    <string name="rss_fetching_disabled_message">
+        RSS fetching is disabled on the server - feeds won\'t update.
+    </string>
+    <string name="rss_auto_downloading_disabled_message">
+        RSS auto-downloading is disabled on the server - matching rules won\'t download torrents.
+    </string>
+    <string name="enable_action">Enable</string>
+    <string name="no_rss_feeds_placeholder">No RSS feeds yet — tap + to add one</string>
+    <string name="no_rss_rules_placeholder">No auto-download rules yet — tap + to add one</string>
+    <string name="view_matching_articles_action">View matching articles</string>
+    <string name="feed_url_label">Feed URL</string>
+    <string name="folder_label">Folder</string>
+    <string name="root_label">Root</string>
+    <string name="move_to_folder_action">Move to folder</string>
+    <string name="remove_feed_action">Remove feed</string>
+    <string name="remove_folder_action">Remove folder (and its feeds)</string>
+    <string name="rss_refresh_interval_title">RSS refresh interval</string>
+    <string name="move_item_to_title">Move \"%1$s\" to…</string>
+    <string name="new_folder_name_label">New folder name</string>
+    <string name="new_folder_ellipsis">New folder…</string>
+    <string name="move_action">Move</string>
+    <string name="new_folder_title">New folder</string>
+    <string name="folder_name_label">Folder name</string>
+    <string name="parent_folder_label">Parent folder</string>
+
+    <!-- RSS rule editor -->
+    <string name="edit_rule_title">Edit rule</string>
+    <string name="remove_rule_action">Remove rule</string>
+    <string name="rule_name_label">Rule name</string>
+    <string name="enabled_label">Enabled</string>
+    <string name="must_contain_label">Must contain</string>
+    <string name="must_contain_supporting_text">
+        One expression per line (OR); words in a line are ANDed
+    </string>
+    <string name="must_not_contain_label">Must not contain</string>
+    <string name="use_regex_label">Use regex</string>
+    <string name="episode_filter_label">Episode filter</string>
+    <string name="episode_filter_supporting_text">
+        Format: 1x01;1x02-03;1x05- (season x episode, ranges allowed); blank matches every episode
+    </string>
+    <string name="smart_episode_filter_label">Smart episode filter</string>
+    <string name="smart_episode_filter_subtitle">
+        Remembers the last episode this rule matched and only alerts on newer ones, so you don\'t
+        have to keep updating the episode filter as a show airs
+    </string>
+    <string name="ignore_days_label">Ignore days after last match</string>
+    <string name="add_matched_torrents_as_label">Add matched torrents as</string>
+    <string name="use_global_default_label">Use global default</string>
+    <string name="started_label">Started</string>
+    <string name="category_pick_or_type_label">Category (pick or type a new one)</string>
+    <string name="content_layout_label">Content layout</string>
+    <string name="affected_feeds_count">Affected feeds (%1$d of %2$d)</string>
+    <string name="loading_ellipsis">Loading…</string>
+    <string name="reflects_last_saved_version_message">
+        Reflects the last saved version of this rule, not any unsaved edits above.
+    </string>
+    <string name="remove_rule_confirm_title">Remove rule \"%1$s\"?</string>
+    <string name="remove_action">Remove</string>
+    <string name="no_matches_yet_title">No matches yet</string>
+    <string name="matching_articles_count">%1$d matching article(s)</string>
+    <string name="rule_no_matches_message">
+        This rule hasn\'t matched any article currently cached in its affected feeds.
+    </string>
+    <string name="affected_feeds_title">Affected feeds</string>
+
+    <!-- MainActivity -->
+    <string name="crash_report_copied">Crash report copied</string>
+    <string name="enable_notifications_title">Enable notifications?</string>
+    <string name="enable_notifications_message">
+        Get a status notification with live transfer speeds, plus alerts when a torrent finishes
+        downloading or checking. You can change this anytime in Settings.
+    </string>
+    <string name="not_now_action">Not now</string>
+    <string name="press_back_again_to_exit">Press back again to exit</string>
+    <string name="backup_passphrase_title">Backup passphrase</string>
+
+    <!-- Crash report dialog -->
+    <string name="crash_report_dialog_title">Captain qBit crashed last time</string>
+    <string name="crash_report_saved_locally">Saved on this device only — nothing is sent automatically.</string>
+    <string name="copy_action">Copy</string>
+    <string name="report_on_github_action">Report on GitHub</string>
+
+    <!-- Add torrent screen -->
+    <string name="magnet_url_placeholder">http://, https://, magnet: or bc://bt/</string>
+    <string name="save_as_default_category_label">Save as default category</string>
+    <string name="automatic_torrent_management_label">Automatic torrent management</string>
+    <string name="save_path_optional_label">Save path (optional)</string>
+    <string name="add_as_paused_label">Add as paused</string>
+
+    <!-- Logs screen -->
+    <string name="server_logs_title">Server logs</string>
+    <string name="content_description_close_search">Close search</string>
+    <string name="content_description_search">Search</string>
+    <string name="search_log_messages_placeholder">Search log messages</string>
+    <string name="content_description_clear">Clear</string>
+    <string name="no_log_entries">No log entries</string>
+    <string name="no_matching_entries">No matching entries</string>
+    <string name="jump_to_newest">Jump to newest</string>
+    <string name="copied_log_line">Copied log line</string>
+
+    <!-- RSS articles screen -->
+    <string name="articles_title">Articles</string>
+    <string name="search_articles_placeholder">Search articles (all words, any order)</string>
+    <string name="no_articles_yet">No articles yet</string>
+    <string name="no_matching_articles">No matching articles</string>
+    <string name="fetching_torrent_file">Fetching torrent file…</string>
+    <string name="content_description_add_torrent">Add torrent</string>
+    <string name="content_description_already_added">Already added</string>
+
+    <!-- State filters (drawer) -->
+    <string name="all_label">All</string>
+    <string name="filter_downloading">Downloading</string>
+    <string name="filter_queued">Queued</string>
+    <string name="filter_running">Running</string>
+    <string name="filter_active">Active</string>
+    <string name="filter_inactive">Inactive</string>
+    <string name="filter_stalled_uploading">Stalled uploading</string>
+    <string name="filter_stalled_downloading">Stalled downloading</string>
+
+    <!-- Server drawer -->
+    <string name="server_logs_action">Server logs</string>
+    <string name="statistics_action">Statistics</string>
+    <string name="status_section_title">Status</string>
+    <string name="categories_section_title">Categories</string>
+    <string name="tags_section_title">Tags</string>
+    <string name="untagged_label">Untagged</string>
+    <string name="trackers_section_title">Trackers</string>
+    <string name="clear_all_action">Clear all</string>
+    <string name="use_alternate_speed_limits_label">Use alternate speed limits</string>
+    <string name="use_alternate_speed_limits_description">
+        Switch between your normal speed limits and the alternate ones.
+    </string>
+    <string name="rss_feeds_label">RSS feeds</string>
+    <string name="rss_feeds_description">Browse RSS feeds and manage auto-download rules.</string>
+    <string name="settings_label">Settings</string>
+    <string name="settings_description">Open the app\'s settings.</string>
+    <string name="manage_named_action">Manage %1$s</string>
+
+    <!-- Server screen -->
+    <string name="torrent_already_exists">Torrent already exists</string>
+    <string name="filters_label">Filters</string>
+    <string name="status_speed_free_space">↓ %1$s/s  ↑ %2$s/s   %3$s free</string>
+    <string name="retry_action">Retry</string>
+    <string name="remove_torrents_count">Remove %1$d torrents</string>
+    <string name="remove_torrent_singular">Remove torrent</string>
+    <string name="also_delete_the_files_on_disk">Also delete the files on disk</string>
+
+    <!-- Server list screen -->
+    <string name="delete_server_confirm_title">Delete \"%1$s\"?</string>
+    <string name="delete_server_confirm_message">This removes the saved server from the app.</string>
+    <string name="content_description_drag_to_reorder">Drag to reorder</string>
+
+    <!-- Settings screen -->
+    <string name="theme_system_default">System default</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="interval_5_seconds">5 seconds</string>
+    <string name="interval_10_seconds">10 seconds</string>
+    <string name="interval_30_seconds">30 seconds</string>
+    <string name="interval_1_minute">1 minute</string>
+    <string name="interval_5_minutes">5 minutes</string>
+    <string name="general_section_title">General</string>
+    <string name="server_section_title">Server</string>
+    <string name="server_section_description">
+        Settings on the connected qBittorrent server, not this app
+    </string>
+    <string name="auto_tmm_default_label">Automatic Torrent Management by default</string>
+    <string name="auto_tmm_default_subtitle">
+        Applies to torrents added outside this app, e.g. via RSS rules
+    </string>
+    <string name="rss_refresh_interval_label">RSS refresh interval</string>
+    <string name="minutes_suffix">%1$d min</string>
+    <string name="fetch_rss_feeds_label">Fetch RSS feeds</string>
+    <string name="fetch_rss_feeds_subtitle">Feeds won\'t update at all while this is off</string>
+    <string name="auto_download_rss_label">Auto-download matching RSS articles</string>
+    <string name="auto_download_rss_subtitle">Lets RSS rules download torrents automatically</string>
+    <string name="use_alternate_speed_limits_subtitle">
+        Switch between your normal speed limits and the alternate ones
+    </string>
+    <string name="global_speed_limits_label">Global speed limits</string>
+    <string name="global_speed_limits_subtitle">
+        Set the server-wide download and upload speed limits
+    </string>
+    <string name="alternate_speed_limits_label">Alternate speed limits</string>
+    <string name="alternate_speed_limits_subtitle">
+        Set the limits used while \"use alternate speed limits\" is on
+    </string>
+    <string name="torrent_queueing_label">Torrent queueing</string>
+    <string name="torrent_queueing_subtitle">
+        Cap how many torrents are active at once; enables queue positions
+    </string>
+    <string name="appearance_section_title">Appearance</string>
+    <string name="theme_label">Theme</string>
+    <string name="dynamic_colors_label">Dynamic colors</string>
+    <string name="dynamic_colors_subtitle">Use the wallpaper-based Material You palette</string>
+    <string name="notifications_section_title">Notifications</string>
+    <string name="status_notification_label">Status notification</string>
+    <string name="status_notification_subtitle">
+        Ongoing notification showing current transfer speeds
+    </string>
+    <string name="notify_on_complete_label">Notify on complete</string>
+    <string name="notify_on_complete_subtitle">Alert when a torrent finishes downloading</string>
+    <string name="notify_on_checked_label">Notify on checked</string>
+    <string name="notify_on_checked_subtitle">Alert when a torrent finishes rechecking</string>
+    <string name="notify_on_new_rss_label">Notify on new RSS articles</string>
+    <string name="notify_on_new_rss_subtitle">
+        Alert when a feed gets new articles - checked as often as the RSS screen\'s own feed
+        refresh interval
+    </string>
+    <string name="notification_refresh_interval_label">Notification refresh interval</string>
+    <string name="notification_refresh_interval_description">
+        How often the notification updates its transfer speeds. Longer saves battery.
+    </string>
+    <string name="torrent_alert_check_interval_label">Torrent alert check interval</string>
+    <string name="torrent_alert_check_interval_description">
+        How often finished/rechecked torrents are checked. Longer delays alerts but saves battery.
+    </string>
+    <string name="sync_section_title">Sync</string>
+    <string name="torrent_list_refresh_interval_label">Torrent list refresh interval</string>
+    <string name="torrent_list_refresh_interval_description">
+        How often the open torrent list refreshes. Longer saves battery and data.
+    </string>
+    <string name="backup_section_title">Backup</string>
+    <string name="export_configuration_label">Export configuration</string>
+    <string name="import_configuration_label">Import configuration</string>
+    <string name="encrypt_backup_title">Encrypt backup</string>
+    <string name="notifications_blocked_title">Notifications are blocked</string>
+    <string name="notifications_blocked_message">
+        These switches won\'t show anything until notifications are re-enabled for this app in
+        system settings.
+    </string>
+    <string name="open_settings_action">Open settings</string>
+
+    <!-- Files tab -->
+    <string name="folder_path_title">Folder path</string>
+    <string name="file_path_title">File path</string>
+    <string name="rename_folder_title">Rename folder</string>
+    <string name="rename_file_title">Rename file</string>
+    <string name="no_content_found">No content found</string>
+
+    <!-- Peers tab -->
+    <string name="no_peers_connected">No peers connected</string>
+    <string name="peer_country_label">Country</string>
+    <string name="peer_connection_label">Connection</string>
+    <string name="peer_client_label">Client</string>
+    <string name="peer_down_speed_label">Down speed</string>
+    <string name="peer_up_speed_label">Up speed</string>
+    <string name="peer_relevance_label">Relevance</string>
+    <string name="peer_flags_label">Flags</string>
+    <string name="peer_files_label">Files</string>
+    <string name="ban_peer_action">Ban Peer</string>
+    <string name="dismiss_action">Dismiss</string>
+
+    <!-- Trackers tab -->
+    <string name="private_torrent_trackers_fixed_message">
+        Private torrent — trackers are fixed by the torrent and can\'t be changed.
+    </string>
+    <string name="add_tracker_action">Add tracker</string>
+    <string name="no_trackers">No trackers</string>
+    <string name="edit_tracker_label">Edit tracker</string>
+    <string name="remove_tracker_label">Remove tracker</string>
+    <string name="add_trackers_title">Add trackers</string>
+    <string name="one_url_per_line">One URL per line</string>
+    <string name="remove_tracker_confirm_title">Remove tracker?</string>
+
+    <!-- Version / About screen -->
+    <string name="version_name_code">Version %1$s (%2$d)</string>
+    <string name="qbittorrent_version_label">qBittorrent %1$s</string>
+    <string name="web_api_version_label">Web API v%1$s</string>
+    <string name="fork_attribution_message">A fork of qBittorrent Manager by Yash Garg.</string>
+    <string name="license_message">Free and open source · GPL-3.0</string>
+    <string name="whats_new_link_label">What\'s New</string>
+    <string name="source_code_link_label">Source code</string>
+    <string name="report_issue_link_label">Report an issue</string>
+    <string name="support_kofi_link_label">Support on Ko-fi</string>
+
+    <!-- What's New dialog -->
+    <string name="whats_new_in_version_title">What\'s New in v%1$s</string>
+    <string name="got_it_action">Got it</string>
+
+    <!-- Language picker -->
+    <string name="language_label">Language</string>
+    <string name="language_english">English</string>
 
     <!-- ViewModel status messages -->
     <string name="status_add_torrent_url_success">Successfully added torrent</string>

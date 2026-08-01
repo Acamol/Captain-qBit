@@ -69,6 +69,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -78,6 +79,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.ui.compose.RssFeedTreeView
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
@@ -88,14 +90,14 @@ import qbittorrent.models.RssFolder
 import qbittorrent.models.RssItem
 import qbittorrent.models.RssRule
 
-private val TAB_TITLES = listOf("Feeds", "Rules")
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RssScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewModel()) {
+    val tabTitles =
+        listOf(stringResource(CommonR.string.tab_feeds), stringResource(CommonR.string.tab_rules))
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val pagerState = rememberPagerState(pageCount = { TAB_TITLES.size })
+    val pagerState = rememberPagerState(pageCount = { tabTitles.size })
     val scope = rememberCoroutineScope()
 
     var addMenuOpen by remember { mutableStateOf(false) }
@@ -120,22 +122,26 @@ fun RssScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewMode
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("RSS") },
+                title = { Text(stringResource(CommonR.string.rss_title)) },
                 navigationIcon = {
                     IconButton(onClick = { appNavigator.navigate(NavCommand.Back) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription =
+                                stringResource(CommonR.string.content_description_back),
+                        )
                     }
                 },
                 actions = {
                     TooltipIconButton(
-                        label = "Refresh",
+                        label = stringResource(CommonR.string.refresh_action),
                         icon = Icons.Filled.Refresh,
                         onClick = { viewModel.refresh() },
                         enabled = !state.refreshing,
                         position = TooltipAnchorPosition.Below,
                     )
                     TooltipIconButton(
-                        label = "Refresh interval",
+                        label = stringResource(CommonR.string.refresh_interval_action),
                         icon = Icons.Filled.Schedule,
                         onClick = { dialog = RssDialog.RefreshInterval },
                         position = TooltipAnchorPosition.Below,
@@ -143,7 +149,10 @@ fun RssScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewMode
                     if (pagerState.currentPage == 0) {
                         TooltipIconButton(
                             label =
-                                if (state.sortDescending) "Sort ascending" else "Sort descending",
+                                stringResource(
+                                    if (state.sortDescending) CommonR.string.sort_ascending_action
+                                    else CommonR.string.sort_descending_action
+                                ),
                             icon = Icons.AutoMirrored.Filled.Sort,
                             onClick = { viewModel.toggleSort() },
                             position = TooltipAnchorPosition.Below,
@@ -153,13 +162,13 @@ fun RssScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewMode
                                 ),
                         )
                         TooltipIconButton(
-                            label = "Mark all as read",
+                            label = stringResource(CommonR.string.mark_all_as_read),
                             icon = Icons.Filled.DoneAll,
                             onClick = { viewModel.markAllAsRead() },
                             position = TooltipAnchorPosition.Below,
                         )
                         TooltipIconButton(
-                            label = "Add",
+                            label = stringResource(CommonR.string.add),
                             icon = Icons.Filled.Add,
                             onClick = { addMenuOpen = true },
                             position = TooltipAnchorPosition.Below,
@@ -169,7 +178,7 @@ fun RssScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewMode
                             onDismissRequest = { addMenuOpen = false },
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Add feed") },
+                                text = { Text(stringResource(CommonR.string.add_feed_title)) },
                                 leadingIcon = { Icon(Icons.Filled.RssFeed, null) },
                                 onClick = {
                                     addMenuOpen = false
@@ -177,7 +186,9 @@ fun RssScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewMode
                                 },
                             )
                             DropdownMenuItem(
-                                text = { Text("Add folder") },
+                                text = {
+                                    Text(stringResource(CommonR.string.add_folder_menu_item))
+                                },
                                 leadingIcon = { Icon(Icons.Filled.CreateNewFolder, null) },
                                 onClick = {
                                     addMenuOpen = false
@@ -187,7 +198,7 @@ fun RssScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewMode
                         }
                     } else {
                         TooltipIconButton(
-                            label = "New rule",
+                            label = stringResource(CommonR.string.new_rule_action),
                             icon = Icons.Filled.Add,
                             onClick = { appNavigator.navigate(NavCommand.OpenRssRuleEditor()) },
                             position = TooltipAnchorPosition.Below,
@@ -200,7 +211,7 @@ fun RssScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewMode
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             PrimaryTabRow(selectedTabIndex = pagerState.currentPage) {
-                TAB_TITLES.forEachIndexed { index, title ->
+                tabTitles.forEachIndexed { index, title ->
                     Tab(
                         selected = pagerState.currentPage == index,
                         onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
@@ -211,14 +222,13 @@ fun RssScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewMode
             when {
                 !state.rssProcessingEnabled ->
                     RssWarningBanner(
-                        message = "RSS fetching is disabled on the server - feeds won't update.",
+                        message = stringResource(CommonR.string.rss_fetching_disabled_message),
                         onEnable = { viewModel.setRssProcessingEnabled(true) },
                     )
                 pagerState.currentPage == 1 && !state.rssAutoDownloadingEnabled ->
                     RssWarningBanner(
                         message =
-                            "RSS auto-downloading is disabled on the server - matching rules " +
-                                "won't download torrents.",
+                            stringResource(CommonR.string.rss_auto_downloading_disabled_message),
                         onEnable = { viewModel.setRssAutoDownloadingEnabled(true) },
                     )
             }
@@ -378,7 +388,7 @@ private fun RssWarningBanner(message: String, onEnable: () -> Unit) {
                 color = MaterialTheme.colorScheme.onErrorContainer,
                 style = MaterialTheme.typography.bodyMedium,
             )
-            TextButton(onClick = onEnable) { Text("Enable") }
+            TextButton(onClick = onEnable) { Text(stringResource(CommonR.string.enable_action)) }
         }
     }
 }
@@ -407,7 +417,7 @@ private fun FeedsTab(
                 )
             state.items.isEmpty() ->
                 Text(
-                    "No RSS feeds yet — tap + to add one",
+                    stringResource(CommonR.string.no_rss_feeds_placeholder),
                     Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = 32.dp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -446,7 +456,7 @@ private fun RulesTab(
         if (state.rules.isEmpty()) {
             Box(Modifier.fillMaxSize()) {
                 Text(
-                    "No auto-download rules yet — tap + to add one",
+                    stringResource(CommonR.string.no_rss_rules_placeholder),
                     Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = 32.dp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -473,7 +483,7 @@ private fun RulesTab(
                             fontWeight = FontWeight.Medium,
                         )
                         TooltipIconButton(
-                            label = "View matching articles",
+                            label = stringResource(CommonR.string.view_matching_articles_action),
                             icon = Icons.Filled.Visibility,
                             onClick = { onViewMatches(name) },
                             position = TooltipAnchorPosition.Below,
@@ -500,19 +510,19 @@ private fun AddFeedDialog(
     var path by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add feed") },
+        title = { Text(stringResource(CommonR.string.add_feed_title)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = url,
                     onValueChange = { url = it },
-                    label = { Text("Feed URL") },
+                    label = { Text(stringResource(CommonR.string.feed_url_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.size(8.dp))
                 FolderPickerField(
-                    label = "Folder",
+                    label = stringResource(CommonR.string.folder_label),
                     selected = path,
                     folders = folders,
                     onSelect = { path = it },
@@ -521,10 +531,12 @@ private fun AddFeedDialog(
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(url, path) }, enabled = url.isNotBlank()) {
-                Text("Add")
+                Text(stringResource(CommonR.string.add))
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
+        },
     )
 }
 
@@ -541,9 +553,10 @@ private fun FolderPickerField(
     onSelect: (String) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val rootLabel = stringResource(CommonR.string.root_label)
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
         OutlinedTextField(
-            value = selected.ifBlank { "Root" },
+            value = selected.ifBlank { rootLabel },
             onValueChange = {},
             readOnly = true,
             label = { Text(label) },
@@ -555,7 +568,7 @@ private fun FolderPickerField(
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             (listOf("") + folders).forEach { option ->
                 DropdownMenuItem(
-                    text = { Text(option.ifBlank { "Root" }) },
+                    text = { Text(option.ifBlank { rootLabel }) },
                     onClick = {
                         onSelect(option)
                         expanded = false
@@ -592,18 +605,32 @@ private fun FeedActionsDialog(
         title = { Text(feed.name) },
         text = {
             Column {
-                ActionOption(Icons.Filled.Refresh, "Refresh", onRefresh)
-                ActionOption(Icons.Filled.DoneAll, "Mark all as read", onMarkAllRead)
+                ActionOption(
+                    Icons.Filled.Refresh,
+                    stringResource(CommonR.string.refresh_action),
+                    onRefresh,
+                )
+                ActionOption(
+                    Icons.Filled.DoneAll,
+                    stringResource(CommonR.string.mark_all_as_read),
+                    onMarkAllRead,
+                )
                 ActionOption(
                     Icons.AutoMirrored.Filled.DriveFileMove,
-                    "Move to folder",
+                    stringResource(CommonR.string.move_to_folder_action),
                     onMoveToFolder,
                 )
-                ActionOption(Icons.Filled.Delete, "Remove feed", onRemove)
+                ActionOption(
+                    Icons.Filled.Delete,
+                    stringResource(CommonR.string.remove_feed_action),
+                    onRemove,
+                )
             }
         },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
+        },
     )
 }
 
@@ -621,14 +648,20 @@ private fun FolderActionsDialog(
             Column {
                 ActionOption(
                     Icons.AutoMirrored.Filled.DriveFileMove,
-                    "Move to folder",
+                    stringResource(CommonR.string.move_to_folder_action),
                     onMoveToFolder,
                 )
-                ActionOption(Icons.Filled.Delete, "Remove folder (and its feeds)", onRemove)
+                ActionOption(
+                    Icons.Filled.Delete,
+                    stringResource(CommonR.string.remove_folder_action),
+                    onRemove,
+                )
             }
         },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
+        },
     )
 }
 
@@ -642,13 +675,13 @@ internal fun RefreshIntervalDialog(
     var value by remember { mutableStateOf(currentMinutes.toString()) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("RSS refresh interval") },
+        title = { Text(stringResource(CommonR.string.rss_refresh_interval_title)) },
         text = {
             OutlinedTextField(
                 value = value,
                 onValueChange = { value = it.filter(Char::isDigit) },
                 singleLine = true,
-                label = { Text("Minutes") },
+                label = { Text(stringResource(CommonR.string.minutes_label)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -658,10 +691,12 @@ internal fun RefreshIntervalDialog(
                 onClick = { value.toIntOrNull()?.takeIf { it > 0 }?.let(onConfirm) },
                 enabled = (value.toIntOrNull() ?: 0) > 0,
             ) {
-                Text("Save")
+                Text(stringResource(CommonR.string.save_cfg))
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
+        },
     )
 }
 
@@ -683,20 +718,20 @@ private fun MoveItemDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Move \"$itemName\" to…") },
+        title = { Text(stringResource(CommonR.string.move_item_to_title, itemName)) },
         text = {
             if (creatingFolder) {
                 OutlinedTextField(
                     value = newFolderName,
                     onValueChange = { newFolderName = it },
-                    label = { Text("New folder name") },
+                    label = { Text(stringResource(CommonR.string.new_folder_name_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
             } else {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
                     Text(
-                        "Root",
+                        stringResource(CommonR.string.root_label),
                         modifier =
                             Modifier.fillMaxWidth()
                                 .clickable { onMove(destPathFor("")) }
@@ -711,7 +746,9 @@ private fun MoveItemDialog(
                                     .padding(vertical = 10.dp),
                         )
                     }
-                    TextButton(onClick = { creatingFolder = true }) { Text("New folder…") }
+                    TextButton(onClick = { creatingFolder = true }) {
+                        Text(stringResource(CommonR.string.new_folder_ellipsis))
+                    }
                 }
             }
         },
@@ -721,11 +758,13 @@ private fun MoveItemDialog(
                     onClick = { onMove(destPathFor(newFolderName.trim())) },
                     enabled = newFolderName.isNotBlank(),
                 ) {
-                    Text("Move")
+                    Text(stringResource(CommonR.string.move_action))
                 }
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
+        },
     )
 }
 
@@ -739,19 +778,19 @@ private fun AddFolderDialog(
     var parent by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("New folder") },
+        title = { Text(stringResource(CommonR.string.new_folder_title)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Folder name") },
+                    label = { Text(stringResource(CommonR.string.folder_name_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.size(8.dp))
                 FolderPickerField(
-                    label = "Parent folder",
+                    label = stringResource(CommonR.string.parent_folder_label),
                     selected = parent,
                     folders = folders,
                     onSelect = { parent = it },
@@ -760,9 +799,11 @@ private fun AddFolderDialog(
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(name, parent) }, enabled = name.isNotBlank()) {
-                Text("Add")
+                Text(stringResource(CommonR.string.add))
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
+        },
     )
 }

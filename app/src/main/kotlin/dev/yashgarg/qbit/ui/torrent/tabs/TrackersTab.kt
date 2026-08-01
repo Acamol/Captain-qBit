@@ -26,9 +26,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.yashgarg.qbit.R
+import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.models.TrackerStatus
 import dev.yashgarg.qbit.ui.torrent.TorrentDetailsState
 
@@ -60,7 +62,7 @@ fun TrackersTab(
         if (isPrivate) {
             item {
                 Text(
-                    "Private torrent — trackers are fixed by the torrent and can't be changed.",
+                    stringResource(CommonR.string.private_torrent_trackers_fixed_message),
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                 )
@@ -72,13 +74,21 @@ fun TrackersTab(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
                 ) {
                     Icon(Icons.Filled.Add, contentDescription = null)
-                    Text("Add tracker", modifier = Modifier.padding(start = 8.dp))
+                    Text(
+                        stringResource(CommonR.string.add_tracker_action),
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
                 }
             }
         }
 
         if (trackers.isEmpty()) {
-            item { Text("No trackers", modifier = Modifier.fillMaxWidth().padding(16.dp)) }
+            item {
+                Text(
+                    stringResource(CommonR.string.no_trackers),
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                )
+            }
         }
 
         // No stable key: a torrent can report the same tracker URL more than once (duplicated
@@ -104,10 +114,17 @@ fun TrackersTab(
                 )
                 if (!isPrivate && tracker.url.isRealTracker()) {
                     IconButton(onClick = { dialog = TrackerDialog.Edit(tracker.url) }) {
-                        Icon(Icons.Filled.Edit, contentDescription = "Edit tracker")
+                        Icon(
+                            Icons.Filled.Edit,
+                            contentDescription = stringResource(CommonR.string.edit_tracker_label),
+                        )
                     }
                     IconButton(onClick = { dialog = TrackerDialog.Remove(tracker.url) }) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Remove tracker")
+                        Icon(
+                            Icons.Filled.Delete,
+                            contentDescription =
+                                stringResource(CommonR.string.remove_tracker_label),
+                        )
                     }
                 }
             }
@@ -117,10 +134,10 @@ fun TrackersTab(
     when (val current = dialog) {
         TrackerDialog.Add ->
             TrackerInputDialog(
-                title = "Add trackers",
+                title = stringResource(CommonR.string.add_trackers_title),
                 initial = "",
                 // One tracker URL per line, matching the qBittorrent desktop dialog.
-                supportingText = "One URL per line",
+                supportingText = stringResource(CommonR.string.one_url_per_line),
                 onConfirm = { text ->
                     val urls = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
                     if (urls.isNotEmpty()) onAddTrackers(urls)
@@ -130,7 +147,7 @@ fun TrackersTab(
             )
         is TrackerDialog.Edit ->
             TrackerInputDialog(
-                title = "Edit tracker",
+                title = stringResource(CommonR.string.edit_tracker_label),
                 initial = current.url,
                 onConfirm = { newUrl ->
                     val trimmed = newUrl.trim()
@@ -144,7 +161,7 @@ fun TrackersTab(
         is TrackerDialog.Remove ->
             AlertDialog(
                 onDismissRequest = { dialog = null },
-                title = { Text("Remove tracker?") },
+                title = { Text(stringResource(CommonR.string.remove_tracker_confirm_title)) },
                 text = { Text(current.url) },
                 confirmButton = {
                     TextButton(
@@ -153,10 +170,14 @@ fun TrackersTab(
                             dialog = null
                         }
                     ) {
-                        Text("Remove")
+                        Text(stringResource(CommonR.string.remove_action))
                     }
                 },
-                dismissButton = { TextButton(onClick = { dialog = null }) { Text("Cancel") } },
+                dismissButton = {
+                    TextButton(onClick = { dialog = null }) {
+                        Text(stringResource(CommonR.string.cancel))
+                    }
+                },
             )
         null -> Unit
     }
@@ -189,7 +210,11 @@ private fun TrackerInputDialog(
                 supportingText = supportingText?.let { { Text(it) } },
             )
         },
-        confirmButton = { TextButton(onClick = { onConfirm(value) }) { Text("OK") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(value) }) { Text(stringResource(CommonR.string.ok)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
+        },
     )
 }

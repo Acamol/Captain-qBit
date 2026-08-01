@@ -49,12 +49,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.ui.dialogs.AddTorrentScreen
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
@@ -89,15 +91,23 @@ fun RssArticlesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(feed?.name ?: "Articles") },
+                title = { Text(feed?.name ?: stringResource(CommonR.string.articles_title)) },
                 navigationIcon = {
                     IconButton(onClick = { appNavigator.navigate(NavCommand.Back) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription =
+                                stringResource(CommonR.string.content_description_back),
+                        )
                     }
                 },
                 actions = {
                     TooltipIconButton(
-                        label = if (searchOpen) "Close search" else "Search",
+                        label =
+                            stringResource(
+                                if (searchOpen) CommonR.string.content_description_close_search
+                                else CommonR.string.content_description_search
+                            ),
                         icon = if (searchOpen) Icons.Filled.Close else Icons.Filled.Search,
                         onClick = {
                             searchOpen = !searchOpen
@@ -106,13 +116,13 @@ fun RssArticlesScreen(
                         position = TooltipAnchorPosition.Below,
                     )
                     TooltipIconButton(
-                        label = "Refresh",
+                        label = stringResource(CommonR.string.refresh_action),
                         icon = Icons.Filled.Refresh,
                         onClick = { viewModel.refreshItem(itemPath) },
                         position = TooltipAnchorPosition.Below,
                     )
                     TooltipIconButton(
-                        label = "Mark all as read",
+                        label = stringResource(CommonR.string.mark_all_as_read),
                         icon = Icons.Filled.DoneAll,
                         onClick = { viewModel.markAsRead(itemPath) },
                         position = TooltipAnchorPosition.Below,
@@ -128,12 +138,18 @@ fun RssArticlesScreen(
                     value = query,
                     onValueChange = { query = it },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                    placeholder = { Text("Search articles (all words, any order)") },
+                    placeholder = {
+                        Text(stringResource(CommonR.string.search_articles_placeholder))
+                    },
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                     trailingIcon = {
                         if (query.isNotEmpty()) {
                             IconButton(onClick = { query = "" }) {
-                                Icon(Icons.Filled.Close, contentDescription = "Clear")
+                                Icon(
+                                    Icons.Filled.Close,
+                                    contentDescription =
+                                        stringResource(CommonR.string.content_description_clear),
+                                )
                             }
                         }
                     },
@@ -154,7 +170,7 @@ fun RssArticlesScreen(
                     feed.articles.isEmpty() ->
                         Box(Modifier.fillMaxSize()) {
                             Text(
-                                "No articles yet",
+                                stringResource(CommonR.string.no_articles_yet),
                                 Modifier.align(Alignment.Center)
                                     .fillMaxWidth()
                                     .padding(horizontal = 32.dp),
@@ -165,7 +181,7 @@ fun RssArticlesScreen(
                     filtered.isEmpty() ->
                         Box(Modifier.fillMaxSize()) {
                             Text(
-                                "No matching articles",
+                                stringResource(CommonR.string.no_matching_articles),
                                 Modifier.align(Alignment.Center)
                                     .fillMaxWidth()
                                     .padding(horizontal = 32.dp),
@@ -245,7 +261,7 @@ fun RssArticlesScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(Modifier.size(20.dp))
                     Spacer(Modifier.width(12.dp))
-                    Text("Fetching torrent file…")
+                    Text(stringResource(CommonR.string.fetching_torrent_file))
                 }
             },
         )
@@ -293,12 +309,17 @@ private fun ArticleCard(
             when {
                 onAddTorrent != null ->
                     IconButton(onClick = onAddTorrent) {
-                        Icon(Icons.Filled.Download, contentDescription = "Add torrent")
+                        Icon(
+                            Icons.Filled.Download,
+                            contentDescription =
+                                stringResource(CommonR.string.content_description_add_torrent),
+                        )
                     }
                 alreadyAdded ->
                     Icon(
                         Icons.Filled.CheckCircle,
-                        contentDescription = "Already added",
+                        contentDescription =
+                            stringResource(CommonR.string.content_description_already_added),
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(12.dp).size(24.dp),
                     )

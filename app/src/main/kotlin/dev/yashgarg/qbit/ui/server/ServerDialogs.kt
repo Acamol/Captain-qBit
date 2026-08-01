@@ -136,9 +136,10 @@ fun ServerDialogHost(
             val currentCategories =
                 dialog.hashes.mapNotNull { state.data?.torrents?.get(it)?.category }.toSet()
             val selectedIndex = currentCategories.singleOrNull()?.let { options.indexOf(it) } ?: -1
+            val noneLabel = stringResource(CommonR.string.none_option)
             SingleChoiceDialog(
-                title = "Set category",
-                labels = options.map { it.ifBlank { "None" } },
+                title = stringResource(CommonR.string.set_category),
+                labels = options.map { it.ifBlank { noneLabel } },
                 selectedIndex = selectedIndex,
                 onSelect = { i ->
                     viewModel.bulkSetCategory(dialog.hashes, options[i])
@@ -161,7 +162,7 @@ fun ServerDialogHost(
                 val checked = remember(tags) { initialChecked.toMutableStateList() }
                 AlertDialog(
                     onDismissRequest = dismiss,
-                    title = { Text("Set tags") },
+                    title = { Text(stringResource(CommonR.string.set_tags)) },
                     text = {
                         Column(Modifier.verticalScroll(rememberScrollState())) {
                             tags.forEachIndexed { i, tag ->
@@ -184,7 +185,7 @@ fun ServerDialogHost(
                                 dismiss()
                             }
                         ) {
-                            Text("Apply")
+                            Text(stringResource(CommonR.string.apply))
                         }
                     },
                     dismissButton = {
@@ -192,23 +193,27 @@ fun ServerDialogHost(
                             TextButton(
                                 onClick = { onDialogChange(ServerDialog.CreateTag(dialog.hashes)) }
                             ) {
-                                Text("New tag…")
+                                Text(stringResource(CommonR.string.new_tag_ellipsis))
                             }
-                            TextButton(onClick = dismiss) { Text("Cancel") }
+                            TextButton(onClick = dismiss) {
+                                Text(stringResource(CommonR.string.cancel))
+                            }
                         }
                     },
                 )
             }
         }
         is ServerDialog.CreateTag -> {
+            val nameEmptyError = stringResource(CommonR.string.invalid_name)
+            val tagExistsError = stringResource(CommonR.string.tag_already_exists)
             TextInputDialog(
-                title = "New tag",
-                label = "Tag name",
-                confirmLabel = "Create",
+                title = stringResource(CommonR.string.new_tag_title),
+                label = stringResource(CommonR.string.tag_name_label),
+                confirmLabel = stringResource(CommonR.string.create_action),
                 validate = { name ->
                     when {
-                        name.isBlank() -> "Name cannot be empty"
-                        state.availableTags.contains(name) -> "Tag already exists"
+                        name.isBlank() -> nameEmptyError
+                        state.availableTags.contains(name) -> tagExistsError
                         else -> null
                     }
                 },
@@ -226,11 +231,14 @@ fun ServerDialogHost(
             val marked = remember(tags) { tags.map { false }.toMutableStateList() }
             AlertDialog(
                 onDismissRequest = dismiss,
-                title = { Text("Manage tags") },
+                title = { Text(stringResource(CommonR.string.manage_tags_title)) },
                 text = {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
                         if (tags.isEmpty()) {
-                            Text("No tags yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                stringResource(CommonR.string.no_tags_yet),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                         tags.forEachIndexed { i, tag ->
                             CheckboxRow(tag, marked[i]) { marked[i] = it }
@@ -247,12 +255,12 @@ fun ServerDialogHost(
                             }
                         }
                     ) {
-                        Text("Delete")
+                        Text(stringResource(CommonR.string.delete))
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { onDialogChange(ServerDialog.CreateTag(null)) }) {
-                        Text("New tag…")
+                        Text(stringResource(CommonR.string.new_tag_ellipsis))
                     }
                 },
             )
@@ -260,7 +268,7 @@ fun ServerDialogHost(
         ServerDialog.ManageCategories -> {
             AlertDialog(
                 onDismissRequest = dismiss,
-                title = { Text("Manage categories") },
+                title = { Text(stringResource(CommonR.string.manage_categories_title)) },
                 text = {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
                         state.availableCategories.forEach { name ->
@@ -280,7 +288,14 @@ fun ServerDialogHost(
                                         )
                                     }
                                 ) {
-                                    Icon(Icons.Outlined.Edit, contentDescription = "Edit $name")
+                                    Icon(
+                                        Icons.Outlined.Edit,
+                                        contentDescription =
+                                            stringResource(
+                                                CommonR.string.content_description_edit_named,
+                                                name,
+                                            ),
+                                    )
                                 }
                                 IconButton(
                                     onClick = {
@@ -289,7 +304,14 @@ fun ServerDialogHost(
                                         )
                                     }
                                 ) {
-                                    Icon(Icons.Outlined.Delete, contentDescription = "Delete $name")
+                                    Icon(
+                                        Icons.Outlined.Delete,
+                                        contentDescription =
+                                            stringResource(
+                                                CommonR.string.content_description_delete_named,
+                                                name,
+                                            ),
+                                    )
                                 }
                             }
                         }
@@ -298,11 +320,18 @@ fun ServerDialogHost(
                             modifier = Modifier.padding(top = 8.dp),
                         ) {
                             Icon(Icons.Filled.Add, contentDescription = null)
-                            Text("New category", Modifier.padding(start = 4.dp))
+                            Text(
+                                stringResource(CommonR.string.new_category_title),
+                                Modifier.padding(start = 4.dp),
+                            )
                         }
                     }
                 },
-                confirmButton = { TextButton(onClick = dismiss) { Text("Close") } },
+                confirmButton = {
+                    TextButton(onClick = dismiss) {
+                        Text(stringResource(CommonR.string.close_action))
+                    }
+                },
             )
         }
         is ServerDialog.CreateCategory -> {
@@ -310,14 +339,16 @@ fun ServerDialogHost(
                 if (dialog.returnToManage) onDialogChange(ServerDialog.ManageCategories)
                 else dismiss()
             }
+            val nameEmptyError = stringResource(CommonR.string.invalid_name)
+            val categoryExistsError = stringResource(CommonR.string.category_already_exists)
             TextInputDialog(
-                title = "New category",
-                label = "Category name",
-                confirmLabel = "Create",
+                title = stringResource(CommonR.string.new_category_title),
+                label = stringResource(CommonR.string.category_name_label),
+                confirmLabel = stringResource(CommonR.string.create_action),
                 validate = { name ->
                     when {
-                        name.isBlank() -> "Name cannot be empty"
-                        state.availableCategories.contains(name) -> "Category already exists"
+                        name.isBlank() -> nameEmptyError
+                        state.availableCategories.contains(name) -> categoryExistsError
                         else -> null
                     }
                 },
@@ -350,7 +381,7 @@ fun ServerDialogHost(
                         Modifier.fillMaxWidth().padding(top = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("Color", Modifier.weight(1f))
+                        Text(stringResource(CommonR.string.color_label), Modifier.weight(1f))
                         ColorSwatch(
                             color = categoryColors[dialog.name],
                             onClick = { colorPickerFor = dialog.name },
@@ -365,7 +396,7 @@ fun ServerDialogHost(
                 else dismiss()
             }
             ConfirmDialog(
-                title = "Delete ${dialog.name}?",
+                title = stringResource(CommonR.string.confirm_delete_named_title, dialog.name),
                 confirmLabel = stringResource(CommonR.string.delete),
                 onConfirm = {
                     viewModel.deleteCategories(listOf(dialog.name))
@@ -398,7 +429,7 @@ fun ServerDialogHost(
         }
         is ServerDialog.ConfirmDeleteTag -> {
             ConfirmDialog(
-                title = "Delete ${dialog.name}?",
+                title = stringResource(CommonR.string.confirm_delete_named_title, dialog.name),
                 confirmLabel = stringResource(CommonR.string.delete),
                 onConfirm = {
                     viewModel.deleteTags(listOf(dialog.name))
@@ -414,55 +445,93 @@ fun ServerDialogHost(
             } else {
                 AlertDialog(
                     onDismissRequest = dismiss,
-                    title = { Text("Statistics") },
+                    title = { Text(stringResource(CommonR.string.statistics_title)) },
                     text = {
                         Column(Modifier.verticalScroll(rememberScrollState())) {
-                            StatHeader("User statistics")
-                            StatRow("All-time upload", serverState.allTimeUpload.toHumanReadable())
+                            StatHeader(stringResource(CommonR.string.stat_header_user))
                             StatRow(
-                                "All-time download",
+                                stringResource(CommonR.string.stat_all_time_upload),
+                                serverState.allTimeUpload.toHumanReadable(),
+                            )
+                            StatRow(
+                                stringResource(CommonR.string.stat_all_time_download),
                                 serverState.allTimeDownload.toHumanReadable(),
                             )
-                            StatRow("All-time share ratio", serverState.globalShareRatio)
-                            StatRow("Session waste", serverState.sessionWaste.toHumanReadable())
-                            StatRow("Connected peers", serverState.totalPeerConnections.toString())
-
-                            StatHeader("Cache statistics")
-                            StatRow("Read cache hits", "${serverState.readCacheHits}%")
                             StatRow(
-                                "Total buffer size",
+                                stringResource(CommonR.string.stat_all_time_share_ratio),
+                                serverState.globalShareRatio,
+                            )
+                            StatRow(
+                                stringResource(CommonR.string.stat_session_waste),
+                                serverState.sessionWaste.toHumanReadable(),
+                            )
+                            StatRow(
+                                stringResource(CommonR.string.connected_peers),
+                                serverState.totalPeerConnections.toString(),
+                            )
+
+                            StatHeader(stringResource(CommonR.string.stat_header_cache))
+                            StatRow(
+                                stringResource(CommonR.string.stat_read_cache_hits),
+                                "${serverState.readCacheHits}%",
+                            )
+                            StatRow(
+                                stringResource(CommonR.string.stat_total_buffer_size),
                                 serverState.totalBuffersSize.toLong().toHumanReadable(),
                             )
 
-                            StatHeader("Performance statistics")
-                            StatRow("Write cache overload", "${serverState.writeCacheOverload}%")
-                            StatRow("Read cache overload", "${serverState.readCacheOverload}%")
-                            StatRow("Queued I/O jobs", serverState.queuedIoJobs.toString())
-                            StatRow("Average time in queue", "${serverState.averageTimeInQueue} ms")
+                            StatHeader(stringResource(CommonR.string.stat_header_performance))
                             StatRow(
-                                "Total queued size",
+                                stringResource(CommonR.string.stat_write_cache_overload),
+                                "${serverState.writeCacheOverload}%",
+                            )
+                            StatRow(
+                                stringResource(CommonR.string.stat_read_cache_overload),
+                                "${serverState.readCacheOverload}%",
+                            )
+                            StatRow(
+                                stringResource(CommonR.string.stat_queued_io_jobs),
+                                serverState.queuedIoJobs.toString(),
+                            )
+                            StatRow(
+                                stringResource(CommonR.string.stat_average_time_in_queue),
+                                stringResource(
+                                    CommonR.string.value_ms,
+                                    serverState.averageTimeInQueue,
+                                ),
+                            )
+                            StatRow(
+                                stringResource(CommonR.string.stat_total_queued_size),
                                 serverState.totalQueuedSize.toLong().toHumanReadable(),
                             )
                         }
                     },
-                    confirmButton = { TextButton(onClick = dismiss) { Text("Close") } },
+                    confirmButton = {
+                        TextButton(onClick = dismiss) {
+                            Text(stringResource(CommonR.string.close_action))
+                        }
+                    },
                 )
             }
         }
         ServerDialog.SortPicker -> {
             val options = SortOption.entries
+            val ascendingLabel = stringResource(CommonR.string.ascending_label)
+            val descendingLabel = stringResource(CommonR.string.descending_label)
             val labels = options.map { option ->
+                val label = stringResource(option.labelRes)
                 when {
-                    option != state.sortOption -> option.label
-                    state.sortDirection == SortDirection.ASC -> "↑ ${option.label}"
-                    else -> "↓ ${option.label}"
+                    option != state.sortOption -> label
+                    state.sortDirection == SortDirection.ASC -> "↑ $label"
+                    else -> "↓ $label"
                 }
             }
             val dirLabel =
-                if (state.sortDirection == SortDirection.ASC) "↑ Ascending" else "↓ Descending"
+                if (state.sortDirection == SortDirection.ASC) "↑ $ascendingLabel"
+                else "↓ $descendingLabel"
             AlertDialog(
                 onDismissRequest = dismiss,
-                title = { Text("Sort by") },
+                title = { Text(stringResource(CommonR.string.sort_by_title)) },
                 text = {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
                         options.forEachIndexed { i, option ->
@@ -487,7 +556,9 @@ fun ServerDialogHost(
                         Text(dirLabel)
                     }
                 },
-                dismissButton = { TextButton(onClick = dismiss) { Text("Cancel") } },
+                dismissButton = {
+                    TextButton(onClick = dismiss) { Text(stringResource(CommonR.string.cancel)) }
+                },
             )
         }
         ServerDialog.ServerPicker -> {
@@ -495,7 +566,7 @@ fun ServerDialogHost(
             val activeId by viewModel.activeServerId.collectAsStateWithLifecycle()
             AlertDialog(
                 onDismissRequest = dismiss,
-                title = { Text("Servers") },
+                title = { Text(stringResource(CommonR.string.servers_title)) },
                 text = {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
                         servers.forEach { server ->
@@ -532,11 +603,18 @@ fun ServerDialogHost(
                             modifier = Modifier.padding(top = 4.dp),
                         ) {
                             Icon(Icons.Filled.Add, contentDescription = null)
-                            Text("Add server", Modifier.padding(start = 4.dp))
+                            Text(
+                                stringResource(CommonR.string.add_server),
+                                Modifier.padding(start = 4.dp),
+                            )
                         }
                     }
                 },
-                confirmButton = { TextButton(onClick = dismiss) { Text("Close") } },
+                confirmButton = {
+                    TextButton(onClick = dismiss) {
+                        Text(stringResource(CommonR.string.close_action))
+                    }
+                },
             )
         }
         is ServerDialog.ServerLongPress -> {
@@ -554,7 +632,11 @@ fun ServerDialogHost(
         }
         is ServerDialog.ConfirmDeleteServer -> {
             ConfirmDialog(
-                title = "Delete ${dialog.server.serverName}?",
+                title =
+                    stringResource(
+                        CommonR.string.confirm_delete_named_title,
+                        dialog.server.serverName,
+                    ),
                 confirmLabel = stringResource(CommonR.string.delete),
                 onConfirm = {
                     viewModel.deleteServer(dialog.server.configId)
@@ -571,7 +653,7 @@ fun ServerDialogHost(
         val current = categoryColors[name]
         AlertDialog(
             onDismissRequest = { colorPickerFor = null },
-            title = { Text("Category color") },
+            title = { Text(stringResource(CommonR.string.category_color_title)) },
             text = {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ColorSwatch(
@@ -648,7 +730,9 @@ private fun TextInputDialog(
                 Text(confirmLabel)
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
+        },
     )
 }
 
@@ -663,7 +747,9 @@ private fun ConfirmDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         confirmButton = { TextButton(onClick = onConfirm) { Text(confirmLabel) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
+        },
     )
 }
 
@@ -683,7 +769,7 @@ private fun ThreeActionDialog(
         dismissButton = {
             Row {
                 TextButton(onClick = onNeutral) { Text(neutralLabel) }
-                TextButton(onClick = onDismiss) { Text("Cancel") }
+                TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
             }
         },
     )
@@ -711,7 +797,9 @@ private fun SingleChoiceDialog(
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
+        },
     )
 }
 
@@ -746,7 +834,7 @@ internal fun SpeedLimitsDialog(
                     value = dl,
                     onValueChange = { new -> dl = new.filter { it.isDigit() } },
                     singleLine = true,
-                    label = { Text("Download (KiB/s)") },
+                    label = { Text(stringResource(CommonR.string.download_kib_per_sec)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 )
                 Spacer(Modifier.size(12.dp))
@@ -754,11 +842,11 @@ internal fun SpeedLimitsDialog(
                     value = ul,
                     onValueChange = { new -> ul = new.filter { it.isDigit() } },
                     singleLine = true,
-                    label = { Text("Upload (KiB/s)") },
+                    label = { Text(stringResource(CommonR.string.upload_kib_per_sec)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 )
                 Text(
-                    "Leave empty for unlimited",
+                    stringResource(CommonR.string.leave_empty_for_unlimited),
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(top = 8.dp),
                 )
@@ -774,10 +862,12 @@ internal fun SpeedLimitsDialog(
                     onDismiss()
                 }
             ) {
-                Text("OK")
+                Text(stringResource(CommonR.string.ok))
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
+        },
     )
 }
 

@@ -47,12 +47,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.os.LocaleListCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.ui.backup.BackupDialogs
 import dev.yashgarg.qbit.ui.backup.BackupViewModel
@@ -66,25 +69,47 @@ private val BACKUP_MIME_TYPES = arrayOf("application/json", "application/octet-s
 
 private val THEME_OPTIONS =
     listOf(
-        AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM to "System default",
-        AppCompatDelegate.MODE_NIGHT_NO to "Light",
-        AppCompatDelegate.MODE_NIGHT_YES to "Dark",
+        AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM to CommonR.string.theme_system_default,
+        AppCompatDelegate.MODE_NIGHT_NO to CommonR.string.theme_light,
+        AppCompatDelegate.MODE_NIGHT_YES to CommonR.string.theme_dark,
     )
 
+@Composable
 private fun themeLabel(mode: Int): String =
-    THEME_OPTIONS.firstOrNull { it.first == mode }?.second ?: "System default"
+    stringResource(
+        THEME_OPTIONS.firstOrNull { it.first == mode }?.second
+            ?: CommonR.string.theme_system_default
+    )
 
 private val INTERVAL_OPTIONS =
     listOf(
-        5_000L to "5 seconds",
-        10_000L to "10 seconds",
-        30_000L to "30 seconds",
-        60_000L to "1 minute",
-        300_000L to "5 minutes",
+        5_000L to CommonR.string.interval_5_seconds,
+        10_000L to CommonR.string.interval_10_seconds,
+        30_000L to CommonR.string.interval_30_seconds,
+        60_000L to CommonR.string.interval_1_minute,
+        300_000L to CommonR.string.interval_5_minutes,
     )
 
+@Composable
 private fun intervalLabel(ms: Long): String =
-    INTERVAL_OPTIONS.firstOrNull { it.first == ms }?.second ?: "5 seconds"
+    stringResource(
+        INTERVAL_OPTIONS.firstOrNull { it.first == ms }?.second ?: CommonR.string.interval_5_seconds
+    )
+
+// Per-app language: "" is the system-default locale list. Add a language's tag + label here (and
+// to res/xml/locale_config.xml) as translations land.
+private val LANGUAGE_OPTIONS =
+    listOf(
+        "" to CommonR.string.theme_system_default,
+        "en" to CommonR.string.language_english,
+    )
+
+@Composable
+private fun languageLabel(tag: String): String =
+    stringResource(
+        LANGUAGE_OPTIONS.firstOrNull { it.first == tag }?.second
+            ?: CommonR.string.theme_system_default
+    )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,6 +120,8 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val backupPassphraseTitle = stringResource(CommonR.string.backup_passphrase_title)
+    val encryptBackupTitle = stringResource(CommonR.string.encrypt_backup_title)
 
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val dynamicColors by viewModel.dynamicColors.collectAsStateWithLifecycle()
@@ -119,6 +146,10 @@ fun SettingsScreen(
     val syncIntervalMs by viewModel.syncIntervalMs.collectAsStateWithLifecycle()
 
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
+    var currentLanguageTag by remember {
+        mutableStateOf(AppCompatDelegate.getApplicationLocales().toLanguageTags())
+    }
     var showStatusIntervalDialog by remember { mutableStateOf(false) }
     var showEventIntervalDialog by remember { mutableStateOf(false) }
     var showSyncIntervalDialog by remember { mutableStateOf(false) }
@@ -192,7 +223,7 @@ fun SettingsScreen(
             if (uri != null) {
                 BackupDialogs.showPassphraseDialog(
                     context,
-                    title = "Backup passphrase",
+                    title = backupPassphraseTitle,
                     confirm = false,
                 ) { passphrase ->
                     backupViewModel.beginImport(uri, passphrase)
@@ -226,8 +257,11 @@ fun SettingsScreen(
             serverIds,
             prefGroups,
             includeColors ->
-            BackupDialogs.showPassphraseDialog(context, title = "Encrypt backup", confirm = true) {
-                passphrase ->
+            BackupDialogs.showPassphraseDialog(
+                context,
+                title = encryptBackupTitle,
+                confirm = true,
+            ) { passphrase ->
                 pendingExport = PendingExport(passphrase, serverIds, prefGroups, includeColors)
                 exportLauncher.launch("captain-qbit-backup.cqb")
             }
@@ -237,10 +271,14 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(CommonR.string.settings_label)) },
                 navigationIcon = {
                     IconButton(onClick = { appNavigator.navigate(NavCommand.Back) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription =
+                                stringResource(CommonR.string.content_description_back),
+                        )
                     }
                 },
             )
@@ -250,163 +288,169 @@ fun SettingsScreen(
         Column(
             modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())
         ) {
-            SectionHeader("General")
+            SectionHeader(stringResource(CommonR.string.general_section_title))
             ClickableRow(
-                title = "Servers",
+                title = stringResource(CommonR.string.servers_title),
                 onClick = { appNavigator.navigate(NavCommand.OpenServerList) },
             )
 
             HorizontalDivider()
-            SectionHeader("Server")
+            SectionHeader(stringResource(CommonR.string.server_section_title))
             Text(
-                "Settings on the connected qBittorrent server, not this app",
+                stringResource(CommonR.string.server_section_description),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
             )
             SwitchRow(
-                "Automatic Torrent Management by default",
+                stringResource(CommonR.string.auto_tmm_default_label),
                 autoTmmEnabled,
-                subtitle = "Applies to torrents added outside this app, e.g. via RSS rules",
+                subtitle = stringResource(CommonR.string.auto_tmm_default_subtitle),
             ) {
                 viewModel.setAutoTmmEnabled(it)
             }
             ClickableRow(
-                title = "RSS refresh interval",
-                subtitle = "$rssRefreshIntervalMinutes min",
+                title = stringResource(CommonR.string.rss_refresh_interval_label),
+                subtitle = stringResource(CommonR.string.minutes_suffix, rssRefreshIntervalMinutes),
                 onClick = { showRssIntervalDialog = true },
             )
             SwitchRow(
-                "Fetch RSS feeds",
+                stringResource(CommonR.string.fetch_rss_feeds_label),
                 rssProcessingEnabled,
-                subtitle = "Feeds won't update at all while this is off",
+                subtitle = stringResource(CommonR.string.fetch_rss_feeds_subtitle),
             ) {
                 viewModel.setRssProcessingEnabled(it)
             }
             SwitchRow(
-                "Auto-download matching RSS articles",
+                stringResource(CommonR.string.auto_download_rss_label),
                 rssAutoDownloadingEnabled,
-                subtitle = "Lets RSS rules download torrents automatically",
+                subtitle = stringResource(CommonR.string.auto_download_rss_subtitle),
             ) {
                 viewModel.setRssAutoDownloadingEnabled(it)
             }
             SwitchRow(
-                "Use alternate speed limits",
+                stringResource(CommonR.string.use_alternate_speed_limits_label),
                 speedLimitMode != 0,
-                subtitle = "Switch between your normal speed limits and the alternate ones",
+                subtitle = stringResource(CommonR.string.use_alternate_speed_limits_subtitle),
             ) {
                 viewModel.toggleSpeedLimits()
             }
             ClickableRow(
-                title = "Global speed limits",
-                subtitle = "Set the server-wide download and upload speed limits",
+                title = stringResource(CommonR.string.global_speed_limits_label),
+                subtitle = stringResource(CommonR.string.global_speed_limits_subtitle),
                 onClick = { showGlobalLimitsDialog = true },
             )
             ClickableRow(
-                title = "Alternate speed limits",
-                subtitle = "Set the limits used while \"use alternate speed limits\" is on",
+                title = stringResource(CommonR.string.alternate_speed_limits_label),
+                subtitle = stringResource(CommonR.string.alternate_speed_limits_subtitle),
                 onClick = { showAltLimitsDialog = true },
             )
             SwitchRow(
-                "Torrent queueing",
+                stringResource(CommonR.string.torrent_queueing_label),
                 queueingEnabled,
-                subtitle = "Cap how many torrents are active at once; enables queue positions",
+                subtitle = stringResource(CommonR.string.torrent_queueing_subtitle),
             ) {
                 viewModel.setQueueingEnabled(it)
             }
 
             HorizontalDivider()
-            SectionHeader("Appearance")
+            SectionHeader(stringResource(CommonR.string.appearance_section_title))
             ClickableRow(
-                title = "Theme",
+                title = stringResource(CommonR.string.theme_label),
                 subtitle = themeLabel(themeMode),
                 onClick = { showThemeDialog = true },
             )
+            ClickableRow(
+                title = stringResource(CommonR.string.language_label),
+                subtitle = languageLabel(currentLanguageTag),
+                onClick = { showLanguageDialog = true },
+            )
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                 SwitchRow(
-                    "Dynamic colors",
+                    stringResource(CommonR.string.dynamic_colors_label),
                     dynamicColors,
-                    subtitle = "Use the wallpaper-based Material You palette",
+                    subtitle = stringResource(CommonR.string.dynamic_colors_subtitle),
                 ) {
                     viewModel.setDynamicColors(it)
                 }
             }
 
             HorizontalDivider()
-            SectionHeader("Notifications")
+            SectionHeader(stringResource(CommonR.string.notifications_section_title))
             if (notificationsBlocked) {
                 NotificationsBlockedBanner(
                     onOpenSettings = { openAppNotificationSettings(context) }
                 )
             }
             SwitchRow(
-                "Status notification",
+                stringResource(CommonR.string.status_notification_label),
                 statusNotif,
-                subtitle = "Ongoing notification showing current transfer speeds",
+                subtitle = stringResource(CommonR.string.status_notification_subtitle),
                 enabled = !notificationsBlocked,
             ) {
                 viewModel.setStatusNotification(it)
                 applyNotificationPrefs(it, notifyComplete, notifyChecked, notifyRssUpdates)
             }
             SwitchRow(
-                "Notify on complete",
+                stringResource(CommonR.string.notify_on_complete_label),
                 notifyComplete,
-                subtitle = "Alert when a torrent finishes downloading",
+                subtitle = stringResource(CommonR.string.notify_on_complete_subtitle),
                 enabled = !notificationsBlocked,
             ) {
                 viewModel.setNotifyOnComplete(it)
                 applyNotificationPrefs(statusNotif, it, notifyChecked, notifyRssUpdates)
             }
             SwitchRow(
-                "Notify on checked",
+                stringResource(CommonR.string.notify_on_checked_label),
                 notifyChecked,
-                subtitle = "Alert when a torrent finishes rechecking",
+                subtitle = stringResource(CommonR.string.notify_on_checked_subtitle),
                 enabled = !notificationsBlocked,
             ) {
                 viewModel.setNotifyOnChecked(it)
                 applyNotificationPrefs(statusNotif, notifyComplete, it, notifyRssUpdates)
             }
             SwitchRow(
-                "Notify on new RSS articles",
+                stringResource(CommonR.string.notify_on_new_rss_label),
                 notifyRssUpdates,
-                subtitle =
-                    "Alert when a feed gets new articles - checked as often as the RSS " +
-                        "screen's own feed refresh interval",
+                subtitle = stringResource(CommonR.string.notify_on_new_rss_subtitle),
                 enabled = !notificationsBlocked,
             ) {
                 viewModel.setNotifyOnNewRssArticles(it)
                 applyNotificationPrefs(statusNotif, notifyComplete, notifyChecked, it)
             }
             ClickableRow(
-                title = "Notification refresh interval",
+                title = stringResource(CommonR.string.notification_refresh_interval_label),
                 subtitle = intervalLabel(statusRefreshIntervalMs),
                 onClick = { showStatusIntervalDialog = true },
             )
             ClickableRow(
-                title = "Torrent alert check interval",
+                title = stringResource(CommonR.string.torrent_alert_check_interval_label),
                 subtitle = intervalLabel(eventPollIntervalMs),
                 onClick = { showEventIntervalDialog = true },
             )
 
             HorizontalDivider()
-            SectionHeader("Sync")
+            SectionHeader(stringResource(CommonR.string.sync_section_title))
             ClickableRow(
-                title = "Torrent list refresh interval",
+                title = stringResource(CommonR.string.torrent_list_refresh_interval_label),
                 subtitle = intervalLabel(syncIntervalMs),
                 onClick = { showSyncIntervalDialog = true },
             )
 
             HorizontalDivider()
-            SectionHeader("Backup")
-            ClickableRow(title = "Export configuration", onClick = { startExport() })
+            SectionHeader(stringResource(CommonR.string.backup_section_title))
             ClickableRow(
-                title = "Import configuration",
+                title = stringResource(CommonR.string.export_configuration_label),
+                onClick = { startExport() },
+            )
+            ClickableRow(
+                title = stringResource(CommonR.string.import_configuration_label),
                 onClick = { importLauncher.launch(BACKUP_MIME_TYPES) },
             )
 
             HorizontalDivider()
             ClickableRow(
-                title = "About",
+                title = stringResource(CommonR.string.about),
                 onClick = { appNavigator.navigate(NavCommand.OpenVersion) },
             )
         }
@@ -415,10 +459,10 @@ fun SettingsScreen(
     if (showThemeDialog) {
         AlertDialog(
             onDismissRequest = { showThemeDialog = false },
-            title = { Text("Theme") },
+            title = { Text(stringResource(CommonR.string.theme_label)) },
             text = {
                 Column {
-                    THEME_OPTIONS.forEach { (mode, label) ->
+                    THEME_OPTIONS.forEach { (mode, labelRes) ->
                         Row(
                             modifier =
                                 Modifier.fillMaxWidth()
@@ -437,22 +481,69 @@ fun SettingsScreen(
                                 },
                             )
                             Spacer(Modifier.size(12.dp))
-                            Text(label)
+                            Text(stringResource(labelRes))
                         }
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showThemeDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showThemeDialog = false }) {
+                    Text(stringResource(CommonR.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (showLanguageDialog) {
+        AlertDialog(
+            onDismissRequest = { showLanguageDialog = false },
+            title = { Text(stringResource(CommonR.string.language_label)) },
+            text = {
+                Column {
+                    LANGUAGE_OPTIONS.forEach { (tag, labelRes) ->
+                        Row(
+                            modifier =
+                                Modifier.fillMaxWidth()
+                                    .clickable {
+                                        AppCompatDelegate.setApplicationLocales(
+                                            if (tag.isEmpty()) LocaleListCompat.getEmptyLocaleList()
+                                            else LocaleListCompat.forLanguageTags(tag)
+                                        )
+                                        currentLanguageTag = tag
+                                        showLanguageDialog = false
+                                    }
+                                    .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(
+                                selected = currentLanguageTag == tag,
+                                onClick = {
+                                    AppCompatDelegate.setApplicationLocales(
+                                        if (tag.isEmpty()) LocaleListCompat.getEmptyLocaleList()
+                                        else LocaleListCompat.forLanguageTags(tag)
+                                    )
+                                    currentLanguageTag = tag
+                                    showLanguageDialog = false
+                                },
+                            )
+                            Spacer(Modifier.size(12.dp))
+                            Text(stringResource(labelRes))
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLanguageDialog = false }) {
+                    Text(stringResource(CommonR.string.cancel))
+                }
             },
         )
     }
 
     if (showStatusIntervalDialog) {
         IntervalDialog(
-            title = "Notification refresh interval",
-            description =
-                "How often the notification updates its transfer speeds. Longer saves battery.",
+            title = stringResource(CommonR.string.notification_refresh_interval_label),
+            description = stringResource(CommonR.string.notification_refresh_interval_description),
             selected = statusRefreshIntervalMs,
             onSelect = {
                 viewModel.setStatusRefreshIntervalMs(it)
@@ -465,9 +556,8 @@ fun SettingsScreen(
     }
     if (showEventIntervalDialog) {
         IntervalDialog(
-            title = "Torrent alert check interval",
-            description =
-                "How often finished/rechecked torrents are checked. Longer delays alerts but saves battery.",
+            title = stringResource(CommonR.string.torrent_alert_check_interval_label),
+            description = stringResource(CommonR.string.torrent_alert_check_interval_description),
             selected = eventPollIntervalMs,
             onSelect = {
                 viewModel.setEventPollIntervalMs(it)
@@ -478,9 +568,8 @@ fun SettingsScreen(
     }
     if (showSyncIntervalDialog) {
         IntervalDialog(
-            title = "Torrent list refresh interval",
-            description =
-                "How often the open torrent list refreshes. Longer saves battery and data.",
+            title = stringResource(CommonR.string.torrent_list_refresh_interval_label),
+            description = stringResource(CommonR.string.torrent_list_refresh_interval_description),
             selected = syncIntervalMs,
             onSelect = viewModel::setSyncIntervalMs,
             onDismiss = { showSyncIntervalDialog = false },
@@ -488,7 +577,7 @@ fun SettingsScreen(
     }
     if (showGlobalLimitsDialog) {
         SpeedLimitsDialog(
-            title = "Global speed limits",
+            title = stringResource(CommonR.string.global_speed_limits_label),
             initialDownloadBytes = globalDownloadLimit,
             initialUploadBytes = globalUploadLimit,
             onConfirm = { dl, ul -> viewModel.setGlobalLimits(dl, ul) },
@@ -497,7 +586,7 @@ fun SettingsScreen(
     }
     if (showAltLimitsDialog) {
         SpeedLimitsDialog(
-            title = "Alternate speed limits",
+            title = stringResource(CommonR.string.alternate_speed_limits_label),
             initialDownloadBytes = altDownloadLimit,
             initialUploadBytes = altUploadLimit,
             onConfirm = { dl, ul -> viewModel.setAltLimits(dl, ul) },
@@ -562,12 +651,14 @@ private fun IntervalDialog(
                             },
                         )
                         Spacer(Modifier.size(12.dp))
-                        Text(label)
+                        Text(stringResource(label))
                     }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
+        },
     )
 }
 
@@ -586,18 +677,19 @@ private fun NotificationsBlockedBanner(onOpenSettings: () -> Unit) {
     ) {
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
-                "Notifications are blocked",
+                stringResource(CommonR.string.notifications_blocked_title),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.error,
             )
             Text(
-                "These switches won't show anything until notifications are re-enabled for this " +
-                    "app in system settings.",
+                stringResource(CommonR.string.notifications_blocked_message),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        TextButton(onClick = onOpenSettings) { Text("Open settings") }
+        TextButton(onClick = onOpenSettings) {
+            Text(stringResource(CommonR.string.open_settings_action))
+        }
     }
 }
 

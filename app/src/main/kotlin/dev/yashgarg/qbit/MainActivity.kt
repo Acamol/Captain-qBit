@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import androidx.datastore.core.DataStore
@@ -30,6 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import dagger.hilt.android.AndroidEntryPoint
+import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.manager.PendingTorrentIntent
 import dev.yashgarg.qbit.data.models.ConfigStatus
@@ -107,11 +109,13 @@ class MainActivity : AppCompatActivity() {
                 }
                 crashReport?.let { report ->
                     val copyToClipboard = rememberCopyToClipboard()
+                    val crashReportCopiedMessage =
+                        stringResource(CommonR.string.crash_report_copied)
                     CrashReportDialog(
                         report = report,
                         onDismiss = { crashReport = null },
                         onCopy = {
-                            copyToClipboard("Crash report", report, "Crash report copied")
+                            copyToClipboard("Crash report", report, crashReportCopiedMessage)
                         },
                         onReportIssue = {
                             startActivity(
@@ -149,13 +153,11 @@ class MainActivity : AppCompatActivity() {
                     if (showNotificationRationale) {
                         AlertDialog(
                             onDismissRequest = {},
-                            title = { Text("Enable notifications?") },
+                            title = {
+                                Text(stringResource(CommonR.string.enable_notifications_title))
+                            },
                             text = {
-                                Text(
-                                    "Get a status notification with live transfer speeds, plus " +
-                                        "alerts when a torrent finishes downloading or checking. " +
-                                        "You can change this anytime in Settings."
-                                )
+                                Text(stringResource(CommonR.string.enable_notifications_message))
                             },
                             confirmButton = {
                                 TextButton(
@@ -171,7 +173,7 @@ class MainActivity : AppCompatActivity() {
                                         )
                                     }
                                 ) {
-                                    Text("Enable")
+                                    Text(stringResource(CommonR.string.enable_action))
                                 }
                             },
                             dismissButton = {
@@ -185,7 +187,7 @@ class MainActivity : AppCompatActivity() {
                                         }
                                     }
                                 ) {
-                                    Text("Not now")
+                                    Text(stringResource(CommonR.string.not_now_action))
                                 }
                             },
                         )
@@ -330,7 +332,12 @@ class MainActivity : AppCompatActivity() {
             finish()
         } else {
             lastBackPressTime = now
-            Toast.makeText(this, "Press back again to exit", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                    this,
+                    getString(CommonR.string.press_back_again_to_exit),
+                    Toast.LENGTH_SHORT,
+                )
+                .show()
         }
     }
 
@@ -346,8 +353,11 @@ class MainActivity : AppCompatActivity() {
         // Prevent the torrent handling from treating this URI as a torrent to add.
         setIntent(intent.apply { data = null })
 
-        BackupDialogs.showPassphraseDialog(this, title = "Backup passphrase", confirm = false) {
-            passphrase ->
+        BackupDialogs.showPassphraseDialog(
+            this,
+            title = getString(CommonR.string.backup_passphrase_title),
+            confirm = false,
+        ) { passphrase ->
             backupViewModel.beginImport(uri, passphrase)
         }
     }

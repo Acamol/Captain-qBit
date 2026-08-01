@@ -11,8 +11,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.yashgarg.qbit.common.R as CommonR
 
 /**
  * Shown once after a crash, from a report saved locally by [dev.yashgarg.qbit.utils.CrashHandler].
@@ -28,11 +30,11 @@ fun CrashReportDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Captain qBit crashed last time") },
+        title = { Text(stringResource(CommonR.string.crash_report_dialog_title)) },
         text = {
             Column {
                 Text(
-                    "Saved on this device only — nothing is sent automatically.",
+                    stringResource(CommonR.string.crash_report_saved_locally),
                     fontWeight = FontWeight.Medium,
                 )
                 Text(
@@ -46,17 +48,19 @@ fun CrashReportDialog(
         },
         confirmButton = {
             Row {
-                TextButton(onClick = onCopy) { Text("Copy") }
+                TextButton(onClick = onCopy) { Text(stringResource(CommonR.string.copy_action)) }
                 TextButton(
                     onClick = {
                         onReportIssue()
                         onDismiss()
                     }
                 ) {
-                    Text("Report on GitHub")
+                    Text(stringResource(CommonR.string.report_on_github_action))
                 }
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Not now") } },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.not_now_action)) }
+        },
     )
 }

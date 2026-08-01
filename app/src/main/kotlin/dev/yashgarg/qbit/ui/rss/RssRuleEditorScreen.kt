@@ -48,10 +48,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.ui.server.TooltipIconButton
@@ -114,16 +116,27 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(if (editingName != null) "Edit rule" else "New rule") },
+                title = {
+                    Text(
+                        stringResource(
+                            if (editingName != null) CommonR.string.edit_rule_title
+                            else CommonR.string.new_rule_action
+                        )
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { appNavigator.navigate(NavCommand.Back) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription =
+                                stringResource(CommonR.string.content_description_back),
+                        )
                     }
                 },
                 actions = {
                     if (editingName != null) {
                         TooltipIconButton(
-                            label = "Remove rule",
+                            label = stringResource(CommonR.string.remove_rule_action),
                             icon = Icons.Filled.Delete,
                             onClick = { showRemoveConfirm = true },
                             position = TooltipAnchorPosition.Below,
@@ -144,48 +157,48 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Rule name") },
+                label = { Text(stringResource(CommonR.string.rule_name_label)) },
                 singleLine = true,
                 enabled = editingName == null,
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            SwitchRow("Enabled", rule.enabled) { rule = rule.copy(enabled = it) }
+            SwitchRow(stringResource(CommonR.string.enabled_label), rule.enabled) {
+                rule = rule.copy(enabled = it)
+            }
 
             OutlinedTextField(
                 value = rule.mustContain,
                 onValueChange = { rule = rule.copy(mustContain = it) },
-                label = { Text("Must contain") },
+                label = { Text(stringResource(CommonR.string.must_contain_label)) },
                 supportingText = {
-                    Text("One expression per line (OR); words in a line are ANDed")
+                    Text(stringResource(CommonR.string.must_contain_supporting_text))
                 },
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
                 value = rule.mustNotContain,
                 onValueChange = { rule = rule.copy(mustNotContain = it) },
-                label = { Text("Must not contain") },
+                label = { Text(stringResource(CommonR.string.must_not_contain_label)) },
                 modifier = Modifier.fillMaxWidth(),
             )
-            SwitchRow("Use regex", rule.useRegex) { rule = rule.copy(useRegex = it) }
+            SwitchRow(stringResource(CommonR.string.use_regex_label), rule.useRegex) {
+                rule = rule.copy(useRegex = it)
+            }
             OutlinedTextField(
                 value = rule.episodeFilter,
                 onValueChange = { rule = rule.copy(episodeFilter = it) },
-                label = { Text("Episode filter") },
+                label = { Text(stringResource(CommonR.string.episode_filter_label)) },
                 supportingText = {
-                    Text(
-                        "Format: 1x01;1x02-03;1x05- (season x episode, ranges allowed); blank matches every episode"
-                    )
+                    Text(stringResource(CommonR.string.episode_filter_supporting_text))
                 },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
             SwitchRow(
-                "Smart episode filter",
+                stringResource(CommonR.string.smart_episode_filter_label),
                 rule.smartFilter,
-                subtitle =
-                    "Remembers the last episode this rule matched and only alerts on newer " +
-                        "ones, so you don't have to keep updating the episode filter as a show airs",
+                subtitle = stringResource(CommonR.string.smart_episode_filter_subtitle),
             ) {
                 rule = rule.copy(smartFilter = it)
             }
@@ -194,13 +207,16 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
                 onValueChange = { new ->
                     rule = rule.copy(ignoreDays = new.filter(Char::isDigit).toIntOrNull() ?: 0)
                 },
-                label = { Text("Ignore days after last match") },
+                label = { Text(stringResource(CommonR.string.ignore_days_label)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            Text("Add matched torrents as", style = MaterialTheme.typography.titleSmall)
+            Text(
+                stringResource(CommonR.string.add_matched_torrents_as_label),
+                style = MaterialTheme.typography.titleSmall,
+            )
             PausedMode.entries.forEach { mode ->
                 Row(
                     modifier =
@@ -216,11 +232,13 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
                         onClick = { rule = rule.copy(addPaused = mode.toAddPaused()) },
                     )
                     Text(
-                        when (mode) {
-                            PausedMode.GLOBAL -> "Use global default"
-                            PausedMode.PAUSED -> "Paused"
-                            PausedMode.STARTED -> "Started"
-                        }
+                        stringResource(
+                            when (mode) {
+                                PausedMode.GLOBAL -> CommonR.string.use_global_default_label
+                                PausedMode.PAUSED -> CommonR.string.paused
+                                PausedMode.STARTED -> CommonR.string.started_label
+                            }
+                        )
                     )
                 }
             }
@@ -232,7 +250,7 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
                 OutlinedTextField(
                     value = rule.assignedCategory,
                     onValueChange = { rule = rule.copy(assignedCategory = it) },
-                    label = { Text("Category (pick or type a new one)") },
+                    label = { Text(stringResource(CommonR.string.category_pick_or_type_label)) },
                     singleLine = true,
                     trailingIcon = {
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
@@ -262,7 +280,7 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
             OutlinedTextField(
                 value = rule.savePath,
                 onValueChange = { rule = rule.copy(savePath = it) },
-                label = { Text("Save path") },
+                label = { Text(stringResource(CommonR.string.save_path_hint)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -275,7 +293,7 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
                     value = rule.torrentContentLayout,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Content layout") },
+                    label = { Text(stringResource(CommonR.string.content_layout_label)) },
                     trailingIcon = {
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = contentLayoutExpanded)
                     },
@@ -303,7 +321,13 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
                 onClick = { showFeedPicker = true },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Affected feeds (${rule.affectedFeeds.size} of ${allFeeds.size})")
+                Text(
+                    stringResource(
+                        CommonR.string.affected_feeds_count,
+                        rule.affectedFeeds.size,
+                        allFeeds.size,
+                    )
+                )
             }
 
             if (editingName != null) {
@@ -318,10 +342,15 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
                     enabled = !loadingMatches,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(if (loadingMatches) "Loading…" else "View matching articles")
+                    Text(
+                        stringResource(
+                            if (loadingMatches) CommonR.string.loading_ellipsis
+                            else CommonR.string.view_matching_articles_action
+                        )
+                    )
                 }
                 Text(
-                    "Reflects the last saved version of this rule, not any unsaved edits above.",
+                    stringResource(CommonR.string.reflects_last_saved_version_message),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -336,7 +365,7 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
                 enabled = name.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Save")
+                Text(stringResource(CommonR.string.save_cfg))
             }
         }
     }
@@ -364,7 +393,9 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
     if (showRemoveConfirm && editingName != null) {
         AlertDialog(
             onDismissRequest = { showRemoveConfirm = false },
-            title = { Text("Remove rule \"$editingName\"?") },
+            title = {
+                Text(stringResource(CommonR.string.remove_rule_confirm_title, editingName))
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -373,11 +404,13 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
                         appNavigator.navigate(NavCommand.Back)
                     }
                 ) {
-                    Text("Remove")
+                    Text(stringResource(CommonR.string.remove_action))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showRemoveConfirm = false }) { Text("Cancel") }
+                TextButton(onClick = { showRemoveConfirm = false }) {
+                    Text(stringResource(CommonR.string.cancel))
+                }
             },
         )
     }
@@ -420,11 +453,14 @@ fun MatchingArticlesResultDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(if (totalMatches == 0) "No matches yet" else "$totalMatches matching article(s)")
+            Text(
+                if (totalMatches == 0) stringResource(CommonR.string.no_matches_yet_title)
+                else stringResource(CommonR.string.matching_articles_count, totalMatches)
+            )
         },
         text = {
             if (totalMatches == 0) {
-                Text("This rule hasn't matched any article currently cached in its affected feeds.")
+                Text(stringResource(CommonR.string.rule_no_matches_message))
             } else {
                 // A loosely-filtered rule spanning many feeds can match hundreds of articles -
                 // LazyColumn only composes the rows actually scrolled into view.
@@ -442,7 +478,9 @@ fun MatchingArticlesResultDialog(
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.close_action)) }
+        },
     )
 }
 
@@ -456,7 +494,7 @@ private fun FeedPickerDialog(
     val checked = remember { mutableStateOf(selected) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Affected feeds") },
+        title = { Text(stringResource(CommonR.string.affected_feeds_title)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 feeds.forEach { feed ->
@@ -485,8 +523,12 @@ private fun FeedPickerDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onApply(checked.value.toList()) }) { Text("OK") }
+            TextButton(onClick = { onApply(checked.value.toList()) }) {
+                Text(stringResource(CommonR.string.ok))
+            }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
+        },
     )
 }
