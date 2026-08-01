@@ -312,7 +312,7 @@ private fun ArticleCard(
  * rule's "Must contain" field (words are ANDed; only OR-across-lines doesn't apply to a single-line
  * search box).
  */
-private fun matchesQuery(title: String, query: String): Boolean {
+internal fun matchesQuery(title: String, query: String): Boolean {
     val words = query.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
     return words.all { title.contains(it, ignoreCase = true) }
 }
