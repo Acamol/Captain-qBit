@@ -1,3 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="add_server">הוספת שרת</string>
+    <string name="edit_server">עריכת שרת</string>
+    <string name="server_settings">הגדרות שרת</string>
+    <string name="status_cannot_delete_last_server">לא ניתן למחוק שרת יחיד</string>
+    <string name="welcome_text">ברוכים הבאים ל-Captain qBit</string>
+    <string name="press_button">ניתן ללחוץ על הכפתור למטה כדי להוסיף שרת</string>
+    <string name="restore_from_backup">שיחזור מגיבוי</string>
+    <string name="error">משהו השתבש</string>
+    <string name="no_queue">התור ריק</string>
+    <string name="invalid_username">יש להזין שם משתמש</string>
+    <string name="invalid_password">יש להזין סיסמה</string>
+    <string name="invalid_type">יש לבחור ערך</string>
+    <string name="invalid_url">נא להזין כתובת מארח תקינה</string>
+    <string name="invalid_port">נא להזין מספר פורט תקין</string>
+    <string name="invalid_name">יש להזין שם</string>
+    <string name="about">אודות</string>
 </resources>
