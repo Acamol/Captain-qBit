@@ -13,6 +13,7 @@ Features:
 * Light, Dark, or System theme, with optional Material You dynamic colours
 * Optional status notification, plus opt-in alerts when a download or force-recheck finishes,
   with configurable refresh intervals to trade freshness for battery life
+* Browse RSS feeds and articles, with auto-download rules and notifications for new matches
 * Encrypted backup and restore of your servers and settings
 * Clear failure reasons when a torrent errors, instead of a bare "error"
 * Optional HTTP Basic Auth for servers behind a reverse proxy, plus self-signed certificate support

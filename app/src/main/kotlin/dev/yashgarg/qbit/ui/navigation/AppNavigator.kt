@@ -51,6 +51,15 @@ sealed interface NavCommand {
     /** Open the read-only viewer for the remote qBittorrent server's main log. */
     data object OpenLogs : NavCommand
 
+    /** Open the RSS feeds/articles/rules screen. */
+    data object OpenRss : NavCommand
+
+    /** Open the article list for one feed. [itemPath] is the feed's `\`-joined tree path. */
+    data class OpenRssArticles(val itemPath: String) : NavCommand
+
+    /** Open the rule editor. Null [ruleName] creates a new rule. */
+    data class OpenRssRuleEditor(val ruleName: String? = null) : NavCommand
+
     /** Up / system-back within the Compose back stack. */
     data object Back : NavCommand
 }

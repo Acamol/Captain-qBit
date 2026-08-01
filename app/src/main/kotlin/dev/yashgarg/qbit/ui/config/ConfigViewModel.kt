@@ -4,7 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.Result
-import com.github.michaelbull.result.runCatching
+import com.github.michaelbull.result.coroutines.runSuspendCatching
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.yashgarg.qbit.data.daos.ConfigDao
 import dev.yashgarg.qbit.data.manager.ClientManager
@@ -246,9 +246,13 @@ constructor(
             val editing = serverId >= 0
             val wasEmpty = configDao.maxConfigId() == -1
             val newId = if (editing) serverId else configDao.maxConfigId() + 1
+            val position =
+                if (editing) configDao.getConfigById(serverId)?.position ?: 0
+                else configDao.maxPosition() + 1
             val config =
                 ServerConfig(
                     configId = newId,
+                    position = position,
                     serverName = serverName.trim(),
                     baseUrl = serverHost.trim(),
                     port = if (port.isEmpty()) null else port.trim().toInt(),
@@ -275,7 +279,7 @@ constructor(
         basicAuthUsername: String?,
         basicAuthPassword: String?,
     ): Result<String, Throwable> {
-        return runCatching {
+        return runSuspendCatching {
             val basicAuth =
                 if (!basicAuthUsername.isNullOrEmpty() && !basicAuthPassword.isNullOrEmpty()) {
                     basicAuthUsername to basicAuthPassword

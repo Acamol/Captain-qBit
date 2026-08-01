@@ -165,9 +165,6 @@
     <string name="status_speed_limits_disabled">Alternative speed limits are disabled</string>
     <string name="status_speed_limits_enabled">Alternative speed limits are enabled</string>
     <string name="status_toggle_speed_limits_failure">Failed to toggle speed limits</string>
-    <string name="status_queueing_enabled">Torrent queueing enabled</string>
-    <string name="status_queueing_disabled">Torrent queueing disabled</string>
-    <string name="status_set_queueing_failure">Failed to change torrent queueing</string>
     <string name="status_get_speed_limit_mode_failure">Failed to get speed limit mode</string>
     <string name="status_sync_data_failure">Failed to sync data</string>
 
@@ -177,6 +174,9 @@
     <string name="status_resume_torrent_failure">Failed to resume torrent</string>
     <string name="status_torrent_removed">Torrent removed</string>
     <string name="status_remove_torrent_failure">Failed to remove torrent</string>
+    <string name="status_torrent_not_found">
+        Couldn\'t find this torrent — it may have been removed, or the server hasn\'t synced it yet
+    </string>
     <string name="status_rechecking_torrent">Rechecking torrent</string>
     <string name="status_recheck_torrent_failure">Failed to recheck torrent</string>
     <string name="status_reannouncing_torrent">Reannouncing torrent</string>
@@ -213,4 +213,32 @@
     <string name="status_remove_tracker_failure">Failed to remove tracker</string>
     <string name="status_category_edited">Category \"%1$s\" updated</string>
     <string name="status_edit_category_failure">Failed to edit category</string>
+
+    <string name="status_rss_load_failure">Failed to load RSS feeds</string>
+    <string name="status_rss_folder_added">Folder added</string>
+    <string name="status_rss_add_folder_failure">Failed to add folder</string>
+    <string name="status_rss_feed_added">Feed added</string>
+    <string name="status_rss_add_feed_failure">Failed to add feed</string>
+    <string name="status_rss_item_removed">Removed</string>
+    <string name="status_rss_remove_item_failure">Failed to remove</string>
+    <string name="status_rss_move_item_failure">Failed to move</string>
+    <string name="status_rss_marked_read">Marked as read</string>
+    <string name="status_rss_mark_read_failure">Failed to mark as read</string>
+    <string name="status_rss_refreshing_item">Refreshing feed</string>
+    <string name="status_rss_refresh_item_failure">Failed to refresh feed</string>
+    <string name="status_rss_rule_saved">Rule saved</string>
+    <string name="status_rss_save_rule_failure">Failed to save rule</string>
+    <string name="status_rss_rule_renamed">Rule renamed</string>
+    <string name="status_rss_rename_rule_failure">Failed to rename rule</string>
+    <string name="status_rss_rule_removed">Rule removed</string>
+    <string name="status_rss_remove_rule_failure">Failed to remove rule</string>
+    <string name="status_rss_fetch_torrent_failure">Failed to fetch the torrent file</string>
+    <string name="status_rss_interval_updated">Refresh interval updated</string>
+    <string name="status_rss_interval_update_failure">Failed to update refresh interval</string>
+    <string name="status_rss_processing_updated">RSS fetching updated</string>
+    <string name="status_rss_processing_update_failure">Failed to update RSS fetching</string>
+    <string name="status_rss_auto_downloading_updated">RSS auto-downloading updated</string>
+    <string name="status_rss_auto_downloading_update_failure">
+        Failed to update RSS auto-downloading
+    </string>
 </resources>

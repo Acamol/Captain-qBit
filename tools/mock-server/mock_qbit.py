@@ -266,6 +266,14 @@ TRANSFER_INFO = {
     "connection_status": "connected",
 }
 
+# ---- app preferences (alt speed limits, queueing, RSS refresh interval) --
+PREFERENCES = {
+    "alt_dl_limit": -1,
+    "alt_up_limit": -1,
+    "queueing_enabled": False,
+    "rss_refresh_interval": 30,
+}
+
 # ---- torrent details data (files/properties/trackers) --------------------
 _MULTI_FILE = "Blender Open Movies Pack"
 
@@ -437,6 +445,209 @@ def logs_response(qs):
     ]
 
 
+# ---- RSS (folders/feeds tree + auto-download rules) -----------------------
+# Mutable in-memory state so add/remove/rule edits from the app persist for the
+# rest of this mock server's process lifetime, mirroring the stateful torrent
+# actions above.
+RSS_ITEMS = {
+    "Linux Distros": {
+        "Ubuntu Releases": {
+            "uid": "b7a1e9d2-1111-4c2a-9d3e-000000000001",
+            "url": "https://example.org/feeds/ubuntu-releases.xml",
+            "title": "Ubuntu Releases",
+            "lastBuildDate": "Mon, 27 Jul 2026 09:00:00 +0000",
+            "isLoading": False,
+            "hasError": False,
+            "articles": [
+                {
+                    "id": "ubuntu-24.04.1",
+                    "date": "Mon, 27 Jul 2026 09:00:00 +0000",
+                    "title": "Ubuntu 24.04.1 LTS released",
+                    "link": "https://example.org/releases/ubuntu-24.04.1",
+                    "description": "Point release with cumulative fixes.",
+                    "torrentURL": "https://example.org/torrents/ubuntu-24.04.1-desktop-amd64.iso.torrent",
+                    "isRead": False,
+                },
+                {
+                    "id": "ubuntu-24.10",
+                    "date": "Thu, 10 Jul 2026 09:00:00 +0000",
+                    "title": "Ubuntu 24.10 released",
+                    "link": "https://example.org/releases/ubuntu-24.10",
+                    "description": "Latest interim release.",
+                    "torrentURL": "https://example.org/torrents/ubuntu-24.10-desktop-amd64.iso.torrent",
+                    "isRead": True,
+                },
+            ],
+        }
+    },
+    "Public Domain Books": {
+        "uid": "b7a1e9d2-1111-4c2a-9d3e-000000000002",
+        "url": "https://example.org/feeds/public-domain-books.xml",
+        "title": "Public Domain Books",
+        "lastBuildDate": "Sun, 26 Jul 2026 18:00:00 +0000",
+        "isLoading": False,
+        "hasError": False,
+        "articles": [
+            {
+                "id": "pg-11",
+                "date": "Sun, 26 Jul 2026 18:00:00 +0000",
+                "title": "Alice's Adventures in Wonderland (EPUB collection)",
+                "link": "https://example.org/books/alices-adventures-in-wonderland",
+                "description": "Public-domain EPUB/MOBI/PDF bundle.",
+                "torrentURL": "https://example.org/torrents/alices-adventures-in-wonderland.torrent",
+                "isRead": False,
+            }
+        ],
+    },
+}
+
+RSS_RULES = {
+    "Ubuntu LTS only": {
+        "enabled": True,
+        "mustContain": "LTS",
+        "mustNotContain": "",
+        "useRegex": False,
+        "episodeFilter": "",
+        "smartFilter": False,
+        "ignoreDays": 0,
+        "addPaused": None,
+        "assignedCategory": "distros/ubuntu",
+        "savePath": "",
+        "torrentContentLayout": "Original",
+        "affectedFeeds": ["https://example.org/feeds/ubuntu-releases.xml"],
+    }
+}
+
+
+def _rss_split(item_path):
+    return [p for p in item_path.split("\\") if p]
+
+
+def _rss_parent_and_key(item_path):
+    """Walk RSS_ITEMS down to item_path's parent dict, creating folders as needed."""
+    parts = _rss_split(item_path)
+    node = RSS_ITEMS
+    for part in parts[:-1]:
+        node = node.setdefault(part, {})
+    return node, parts[-1] if parts else None
+
+
+def _rss_find(item_path):
+    node, key = _rss_parent_and_key(item_path)
+    return node.get(key) if key else None
+
+
+def rss_add_folder(path):
+    node, key = _rss_parent_and_key(path)
+    if key:
+        node.setdefault(key, {})
+
+
+def rss_add_feed(url, path):
+    # Real qBittorrent's own "path" semantics for addFeed are ambiguously documented (parent
+    # folder vs. full path incl. the feed's own key); this mock takes `path` as the parent
+    # folder and derives a stable key from the URL, which is enough to exercise the app's UI.
+    key = url.rstrip("/").rsplit("/", 1)[-1] or url
+    parent = RSS_ITEMS
+    if path:
+        for part in _rss_split(path):
+            parent = parent.setdefault(part, {})
+    parent[key] = {
+        "uid": hashlib.sha256(url.encode()).hexdigest(),
+        "url": url,
+        "title": key,
+        "lastBuildDate": None,
+        "isLoading": False,
+        "hasError": False,
+        "articles": [],
+    }
+
+
+def rss_remove_item(item_path):
+    node, key = _rss_parent_and_key(item_path)
+    if key:
+        node.pop(key, None)
+
+
+def rss_move_item(item_path, dest_path):
+    node, key = _rss_parent_and_key(item_path)
+    item = node.pop(key, None) if key else None
+    if item is None:
+        return
+    dest_node, dest_key = _rss_parent_and_key(dest_path)
+    if dest_key:
+        dest_node[dest_key] = item
+
+
+def rss_mark_as_read(item_path, article_id):
+    item = _rss_find(item_path)
+    if not item or "articles" not in item:
+        return
+    for article in item["articles"]:
+        if article_id is None or article["id"] == article_id:
+            article["isRead"] = True
+
+
+_rss_refresh_counts = {}
+
+
+def rss_refresh_item(item_path):
+    item = _rss_find(item_path)
+    if not item:
+        return
+    if "lastBuildDate" in item:
+        item["lastBuildDate"] = time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime())
+    # Test aid: each manual refresh of a feed injects one new synthetic article, so RSS
+    # "new article" notifications can be exercised on demand from the app's own Refresh
+    # action - mirrors resuming a torrent twice to force completion, above - with no code
+    # edits or server restart needed.
+    if "articles" in item:
+        _rss_refresh_counts[item_path] = _rss_refresh_counts.get(item_path, 0) + 1
+        n = _rss_refresh_counts[item_path]
+        item["articles"].insert(
+            0,
+            {
+                "id": f"test-refresh-{item_path}-{n}",
+                "date": time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime()),
+                "title": f"TEST - refreshed article #{n}",
+                "link": "https://example.org/test-article",
+                "description": "Injected by a manual feed refresh, for testing RSS notifications.",
+                "torrentURL": "https://example.org/torrents/test-refresh.torrent",
+                "isRead": False,
+            },
+        )
+
+
+def _rss_all_feeds(node=None):
+    node = RSS_ITEMS if node is None else node
+    feeds = []
+    for value in node.values():
+        if "url" in value:
+            feeds.append(value)
+        else:
+            feeds.extend(_rss_all_feeds(value))
+    return feeds
+
+
+def rss_matching_articles(rule_name):
+    rule = RSS_RULES.get(rule_name)
+    if not rule:
+        return {}
+    needle = (rule.get("mustContain") or "").lower()
+    result = {}
+    for feed in _rss_all_feeds():
+        if feed["url"] not in rule.get("affectedFeeds", []):
+            continue
+        titles = [
+            a["title"]
+            for a in feed["articles"]
+            if not needle or needle in a["title"].lower()
+        ]
+        if titles:
+            result[feed["url"]] = titles
+    return result
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass  # quiet
@@ -496,6 +707,31 @@ class Handler(BaseHTTPRequestHandler):
                         _complete_torrent(t)
                 else:
                     t["state"] = "uploading" if t["progress"] >= 1.0 else "downloading"
+        elif path == "/api/v2/rss/addFolder":
+            rss_add_folder(form.get("path", [""])[0])
+        elif path == "/api/v2/rss/addFeed":
+            rss_add_feed(form.get("url", [""])[0], form.get("path", [""])[0])
+        elif path == "/api/v2/rss/removeItem":
+            rss_remove_item(form.get("path", [""])[0])
+        elif path == "/api/v2/rss/moveItem":
+            rss_move_item(form.get("itemPath", [""])[0], form.get("destPath", [""])[0])
+        elif path == "/api/v2/rss/markAsRead":
+            rss_mark_as_read(form.get("itemPath", [""])[0], (form.get("id") or [None])[0])
+        elif path == "/api/v2/rss/refreshItem":
+            rss_refresh_item(form.get("itemPath", [""])[0])
+        elif path == "/api/v2/rss/setRule":
+            rule_name = form.get("ruleName", [""])[0]
+            if rule_name:
+                RSS_RULES[rule_name] = json.loads(form.get("ruleDef", ["{}"])[0])
+        elif path == "/api/v2/rss/renameRule":
+            old_name = form.get("ruleName", [""])[0]
+            new_name = form.get("newRuleName", [""])[0]
+            if old_name in RSS_RULES and new_name:
+                RSS_RULES[new_name] = RSS_RULES.pop(old_name)
+        elif path == "/api/v2/rss/removeRule":
+            RSS_RULES.pop(form.get("ruleName", [""])[0], None)
+        elif path == "/api/v2/app/setPreferences":
+            PREFERENCES.update(json.loads(form.get("json", ["{}"])[0]))
 
         self._send("Ok.", "text/plain")  # generic success for any other action
 
@@ -512,6 +748,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send("v4.6.0", "text/plain")
         elif path == "/api/v2/app/webapiVersion":
             self._send("2.9.3", "text/plain")
+        elif path == "/api/v2/app/preferences":
+            self._send(json.dumps(PREFERENCES))
         elif path == "/api/v2/torrents/properties":
             self._send(json.dumps(properties_for((qs.get("hash") or [""])[0])))
         elif path == "/api/v2/torrents/files":
@@ -524,6 +762,12 @@ class Handler(BaseHTTPRequestHandler):
             self._send(json.dumps(peers_for((qs.get("hash") or [""])[0])))
         elif path == "/api/v2/log/main":
             self._send(json.dumps(logs_response(qs)))
+        elif path == "/api/v2/rss/items":
+            self._send(json.dumps(RSS_ITEMS))
+        elif path == "/api/v2/rss/rules":
+            self._send(json.dumps(RSS_RULES))
+        elif path == "/api/v2/rss/matchingArticles":
+            self._send(json.dumps(rss_matching_articles((qs.get("ruleName") or [""])[0])))
         elif path == "/api/v2/auth/logout":
             self._send("Ok.", "text/plain")
         else:

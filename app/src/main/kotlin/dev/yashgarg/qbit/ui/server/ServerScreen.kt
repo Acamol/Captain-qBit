@@ -262,15 +262,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                     scope.launch { drawerState.close() }
                 },
                 onToggleSpeedLimits = { viewModel.toggleSpeedLimits() },
-                onGlobalLimits = {
-                    scope.launch { drawerState.close() }
-                    serverDialog = ServerDialog.GlobalLimits
-                },
-                onAltLimits = {
-                    scope.launch { drawerState.close() }
-                    serverDialog = ServerDialog.AltLimits
-                },
-                onToggleQueueing = { viewModel.setQueueing(!state.queueingEnabled) },
+                onRss = { appNavigator.navigate(NavCommand.OpenRss) },
                 onSettings = { appNavigator.navigate(NavCommand.OpenSettings) },
             )
         },
@@ -551,6 +543,7 @@ internal fun TooltipIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     position: TooltipAnchorPosition = TooltipAnchorPosition.Above,
+    enabled: Boolean = true,
 ) {
     val tooltipState = rememberTooltipState()
     val haptics = LocalHapticFeedback.current
@@ -563,7 +556,7 @@ internal fun TooltipIconButton(
         tooltip = { PlainTooltip { Text(label) } },
         state = tooltipState,
     ) {
-        IconButton(onClick = onClick) {
+        IconButton(onClick = onClick, enabled = enabled) {
             Icon(icon, contentDescription = label, modifier = modifier)
         }
     }

@@ -27,4 +27,5 @@ dependencies {
     implementation(libs.compose.material.icons)
     implementation(projects.common)
     implementation(projects.bonsaiCore)
+    implementation(projects.clientWrapper.models)
 }

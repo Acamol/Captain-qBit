@@ -16,6 +16,19 @@ torrent, and `torrents/{stop,pause}` / `torrents/{start,resume}` flip its state 
 so swipe and bulk pause/resume/delete are reflected on the next `sync/maindata`
 poll. Other POST actions still return a generic `Ok.`.
 
+## Test aids (for notification testing, no code edits needed)
+
+- **Completion / recheck alerts**: resume the same downloading torrent twice
+  (pause it, then resume-resume) to force it to finish, firing the "download
+  complete" notification; do it again on a forced-complete torrent to send it
+  back to downloading so you can repeat the test. Toggled via the app's own
+  pause/resume actions.
+- **RSS "new article" alerts**: tap **Refresh** on any feed in the app (Feeds
+  tab's per-feed action, or the top bar in a feed's article list) - each
+  refresh injects one new synthetic article into that feed, so the next RSS
+  poll (Settings → RSS alert check interval) notices it and fires a
+  notification. Repeatable indefinitely; each refresh adds one more article.
+
 ## Run
 
 ```bash

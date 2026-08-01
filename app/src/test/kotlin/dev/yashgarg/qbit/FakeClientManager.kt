@@ -29,6 +29,8 @@ import qbittorrent.models.Torrent
  */
 class FakeClientManager : ClientManager {
     private val torrents = mutableSetOf<String>()
+    private var rssItems = "{}"
+    private var rssRules = "{}"
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
@@ -148,6 +150,38 @@ class FakeClientManager : ClientManager {
                     HttpStatusCode.OK,
                     headersOf(HttpHeaders.ContentType, "application/json"),
                 )
+            path.endsWith("/rss/items") ->
+                respond(
+                    rssItems,
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, "application/json"),
+                )
+            path.endsWith("/rss/rules") ->
+                respond(
+                    rssRules,
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, "application/json"),
+                )
+            path.endsWith("/rss/matchingArticles") ->
+                respond(
+                    "{}",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, "application/json"),
+                )
+            path.endsWith("/rss/setRule") -> {
+                rssRules =
+                    requestBody(request.body).substringAfter("ruleDef=").let {
+                        """{"test-rule":${java.net.URLDecoder.decode(it, "UTF-8")}}"""
+                    }
+                respond("Ok.")
+            }
+            path.endsWith("/rss/addFeed") -> {
+                rssItems =
+                    """{"Test Feed":{"uid":"1","url":"https://example.org/feed.xml",""" +
+                        """"title":"Test Feed","lastBuildDate":null,"isLoading":false,""" +
+                        """"hasError":false,"articles":[]}}"""
+                respond("Ok.")
+            }
             else -> respond("Ok.")
         }
     }

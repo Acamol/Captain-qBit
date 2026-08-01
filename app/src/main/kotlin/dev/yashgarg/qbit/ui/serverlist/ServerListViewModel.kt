@@ -38,6 +38,13 @@ constructor(
             .map { it.activeServerId }
             .stateIn(viewModelScope, SharingStarted.Eagerly, -1)
 
+    /** Persists a drag-to-reorder result: [orderedIds] is the full server list in its new order. */
+    fun reorderServers(orderedIds: List<Int>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            orderedIds.forEachIndexed { index, id -> configDao.updatePosition(id, index) }
+        }
+    }
+
     // Mirrors ServerViewModel.deleteServer exactly: block deleting the last server, and if the
     // deleted one was active, fall back to whatever remains.
     fun deleteServer(id: Int) {

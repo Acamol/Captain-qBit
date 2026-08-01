@@ -20,4 +20,5 @@ data class ServerConfig(
     val connectionType: ConnectionType,
     val basicAuthUsername: String? = null,
     val basicAuthPassword: String? = null,
+    val position: Int = 0,
 )

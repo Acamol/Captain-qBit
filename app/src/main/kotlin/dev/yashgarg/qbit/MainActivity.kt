@@ -1,6 +1,6 @@
 package dev.yashgarg.qbit
 
-import android.content.Context
+import android.Manifest
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -8,12 +8,15 @@ import android.os.Bundle
 import android.provider.OpenableColumns
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +52,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -72,6 +76,8 @@ class MainActivity : AppCompatActivity() {
     // RESUMED collector below has run) — applied once OpenServerAsRoot has actually fired, so it
     // can't be wiped out by that command's own popUpTo.
     private var pendingNotificationHash: String? = null
+    // Same idea, for a "new RSS articles" notification tap.
+    private var pendingNotificationRssPath: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -114,11 +120,78 @@ class MainActivity : AppCompatActivity() {
                         },
                     )
                 }
-            }
-        }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            checkPermissions(applicationContext)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    var showNotificationRationale by remember { mutableStateOf(false) }
+                    val notificationPermissionLauncher =
+                        rememberLauncherForActivityResult(
+                            ActivityResultContracts.RequestPermission()
+                        ) { granted ->
+                            if (granted) launchWorkManager(true)
+                        }
+                    // Only ever asked once per install (tracked in prefs) - a denial doesn't nag
+                    // again on every later launch. Skipped entirely when this launch is opening a
+                    // backup file: that flow shows its own (native, non-Compose) passphrase dialog
+                    // immediately in onCreate, which would otherwise land on screen at the same
+                    // time as this one. Deferred to the next normal launch instead.
+                    val openingBackupFile = intent?.data?.let(::isBackupUri) == true
+                    LaunchedEffect(Unit) {
+                        if (openingBackupFile) return@LaunchedEffect
+                        val alreadyAsked =
+                            serverPrefsStore.data.map { it.notificationPermissionAsked }.first()
+                        if (
+                            !alreadyAsked &&
+                                !AppNotificationManager.checkPermission(this@MainActivity)
+                        ) {
+                            showNotificationRationale = true
+                        }
+                    }
+                    if (showNotificationRationale) {
+                        AlertDialog(
+                            onDismissRequest = {},
+                            title = { Text("Enable notifications?") },
+                            text = {
+                                Text(
+                                    "Get a status notification with live transfer speeds, plus " +
+                                        "alerts when a torrent finishes downloading or checking. " +
+                                        "You can change this anytime in Settings."
+                                )
+                            },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = {
+                                        showNotificationRationale = false
+                                        lifecycleScope.launch {
+                                            serverPrefsStore.updateData {
+                                                it.copy(notificationPermissionAsked = true)
+                                            }
+                                        }
+                                        notificationPermissionLauncher.launch(
+                                            Manifest.permission.POST_NOTIFICATIONS
+                                        )
+                                    }
+                                ) {
+                                    Text("Enable")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(
+                                    onClick = {
+                                        showNotificationRationale = false
+                                        lifecycleScope.launch {
+                                            serverPrefsStore.updateData {
+                                                it.copy(notificationPermissionAsked = true)
+                                            }
+                                        }
+                                    }
+                                ) {
+                                    Text("Not now")
+                                }
+                            },
+                        )
+                    }
+                }
+            }
         }
 
         // Apply the persisted theme mode (Light / Dark / Follow system). Driving this off the
@@ -177,7 +250,10 @@ class MainActivity : AppCompatActivity() {
                         clientManager.configStatus,
                         serverPrefsStore.data
                             .map {
-                                it.statusNotification || it.notifyOnComplete || it.notifyOnChecked
+                                it.statusNotification ||
+                                    it.notifyOnComplete ||
+                                    it.notifyOnChecked ||
+                                    it.notifyOnNewRssArticles
                             }
                             .distinctUntilChanged(),
                     ) { status, notify ->
@@ -190,15 +266,23 @@ class MainActivity : AppCompatActivity() {
                         when (status) {
                             ConfigStatus.EXISTS -> {
                                 launchWorkManager(notify)
+                                Log.i(
+                                    ClientManager.tag,
+                                    "Config exists (navigatedToServer=$navigatedToServer)",
+                                )
                                 if (!navigatedToServer) {
                                     navigatedToServer = true
                                     appNavigator.navigate(NavCommand.OpenServerAsRoot)
                                     // Must queue behind OpenServerAsRoot, not race it — that
-                                    // command's popUpTo would otherwise wipe out a torrent
+                                    // command's popUpTo would otherwise wipe out a torrent/RSS
                                     // navigation sent first.
                                     pendingNotificationHash?.let { hash ->
                                         pendingNotificationHash = null
                                         appNavigator.navigate(NavCommand.OpenTorrent(hash))
+                                    }
+                                    pendingNotificationRssPath?.let { path ->
+                                        pendingNotificationRssPath = null
+                                        appNavigator.navigate(NavCommand.OpenRssArticles(path))
                                     }
                                 }
                             }
@@ -212,6 +296,7 @@ class MainActivity : AppCompatActivity() {
         handleBackupIntent(intent)
         handleTorrentViewIntent(intent)
         pendingNotificationHash = intent.getStringExtra(EXTRA_TORRENT_HASH)
+        pendingNotificationRssPath = intent.getStringExtra(EXTRA_RSS_ITEM_PATH)
     }
 
     // singleInstance: an already-running task receives opened files here rather than in onCreate.
@@ -227,7 +312,7 @@ class MainActivity : AppCompatActivity() {
         }
         // Notification taps never reach here: notifyEvent()'s PendingIntent sets
         // FLAG_ACTIVITY_CLEAR_TASK, which always destroys and recreates this singleInstance
-        // activity — so EXTRA_TORRENT_HASH is only ever read in onCreate.
+        // activity — so EXTRA_TORRENT_HASH/EXTRA_RSS_ITEM_PATH are only ever read in onCreate.
     }
 
     /** Offers a non-backup VIEW intent's URI to [pendingTorrentIntent]. Returns true if it did. */
@@ -284,22 +369,8 @@ class MainActivity : AppCompatActivity() {
         return resolved?.endsWith(".cqb", ignoreCase = true) == true
     }
 
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    private fun checkPermissions(context: Context) {
-        val permissionLauncher =
-            registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-                Log.i(
-                    AppNotificationManager.javaClass.simpleName,
-                    "Notification permission: $granted",
-                )
-                if (granted) launchWorkManager(true)
-            }
-
-        AppNotificationManager.requestPermission(context, permissionLauncher)
-    }
-
     private fun launchWorkManager(show: Boolean) {
-        if (show && AppNotificationManager.checkPermission(applicationContext)) {
+        if (show && AppNotificationManager.notificationsEnabled(applicationContext)) {
             StatusWorker.enqueue(applicationContext)
         } else {
             StatusWorker.cancel(applicationContext)
@@ -309,6 +380,10 @@ class MainActivity : AppCompatActivity() {
     companion object {
         /** Extra key for the torrent hash carried by a "download complete" notification's tap. */
         const val EXTRA_TORRENT_HASH = "torrent_hash"
+        /**
+         * Extra key for the feed's item path carried by a "new RSS articles" notification's tap.
+         */
+        const val EXTRA_RSS_ITEM_PATH = "rss_item_path"
         private const val EXIT_CONFIRMATION_WINDOW_MS = 2000L
     }
 }

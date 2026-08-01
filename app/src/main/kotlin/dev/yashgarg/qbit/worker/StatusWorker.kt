@@ -25,12 +25,16 @@ import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.models.ServerPreferences
 import dev.yashgarg.qbit.notifications.AppNotificationManager
+import dev.yashgarg.qbit.ui.rss.flattenFeeds
 import dev.yashgarg.qbit.utils.toHumanReadable
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import qbittorrent.getGlobalTransferInfo
+import qbittorrent.getRssItems
+import qbittorrent.getRssRefreshIntervalMinutes
 import qbittorrent.getTorrents
+import qbittorrent.models.RssItem
 import qbittorrent.models.Torrent
 
 @HiltWorker
@@ -50,7 +54,7 @@ constructor(
         if (prefsStore.data.first().statusNotification) {
             createForegroundInfo("Connecting…", "")
         } else {
-            createForegroundInfo("Captain qBit", "Torrent alerts are on", minimal = true)
+            createForegroundInfo("Captain qBit", "Alerts are on", minimal = true)
         }
 
     override suspend fun doWork(): Result {
@@ -63,18 +67,31 @@ constructor(
         return Result.success()
     }
 
-    // Serves both the ongoing status notification and torrent-event alerts (completed / checked)
-    // out of a single loop, but on independent, user-configurable cadences (statusRefreshIntervalMs
-    // / eventPollIntervalMs) — so slowing the speed readout down for battery doesn't also delay
-    // completion alerts. The user can toggle each independently in Settings; the service keeps
-    // running while any of them is enabled, and stops itself once all are off.
+    // Serves the ongoing status notification, torrent-event alerts (completed / checked), and RSS
+    // new-article alerts out of a single loop, but on independent cadences (statusRefreshIntervalMs
+    // / eventPollIntervalMs / rssIntervalMs) — so slowing the speed readout down for battery
+    // doesn't
+    // also delay completion alerts. The user can toggle each independently in Settings; the service
+    // keeps running while any of them is enabled, and stops itself once all are off.
     private suspend fun getStatus() {
         var lastStatusFetch = 0L
         var lastEventFetch = 0L
+        var lastRssFetch = 0L
+        // Refetched from the server each time the RSS branch actually runs (see below) - there's no
+        // separate app-side setting for this on purpose, since checking faster than qBittorrent's
+        // own rss_refresh_interval just re-reads the same cached articles. Falls back to a sane
+        // default until the first successful fetch.
+        var rssIntervalMs = 300_000L
         while (true) {
             val prefs = prefsStore.data.first()
             val eventsOn = prefs.notifyOnComplete || prefs.notifyOnChecked
-            if (!prefs.statusNotification && !eventsOn) return
+            val rssOn = prefs.notifyOnNewRssArticles
+            if (!prefs.statusNotification && !eventsOn && !rssOn) return
+            // Re-checked every tick (not just at start) so blocking notifications mid-session -
+            // e.g. via system Settings, without touching the app - stops this loop's polling and
+            // releases the foreground service on its very next iteration, rather than only when
+            // something external (app foreground, a Settings toggle) happens to re-enqueue.
+            if (!AppNotificationManager.notificationsEnabled(applicationContext)) return
 
             // Fetch the client each tick so the worker follows a server switch (setActiveServer
             // rebuilds it); a captured reference would keep polling the old server.
@@ -108,12 +125,10 @@ constructor(
                     lastStatusFetch = now
                 }
             } else {
-                // Events-only: Android still requires an ongoing notification for the service,
-                // so show a minimal, min-importance one (no sound/status-bar icon) instead of
-                // the speed readout.
-                setForeground(
-                    createForegroundInfo("Captain qBit", "Torrent alerts are on", minimal = true)
-                )
+                // Events/RSS-only: Android still requires an ongoing notification for the
+                // service, so show a minimal, min-importance one (no sound/status-bar icon)
+                // instead of the speed readout.
+                setForeground(createForegroundInfo("Captain qBit", "Alerts are on", minimal = true))
             }
 
             if (eventsOn && now - lastEventFetch >= prefs.eventPollIntervalMs) {
@@ -129,12 +144,25 @@ constructor(
                 lastEventFetch = now
             }
 
-            // Tick at the finer-grained of the two active cadences; each branch above only does
-            // its own (network-hitting) work once its own interval has actually elapsed.
+            if (rssOn && now - lastRssFetch >= rssIntervalMs) {
+                try {
+                    rssIntervalMs = client.getRssRefreshIntervalMinutes().coerceAtLeast(1) * 60_000L
+                    notifyNewRssArticles(client.getRssItems(), prefs)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // Transient error — retry on the next tick.
+                }
+                lastRssFetch = now
+            }
+
+            // Tick at the finer-grained of the active cadences; each branch above only does its
+            // own (network-hitting) work once its own interval has actually elapsed.
             val nextTick =
                 listOfNotNull(
                         prefs.statusRefreshIntervalMs.takeIf { prefs.statusNotification },
                         prefs.eventPollIntervalMs.takeIf { eventsOn },
+                        rssIntervalMs.takeIf { rssOn },
                     )
                     .min()
                     .coerceAtLeast(MIN_TICK_MS)
@@ -231,11 +259,72 @@ constructor(
         }
     }
 
-    private fun notifyEvent(id: Int, title: String, content: String, torrentHash: String? = null) {
+    /**
+     * Fire a "new articles" alert per feed that has any article id not yet accounted for, then
+     * record every feed's current article ids so the same articles never re-alert. Keyed by
+     * `serverId|feedPath` (not just serverId, like the torrent watermarks above) since a server can
+     * have many feeds at once. A feed with no stored baseline yet - newly added since RSS
+     * notifications were turned on - is seeded silently rather than alerting for its whole existing
+     * backlog.
+     */
+    private suspend fun notifyNewRssArticles(items: List<RssItem>, prefs: ServerPreferences) {
+        val serverId = prefs.activeServerId
+        val feeds = items.flattenFeeds()
+
+        if (prefs.notifRssRebaseline) {
+            val baseline = feeds.associate {
+                feedKey(serverId, it.path) to it.articles.map { a -> a.id }.toSet()
+            }
+            prefsStore.updateData {
+                it.copy(
+                    notifRssArticleSeen = it.notifRssArticleSeen + baseline,
+                    notifRssRebaseline = false,
+                )
+            }
+            return
+        }
+
+        var updatedSeen = prefs.notifRssArticleSeen
+        feeds.forEach { feed ->
+            val key = feedKey(serverId, feed.path)
+            val currentIds = feed.articles.map { it.id }.toSet()
+            val previouslySeen = updatedSeen[key]
+            if (previouslySeen == null) {
+                updatedSeen = updatedSeen + (key to currentIds)
+                return@forEach
+            }
+
+            val newArticles = feed.articles.filter { it.id !in previouslySeen }
+            if (newArticles.isNotEmpty()) {
+                notifyEvent(
+                    "rss:$key".hashCode(),
+                    if (newArticles.size == 1) "New RSS article" else "New RSS articles",
+                    if (newArticles.size == 1) newArticles.first().title
+                    else "${newArticles.size} new in ${feed.name}",
+                    rssItemPath = feed.path,
+                )
+            }
+            updatedSeen = updatedSeen + (key to currentIds)
+        }
+        if (updatedSeen != prefs.notifRssArticleSeen) {
+            prefsStore.updateData { it.copy(notifRssArticleSeen = updatedSeen) }
+        }
+    }
+
+    private fun feedKey(serverId: Int, feedPath: String) = "$serverId|$feedPath"
+
+    private fun notifyEvent(
+        id: Int,
+        title: String,
+        content: String,
+        torrentHash: String? = null,
+        rssItemPath: String? = null,
+    ) {
         val intent =
             Intent(applicationContext, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 if (torrentHash != null) putExtra(MainActivity.EXTRA_TORRENT_HASH, torrentHash)
+                if (rssItemPath != null) putExtra(MainActivity.EXTRA_RSS_ITEM_PATH, rssItemPath)
             }
         val pendingIntent =
             PendingIntent.getActivity(applicationContext, id, intent, PendingIntent.FLAG_IMMUTABLE)

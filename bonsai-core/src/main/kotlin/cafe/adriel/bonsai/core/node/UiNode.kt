@@ -15,20 +15,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.times
+import androidx.compose.ui.zIndex
 import cafe.adriel.bonsai.core.BonsaiScope
 
 @Composable
 internal fun <T> BonsaiScope<T>.Node(node: Node<T>) {
+    val offsetY = style.nodeOffsetY(node)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
-            Modifier.padding(vertical = 1.dp).padding(start = node.depth * style.toggleIconSize),
+            Modifier.zIndex(if (offsetY != 0f) 1f else 0f)
+                .graphicsLayer { translationY = offsetY }
+                .fillMaxWidth()
+                .padding(vertical = style.nodeSpacing)
+                .padding(start = node.depth * style.toggleIconSize),
     ) {
         ToggleIcon(node)
-        NodeContent(node)
+        NodeContent(node, this)
     }
 }
 
@@ -57,13 +64,17 @@ private fun <T> BonsaiScope<T>.ToggleIcon(node: Node<T>) {
 }
 
 @Composable
-private fun <T> BonsaiScope<T>.NodeContent(node: Node<T>) {
+private fun <T> BonsaiScope<T>.NodeContent(node: Node<T>, rowScope: RowScope) {
+    val backgroundColor =
+        if (node.isSelected) style.nodeSelectedBackgroundColor else style.nodeBackgroundColor(node)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
-            Modifier.run {
-                    if (node.isSelected.not()) clip(style.nodeShape)
-                    else background(style.nodeSelectedBackgroundColor, style.nodeShape)
+            with(rowScope) { Modifier.weight(1f) }
+                .clip(style.nodeShape)
+                .run {
+                    if (backgroundColor.isSpecified) background(backgroundColor, style.nodeShape)
+                    else this
                 }
                 .then(clickableNode(node))
                 .padding(style.nodePadding)

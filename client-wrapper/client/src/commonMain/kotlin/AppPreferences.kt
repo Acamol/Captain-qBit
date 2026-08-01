@@ -5,6 +5,10 @@ import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import qbittorrent.internal.bodyOrThrow
 import qbittorrent.internal.orThrow
 import qbittorrent.models.BuildInfo
@@ -101,4 +105,38 @@ suspend fun QBittorrentClient.setGlobalUploadLimit(limit: Int) {
             formParameters = Parameters.build { append("limit", limit.toString()) },
         )
         .orThrow()
+}
+
+/**
+ * Whether newly added torrents default to Automatic Torrent Management - a single global server
+ * setting (distinct from the per-torrent/per-add-request autoTMM flag). Governs torrents added
+ * outside this app's own manual add-torrent flow, e.g. via RSS rules.
+ */
+@Throws(QBittorrentException::class, CancellationException::class)
+suspend fun QBittorrentClient.getAutoTmmEnabled(): Boolean =
+    getPreferences()["auto_tmm_enabled"]?.jsonPrimitive?.booleanOrNull ?: false
+
+@Throws(QBittorrentException::class, CancellationException::class)
+suspend fun QBittorrentClient.setAutoTmmEnabled(enabled: Boolean) {
+    setPreferences(buildJsonObject { put("auto_tmm_enabled", enabled) })
+}
+
+/** Whether the server fetches RSS feeds at all - distinct from per-rule auto-downloading. */
+@Throws(QBittorrentException::class, CancellationException::class)
+suspend fun QBittorrentClient.getRssProcessingEnabled(): Boolean =
+    getPreferences()["rss_processing_enabled"]?.jsonPrimitive?.booleanOrNull ?: false
+
+@Throws(QBittorrentException::class, CancellationException::class)
+suspend fun QBittorrentClient.setRssProcessingEnabled(enabled: Boolean) {
+    setPreferences(buildJsonObject { put("rss_processing_enabled", enabled) })
+}
+
+/** Whether matching RSS rules auto-download torrents - distinct from fetching the feeds. */
+@Throws(QBittorrentException::class, CancellationException::class)
+suspend fun QBittorrentClient.getRssAutoDownloadingEnabled(): Boolean =
+    getPreferences()["rss_auto_downloading_enabled"]?.jsonPrimitive?.booleanOrNull ?: false
+
+@Throws(QBittorrentException::class, CancellationException::class)
+suspend fun QBittorrentClient.setRssAutoDownloadingEnabled(enabled: Boolean) {
+    setPreferences(buildJsonObject { put("rss_auto_downloading_enabled", enabled) })
 }

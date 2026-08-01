@@ -1,7 +1,10 @@
 package dev.yashgarg.qbit.ui.settings
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
 import android.os.Build
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -34,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,15 +45,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.ui.backup.BackupDialogs
 import dev.yashgarg.qbit.ui.backup.BackupViewModel
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
+import dev.yashgarg.qbit.ui.rss.RefreshIntervalDialog
+import dev.yashgarg.qbit.ui.server.SpeedLimitsDialog
 import dev.yashgarg.qbit.worker.StatusWorker
 
 private val BACKUP_MIME_TYPES = arrayOf("application/json", "application/octet-stream", "*/*")
@@ -88,9 +98,22 @@ fun SettingsScreen(
 
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val dynamicColors by viewModel.dynamicColors.collectAsStateWithLifecycle()
+    val autoTmmEnabled by viewModel.autoTmmEnabled.collectAsStateWithLifecycle()
+    val rssRefreshIntervalMinutes by
+        viewModel.rssRefreshIntervalMinutes.collectAsStateWithLifecycle()
+    val rssProcessingEnabled by viewModel.rssProcessingEnabled.collectAsStateWithLifecycle()
+    val rssAutoDownloadingEnabled by
+        viewModel.rssAutoDownloadingEnabled.collectAsStateWithLifecycle()
+    val queueingEnabled by viewModel.queueingEnabled.collectAsStateWithLifecycle()
+    val speedLimitMode by viewModel.speedLimitMode.collectAsStateWithLifecycle()
+    val globalDownloadLimit by viewModel.globalDownloadLimit.collectAsStateWithLifecycle()
+    val globalUploadLimit by viewModel.globalUploadLimit.collectAsStateWithLifecycle()
+    val altDownloadLimit by viewModel.altDownloadLimit.collectAsStateWithLifecycle()
+    val altUploadLimit by viewModel.altUploadLimit.collectAsStateWithLifecycle()
     val statusNotif by viewModel.statusNotification.collectAsStateWithLifecycle()
     val notifyComplete by viewModel.notifyOnComplete.collectAsStateWithLifecycle()
     val notifyChecked by viewModel.notifyOnChecked.collectAsStateWithLifecycle()
+    val notifyRssUpdates by viewModel.notifyOnNewRssArticles.collectAsStateWithLifecycle()
     val statusRefreshIntervalMs by viewModel.statusRefreshIntervalMs.collectAsStateWithLifecycle()
     val eventPollIntervalMs by viewModel.eventPollIntervalMs.collectAsStateWithLifecycle()
     val syncIntervalMs by viewModel.syncIntervalMs.collectAsStateWithLifecycle()
@@ -99,22 +122,51 @@ fun SettingsScreen(
     var showStatusIntervalDialog by remember { mutableStateOf(false) }
     var showEventIntervalDialog by remember { mutableStateOf(false) }
     var showSyncIntervalDialog by remember { mutableStateOf(false) }
+    var showGlobalLimitsDialog by remember { mutableStateOf(false) }
+    var showAltLimitsDialog by remember { mutableStateOf(false) }
+    var showRssIntervalDialog by remember { mutableStateOf(false) }
     var pendingExport by remember { mutableStateOf<PendingExport?>(null) }
 
+    // Re-checked on resume so coming back from the system notification settings screen (via the
+    // banner below) reflects the change immediately, not just on next screen open.
+    var notificationsEnabled by remember {
+        mutableStateOf(AppNotificationManager.notificationsEnabled(context))
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                notificationsEnabled = AppNotificationManager.notificationsEnabled(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    // Only worth flagging if the user actually wants one of these to show something.
+    val notificationsBlocked =
+        !notificationsEnabled &&
+            (statusNotif || notifyComplete || notifyChecked || notifyRssUpdates)
+
     val notifPermissionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) StatusWorker.enqueue(context)
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
+            notificationsEnabled = AppNotificationManager.notificationsEnabled(context)
+            if (notificationsEnabled) StatusWorker.enqueue(context)
         }
 
-    fun applyNotificationPrefs(status: Boolean, complete: Boolean, checked: Boolean) {
-        if (!(status || complete || checked)) {
+    fun applyNotificationPrefs(status: Boolean, complete: Boolean, checked: Boolean, rss: Boolean) {
+        if (!(status || complete || checked || rss)) {
             StatusWorker.cancel(context)
             return
         }
-        if (AppNotificationManager.checkPermission(context)) {
-            StatusWorker.enqueue(context)
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        when {
+            AppNotificationManager.notificationsEnabled(context) -> StatusWorker.enqueue(context)
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                !AppNotificationManager.checkPermission(context) ->
+                notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            // Runtime permission is already granted (or this is pre-33, which has none) but
+            // notifications are still blocked at the app level - no system dialog can fix that,
+            // only the notification settings screen can, same as the banner below.
+            else -> openAppNotificationSettings(context)
         }
     }
 
@@ -205,6 +257,65 @@ fun SettingsScreen(
             )
 
             HorizontalDivider()
+            SectionHeader("Server")
+            Text(
+                "Settings on the connected qBittorrent server, not this app",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+            )
+            SwitchRow(
+                "Automatic Torrent Management by default",
+                autoTmmEnabled,
+                subtitle = "Applies to torrents added outside this app, e.g. via RSS rules",
+            ) {
+                viewModel.setAutoTmmEnabled(it)
+            }
+            ClickableRow(
+                title = "RSS refresh interval",
+                subtitle = "$rssRefreshIntervalMinutes min",
+                onClick = { showRssIntervalDialog = true },
+            )
+            SwitchRow(
+                "Fetch RSS feeds",
+                rssProcessingEnabled,
+                subtitle = "Feeds won't update at all while this is off",
+            ) {
+                viewModel.setRssProcessingEnabled(it)
+            }
+            SwitchRow(
+                "Auto-download matching RSS articles",
+                rssAutoDownloadingEnabled,
+                subtitle = "Lets RSS rules download torrents automatically",
+            ) {
+                viewModel.setRssAutoDownloadingEnabled(it)
+            }
+            SwitchRow(
+                "Use alternate speed limits",
+                speedLimitMode != 0,
+                subtitle = "Switch between your normal speed limits and the alternate ones",
+            ) {
+                viewModel.toggleSpeedLimits()
+            }
+            ClickableRow(
+                title = "Global speed limits",
+                subtitle = "Set the server-wide download and upload speed limits",
+                onClick = { showGlobalLimitsDialog = true },
+            )
+            ClickableRow(
+                title = "Alternate speed limits",
+                subtitle = "Set the limits used while \"use alternate speed limits\" is on",
+                onClick = { showAltLimitsDialog = true },
+            )
+            SwitchRow(
+                "Torrent queueing",
+                queueingEnabled,
+                subtitle = "Cap how many torrents are active at once; enables queue positions",
+            ) {
+                viewModel.setQueueingEnabled(it)
+            }
+
+            HorizontalDivider()
             SectionHeader("Appearance")
             ClickableRow(
                 title = "Theme",
@@ -223,29 +334,48 @@ fun SettingsScreen(
 
             HorizontalDivider()
             SectionHeader("Notifications")
+            if (notificationsBlocked) {
+                NotificationsBlockedBanner(
+                    onOpenSettings = { openAppNotificationSettings(context) }
+                )
+            }
             SwitchRow(
                 "Status notification",
                 statusNotif,
                 subtitle = "Ongoing notification showing current transfer speeds",
+                enabled = !notificationsBlocked,
             ) {
                 viewModel.setStatusNotification(it)
-                applyNotificationPrefs(it, notifyComplete, notifyChecked)
+                applyNotificationPrefs(it, notifyComplete, notifyChecked, notifyRssUpdates)
             }
             SwitchRow(
                 "Notify on complete",
                 notifyComplete,
                 subtitle = "Alert when a torrent finishes downloading",
+                enabled = !notificationsBlocked,
             ) {
                 viewModel.setNotifyOnComplete(it)
-                applyNotificationPrefs(statusNotif, it, notifyChecked)
+                applyNotificationPrefs(statusNotif, it, notifyChecked, notifyRssUpdates)
             }
             SwitchRow(
                 "Notify on checked",
                 notifyChecked,
                 subtitle = "Alert when a torrent finishes rechecking",
+                enabled = !notificationsBlocked,
             ) {
                 viewModel.setNotifyOnChecked(it)
-                applyNotificationPrefs(statusNotif, notifyComplete, it)
+                applyNotificationPrefs(statusNotif, notifyComplete, it, notifyRssUpdates)
+            }
+            SwitchRow(
+                "Notify on new RSS articles",
+                notifyRssUpdates,
+                subtitle =
+                    "Alert when a feed gets new articles - checked as often as the RSS " +
+                        "screen's own feed refresh interval",
+                enabled = !notificationsBlocked,
+            ) {
+                viewModel.setNotifyOnNewRssArticles(it)
+                applyNotificationPrefs(statusNotif, notifyComplete, notifyChecked, it)
             }
             ClickableRow(
                 title = "Notification refresh interval",
@@ -328,7 +458,7 @@ fun SettingsScreen(
                 viewModel.setStatusRefreshIntervalMs(it)
                 // Restarts the already-running worker so it picks up the new interval right
                 // away, instead of only after its current (possibly minutes-long) sleep ends.
-                applyNotificationPrefs(statusNotif, notifyComplete, notifyChecked)
+                applyNotificationPrefs(statusNotif, notifyComplete, notifyChecked, notifyRssUpdates)
             },
             onDismiss = { showStatusIntervalDialog = false },
         )
@@ -341,7 +471,7 @@ fun SettingsScreen(
             selected = eventPollIntervalMs,
             onSelect = {
                 viewModel.setEventPollIntervalMs(it)
-                applyNotificationPrefs(statusNotif, notifyComplete, notifyChecked)
+                applyNotificationPrefs(statusNotif, notifyComplete, notifyChecked, notifyRssUpdates)
             },
             onDismiss = { showEventIntervalDialog = false },
         )
@@ -354,6 +484,34 @@ fun SettingsScreen(
             selected = syncIntervalMs,
             onSelect = viewModel::setSyncIntervalMs,
             onDismiss = { showSyncIntervalDialog = false },
+        )
+    }
+    if (showGlobalLimitsDialog) {
+        SpeedLimitsDialog(
+            title = "Global speed limits",
+            initialDownloadBytes = globalDownloadLimit,
+            initialUploadBytes = globalUploadLimit,
+            onConfirm = { dl, ul -> viewModel.setGlobalLimits(dl, ul) },
+            onDismiss = { showGlobalLimitsDialog = false },
+        )
+    }
+    if (showAltLimitsDialog) {
+        SpeedLimitsDialog(
+            title = "Alternate speed limits",
+            initialDownloadBytes = altDownloadLimit,
+            initialUploadBytes = altUploadLimit,
+            onConfirm = { dl, ul -> viewModel.setAltLimits(dl, ul) },
+            onDismiss = { showAltLimitsDialog = false },
+        )
+    }
+    if (showRssIntervalDialog) {
+        RefreshIntervalDialog(
+            currentMinutes = rssRefreshIntervalMinutes,
+            onConfirm = {
+                viewModel.setRssRefreshInterval(it)
+                showRssIntervalDialog = false
+            },
+            onDismiss = { showRssIntervalDialog = false },
         )
     }
 }
@@ -413,6 +571,36 @@ private fun IntervalDialog(
     )
 }
 
+private fun openAppNotificationSettings(context: Context) {
+    context.startActivity(
+        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+    )
+}
+
+@Composable
+private fun NotificationsBlockedBanner(onOpenSettings: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                "Notifications are blocked",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.error,
+            )
+            Text(
+                "These switches won't show anything until notifications are re-enabled for this " +
+                    "app in system settings.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        TextButton(onClick = onOpenSettings) { Text("Open settings") }
+    }
+}
+
 @Composable
 private fun SectionHeader(text: String) {
     Text(
@@ -445,10 +633,15 @@ private fun SwitchRow(
     title: String,
     checked: Boolean,
     subtitle: String? = null,
+    enabled: Boolean = true,
     onChange: (Boolean) -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable { onChange(!checked) }.padding(16.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .alpha(if (enabled) 1f else 0.38f)
+                .clickable(enabled = enabled) { onChange(!checked) }
+                .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(
@@ -464,6 +657,6 @@ private fun SwitchRow(
                 )
             }
         }
-        Switch(checked = checked, onCheckedChange = onChange)
+        Switch(checked = checked, onCheckedChange = onChange, enabled = enabled)
     }
 }

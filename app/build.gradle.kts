@@ -89,8 +89,8 @@ android {
         applicationId = "dev.acamol.qbit"
         minSdk = 28
         targetSdk = 35
-        versionCode = 10
-        versionName = "1.1.1"
+        versionCode = 11
+        versionName = "1.2.0"
 
         multiDexEnabled = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -236,6 +236,7 @@ dependencies {
 
     debugImplementation(libs.tools.leakcanary)
     implementation(libs.tools.kotlin.result)
+    implementation(libs.tools.kotlin.result.coroutines)
     implementation(libs.tools.cascade)
     implementation(libs.tools.lottie)
     debugImplementation(libs.tools.whatthestack)
