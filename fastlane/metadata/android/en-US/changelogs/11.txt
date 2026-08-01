@@ -1,0 +1,5 @@
+- New: RSS support - browse feeds, read articles, and manage auto-download rules, with notifications for new articles
+- New: drag-and-drop reordering for the server list
+- Fixed: a background battery drain from polling after opening the RSS screen
+- Fixed: the torrent details screen could spin forever after tapping a notification
+- Torrent and RSS article search now match words in any order, not just exact substrings

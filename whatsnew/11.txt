@@ -1,0 +1,20 @@
+New: RSS support — browse feeds, read articles, and manage auto-download rules
+- Feeds and folders tree with drag-to-reorder and nest-into-folder support
+- Per-feed article list with search, pull-to-refresh, and mark-as-read
+- Rule editor with hints for each field, a category picker, and a way to view a rule's currently matching articles
+- Notifications for new articles, plus toggles for the server's own RSS fetching and auto-downloading, with a warning banner if either is off
+- Downloading an article's torrent now opens the same full add-torrent dialog used everywhere else (category, save path, paused, etc.) instead of adding immediately with server defaults
+
+New: drag-and-drop reordering for the server list
+
+New: a dedicated "Server" section in Settings, consolidating settings that live on the qBittorrent server itself — Automatic Torrent Management default, RSS fetching/auto-downloading and refresh interval, global/alternate speed limits, and torrent queueing
+
+Improved: torrent list and RSS article search now match all typed words in any order, instead of requiring the exact text as one contiguous substring
+
+Improved: long torrent names in the details screen now scroll instead of being cut off
+
+Fixed: a background battery drain from the RSS screen continuing to poll the server after the app was backgrounded
+
+Fixed: the torrent details screen could spin forever after tapping a notification for a torrent added moments earlier
+
+Fixed: the RSS notification toggle and poll-interval settings were missing from backup/restore
