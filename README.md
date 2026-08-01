@@ -25,6 +25,7 @@ over its Web API — control your self-hosted server from your phone. Written in
 - Light, Dark, or System theme, plus optional Material You dynamic colours
 - Smart notifications that jump straight to a finished download, with battery-friendly refresh
   rates you control
+- Browse RSS feeds and articles, with auto-download rules and notifications for new matches
 - Works with qBittorrent 4.x and 5.x over HTTP or HTTPS (including self-signed certs), with
   optional HTTP Basic Auth for servers behind a reverse proxy
 
@@ -37,7 +38,6 @@ See the [F-Droid listing](https://f-droid.org/packages/dev.acamol.qbit/) for the
 
 ## Roadmap
 - **Alternate speed-limit scheduler** — choose the time window and days when the alternate limits automatically take over
-- **RSS support** — browse RSS feeds, view articles, and manage auto-download rules
 
 ## Support
 
