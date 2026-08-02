@@ -16,4 +16,19 @@
     <string name="invalid_port">נא להזין מספר פורט תקין</string>
     <string name="invalid_name">נא להזין שם</string>
     <string name="about">אודות</string>
+    <string name="version">גרסת אפליקציה - %1$s\nגרסת Api - %2$s</string>
+    <string name="server_info">פרטי השרת</string>
+    <string name="seed_status">בהורדה • %1$d/%2$d זורעים</string>
+    <string name="speed_status">▼ %1$s/s • ▲ %2$s/s</string>
+    <string name="percent_done">%1$s / %2$s • %3$d%%</string>
+    <string name="seeding">זורע</string>
+    <string name="enter_url">כתובת Magnet</string>
+    <string name="use_basic_auth">השתמש באימות HTTP בסיסי</string>
+    <string name="basic_auth_username">שם משתמש (אימות בסיסי)</string>
+    <string name="basic_auth_password">סיסמה (אימות בסיסי)</string>
+    <string name="paused">מושהה</string>
+    <string name="stopped">נעצר</string>
+    <string name="stalled">ממתין</string>
+    <string name="completed">הושלם</string>
+    <string name="state_downloading_metadata">מוריד מטא־נתונים</string>
 </resources>
