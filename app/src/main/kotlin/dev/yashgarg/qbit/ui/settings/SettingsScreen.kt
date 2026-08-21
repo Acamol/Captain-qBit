@@ -61,6 +61,7 @@ import dev.yashgarg.qbit.ui.backup.BackupDialogs
 import dev.yashgarg.qbit.ui.backup.BackupViewModel
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
+import dev.yashgarg.qbit.ui.rss.MaxArticlesPerFeedDialog
 import dev.yashgarg.qbit.ui.rss.RefreshIntervalDialog
 import dev.yashgarg.qbit.ui.server.SpeedLimitsDialog
 import dev.yashgarg.qbit.worker.StatusWorker
@@ -128,6 +129,7 @@ fun SettingsScreen(
     val autoTmmEnabled by viewModel.autoTmmEnabled.collectAsStateWithLifecycle()
     val rssRefreshIntervalMinutes by
         viewModel.rssRefreshIntervalMinutes.collectAsStateWithLifecycle()
+    val rssMaxArticlesPerFeed by viewModel.rssMaxArticlesPerFeed.collectAsStateWithLifecycle()
     val rssProcessingEnabled by viewModel.rssProcessingEnabled.collectAsStateWithLifecycle()
     val rssAutoDownloadingEnabled by
         viewModel.rssAutoDownloadingEnabled.collectAsStateWithLifecycle()
@@ -156,6 +158,7 @@ fun SettingsScreen(
     var showGlobalLimitsDialog by remember { mutableStateOf(false) }
     var showAltLimitsDialog by remember { mutableStateOf(false) }
     var showRssIntervalDialog by remember { mutableStateOf(false) }
+    var showRssMaxArticlesDialog by remember { mutableStateOf(false) }
     var pendingExport by remember { mutableStateOf<PendingExport?>(null) }
 
     // Re-checked on resume so coming back from the system notification settings screen (via the
@@ -313,6 +316,11 @@ fun SettingsScreen(
                 title = stringResource(CommonR.string.rss_refresh_interval_label),
                 subtitle = stringResource(CommonR.string.minutes_suffix, rssRefreshIntervalMinutes),
                 onClick = { showRssIntervalDialog = true },
+            )
+            ClickableRow(
+                title = stringResource(CommonR.string.rss_max_articles_per_feed_label),
+                subtitle = stringResource(CommonR.string.articles_suffix, rssMaxArticlesPerFeed),
+                onClick = { showRssMaxArticlesDialog = true },
             )
             SwitchRow(
                 stringResource(CommonR.string.fetch_rss_feeds_label),
@@ -601,6 +609,16 @@ fun SettingsScreen(
                 showRssIntervalDialog = false
             },
             onDismiss = { showRssIntervalDialog = false },
+        )
+    }
+    if (showRssMaxArticlesDialog) {
+        MaxArticlesPerFeedDialog(
+            currentCount = rssMaxArticlesPerFeed,
+            onConfirm = {
+                viewModel.setRssMaxArticlesPerFeed(it)
+                showRssMaxArticlesDialog = false
+            },
+            onDismiss = { showRssMaxArticlesDialog = false },
         )
     }
 }

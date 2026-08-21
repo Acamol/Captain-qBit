@@ -63,6 +63,23 @@ constructor(
         }
     }
 
+    private val _rssMaxArticlesPerFeed = MutableStateFlow(50)
+
+    /** Maximum number of articles qBittorrent keeps per RSS feed (server-side, not local). */
+    val rssMaxArticlesPerFeed: StateFlow<Int> = _rssMaxArticlesPerFeed.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            repository.getRssMaxArticlesPerFeed().onOk { _rssMaxArticlesPerFeed.value = it }
+        }
+    }
+
+    fun setRssMaxArticlesPerFeed(count: Int) {
+        viewModelScope.launch {
+            repository.setRssMaxArticlesPerFeed(count).onOk { _rssMaxArticlesPerFeed.value = count }
+        }
+    }
+
     private val _rssProcessingEnabled = MutableStateFlow(false)
 
     /** Whether qBittorrent fetches RSS feeds at all (server-side, not local). */

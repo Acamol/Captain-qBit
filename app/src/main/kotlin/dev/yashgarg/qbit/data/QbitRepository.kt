@@ -461,4 +461,15 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
             client().setPreferences(buildJsonObject { put("rss_refresh_interval", minutes) })
         }
     }
+
+    /** Maximum number of articles qBittorrent keeps per RSS feed - a single global setting. */
+    suspend fun getRssMaxArticlesPerFeed(): Result<Int, Throwable> {
+        return runSuspendCatching { client().getRssMaxArticlesPerFeed() }
+    }
+
+    suspend fun setRssMaxArticlesPerFeed(count: Int): Result<Unit, Throwable> {
+        return runSuspendCatching {
+            client().setPreferences(buildJsonObject { put("rss_max_articles_per_feed", count) })
+        }
+    }
 }

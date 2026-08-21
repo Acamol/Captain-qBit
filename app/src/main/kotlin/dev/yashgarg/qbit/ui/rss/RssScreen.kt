@@ -700,6 +700,41 @@ internal fun RefreshIntervalDialog(
     )
 }
 
+/** A single global setting (not per-feed - qBittorrent has no per-feed article cap). */
+@Composable
+internal fun MaxArticlesPerFeedDialog(
+    currentCount: Int,
+    onConfirm: (count: Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var value by remember { mutableStateOf(currentCount.toString()) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(CommonR.string.rss_max_articles_per_feed_title)) },
+        text = {
+            OutlinedTextField(
+                value = value,
+                onValueChange = { value = it.filter(Char::isDigit) },
+                singleLine = true,
+                label = { Text(stringResource(CommonR.string.articles_label)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { value.toIntOrNull()?.takeIf { it > 0 }?.let(onConfirm) },
+                enabled = (value.toIntOrNull() ?: 0) > 0,
+            ) {
+                Text(stringResource(CommonR.string.save_cfg))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
+        },
+    )
+}
+
 /**
  * Destination picker for "move to folder": root, any existing folder, or a freshly named one.
  * [folders] is already filtered by the caller to exclude the moved item's own subtree.

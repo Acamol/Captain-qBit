@@ -260,6 +260,8 @@
     <string name="remove_feed_action">Remove feed</string>
     <string name="remove_folder_action">Remove folder (and its feeds)</string>
     <string name="rss_refresh_interval_title">RSS refresh interval</string>
+    <string name="rss_max_articles_per_feed_title">Max articles per feed</string>
+    <string name="articles_label">Articles</string>
     <string name="move_item_to_title">Move \"%1$s\" to…</string>
     <string name="new_folder_name_label">New folder name</string>
     <string name="new_folder_ellipsis">New folder…</string>
@@ -416,6 +418,8 @@
     </string>
     <string name="rss_refresh_interval_label">RSS refresh interval</string>
     <string name="minutes_suffix">%1$d min</string>
+    <string name="rss_max_articles_per_feed_label">Max articles per feed</string>
+    <string name="articles_suffix">%1$d articles</string>
     <string name="fetch_rss_feeds_label">Fetch RSS feeds</string>
     <string name="fetch_rss_feeds_subtitle">Feeds won\'t update at all while this is off</string>
     <string name="auto_download_rss_label">Auto-download matching RSS articles</string>
