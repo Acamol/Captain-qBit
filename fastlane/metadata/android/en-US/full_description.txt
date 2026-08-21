@@ -11,6 +11,7 @@ Features:
 * Create categories on the fly, manage tags, recheck, reannounce, rename, and change save paths
 * Detailed view with Info, Files, Trackers, and Peers tabs, including a browsable file tree
 * Light, Dark, or System theme, with optional Material You dynamic colours
+* Per-app language override, independent of your device's system language, with community translations via Weblate
 * Optional status notification, plus opt-in alerts when a download or force-recheck finishes,
   with configurable refresh intervals to trade freshness for battery life
 * Browse RSS feeds and articles, with auto-download rules and notifications for new matches
