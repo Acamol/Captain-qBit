@@ -131,4 +131,6 @@
     <string name="manage_tags_title">ניהול תגים</string>
     <string name="no_tags_yet">אין תגים עדיין</string>
     <string name="manage_categories_title">ניהול קטגוריות</string>
+    <string name="state_allocating">מקצה</string>
+    <string name="state_errored">שגיאה</string>
 </resources>
