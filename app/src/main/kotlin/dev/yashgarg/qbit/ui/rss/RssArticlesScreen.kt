@@ -63,6 +63,8 @@ import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.ui.server.ServerViewModel
 import dev.yashgarg.qbit.ui.server.TooltipIconButton
 import java.io.File
+import java.time.Instant
+import java.time.format.DateTimeFormatter
 import qbittorrent.models.RssArticle
 import qbittorrent.models.RssFeed
 import qbittorrent.models.RssFolder
@@ -158,8 +160,10 @@ fun RssArticlesScreen(
             }
             val filtered =
                 if (feed == null) emptyList()
-                else if (query.isBlank()) feed.articles
-                else feed.articles.filter { matchesQuery(it.title, query) }
+                else
+                    (if (query.isBlank()) feed.articles
+                        else feed.articles.filter { matchesQuery(it.title, query) })
+                        .sortedByDescending { parseArticleDate(it.date) ?: Instant.MIN }
             PullToRefreshBox(
                 isRefreshing = uiState.refreshing,
                 onRefresh = { viewModel.refreshItem(itemPath) },
@@ -298,6 +302,9 @@ private fun ArticleCard(
                     article.title,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = if (article.isRead) FontWeight.Normal else FontWeight.Bold,
+                    color =
+                        if (article.isRead) MaterialTheme.colorScheme.onSurfaceVariant
+                        else MaterialTheme.colorScheme.onSurface,
                 )
                 Spacer(Modifier.size(4.dp))
                 Text(
@@ -327,6 +334,14 @@ private fun ArticleCard(
         }
     }
 }
+
+/**
+ * Articles carry their source feed's `pubDate`, an RFC-822 string (e.g. "Thu, 01 Jan 2026 12:00:00
+ * +0000") per the RSS spec. Malformed/missing dates return null so callers can fall back without
+ * crashing.
+ */
+private fun parseArticleDate(date: String): Instant? =
+    runCatching { Instant.from(DateTimeFormatter.RFC_1123_DATE_TIME.parse(date)) }.getOrNull()
 
 /**
  * AND-of-words, order-independent, case-insensitive - the same semantics as a single line of an RSS
