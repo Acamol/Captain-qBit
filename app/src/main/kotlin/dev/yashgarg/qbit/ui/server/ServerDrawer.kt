@@ -38,9 +38,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.yashgarg.qbit.common.R as CommonR
 
 /**
  * The filter drawer (Compose port of `ServerDrawerController`). Status / category / tracker / tag
@@ -94,7 +96,7 @@ fun ServerDrawer(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        state.serverName ?: "Servers",
+                        state.serverName ?: stringResource(CommonR.string.servers_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
@@ -102,13 +104,13 @@ fun ServerDrawer(
                     Text(" ▾", fontSize = 12.sp)
                 }
                 TooltipIconButton(
-                    label = "Server logs",
+                    label = stringResource(CommonR.string.server_logs_action),
                     icon = Icons.Filled.Description,
                     onClick = onLogs,
                     position = TooltipAnchorPosition.Below,
                 )
                 TooltipIconButton(
-                    label = "Statistics",
+                    label = stringResource(CommonR.string.statistics_action),
                     icon = Icons.Filled.BarChart,
                     onClick = onStats,
                     position = TooltipAnchorPosition.Below,
@@ -116,13 +118,14 @@ fun ServerDrawer(
             }
 
             // Status
-            SectionHeader("Status")
+            SectionHeader(stringResource(CommonR.string.status_section_title))
+            val allLabel = stringResource(CommonR.string.all_label)
             StateFilter.entries
                 // The Queued filter is only meaningful when the server has torrent queueing on.
                 .filter { it != StateFilter.QUEUED || state.queueingEnabled }
                 .forEach { filter ->
                     SidebarItem(
-                        text = filter.label,
+                        text = stringResource(filter.labelRes),
                         selected = filter == state.selectedFilter,
                         count = torrents.count { it.matchesFilter(filter) },
                         onClick = {
@@ -136,9 +139,12 @@ fun ServerDrawer(
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
 
             // Categories
-            SectionHeaderWithAction("Categories", onManageCategories)
+            SectionHeaderWithAction(
+                stringResource(CommonR.string.categories_section_title),
+                onManageCategories,
+            )
             SidebarItem(
-                text = "All",
+                text = allLabel,
                 selected = state.selectedCategory == null,
                 count = total,
                 onClick = { onCategory(null) },
@@ -164,13 +170,13 @@ fun ServerDrawer(
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
 
             // Tags
-            SectionHeaderWithAction("Tags", onManageTags)
+            SectionHeaderWithAction(stringResource(CommonR.string.tags_section_title), onManageTags)
             val noneSelected = !state.filterUntagged && state.selectedTags.isEmpty()
-            SidebarItem(text = "All", selected = noneSelected, count = total) {
+            SidebarItem(text = allLabel, selected = noneSelected, count = total) {
                 onFilterUntagged(false)
             }
             SidebarItem(
-                text = "Untagged",
+                text = stringResource(CommonR.string.untagged_label),
                 selected = state.filterUntagged,
                 count = torrents.count { it.tags.isEmpty() },
                 onClick = { onFilterUntagged(!state.filterUntagged) },
@@ -188,9 +194,9 @@ fun ServerDrawer(
             // Trackers
             if (state.availableTrackers.isNotEmpty()) {
                 HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                SectionHeader("Trackers")
+                SectionHeader(stringResource(CommonR.string.trackers_section_title))
                 SidebarItem(
-                    text = "All",
+                    text = allLabel,
                     selected = state.selectedTracker == null,
                     count = total,
                     onClick = { onTracker(null) },
@@ -210,13 +216,13 @@ fun ServerDrawer(
                 onClick = onClearFilters,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
             ) {
-                Text("Clear all")
+                Text(stringResource(CommonR.string.clear_all_action))
             }
             HorizontalDivider()
             // Long-press any option for a haptic buzz + a tooltip describing what it does.
             DrawerOption(
-                label = "Use alternate speed limits",
-                description = "Switch between your normal speed limits and the alternate ones.",
+                label = stringResource(CommonR.string.use_alternate_speed_limits_label),
+                description = stringResource(CommonR.string.use_alternate_speed_limits_description),
                 onClick = onToggleSpeedLimits,
             ) {
                 Switch(
@@ -225,13 +231,13 @@ fun ServerDrawer(
                 )
             }
             DrawerOption(
-                label = "RSS feeds",
-                description = "Browse RSS feeds and manage auto-download rules.",
+                label = stringResource(CommonR.string.rss_feeds_label),
+                description = stringResource(CommonR.string.rss_feeds_description),
                 onClick = onRss,
             )
             DrawerOption(
-                label = "Settings",
-                description = "Open the app's settings.",
+                label = stringResource(CommonR.string.settings_label),
+                description = stringResource(CommonR.string.settings_description),
                 onClick = onSettings,
             )
         }
@@ -300,7 +306,7 @@ private fun SectionHeaderWithAction(title: String, onAction: () -> Unit) {
             modifier = Modifier.weight(1f),
         )
         TooltipIconButton(
-            label = "Manage $title",
+            label = stringResource(CommonR.string.manage_named_action, title),
             icon = Icons.Filled.Edit,
             onClick = onAction,
             modifier = Modifier.width(20.dp),

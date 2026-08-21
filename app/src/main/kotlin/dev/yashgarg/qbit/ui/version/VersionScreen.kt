@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -40,6 +41,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.BuildConfig
 import dev.yashgarg.qbit.R
+import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.ui.whatsnew.ChangelogAssets
@@ -54,10 +56,14 @@ fun VersionScreen(appNavigator: AppNavigator, viewModel: VersionViewModel = hilt
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("About") },
+                title = { Text(stringResource(CommonR.string.about)) },
                 navigationIcon = {
                     IconButton(onClick = { appNavigator.navigate(NavCommand.Back) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription =
+                                stringResource(CommonR.string.content_description_back),
+                        )
                     }
                 },
             )
@@ -93,11 +99,16 @@ fun AboutView(state: VersionState, modifier: Modifier = Modifier) {
             modifier = Modifier.size(112.dp),
         )
         Text(
-            text = "Captain qBit",
+            text = stringResource(CommonR.string.app_name),
             style = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold),
         )
         Text(
-            text = "Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+            text =
+                stringResource(
+                    CommonR.string.version_name_code,
+                    BuildConfig.VERSION_NAME,
+                    BuildConfig.VERSION_CODE,
+                ),
             modifier = Modifier.padding(top = 4.dp),
             style = TextStyle(fontSize = 14.sp, color = secondary),
         )
@@ -106,13 +117,13 @@ fun AboutView(state: VersionState, modifier: Modifier = Modifier) {
             Spacer(Modifier.height(24.dp))
             state.serverVersion?.let {
                 Text(
-                    text = "qBittorrent $it",
+                    text = stringResource(CommonR.string.qbittorrent_version_label, it),
                     style = TextStyle(fontSize = 14.sp, color = secondary),
                 )
             }
             state.apiVersion?.let {
                 Text(
-                    text = "Web API v$it",
+                    text = stringResource(CommonR.string.web_api_version_label, it),
                     modifier = Modifier.padding(top = 2.dp),
                     style = TextStyle(fontSize = 14.sp, color = secondary),
                 )
@@ -121,12 +132,12 @@ fun AboutView(state: VersionState, modifier: Modifier = Modifier) {
 
         Spacer(Modifier.height(28.dp))
         Text(
-            text = "A fork of qBittorrent Manager by Yash Garg.",
+            text = stringResource(CommonR.string.fork_attribution_message),
             textAlign = TextAlign.Center,
             style = TextStyle(fontSize = 14.sp, color = secondary),
         )
         Text(
-            text = "Free and open source · GPL-3.0",
+            text = stringResource(CommonR.string.license_message),
             modifier = Modifier.padding(top = 4.dp),
             textAlign = TextAlign.Center,
             style = TextStyle(fontSize = 14.sp, color = secondary),
@@ -137,13 +148,13 @@ fun AboutView(state: VersionState, modifier: Modifier = Modifier) {
             TextStyle(fontSize = 16.sp, color = accent, fontWeight = FontWeight.SemiBold)
         if (whatsNewEntries.isNotEmpty()) {
             Text(
-                text = "What's New",
+                text = stringResource(CommonR.string.whats_new_link_label),
                 modifier = Modifier.padding(vertical = 8.dp).clickable { showWhatsNew = true },
                 style = linkStyle,
             )
         }
         Text(
-            text = "Source code",
+            text = stringResource(CommonR.string.source_code_link_label),
             modifier =
                 Modifier.padding(vertical = 8.dp).clickable {
                     open("https://github.com/Acamol/Captain-qBit")
@@ -151,12 +162,12 @@ fun AboutView(state: VersionState, modifier: Modifier = Modifier) {
             style = linkStyle,
         )
         Text(
-            text = "Report an issue",
+            text = stringResource(CommonR.string.report_issue_link_label),
             modifier = Modifier.padding(vertical = 8.dp).clickable { open(GitHubIssueLink.url()) },
             style = linkStyle,
         )
         Text(
-            text = "Support on Ko-fi",
+            text = stringResource(CommonR.string.support_kofi_link_label),
             modifier =
                 Modifier.padding(vertical = 8.dp).clickable { open("https://ko-fi.com/acamol") },
             style = linkStyle,

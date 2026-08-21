@@ -49,11 +49,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.utils.rememberCopyToClipboard
@@ -79,10 +81,14 @@ fun LogsScreen(appNavigator: AppNavigator, viewModel: LogsViewModel = hiltViewMo
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Server logs") },
+                title = { Text(stringResource(CommonR.string.server_logs_title)) },
                 navigationIcon = {
                     IconButton(onClick = { appNavigator.navigate(NavCommand.Back) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription =
+                                stringResource(CommonR.string.content_description_back),
+                        )
                     }
                 },
                 actions = {
@@ -94,11 +100,18 @@ fun LogsScreen(appNavigator: AppNavigator, viewModel: LogsViewModel = hiltViewMo
                     ) {
                         Icon(
                             if (searchOpen) Icons.Filled.Close else Icons.Filled.Search,
-                            contentDescription = if (searchOpen) "Close search" else "Search",
+                            contentDescription =
+                                stringResource(
+                                    if (searchOpen) CommonR.string.content_description_close_search
+                                    else CommonR.string.content_description_search
+                                ),
                         )
                     }
                     IconButton(onClick = { viewModel.refresh() }, enabled = !state.refreshing) {
-                        Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
+                        Icon(
+                            Icons.Filled.Refresh,
+                            contentDescription = stringResource(CommonR.string.refresh_action),
+                        )
                     }
                 },
             )
@@ -110,12 +123,18 @@ fun LogsScreen(appNavigator: AppNavigator, viewModel: LogsViewModel = hiltViewMo
                     value = query,
                     onValueChange = { query = it },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                    placeholder = { Text("Search log messages") },
+                    placeholder = {
+                        Text(stringResource(CommonR.string.search_log_messages_placeholder))
+                    },
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                     trailingIcon = {
                         if (query.isNotEmpty()) {
                             IconButton(onClick = { query = "" }) {
-                                Icon(Icons.Filled.Close, contentDescription = "Clear")
+                                Icon(
+                                    Icons.Filled.Close,
+                                    contentDescription =
+                                        stringResource(CommonR.string.content_description_clear),
+                                )
                             }
                         }
                     },
@@ -137,8 +156,10 @@ fun LogsScreen(appNavigator: AppNavigator, viewModel: LogsViewModel = hiltViewMo
                         )
                     filtered.isEmpty() ->
                         Text(
-                            if (state.entries.isEmpty()) "No log entries"
-                            else "No matching entries",
+                            stringResource(
+                                if (state.entries.isEmpty()) CommonR.string.no_log_entries
+                                else CommonR.string.no_matching_entries
+                            ),
                             Modifier.align(Alignment.Center),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -185,7 +206,10 @@ private fun JumpToNewestPill(visible: Boolean, modifier: Modifier = Modifier, on
             ) {
                 Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null)
                 Spacer(Modifier.width(6.dp))
-                Text("Jump to newest", style = MaterialTheme.typography.labelLarge)
+                Text(
+                    stringResource(CommonR.string.jump_to_newest),
+                    style = MaterialTheme.typography.labelLarge,
+                )
             }
         }
     }
@@ -196,6 +220,7 @@ private fun JumpToNewestPill(visible: Boolean, modifier: Modifier = Modifier, on
 private fun LogCard(entry: LogEntry) {
     val (label, accent) = logLevel(entry.type)
     val copy = rememberCopyToClipboard()
+    val copiedLogLineMessage = stringResource(CommonR.string.copied_log_line)
     ElevatedCard(
         modifier =
             Modifier.fillMaxWidth()
@@ -205,7 +230,7 @@ private fun LogCard(entry: LogEntry) {
                         copy(
                             "log",
                             "${logTime(entry.timestamp)}  ${entry.message}",
-                            "Copied log line",
+                            copiedLogLineMessage,
                         )
                     },
                 )

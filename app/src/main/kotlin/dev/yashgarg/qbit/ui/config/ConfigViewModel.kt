@@ -292,7 +292,11 @@ constructor(
                     httpClient = ClientManager.httpClient(basicAuth),
                     dispatcher = Dispatchers.Default,
                 )
-            client.getVersion()
+            try {
+                client.getVersion()
+            } finally {
+                client.close()
+            }
         }
     }
 }

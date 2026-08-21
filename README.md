@@ -46,6 +46,13 @@ development, you can leave a tip on Ko-fi — entirely optional, and always appr
 
 [![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/acamol)
 
+## Translations
+
+Captain qBit is translated via [Weblate](https://hosted.weblate.org/engage/captain-qbit/).
+If you'd like to help translate the app into your language, contributions are welcome there.
+
+[![Translation status](https://hosted.weblate.org/widget/captain-qbit/svg-badge.svg)](https://hosted.weblate.org/engage/captain-qbit/)
+
 ## Credits
 
 Captain qBit began as a fork of [Yash-Garg/qBittorrent-Manager](https://github.com/Yash-Garg/qBittorrent-Manager)

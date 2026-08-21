@@ -153,3 +153,11 @@ suspend fun QBittorrentClient.getRssMatchingArticles(ruleName: String): Map<Stri
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.getRssRefreshIntervalMinutes(): Int =
     getPreferences()["rss_refresh_interval"]?.jsonPrimitive?.content?.toIntOrNull() ?: 30
+
+/**
+ * Maximum number of articles qBittorrent keeps per RSS feed - a single global server setting, not
+ * per-feed. Older articles beyond this count are dropped as new ones arrive.
+ */
+@Throws(QBittorrentException::class, CancellationException::class)
+suspend fun QBittorrentClient.getRssMaxArticlesPerFeed(): Int =
+    getPreferences()["rss_max_articles_per_feed"]?.jsonPrimitive?.content?.toIntOrNull() ?: 50

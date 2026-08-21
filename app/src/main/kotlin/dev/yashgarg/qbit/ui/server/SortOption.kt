@@ -1,34 +1,36 @@
 package dev.yashgarg.qbit.ui.server
 
+import androidx.annotation.StringRes
+import dev.yashgarg.qbit.common.R
 import qbittorrent.models.Torrent
 
-enum class SortOption(val label: String) {
-    NAME("Name"),
-    SIZE("Size"),
-    TOTAL_SIZE("Total size"),
-    PROGRESS("Progress"),
-    DOWNLOAD_SPEED("Download speed"),
-    UPLOAD_SPEED("Upload speed"),
-    DOWNLOADED("Downloaded"),
-    UPLOADED("Uploaded"),
-    DOWNLOADED_SESSION("Downloaded (session)"),
-    UPLOADED_SESSION("Uploaded (session)"),
-    AMOUNT_LEFT("Remaining"),
-    ETA("ETA"),
-    RATIO("Ratio"),
-    AVAILABILITY("Availability"),
-    SEEDS("Seeds"),
-    CONNECTED_SEEDS("Connected seeds"),
-    PEERS("Peers"),
-    CONNECTED_PEERS("Connected peers"),
-    PRIORITY("Queue position"),
-    CATEGORY("Category"),
-    TRACKER("Tracker"),
-    ADDED_ON("Added on"),
-    COMPLETED_ON("Completed on"),
-    LAST_ACTIVITY("Last activity"),
-    TIME_ACTIVE("Time active"),
-    SEEDING_TIME("Seeding time"),
+enum class SortOption(@StringRes val labelRes: Int) {
+    NAME(R.string.sort_name),
+    SIZE(R.string.sort_size),
+    TOTAL_SIZE(R.string.sort_total_size),
+    PROGRESS(R.string.sort_progress),
+    DOWNLOAD_SPEED(R.string.sort_download_speed),
+    UPLOAD_SPEED(R.string.sort_upload_speed),
+    DOWNLOADED(R.string.downloaded),
+    UPLOADED(R.string.uploaded),
+    DOWNLOADED_SESSION(R.string.sort_downloaded_session),
+    UPLOADED_SESSION(R.string.sort_uploaded_session),
+    AMOUNT_LEFT(R.string.sort_remaining),
+    ETA(R.string.eta),
+    RATIO(R.string.ratio),
+    AVAILABILITY(R.string.sort_availability),
+    SEEDS(R.string.seeds),
+    CONNECTED_SEEDS(R.string.sort_connected_seeds),
+    PEERS(R.string.peers),
+    CONNECTED_PEERS(R.string.connected_peers),
+    PRIORITY(R.string.sort_queue_position),
+    CATEGORY(R.string.category),
+    TRACKER(R.string.sort_tracker),
+    ADDED_ON(R.string.sort_added_on),
+    COMPLETED_ON(R.string.sort_completed_on),
+    LAST_ACTIVITY(R.string.sort_last_activity),
+    TIME_ACTIVE(R.string.sort_time_active),
+    SEEDING_TIME(R.string.sort_seeding_time),
 }
 
 enum class SortDirection {

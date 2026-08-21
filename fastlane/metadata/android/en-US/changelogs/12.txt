@@ -1,0 +1,5 @@
+- New: per-app language support in Settings, with community translations via Weblate
+- New: set the max RSS articles kept per feed from Settings
+- RSS articles now sort newest-first and read ones are visually dimmed, instead of appearing in random server order
+- Fixed: restoring a backup in Merge mode could apply the wrong server's saved sort/filter settings
+- Fixed: mislabeled Add Torrent button for screen readers

@@ -49,11 +49,13 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.models.ServerConfig
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
@@ -82,17 +84,21 @@ fun ServerListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Servers") },
+                title = { Text(stringResource(CommonR.string.servers_title)) },
                 navigationIcon = {
                     IconButton(onClick = { appNavigator.navigate(NavCommand.Back) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription =
+                                stringResource(CommonR.string.content_description_back),
+                        )
                     }
                 },
             )
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                text = { Text("Add server") },
+                text = { Text(stringResource(CommonR.string.add_server)) },
                 icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                 onClick = { appNavigator.navigate(NavCommand.OpenConfig(serverId = -1)) },
             )
@@ -127,8 +133,10 @@ fun ServerListScreen(
     pendingDelete?.let { server ->
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
-            title = { Text("Delete \"${server.serverName}\"?") },
-            text = { Text("This removes the saved server from the app.") },
+            title = {
+                Text(stringResource(CommonR.string.delete_server_confirm_title, server.serverName))
+            },
+            text = { Text(stringResource(CommonR.string.delete_server_confirm_message)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -136,10 +144,14 @@ fun ServerListScreen(
                         pendingDelete = null
                     }
                 ) {
-                    Text("Delete")
+                    Text(stringResource(CommonR.string.delete))
                 }
             },
-            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("Cancel") } },
+            dismissButton = {
+                TextButton(onClick = { pendingDelete = null }) {
+                    Text(stringResource(CommonR.string.cancel))
+                }
+            },
         )
     }
 }
@@ -251,13 +263,13 @@ private fun ServerRow(
         IconButton(onClick = onDelete) {
             Icon(
                 Icons.Outlined.Delete,
-                contentDescription = "Delete",
+                contentDescription = stringResource(CommonR.string.delete),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Icon(
             Icons.Filled.DragHandle,
-            contentDescription = "Drag to reorder",
+            contentDescription = stringResource(CommonR.string.content_description_drag_to_reorder),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier =
                 Modifier.pointerInput(server.configId) {

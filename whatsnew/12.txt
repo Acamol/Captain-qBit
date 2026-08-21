@@ -1,0 +1,11 @@
+New: per-app language support — pick a language for this app from Settings, independent of your device's system language. The app is now ready for community translation via Weblate (see the README for how to contribute a translation).
+
+New: set qBittorrent's "max articles per feed" RSS setting from Settings, next to the existing refresh interval
+
+Improved: RSS articles now sort newest-first by their published date instead of appearing in the server's raw, sometimes-jumbled order; read articles are shown with a dimmer color in addition to the existing bold/regular weight cue
+
+Fixed: restoring a backup in Merge mode could silently apply one server's saved sort/filter view onto a different server when both were included in the same restore
+
+Fixed: the main torrent list's "Add torrent" button was announcing itself as "Add server" to screen readers
+
+Fixed: a handful of internal resource-leak and race-condition issues around switching servers, and a crash risk on the About screen when the server was unreachable

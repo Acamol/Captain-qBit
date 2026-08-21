@@ -5,7 +5,6 @@ import androidx.datastore.core.DataStore
 import com.github.michaelbull.result.coroutines.runSuspendCatching
 import com.github.michaelbull.result.get
 import com.github.michaelbull.result.onErr
-import com.github.michaelbull.result.onOk
 import dev.yashgarg.qbit.data.daos.ConfigDao
 import dev.yashgarg.qbit.data.models.ConfigStatus
 import dev.yashgarg.qbit.data.models.ServerConfig
@@ -21,6 +20,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import qbittorrent.QBittorrentClient
 
 @Singleton
@@ -35,6 +36,7 @@ constructor(
     override val configStatus = _configStatus.asSharedFlow()
 
     private var client: QBittorrentClient? = null
+    private val clientMutex = Mutex()
 
     init {
         coroutineScope.launch { observeActiveServer() }
@@ -53,7 +55,7 @@ constructor(
                     configs
                 }
                 .collect { configs ->
-                    client = null // force re-create with the (possibly new) active config
+                    dropClient() // force re-create with the (possibly new) active config
                     if (configs.isNotEmpty()) {
                         _configStatus.emit(ConfigStatus.EXISTS)
                         checkAndGetClient()
@@ -65,13 +67,19 @@ constructor(
     }
 
     override suspend fun setActiveServer(id: Int) {
-        client = null
+        dropClient()
         prefsStore.updateData { it.copy(activeServerId = id) }
+    }
+
+    private suspend fun dropClient() {
+        clientMutex.withLock {
+            client?.close()
+            client = null
+        }
     }
 
     override suspend fun checkAndGetClient(): QBittorrentClient? {
         return runSuspendCatching { getClient() }
-            .onOk { client = it }
             .onErr { Log.e(this::class.simpleName, it.toString()) }
             .get()
     }
@@ -86,34 +94,35 @@ constructor(
         return configs.find { it.configId == activeId } ?: configs.first()
     }
 
-    private suspend fun getClient(): QBittorrentClient =
-        withContext(Dispatchers.IO) {
-            if (client == null) {
-                val config = requireNotNull(resolveActiveConfig()) { "No server config" }
-                val port = if (config.port != null) ":${config.port}" else ""
-                val path = config.path ?: ""
-                val syncIntervalMs = prefsStore.data.first().syncIntervalMs
-
-                val basicAuth =
-                    if (
-                        !config.basicAuthUsername.isNullOrEmpty() &&
-                            !config.basicAuthPassword.isNullOrEmpty()
-                    ) {
-                        config.basicAuthUsername to
-                            (CryptoManager.decrypt(config.basicAuthPassword)
-                                ?: config.basicAuthPassword)
-                    } else null
-
-                client =
-                    QBittorrentClient(
-                        "${config.connectionType.toString().lowercase()}://${config.baseUrl}$port$path",
-                        config.username,
-                        CryptoManager.decrypt(config.password) ?: config.password,
-                        syncInterval = syncIntervalMs.milliseconds,
-                        httpClient = ClientManager.httpClient(basicAuth),
-                        dispatcher = Dispatchers.Default,
-                    )
-            }
-            return@withContext requireNotNull(client)
+    private suspend fun getClient(): QBittorrentClient = clientMutex.withLock {
+        client?.let {
+            return@withLock it
         }
+        withContext(Dispatchers.IO) {
+            val config = requireNotNull(resolveActiveConfig()) { "No server config" }
+            val port = if (config.port != null) ":${config.port}" else ""
+            val path = config.path ?: ""
+            val syncIntervalMs = prefsStore.data.first().syncIntervalMs
+
+            val basicAuth =
+                if (
+                    !config.basicAuthUsername.isNullOrEmpty() &&
+                        !config.basicAuthPassword.isNullOrEmpty()
+                ) {
+                    config.basicAuthUsername to
+                        (CryptoManager.decrypt(config.basicAuthPassword)
+                            ?: config.basicAuthPassword)
+                } else null
+
+            QBittorrentClient(
+                    "${config.connectionType.toString().lowercase()}://${config.baseUrl}$port$path",
+                    config.username,
+                    CryptoManager.decrypt(config.password) ?: config.password,
+                    syncInterval = syncIntervalMs.milliseconds,
+                    httpClient = ClientManager.httpClient(basicAuth),
+                    dispatcher = Dispatchers.Default,
+                )
+                .also { client = it }
+        }
+    }
 }

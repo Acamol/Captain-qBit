@@ -19,9 +19,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.yashgarg.qbit.R
+import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.ui.compose.Center
 import dev.yashgarg.qbit.ui.compose.CenterLinearLoading
 import dev.yashgarg.qbit.ui.compose.ListTile
@@ -42,13 +44,14 @@ fun PeersListView(
     if (state.peersLoading) {
         CenterLinearLoading(modifier, R.color.md_theme_dark_seed)
     } else if (state.peers == null || state.peers.peers.isEmpty()) {
-        Center(modifier) { Text("No peers connected") }
+        Center(modifier) { Text(stringResource(CommonR.string.no_peers_connected)) }
     } else {
         val peers = requireNotNull(state.peers).peers.values.toList()
         LazyColumn(modifier) {
             itemsIndexed(peers, key = { pos, peer -> "${peer.ip}-$pos" }) { _, peer ->
                 var openDialog by remember { mutableStateOf(false) }
                 val copy = rememberCopyToClipboard()
+                val copiedToClipboardMessage = stringResource(CommonR.string.clipboard_copied)
 
                 ListTile(
                     modifier = Modifier.fillMaxWidth().padding(18.dp),
@@ -64,7 +67,7 @@ fun PeersListView(
                     },
                     onClick = { openDialog = true },
                     onLongClick = {
-                        copy("peer_${peer.ip}", "${peer.ip}:${peer.port}", "Copied to clipboard")
+                        copy("peer_${peer.ip}", "${peer.ip}:${peer.port}", copiedToClipboardMessage)
                     },
                 )
 
@@ -93,29 +96,62 @@ private fun PeerDetailsDialog(peer: TorrentPeer, onBan: () -> Unit, onDismiss: (
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 if (peer.country.isNotBlank()) {
-                    PeerDetailRow("Country", "${peer.country} $flag".trim())
+                    PeerDetailRow(
+                        stringResource(CommonR.string.peer_country_label),
+                        "${peer.country} $flag".trim(),
+                    )
                 }
-                if (peer.connection.isNotBlank()) PeerDetailRow("Connection", peer.connection)
-                if (peer.client.isNotBlank()) PeerDetailRow("Client", peer.client)
-                PeerDetailRow("Progress", percent(peer.progress))
-                PeerDetailRow("Down speed", "${peer.dlSpeed.toHumanReadable()}/s")
-                PeerDetailRow("Up speed", "${peer.upSpeed.toHumanReadable()}/s")
-                PeerDetailRow("Downloaded", peer.downloaded.toHumanReadable())
-                PeerDetailRow("Uploaded", peer.uploaded.toHumanReadable())
-                PeerDetailRow("Relevance", percent(peer.relevance))
+                if (peer.connection.isNotBlank()) {
+                    PeerDetailRow(
+                        stringResource(CommonR.string.peer_connection_label),
+                        peer.connection,
+                    )
+                }
+                if (peer.client.isNotBlank()) {
+                    PeerDetailRow(stringResource(CommonR.string.peer_client_label), peer.client)
+                }
+                PeerDetailRow(stringResource(CommonR.string.sort_progress), percent(peer.progress))
+                PeerDetailRow(
+                    stringResource(CommonR.string.peer_down_speed_label),
+                    "${peer.dlSpeed.toHumanReadable()}/s",
+                )
+                PeerDetailRow(
+                    stringResource(CommonR.string.peer_up_speed_label),
+                    "${peer.upSpeed.toHumanReadable()}/s",
+                )
+                PeerDetailRow(
+                    stringResource(CommonR.string.downloaded),
+                    peer.downloaded.toHumanReadable(),
+                )
+                PeerDetailRow(
+                    stringResource(CommonR.string.uploaded),
+                    peer.uploaded.toHumanReadable(),
+                )
+                PeerDetailRow(
+                    stringResource(CommonR.string.peer_relevance_label),
+                    percent(peer.relevance),
+                )
                 val flags =
                     listOf(peer.flags, peer.flagsDesc)
                         .filter { it.isNotBlank() }
                         .joinToString(" — ")
-                if (flags.isNotBlank()) PeerDetailRow("Flags", flags)
-                if (peer.files.isNotBlank()) PeerDetailRow("Files", peer.files)
+                if (flags.isNotBlank()) {
+                    PeerDetailRow(stringResource(CommonR.string.peer_flags_label), flags)
+                }
+                if (peer.files.isNotBlank()) {
+                    PeerDetailRow(stringResource(CommonR.string.peer_files_label), peer.files)
+                }
             }
         },
         confirmButton = {
-            TextButton(onClick = onBan) { Text("Ban Peer", style = bodyMediumPrimary) }
+            TextButton(onClick = onBan) {
+                Text(stringResource(CommonR.string.ban_peer_action), style = bodyMediumPrimary)
+            }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Dismiss", style = bodyMediumPrimary) }
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(CommonR.string.dismiss_action), style = bodyMediumPrimary)
+            }
         },
         modifier = Modifier.fillMaxWidth(),
     )

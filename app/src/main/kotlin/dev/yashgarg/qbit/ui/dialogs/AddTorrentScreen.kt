@@ -364,7 +364,7 @@ private fun OptionsTab(
                 value = magnetText,
                 onValueChange = onMagnetChange,
                 label = { Text(stringResource(CommonR.string.enter_url)) },
-                placeholder = { Text("http://, https://, magnet: or bc://bt/") },
+                placeholder = { Text(stringResource(CommonR.string.magnet_url_placeholder)) },
                 isError = magnetError,
                 supportingText =
                     if (magnetError) {
@@ -392,7 +392,7 @@ private fun OptionsTab(
             OutlinedTextField(
                 value = category,
                 onValueChange = onCategoryChange,
-                label = { Text("Category (pick or type a new one)") },
+                label = { Text(stringResource(CommonR.string.category_pick_or_type_label)) },
                 singleLine = true,
                 trailingIcon = {
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
@@ -421,12 +421,12 @@ private fun OptionsTab(
         }
 
         SwitchRow(
-            label = "Save as default category",
+            label = stringResource(CommonR.string.save_as_default_category_label),
             checked = saveCategory,
             onCheckedChange = onSaveCategoryChange,
         )
         SwitchRow(
-            label = "Automatic torrent management",
+            label = stringResource(CommonR.string.automatic_torrent_management_label),
             checked = autoTmm,
             onCheckedChange = onAutoTmmChange,
         )
@@ -434,14 +434,18 @@ private fun OptionsTab(
             OutlinedTextField(
                 value = savePath,
                 onValueChange = onSavePathChange,
-                label = { Text("Save path (optional)") },
+                label = { Text(stringResource(CommonR.string.save_path_optional_label)) },
                 singleLine = true,
                 keyboardOptions =
                     androidx.compose.foundation.text.KeyboardOptions(imeAction = ImeAction.Done),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
-        SwitchRow(label = "Add as paused", checked = paused, onCheckedChange = onPausedChange)
+        SwitchRow(
+            label = stringResource(CommonR.string.add_as_paused_label),
+            checked = paused,
+            onCheckedChange = onPausedChange,
+        )
     }
 }
 
