@@ -159,11 +159,13 @@ fun RssArticlesScreen(
                 )
             }
             val filtered =
-                if (feed == null) emptyList()
-                else
-                    (if (query.isBlank()) feed.articles
-                        else feed.articles.filter { matchesQuery(it.title, query) })
-                        .sortedByDescending { parseArticleDate(it.date) ?: Instant.MIN }
+                remember(feed, query) {
+                    if (feed == null) emptyList()
+                    else
+                        (if (query.isBlank()) feed.articles
+                            else feed.articles.filter { matchesQuery(it.title, query) })
+                            .sortedByDescending { parseArticleDate(it.date) ?: Instant.MIN }
+                }
             PullToRefreshBox(
                 isRefreshing = uiState.refreshing,
                 onRefresh = { viewModel.refreshItem(itemPath) },

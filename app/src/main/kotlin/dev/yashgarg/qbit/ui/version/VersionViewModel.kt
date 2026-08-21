@@ -29,12 +29,10 @@ class VersionViewModel @Inject constructor(private val clientManager: ClientMana
     }
 
     private suspend fun getVersions() {
+        val apiVersion = runCatching { client.getApiVersion() }.getOrNull()
+        val serverVersion = runCatching { client.getVersion() }.getOrNull()
         _uiState.update { state ->
-            state.copy(
-                apiVersion = client.getApiVersion(),
-                serverVersion = client.getVersion(),
-                loading = false,
-            )
+            state.copy(apiVersion = apiVersion, serverVersion = serverVersion, loading = false)
         }
     }
 }

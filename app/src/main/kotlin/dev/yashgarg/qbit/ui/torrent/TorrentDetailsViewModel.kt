@@ -17,6 +17,7 @@ import dev.yashgarg.qbit.ui.common.StatusViewModel
 import dev.yashgarg.qbit.utils.TransformUtil
 import dev.yashgarg.qbit.utils.friendlyMessage
 import javax.inject.Inject
+import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -405,8 +406,10 @@ constructor(
                 repository.observeTorrent(hash, waitIfMissing = true).collectLatest { info ->
                     found = true
                     timeoutJob.cancel()
-                    val props = repository.getTorrentProperties(hash)
-                    val trackers = repository.getTorrentTrackers(hash)
+                    val propsDeferred = async { repository.getTorrentProperties(hash) }
+                    val trackersDeferred = async { repository.getTorrentTrackers(hash) }
+                    val props = propsDeferred.await()
+                    val trackers = trackersDeferred.await()
                     val errorReason = errorReasonFor(info)
 
                     _uiState.update { state ->

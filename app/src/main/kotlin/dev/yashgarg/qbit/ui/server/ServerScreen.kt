@@ -336,7 +336,8 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                         FloatingActionButton(onClick = { openTorrentDialog() }) {
                             Icon(
                                 Icons.Filled.Add,
-                                contentDescription = stringResource(CommonR.string.add_server),
+                                contentDescription =
+                                    stringResource(CommonR.string.content_description_add_torrent),
                             )
                         }
                     },
@@ -364,7 +365,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                         value = state.searchQuery,
                         onValueChange = viewModel::setSearchQuery,
                         placeholder = {
-                            Text(stringResource(CommonR.string.content_description_search))
+                            Text(stringResource(CommonR.string.search_torrents_placeholder))
                         },
                         singleLine = true,
                         leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },

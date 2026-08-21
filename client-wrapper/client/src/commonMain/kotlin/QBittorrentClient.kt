@@ -303,6 +303,16 @@ class QBittorrentClient(
             )
             .orThrow()
     }
+
+    /**
+     * Releases this client's resources - its background sync coroutines and its HTTP engine
+     * (connection pool, dispatcher threads). Call when discarding a client, e.g. when switching
+     * servers; an unclosed client otherwise leaks its engine for the life of the process.
+     */
+    fun close() {
+        syncScope.cancel()
+        http.close()
+    }
 }
 
 internal suspend fun login(http: HttpClient, config: QBittorrentClient.Config): HttpResponse {

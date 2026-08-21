@@ -389,6 +389,7 @@
     <string name="remove_torrents_count">Remove %1$d torrents</string>
     <string name="remove_torrent_singular">Remove torrent</string>
     <string name="also_delete_the_files_on_disk">Also delete the files on disk</string>
+    <string name="search_torrents_placeholder">Search torrents (all words, any order)</string>
 
     <!-- Server list screen -->
     <string name="delete_server_confirm_title">Delete \"%1$s\"?</string>

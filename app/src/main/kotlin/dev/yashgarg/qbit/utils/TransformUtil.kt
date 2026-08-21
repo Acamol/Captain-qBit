@@ -10,9 +10,9 @@ object TransformUtil {
     fun transformFilesToTree(files: List<TorrentFile>, start: Int): List<ContentTreeItem> {
         val tree = mutableListOf<ContentTreeItem>()
         var folderIndex = 0
-        files.sortedBy { it.name.lowercase() }
+        val sortedFiles = files.sortedBy { it.name.lowercase() }
 
-        val entries = files.groupBy { getFileFolder(it, start) }
+        val entries = sortedFiles.groupBy { getFileFolder(it, start) }
         for ((folder, values) in entries) {
             if (folder == UNWANTED_FILE) {
                 for (item in values) {
