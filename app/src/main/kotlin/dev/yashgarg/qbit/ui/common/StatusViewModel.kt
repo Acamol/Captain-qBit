@@ -23,6 +23,10 @@ abstract class StatusViewModel(private val context: Context) : ViewModel() {
     protected fun getString(resId: Int, vararg formatArgs: Any): String =
         context.getString(resId, *formatArgs)
 
+    /** Resolves a `<plurals>` resource, for building [launchStatus]/[emitStatus] messages. */
+    protected fun getQuantityString(resId: Int, quantity: Int, vararg formatArgs: Any): String =
+        context.resources.getQuantityString(resId, quantity, *formatArgs)
+
     /** For call sites whose success/failure shape doesn't fit [launchStatus]. */
     protected suspend fun emitStatus(message: String) {
         _status.emit(message)

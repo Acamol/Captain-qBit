@@ -5,6 +5,7 @@ import android.net.Uri
 import android.util.Base64
 import androidx.datastore.core.DataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.daos.ConfigDao
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.manager.CryptoManager
@@ -84,7 +85,9 @@ constructor(
                 json.encodeToString(BackupEnvelope.serializer(), envelope).encodeToByteArray()
 
             (context.contentResolver.openOutputStream(uri)
-                    ?: throw InvalidBackupException("Could not open the selected file"))
+                    ?: throw InvalidBackupException(
+                        context.getString(CommonR.string.error_could_not_open_file)
+                    ))
                 .use { it.write(bytes) }
         }
 
@@ -97,17 +100,23 @@ constructor(
         withContext(Dispatchers.IO) {
             val raw =
                 (context.contentResolver.openInputStream(uri)
-                        ?: throw InvalidBackupException("Could not open the selected file"))
+                        ?: throw InvalidBackupException(
+                            context.getString(CommonR.string.error_could_not_open_file)
+                        ))
                     .use { it.readBytes() }
 
             val envelope =
                 try {
                     json.decodeFromString(BackupEnvelope.serializer(), raw.decodeToString())
                 } catch (e: Exception) {
-                    throw InvalidBackupException("This file isn't a Captain qBit backup")
+                    throw InvalidBackupException(
+                        context.getString(CommonR.string.error_not_a_backup_file)
+                    )
                 }
             if (envelope.format != BackupEnvelope.FORMAT) {
-                throw InvalidBackupException("This file isn't a Captain qBit backup")
+                throw InvalidBackupException(
+                    context.getString(CommonR.string.error_not_a_backup_file)
+                )
             }
 
             val chars = passphrase.toCharArray()
@@ -129,7 +138,9 @@ constructor(
             val backup =
                 json.decodeFromString(ConfigBackup.serializer(), plaintext.decodeToString())
             if (backup.servers.isEmpty()) {
-                throw InvalidBackupException("The backup contains no servers")
+                throw InvalidBackupException(
+                    context.getString(CommonR.string.error_backup_no_servers)
+                )
             }
             backup
         }

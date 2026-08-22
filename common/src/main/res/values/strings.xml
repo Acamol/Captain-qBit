@@ -490,6 +490,22 @@
     <string name="backup_server_already_added">%1$s (already added)</string>
     <string name="notifications_section_header">Notifications</string>
     <string name="filters_and_sorting_label">Filters &amp; sorting</string>
+    <string name="unknown_error">Unknown error</string>
+    <string name="status_config_exported">Configuration exported</string>
+    <string name="status_export_failed">Export failed: %1$s</string>
+    <string name="status_import_failed">Import failed: %1$s</string>
+    <string name="status_incorrect_passphrase">Incorrect passphrase, or the file is corrupted</string>
+    <string name="error_could_not_open_file">Could not open the selected file</string>
+    <string name="error_not_a_backup_file">This file isn\'t a Captain qBit backup</string>
+    <string name="error_backup_no_servers">The backup contains no servers</string>
+    <string name="status_replaced_with_servers">Replaced with %1$s</string>
+    <string name="status_no_new_servers">No new servers — %1$s already added</string>
+    <string name="status_imported_servers_with_skipped">Imported %1$s (%2$d skipped, already added)</string>
+    <string name="status_imported_servers">Imported %1$s</string>
+    <plurals name="server_count">
+        <item quantity="one">%d server</item>
+        <item quantity="other">%d servers</item>
+    </plurals>
     <string name="notifications_blocked_title">Notifications are blocked</string>
     <string name="notifications_blocked_message">
         These switches won\'t show anything until notifications are re-enabled for this app in
