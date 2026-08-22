@@ -17,7 +17,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.isSpecified
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.times
 import androidx.compose.ui.zIndex
 import cafe.adriel.bonsai.core.BonsaiScope
@@ -44,8 +46,16 @@ private fun <T> BonsaiScope<T>.ToggleIcon(node: Node<T>) {
     val toggleIcon = style.toggleIcon(node) ?: return
 
     if (node is BranchNode) {
+        // The base icon points toward the reading direction's "forward" side (right in LTR) when
+        // collapsed, then rotates to point down when expanded. In RTL that base direction is
+        // mirrored (left instead of right), and the rotation to "pointing down" runs the opposite
+        // way, so both the resting angle and the rotation sign flip together.
+        val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+        val restingDegrees = if (isRtl) 180f else 0f
+        val expandRotation =
+            if (isRtl) -style.toggleIconRotationDegrees else style.toggleIconRotationDegrees
         val rotationDegrees by
-            animateFloatAsState(if (node.isExpanded) style.toggleIconRotationDegrees else 0f)
+            animateFloatAsState(restingDegrees + if (node.isExpanded) expandRotation else 0f)
 
         Image(
             painter = toggleIcon,

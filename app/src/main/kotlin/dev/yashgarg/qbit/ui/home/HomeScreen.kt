@@ -52,13 +52,14 @@ fun HomeScreen(
     val status by homeViewModel.configStatus.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val noServer = status == ConfigStatus.DOES_NOT_EXIST
+    val backupPassphraseTitle = stringResource(CommonR.string.backup_passphrase_title)
 
     val importLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri != null) {
                 BackupDialogs.showPassphraseDialog(
                     context,
-                    title = "Backup passphrase",
+                    title = backupPassphraseTitle,
                     confirm = false,
                 ) { passphrase ->
                     backupViewModel.beginImport(uri, passphrase)
