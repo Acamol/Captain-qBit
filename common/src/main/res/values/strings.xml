@@ -306,7 +306,10 @@
     <string name="remove_rule_confirm_title">Remove rule \"%1$s\"?</string>
     <string name="remove_action">Remove</string>
     <string name="no_matches_yet_title">No matches yet</string>
-    <string name="matching_articles_count">%1$d matching article(s)</string>
+    <plurals name="matching_articles_count">
+        <item quantity="one">%1$d matching article</item>
+        <item quantity="other">%1$d matching articles</item>
+    </plurals>
     <string name="rule_no_matches_message">
         This rule hasn\'t matched any article currently cached in its affected feeds.
     </string>
@@ -580,7 +583,10 @@
     <string name="status_add_torrent_url_failure">Failed to add torrent</string>
     <string name="status_add_torrent_file_success">Successfully added file</string>
     <string name="status_add_torrent_file_failure">Failed to add file</string>
-    <string name="status_bulk_category_set">Category set on %1$d torrent(s)</string>
+    <plurals name="status_bulk_category_set">
+        <item quantity="one">Category set on %1$d torrent</item>
+        <item quantity="other">Category set on %1$d torrents</item>
+    </plurals>
     <string name="status_set_category_failure">Failed to set category</string>
     <string name="status_set_priority_failure">Failed to set priority</string>
     <string name="file_priority_title">Priority</string>
@@ -599,22 +605,46 @@
     <string name="files_placeholder">Enter a magnet link or choose a .torrent file to see its contents</string>
     <string name="files_unavailable">File selection isn\'t available for this torrent</string>
     <string name="status_file_selection_failed">Torrent added, but the file selection couldn\'t be applied</string>
-    <string name="status_bulk_tags_updated">Tags updated on %1$d torrent(s)</string>
+    <plurals name="status_bulk_tags_updated">
+        <item quantity="one">Tags updated on %1$d torrent</item>
+        <item quantity="other">Tags updated on %1$d torrents</item>
+    </plurals>
     <string name="status_update_tags_failure">Failed to update tags</string>
     <string name="status_tag_created">Tag \"%1$s\" created</string>
     <string name="status_create_tag_failure">Failed to create tag</string>
-    <string name="status_tags_deleted">Deleted %1$d tag(s)</string>
+    <plurals name="status_tags_deleted">
+        <item quantity="one">Deleted %1$d tag</item>
+        <item quantity="other">Deleted %1$d tags</item>
+    </plurals>
     <string name="status_delete_tags_failure">Failed to delete tags</string>
     <string name="status_category_created">Category \"%1$s\" created</string>
     <string name="status_create_category_failure">Failed to create category</string>
-    <string name="status_categories_deleted">Deleted %1$d category(ies)</string>
+    <plurals name="status_categories_deleted">
+        <item quantity="one">Deleted %1$d category</item>
+        <item quantity="other">Deleted %1$d categories</item>
+    </plurals>
     <string name="status_delete_categories_failure">Failed to delete categories</string>
-    <string name="status_torrents_removed">Successfully deleted %1$d file(s)</string>
+    <plurals name="status_torrents_removed">
+        <item quantity="one">Successfully deleted %1$d file</item>
+        <item quantity="other">Successfully deleted %1$d files</item>
+    </plurals>
     <string name="status_remove_torrents_failure">Failed to remove</string>
-    <string name="status_torrents_paused">Paused %1$d torrent(s)</string>
-    <string name="status_torrents_resumed">Resumed %1$d torrent(s)</string>
-    <string name="status_pause_torrents_failure">Failed to pause %1$d torrent(s)</string>
-    <string name="status_resume_torrents_failure">Failed to resume %1$d torrent(s)</string>
+    <plurals name="status_torrents_paused">
+        <item quantity="one">Paused %1$d torrent</item>
+        <item quantity="other">Paused %1$d torrents</item>
+    </plurals>
+    <plurals name="status_torrents_resumed">
+        <item quantity="one">Resumed %1$d torrent</item>
+        <item quantity="other">Resumed %1$d torrents</item>
+    </plurals>
+    <plurals name="status_pause_torrents_failure">
+        <item quantity="one">Failed to pause %1$d torrent</item>
+        <item quantity="other">Failed to pause %1$d torrents</item>
+    </plurals>
+    <plurals name="status_resume_torrents_failure">
+        <item quantity="one">Failed to resume %1$d torrent</item>
+        <item quantity="other">Failed to resume %1$d torrents</item>
+    </plurals>
     <string name="status_speed_limits_disabled">Alternative speed limits are disabled</string>
     <string name="status_speed_limits_enabled">Alternative speed limits are enabled</string>
     <string name="status_toggle_speed_limits_failure">Failed to toggle speed limits</string>

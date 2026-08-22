@@ -489,7 +489,12 @@ constructor(
 
     fun bulkSetCategory(hashes: List<String>, category: String) {
         launchStatus(
-            successMessage = getString(CommonR.string.status_bulk_category_set, hashes.size),
+            successMessage =
+                getQuantityString(
+                    CommonR.plurals.status_bulk_category_set,
+                    hashes.size,
+                    hashes.size,
+                ),
             failureMessage = getString(CommonR.string.status_set_category_failure),
         ) {
             repository.setTorrentCategory(hashes, category)
@@ -498,7 +503,12 @@ constructor(
 
     fun bulkAddTags(hashes: List<String>, tags: List<String>) {
         launchStatus(
-            successMessage = getString(CommonR.string.status_bulk_tags_updated, hashes.size),
+            successMessage =
+                getQuantityString(
+                    CommonR.plurals.status_bulk_tags_updated,
+                    hashes.size,
+                    hashes.size,
+                ),
             failureMessage = getString(CommonR.string.status_update_tags_failure),
         ) {
             repository.addTorrentTags(hashes, tags)
@@ -507,7 +517,12 @@ constructor(
 
     fun bulkRemoveTags(hashes: List<String>, tags: List<String>) {
         launchStatus(
-            successMessage = getString(CommonR.string.status_bulk_tags_updated, hashes.size),
+            successMessage =
+                getQuantityString(
+                    CommonR.plurals.status_bulk_tags_updated,
+                    hashes.size,
+                    hashes.size,
+                ),
             failureMessage = getString(CommonR.string.status_update_tags_failure),
         ) {
             repository.removeTorrentTags(hashes, tags)
@@ -525,7 +540,8 @@ constructor(
 
     fun deleteTags(tags: List<String>) {
         launchStatus(
-            successMessage = getString(CommonR.string.status_tags_deleted, tags.size),
+            successMessage =
+                getQuantityString(CommonR.plurals.status_tags_deleted, tags.size, tags.size),
             failureMessage = getString(CommonR.string.status_delete_tags_failure),
             onSuccess = {
                 _uiState.update { it.copy(selectedTags = it.selectedTags - tags.toSet()) }
@@ -547,7 +563,12 @@ constructor(
 
     fun deleteCategories(names: List<String>) {
         launchStatus(
-            successMessage = getString(CommonR.string.status_categories_deleted, names.size),
+            successMessage =
+                getQuantityString(
+                    CommonR.plurals.status_categories_deleted,
+                    names.size,
+                    names.size,
+                ),
             failureMessage = getString(CommonR.string.status_delete_categories_failure),
         ) {
             repository.deleteCategories(names)
@@ -565,7 +586,12 @@ constructor(
 
     fun removeTorrents(hashes: List<String>, deleteFiles: Boolean = false) {
         launchStatus(
-            successMessage = getString(CommonR.string.status_torrents_removed, hashes.size),
+            successMessage =
+                getQuantityString(
+                    CommonR.plurals.status_torrents_removed,
+                    hashes.size,
+                    hashes.size,
+                ),
             failureMessage = getString(CommonR.string.status_remove_torrents_failure),
         ) {
             repository.removeTorrents(hashes, deleteFiles)
@@ -575,11 +601,31 @@ constructor(
     fun toggleTorrentsState(pause: Boolean, hashes: List<String>) {
         launchStatus(
             successMessage =
-                if (pause) getString(CommonR.string.status_torrents_paused, hashes.size)
-                else getString(CommonR.string.status_torrents_resumed, hashes.size),
+                if (pause)
+                    getQuantityString(
+                        CommonR.plurals.status_torrents_paused,
+                        hashes.size,
+                        hashes.size,
+                    )
+                else
+                    getQuantityString(
+                        CommonR.plurals.status_torrents_resumed,
+                        hashes.size,
+                        hashes.size,
+                    ),
             failureMessage =
-                if (pause) getString(CommonR.string.status_pause_torrents_failure, hashes.size)
-                else getString(CommonR.string.status_resume_torrents_failure, hashes.size),
+                if (pause)
+                    getQuantityString(
+                        CommonR.plurals.status_pause_torrents_failure,
+                        hashes.size,
+                        hashes.size,
+                    )
+                else
+                    getQuantityString(
+                        CommonR.plurals.status_resume_torrents_failure,
+                        hashes.size,
+                        hashes.size,
+                    ),
         ) {
             repository.toggleTorrentsState(hashes, pause)
         }
