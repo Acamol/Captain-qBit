@@ -270,6 +270,10 @@ private fun rssTreeStyle(controller: RssDragController): BonsaiStyle<RssItem> {
     return BonsaiStyle(
         toggleIconSize = 20.dp,
         toggleIconColorFilter = iconTint,
+        toggleIconExpandedContentDescription =
+            stringResource(CommonR.string.content_description_collapse_folder),
+        toggleIconCollapsedContentDescription =
+            stringResource(CommonR.string.content_description_expand_folder),
         nodeIconSize = 24.dp,
         nodePadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
         nodeSpacing = 6.dp,

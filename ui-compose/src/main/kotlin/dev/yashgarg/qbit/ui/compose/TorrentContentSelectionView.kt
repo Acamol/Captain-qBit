@@ -9,6 +9,7 @@ import androidx.compose.material3.TriStateCheckbox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -20,6 +21,7 @@ import cafe.adriel.bonsai.core.node.Leaf
 import cafe.adriel.bonsai.core.node.Node
 import cafe.adriel.bonsai.core.tree.Tree
 import cafe.adriel.bonsai.core.tree.TreeScope
+import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.models.ContentTreeItem
 import dev.yashgarg.qbit.ui.compose.theme.SpaceGrotesk
 
@@ -60,7 +62,13 @@ fun TorrentContentSelectionView(
 
 @Composable
 private fun selectionStyle(): BonsaiStyle<ContentTreeItem> =
-    BonsaiStyle(nodeNameStartPadding = 4.dp)
+    BonsaiStyle(
+        nodeNameStartPadding = 4.dp,
+        toggleIconExpandedContentDescription =
+            stringResource(CommonR.string.content_description_collapse_folder),
+        toggleIconCollapsedContentDescription =
+            stringResource(CommonR.string.content_description_expand_folder),
+    )
 
 @Composable
 private fun TreeScope.SelectionTree(

@@ -259,6 +259,8 @@
     <string name="root_label">Root</string>
     <string name="move_to_folder_action">Move to folder</string>
     <string name="content_description_drag_to_move">Drag to move</string>
+    <string name="content_description_collapse_folder">Collapse folder</string>
+    <string name="content_description_expand_folder">Expand folder</string>
     <string name="remove_feed_action">Remove feed</string>
     <string name="remove_folder_action">Remove folder (and its feeds)</string>
     <string name="rss_refresh_interval_title">RSS refresh interval</string>

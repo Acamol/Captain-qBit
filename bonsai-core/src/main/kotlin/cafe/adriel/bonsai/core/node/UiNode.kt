@@ -59,7 +59,9 @@ private fun <T> BonsaiScope<T>.ToggleIcon(node: Node<T>) {
 
         Image(
             painter = toggleIcon,
-            contentDescription = if (node.isExpanded) "Collapse node" else "Expand node",
+            contentDescription =
+                if (node.isExpanded) style.toggleIconExpandedContentDescription
+                else style.toggleIconCollapsedContentDescription,
             colorFilter = style.toggleIconColorFilter,
             modifier =
                 Modifier.clip(style.toggleShape)
