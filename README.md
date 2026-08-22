@@ -23,6 +23,8 @@ over its Web API — control your self-hosted server from your phone. Written in
 - Detailed per-torrent view with a browsable file tree, trackers, and live peer info
 - Manage multiple servers, with encrypted backup/restore of your whole setup
 - Light, Dark, or System theme, plus optional Material You dynamic colours
+- Per-app language override, independent of your device's system language, with community
+  translations via Weblate
 - Smart notifications that jump straight to a finished download, with battery-friendly refresh
   rates you control
 - Browse RSS feeds and articles, with auto-download rules and notifications for new matches
