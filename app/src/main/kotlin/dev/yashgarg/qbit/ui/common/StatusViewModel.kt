@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
+import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.utils.friendlyMessage
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -26,6 +27,15 @@ abstract class StatusViewModel(private val context: Context) : ViewModel() {
     /** Resolves a `<plurals>` resource, for building [launchStatus]/[emitStatus] messages. */
     protected fun getQuantityString(resId: Int, quantity: Int, vararg formatArgs: Any): String =
         context.resources.getQuantityString(resId, quantity, *formatArgs)
+
+    /**
+     * Member overload of the top-level [dev.yashgarg.qbit.utils.friendlyMessage] resolving against
+     * this ViewModel's own [context], so subclasses can keep calling
+     * `throwable.friendlyMessage(fallback)` without threading a resolver through themselves.
+     */
+    protected fun Throwable.friendlyMessage(
+        fallback: String = context.getString(CommonR.string.unknown_error)
+    ): String = friendlyMessage({ context.getString(it) }, fallback)
 
     /** For call sites whose success/failure shape doesn't fit [launchStatus]. */
     protected suspend fun emitStatus(message: String) {

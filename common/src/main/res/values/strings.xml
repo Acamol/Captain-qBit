@@ -338,6 +338,7 @@
 
     <!-- Logs screen -->
     <string name="server_logs_title">Server logs</string>
+    <string name="status_load_logs_failure">Couldn\'t load the server log</string>
     <string name="content_description_close_search">Close search</string>
     <string name="content_description_search">Search</string>
     <string name="search_log_messages_placeholder">Search log messages</string>
@@ -491,6 +492,16 @@
     <string name="notifications_section_header">Notifications</string>
     <string name="filters_and_sorting_label">Filters &amp; sorting</string>
     <string name="unknown_error">Unknown error</string>
+    <string name="error_connection_failed">Failed to connect to server</string>
+    <string name="error_connection_timed_out">Connection timed out</string>
+    <string name="error_server_unreachable">Could not reach server — check address and port</string>
+    <string name="error_host_not_found">Server not found — check the hostname</string>
+    <string name="error_ssl">SSL error — for a self-signed certificate, install it in Android settings</string>
+    <string name="error_torrent_already_exists">Torrent already exists</string>
+    <string name="error_authentication_failed">Authentication failed — check the username and password</string>
+    <string name="status_checking_connection">Checking connection, please wait…</string>
+    <string name="status_client_version">Success! Client version is %1$s</string>
+    <string name="status_test_failed">Failed! %1$s</string>
     <string name="status_config_exported">Configuration exported</string>
     <string name="status_export_failed">Export failed: %1$s</string>
     <string name="status_import_failed">Import failed: %1$s</string>

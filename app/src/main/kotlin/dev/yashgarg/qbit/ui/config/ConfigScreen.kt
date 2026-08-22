@@ -56,6 +56,7 @@ import dev.yashgarg.qbit.data.manager.CryptoManager
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.utils.friendlyMessage
+import dev.yashgarg.qbit.utils.rememberFriendlyMessageResolver
 
 private val CONNECTION_TYPES = listOf("HTTP", "HTTPS")
 
@@ -67,6 +68,10 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
     val existing by viewModel.existingConfig.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val genericError = stringResource(CommonR.string.error)
+    val checkingConnectionMessage = stringResource(CommonR.string.status_checking_connection)
+    val clientVersionTemplate = stringResource(CommonR.string.status_client_version)
+    val testFailedTemplate = stringResource(CommonR.string.status_test_failed)
+    val friendlyMessageResolver = rememberFriendlyMessageResolver()
 
     var name by remember { mutableStateOf("") }
     var host by remember { mutableStateOf("") }
@@ -112,7 +117,7 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
             when ((event as ConfigViewModel.ValidationEvent.Success).action) {
                 ConfigViewModel.FormAction.TEST -> {
                     checking = true
-                    snackbarHostState.showSnackbar("Checking connection, please wait…")
+                    snackbarHostState.showSnackbar(checkingConnectionMessage)
                     val portPart = if (port.isNotEmpty()) ":$port" else ""
                     val pathPart = if (path.isNotEmpty()) "/$path" else ""
                     viewModel
@@ -126,14 +131,16 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                         .onOk { version ->
                             Toast.makeText(
                                     context,
-                                    "Success! Client version is $version",
+                                    clientVersionTemplate.format(version),
                                     Toast.LENGTH_LONG,
                                 )
                                 .show()
                         }
                         .onErr { error ->
                             snackbarHostState.showSnackbar(
-                                "Failed! ${error.friendlyMessage(genericError)}"
+                                testFailedTemplate.format(
+                                    error.friendlyMessage(friendlyMessageResolver, genericError)
+                                )
                             )
                         }
                     checking = false

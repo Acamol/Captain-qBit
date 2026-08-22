@@ -86,6 +86,7 @@ import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.utils.TorrentHashUtil
 import dev.yashgarg.qbit.utils.friendlyMessage
+import dev.yashgarg.qbit.utils.rememberFriendlyMessageResolver
 import dev.yashgarg.qbit.utils.toHumanReadable
 import dev.yashgarg.qbit.validation.LinkValidator
 import kotlinx.coroutines.Dispatchers
@@ -405,6 +406,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                     when {
                         state.hasError -> {
                             val fallback = stringResource(CommonR.string.error)
+                            val friendlyMessageResolver = rememberFriendlyMessageResolver()
                             // Scrollable so pull-to-refresh works on the error screen too (a static
                             // Column wouldn't feed the pull gesture); the Retry button stays as an
                             // explicit affordance.
@@ -429,7 +431,10 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                                         modifier = Modifier.padding(bottom = 8.dp).size(70.dp),
                                     )
                                     Text(
-                                        state.error?.friendlyMessage(fallback) ?: fallback,
+                                        state.error?.friendlyMessage(
+                                            friendlyMessageResolver,
+                                            fallback,
+                                        ) ?: fallback,
                                         style = MaterialTheme.typography.titleLarge,
                                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                     )
