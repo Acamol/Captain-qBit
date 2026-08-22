@@ -476,6 +476,20 @@
     <string name="export_configuration_label">Export configuration</string>
     <string name="import_configuration_label">Import configuration</string>
     <string name="encrypt_backup_title">Encrypt backup</string>
+    <string name="passphrase_label">Passphrase</string>
+    <string name="confirm_passphrase_label">Confirm passphrase</string>
+    <string name="enter_a_passphrase_error">Enter a passphrase</string>
+    <string name="passphrases_dont_match_error">Passphrases don\'t match</string>
+    <string name="app_settings_section_header">App settings</string>
+    <string name="category_colors_label">Category colors</string>
+    <string name="export_action">Export</string>
+    <string name="import_action">Import</string>
+    <string name="import_mode_section_header">Import mode</string>
+    <string name="merge_with_current_label">Merge with current</string>
+    <string name="replace_everything_label">Replace everything</string>
+    <string name="backup_server_already_added">%1$s (already added)</string>
+    <string name="notifications_section_header">Notifications</string>
+    <string name="filters_and_sorting_label">Filters &amp; sorting</string>
     <string name="notifications_blocked_title">Notifications are blocked</string>
     <string name="notifications_blocked_message">
         These switches won\'t show anything until notifications are re-enabled for this app in
