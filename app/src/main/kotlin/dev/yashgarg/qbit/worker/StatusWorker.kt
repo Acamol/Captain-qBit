@@ -52,9 +52,13 @@ constructor(
     // status notification.
     override suspend fun getForegroundInfo(): ForegroundInfo =
         if (prefsStore.data.first().statusNotification) {
-            createForegroundInfo("Connecting…", "")
+            createForegroundInfo(applicationContext.getString(CommonR.string.status_connecting), "")
         } else {
-            createForegroundInfo("Captain qBit", "Alerts are on", minimal = true)
+            createForegroundInfo(
+                applicationContext.getString(CommonR.string.app_name),
+                applicationContext.getString(CommonR.string.status_alerts_are_on),
+                minimal = true,
+            )
         }
 
     override suspend fun doWork(): Result {
@@ -109,8 +113,14 @@ constructor(
                         val info = client.getGlobalTransferInfo()
                         setForeground(
                             createForegroundInfo(
-                                "Server State • Connected",
-                                "DL: ${info.dlInfoSpeed.toHumanReadable()}/s | UL: ${info.upInfoSpeed.toHumanReadable()}/s",
+                                applicationContext.getString(
+                                    CommonR.string.status_server_connected
+                                ),
+                                applicationContext.getString(
+                                    CommonR.string.status_dl_ul_speed,
+                                    info.dlInfoSpeed.toHumanReadable(),
+                                    info.upInfoSpeed.toHumanReadable(),
+                                ),
                             )
                         )
                     } catch (e: CancellationException) {
@@ -119,7 +129,10 @@ constructor(
                         // Show the server is unreachable rather than freezing the last live
                         // readout.
                         setForeground(
-                            createForegroundInfo("Server State • Offline", "Reconnecting…")
+                            createForegroundInfo(
+                                applicationContext.getString(CommonR.string.status_server_offline),
+                                applicationContext.getString(CommonR.string.status_reconnecting),
+                            )
                         )
                     }
                     lastStatusFetch = now
@@ -128,7 +141,13 @@ constructor(
                 // Events/RSS-only: Android still requires an ongoing notification for the
                 // service, so show a minimal, min-importance one (no sound/status-bar icon)
                 // instead of the speed readout.
-                setForeground(createForegroundInfo("Captain qBit", "Alerts are on", minimal = true))
+                setForeground(
+                    createForegroundInfo(
+                        applicationContext.getString(CommonR.string.app_name),
+                        applicationContext.getString(CommonR.string.status_alerts_are_on),
+                        minimal = true,
+                    )
+                )
             }
 
             if (eventsOn && now - lastEventFetch >= prefs.eventPollIntervalMs) {
@@ -205,7 +224,7 @@ constructor(
             .forEach {
                 notifyEvent(
                     "complete:${it.hash}".hashCode(),
-                    "Download complete",
+                    applicationContext.getString(CommonR.string.status_download_complete),
                     it.name,
                     torrentHash = it.hash,
                 )
@@ -248,7 +267,11 @@ constructor(
         wasChecking.forEach { hash ->
             if (hash !in nowChecking) {
                 byHash[hash]?.let {
-                    notifyEvent("checked:$hash".hashCode(), "Check complete", it.name)
+                    notifyEvent(
+                        "checked:$hash".hashCode(),
+                        applicationContext.getString(CommonR.string.status_check_complete),
+                        it.name,
+                    )
                 }
             }
         }
@@ -298,9 +321,17 @@ constructor(
             if (newArticles.isNotEmpty()) {
                 notifyEvent(
                     "rss:$key".hashCode(),
-                    if (newArticles.size == 1) "New RSS article" else "New RSS articles",
+                    applicationContext.resources.getQuantityString(
+                        CommonR.plurals.status_new_rss_articles,
+                        newArticles.size,
+                    ),
                     if (newArticles.size == 1) newArticles.first().title
-                    else "${newArticles.size} new in ${feed.name}",
+                    else
+                        applicationContext.getString(
+                            CommonR.string.status_new_articles_in_feed,
+                            newArticles.size,
+                            feed.name,
+                        ),
                     rssItemPath = feed.path,
                 )
             }
@@ -367,7 +398,14 @@ constructor(
                 text,
                 R.drawable.ic_stat_qbit,
                 persistent = true,
-                actions = listOf(Action(null, "Close", closeIntent)),
+                actions =
+                    listOf(
+                        Action(
+                            null,
+                            applicationContext.getString(CommonR.string.close_action),
+                            closeIntent,
+                        )
+                    ),
                 contentIntent = pendingIntent,
                 channelId = channelId,
                 priority =

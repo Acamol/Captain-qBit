@@ -94,6 +94,19 @@
     <string name="events_channel_name">Torrent events</string>
     <string name="monitor_channel_id" translatable="false">qBit-Monitor</string>
     <string name="monitor_channel_name">Background monitor</string>
+    <string name="status_connecting">Connecting…</string>
+    <string name="status_alerts_are_on">Alerts are on</string>
+    <string name="status_server_connected">Server State • Connected</string>
+    <string name="status_dl_ul_speed">DL: %1$s/s | UL: %2$s/s</string>
+    <string name="status_server_offline">Server State • Offline</string>
+    <string name="status_reconnecting">Reconnecting…</string>
+    <string name="status_download_complete">Download complete</string>
+    <string name="status_check_complete">Check complete</string>
+    <string name="status_new_articles_in_feed">%1$d new in %2$s</string>
+    <plurals name="status_new_rss_articles">
+        <item quantity="one">New RSS article</item>
+        <item quantity="other">New RSS articles</item>
+    </plurals>
 
     <!-- Dialogs -->
     <string name="rename_torrent_title">Rename torrent</string>
