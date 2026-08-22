@@ -36,6 +36,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cafe.adriel.bonsai.core.Bonsai
@@ -46,6 +47,7 @@ import cafe.adriel.bonsai.core.node.Leaf
 import cafe.adriel.bonsai.core.node.Node
 import cafe.adriel.bonsai.core.tree.Tree
 import cafe.adriel.bonsai.core.tree.TreeScope
+import dev.yashgarg.qbit.common.R as CommonR
 import kotlin.math.floor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -352,7 +354,7 @@ private fun RssNodeName(node: RssItem, controller: RssDragController) {
         Spacer(Modifier.weight(1f))
         Icon(
             Icons.Filled.DragHandle,
-            contentDescription = "Drag to move",
+            contentDescription = stringResource(CommonR.string.content_description_drag_to_move),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier =
                 Modifier.pointerInput(node) {

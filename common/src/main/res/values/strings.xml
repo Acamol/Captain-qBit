@@ -77,6 +77,8 @@
     <!-- Config Fragment -->
     <string name="type">Type</string>
     <string name="password">Password</string>
+    <string name="content_description_hide_password">Hide password</string>
+    <string name="content_description_show_password">Show password</string>
     <string name="username">Username</string>
     <string name="port">Port (optional)</string>
     <string name="path">Path (optional)</string>
@@ -243,6 +245,7 @@
     <string name="folder_label">Folder</string>
     <string name="root_label">Root</string>
     <string name="move_to_folder_action">Move to folder</string>
+    <string name="content_description_drag_to_move">Drag to move</string>
     <string name="remove_feed_action">Remove feed</string>
     <string name="remove_folder_action">Remove folder (and its feeds)</string>
     <string name="rss_refresh_interval_title">RSS refresh interval</string>

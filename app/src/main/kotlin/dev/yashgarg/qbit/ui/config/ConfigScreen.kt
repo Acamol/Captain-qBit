@@ -166,7 +166,11 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                 title = { Text(title) },
                 navigationIcon = {
                     IconButton(onClick = { appNavigator.navigate(NavCommand.Back) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription =
+                                stringResource(CommonR.string.content_description_back),
+                        )
                     }
                 },
             )
@@ -456,7 +460,11 @@ private fun PasswordField(
             IconButton(onClick = onToggleVisible) {
                 Icon(
                     if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                    contentDescription = if (visible) "Hide password" else "Show password",
+                    contentDescription =
+                        stringResource(
+                            if (visible) CommonR.string.content_description_hide_password
+                            else CommonR.string.content_description_show_password
+                        ),
                 )
             }
         },
