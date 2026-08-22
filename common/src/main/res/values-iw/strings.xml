@@ -1,23 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="add_server">הוספת שרת</string>
-    <string name="edit_server">עריכת שרת</string>
     <string name="server_settings">הגדרות שרת</string>
     <string name="status_cannot_delete_last_server">לא ניתן למחוק שרת יחיד</string>
     <string name="welcome_text">ברוכים הבאים ל-Captain qBit</string>
-    <string name="press_button">ניתן ללחוץ על הכפתור למטה כדי להוסיף שרת</string>
     <string name="restore_from_backup">שיחזור מגיבוי</string>
     <string name="error">משהו השתבש</string>
     <string name="no_queue">התור ריק</string>
     <string name="invalid_username">נא להזין שם משתמש</string>
     <string name="invalid_password">נא להזין סיסמה</string>
-    <string name="invalid_type">נא לבחור ערך</string>
     <string name="invalid_url">נא להזין כתובת מארח תקינה</string>
     <string name="invalid_port">נא להזין מספר פורט תקין</string>
     <string name="invalid_name">נא להזין שם</string>
     <string name="about">אודות</string>
-    <string name="version">גרסת אפליקציה - %1$s\nגרסת Api - %2$s</string>
-    <string name="server_info">פרטי השרת</string>
     <string name="seed_status">בהורדה • %1$d/%2$d זורעים</string>
     <string name="speed_status">▼ %1$s/s • ▲ %2$s/s</string>
     <string name="percent_done">%1$s / %2$s • %3$d%%</string>
@@ -64,20 +59,14 @@
     <string name="path">מסלול (לא חובה)</string>
     <string name="host_or_ip">מארח או כתובת IP</string>
     <string name="server_name">שם השרת</string>
-    <string name="save_and_test_cfg">שמור ובדוק תצורה</string>
     <string name="test_cfg">בדיקת חיבור</string>
     <string name="save_cfg">שמירה</string>
     <string name="status_updates">עדכוני מצב</string>
     <string name="events_channel_name">אירועי טורנטים</string>
-    <string name="confirm_delete_torrents">האם למחוק את הטורנט(ים)?</string>
-    <string name="yes">כן</string>
-    <string name="no">לא</string>
     <string name="rename_torrent_title">שינוי שם הטורנט</string>
     <string name="cancel">ביטול</string>
     <string name="rename">שינוי שם</string>
-    <string name="invalid_torrent_name">נא להזין שם תקין</string>
     <string name="add_torrent_title">הוספת טורנט</string>
-    <string name="upload_file">העלאת קובץ</string>
     <string name="add">הוספה</string>
     <string name="no_file_selected">לא נבחר קובץ</string>
     <string name="torrent_file_fallback_name">קובץ טורנט</string>
