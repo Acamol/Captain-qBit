@@ -122,4 +122,37 @@
     <string name="manage_categories_title">ניהול קטגוריות</string>
     <string name="state_allocating">מקצה</string>
     <string name="state_errored">שגיאה</string>
+    <string name="transfer">העברה</string>
+    <string name="peers">עמיתים</string>
+    <string name="time_active">משך זמן פעיל</string>
+    <string name="reannounce">הכרז מחדש בעוד</string>
+    <string name="last_complete">נראה לאחרונה שלם</string>
+    <string name="save_path">נתיב שמירה</string>
+    <string name="category">קטגוריה</string>
+    <string name="content_description_hide_password">הסתרת סיסמה</string>
+    <string name="content_description_show_password">חשיפת סיסמה</string>
+    <string name="status_connecting">מתחבר…</string>
+    <string name="status_alerts_are_on">התראות דלוקות</string>
+    <string name="status_server_connected">מצב שרת • מחובר</string>
+    <string name="selected_file">קובץ נבחר</string>
+    <string name="unspecified">לא מוגדר</string>
+    <string name="torrent_hash">גיבוב</string>
+    <string name="connections_sub">%1$d מתוך %2$d</string>
+    <string name="sp_sub">%1$d מתוך %2$d</string>
+    <string name="infinite">∞</string>
+    <string name="status_rss_mark_read_failure">נכשל לסמן כנקרא</string>
+    <string name="status_speed_limit_updated">מגבלת מהירות עודכנה</string>
+    <string name="status_tags_updated">תגים עודכנו</string>
+    <string name="dl_up_sub">%1$s (%2$s בשיח הנוכחי)</string>
+    <string name="dl_up_speed_sub">%1$s (%2$s ממוצע)</string>
+    <string name="status_reconnecting">מתחבר מחדש…</string>
+    <string name="status_download_complete">הורדה הושלמה</string>
+    <string name="status_check_complete">בדיקה הושלמה</string>
+    <string name="status_dl_ul_speed">מהירות הורדה: %1$s/s | מהירות העלאה: %2$s/s</string>
+    <string name="monitor_channel_name">ניטור ברקע</string>
+    <plurals name="status_new_rss_articles">
+        <item quantity="one">מאמר RSS חדש</item>
+        <item quantity="two">שני מאמרי RSS חדשים</item>
+        <item quantity="other">מאמרים חדשים ב-RSS</item>
+    </plurals>
 </resources>
