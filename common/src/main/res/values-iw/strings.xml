@@ -186,7 +186,7 @@
     <string name="sort_name">שם</string>
     <string name="sort_size">גודל</string>
     <string name="sort_total_size">גודל כולל</string>
-    <string name="sort_remaining">זמן נותר</string>
+    <string name="sort_remaining">נותר</string>
     <string name="sort_availability">זמינות</string>
     <string name="sort_connected_seeds">זורעים מחוברים</string>
     <string name="sort_queue_position">מיקום בתור</string>
@@ -298,7 +298,7 @@
     <string name="add_as_paused_label">הוסף כמושהה</string>
     <string name="content_description_add_torrent">הוספת טורנט</string>
     <string name="content_description_already_added">כבר נוסף</string>
-    <string name="all_label">כל</string>
+    <string name="all_label">הכול</string>
     <string name="filter_downloading">מוריד</string>
     <string name="filter_queued">בתור</string>
     <string name="filter_active">פעיל</string>
