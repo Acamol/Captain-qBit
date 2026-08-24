@@ -356,4 +356,17 @@
     <string name="auto_download_rss_subtitle">אפשר לכללי RSS להוריד טורנטים באופן אוטומטי</string>
     <string name="use_alternate_speed_limits_subtitle">החלף בין מגבלות המהירות הרגילות לבין החלופיות</string>
     <string name="global_speed_limits_label">מגבלות מהירות גלובליות</string>
+    <string name="content_layout_label">סידור תוכן</string>
+    <string name="automatic_torrent_management_label">ניהול טורנטים אוטומטי</string>
+    <string name="server_logs_title">יומן שרת</string>
+    <string name="status_load_logs_failure">נכשל לטעון את יומן השרת</string>
+    <string name="search_log_messages_placeholder">חיפוש הודעות יומן</string>
+    <string name="no_log_entries">אין רשומות יומן</string>
+    <string name="copied_log_line">שורת יומן הועתקה</string>
+    <string name="fetching_torrent_file">מושך קובץ טורנט…</string>
+    <string name="filter_running">רץ</string>
+    <string name="filter_stalled_uploading">העלאה ממתינה</string>
+    <string name="filter_stalled_downloading">הורדה ממתינה</string>
+    <string name="server_logs_action">יומן שרת</string>
+    <string name="manage_named_action">ניהול %1$s</string>
 </resources>
