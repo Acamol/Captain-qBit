@@ -60,7 +60,9 @@ private object NumberFormat {
         val secs: Long = TimeUnit.SECONDS.toSeconds(duration)
         val timeStr = StringBuilder()
         if (days != 0L) {
-            timeStr.append("${days}${context.getString(CommonR.string.unit_days_suffix)}")
+            val daysSuffix =
+                context.resources.getQuantityString(CommonR.plurals.unit_days_suffix, days.toInt())
+            timeStr.append("${days}${daysSuffix}")
         }
         if (hours != 0L) {
             timeStr.append(" ${hours}${context.getString(CommonR.string.unit_hours_suffix)}")

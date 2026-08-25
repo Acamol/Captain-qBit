@@ -727,17 +727,20 @@
         Failed to update RSS auto-downloading
     </string>
 
-    <!-- Byte-size units (data-transfer speeds/sizes) -->
-    <string name="unit_bytes">B</string>
-    <string name="unit_kibibytes">KiB</string>
-    <string name="unit_mebibytes">MiB</string>
-    <string name="unit_gibibytes">GiB</string>
-    <string name="unit_tebibytes">TiB</string>
-    <string name="unit_pebibytes">PiB</string>
-    <string name="unit_exbibytes">EiB</string>
+    <!-- Byte-size units (data-transfer speeds/sizes) - kept in Latin script in every locale -->
+    <string name="unit_bytes" translatable="false">B</string>
+    <string name="unit_kibibytes" translatable="false">KiB</string>
+    <string name="unit_mebibytes" translatable="false">MiB</string>
+    <string name="unit_gibibytes" translatable="false">GiB</string>
+    <string name="unit_tebibytes" translatable="false">TiB</string>
+    <string name="unit_pebibytes" translatable="false">PiB</string>
+    <string name="unit_exbibytes" translatable="false">EiB</string>
 
     <!-- Time-duration suffixes (days/hours/minutes/seconds) -->
-    <string name="unit_days_suffix">d</string>
+    <plurals name="unit_days_suffix">
+        <item quantity="one">d</item>
+        <item quantity="other">d</item>
+    </plurals>
     <string name="unit_hours_suffix">h</string>
     <string name="unit_minutes_suffix">m</string>
     <string name="unit_seconds_suffix">s</string>
