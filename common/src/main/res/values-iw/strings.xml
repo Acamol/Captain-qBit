@@ -369,7 +369,7 @@
     <string name="filter_stalled_downloading">הורדה ממתינה</string>
     <string name="server_logs_action">יומן שרת</string>
     <string name="manage_named_action">ניהול %1$s</string>
-    <string name="status_speed_free_space">%3$s פנוי ↑ %2$s/s ↓ %1$s/s</string>
+    <string name="status_speed_free_space">↓ %1$s/s ↑ %2$s/s %3$s פנוי</string>
     <string name="auto_tmm_default_label">ניהול טורנטים אוטומטי כברירת מחדל</string>
     <string name="global_speed_limits_subtitle">קביעת מגבלות מהירות ההורדה וההעלאה לכל השרת</string>
     <string name="alternate_speed_limits_label">מגבלות מהירות חלופיות</string>
