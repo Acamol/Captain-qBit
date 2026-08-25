@@ -1,8 +1,7 @@
 package dev.yashgarg.qbit.utils
 
+import dev.yashgarg.qbit.common.R as CommonR
 import java.lang.StringBuilder
-import java.text.CharacterIterator
-import java.text.StringCharacterIterator
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -11,21 +10,34 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
 private object NumberFormat {
+    // Indexed by unitIndex below: 0=Ki, 1=Mi, 2=Gi, 3=Ti, 4=Pi, 5=Ei.
+    private val BYTE_UNIT_RES_IDS =
+        intArrayOf(
+            CommonR.string.unit_kibibytes,
+            CommonR.string.unit_mebibytes,
+            CommonR.string.unit_gibibytes,
+            CommonR.string.unit_tebibytes,
+            CommonR.string.unit_pebibytes,
+            CommonR.string.unit_exbibytes,
+        )
+
     fun bytesToHumanReadable(bytes: Long): String {
+        val context = AppContextHolder.context
         val absB = if (bytes == Long.MIN_VALUE) Long.MAX_VALUE else abs(bytes)
         if (absB < 1024) {
-            return "$bytes B"
+            return "$bytes ${context.getString(CommonR.string.unit_bytes)}"
         }
         var value = absB
-        val ci: CharacterIterator = StringCharacterIterator("KMGTPE")
+        var unitIndex = 0
         var i = 40
         while (i >= 0 && absB > 0xfffccccccccccccL shr i) {
             value = value shr 10
-            ci.next()
+            unitIndex++
             i -= 10
         }
         value *= java.lang.Long.signum(bytes).toLong()
-        return String.format("%.2f %ciB", value / 1024.0, ci.current()).trim()
+        val unit = context.getString(BYTE_UNIT_RES_IDS[unitIndex])
+        return String.format("%.2f %s", value / 1024.0, unit).trim()
     }
 
     fun millisToDate(millis: Long, zoneId: ZoneId?): String {
@@ -37,6 +49,7 @@ private object NumberFormat {
     }
 
     fun secondsToTime(seconds: Long): String {
+        val context = AppContextHolder.context
         var duration = seconds
         val days: Long = TimeUnit.SECONDS.toDays(duration)
         duration -= TimeUnit.DAYS.toSeconds(days)
@@ -47,16 +60,16 @@ private object NumberFormat {
         val secs: Long = TimeUnit.SECONDS.toSeconds(duration)
         val timeStr = StringBuilder()
         if (days != 0L) {
-            timeStr.append("${days}d")
+            timeStr.append("${days}${context.getString(CommonR.string.unit_days_suffix)}")
         }
         if (hours != 0L) {
-            timeStr.append(" ${hours}h")
+            timeStr.append(" ${hours}${context.getString(CommonR.string.unit_hours_suffix)}")
         }
         if (minutes != 0L) {
-            timeStr.append(" ${minutes}m")
+            timeStr.append(" ${minutes}${context.getString(CommonR.string.unit_minutes_suffix)}")
         }
         if (secs != 0L) {
-            timeStr.append(" ${secs}s")
+            timeStr.append(" ${secs}${context.getString(CommonR.string.unit_seconds_suffix)}")
         }
 
         return timeStr.toString().trim()

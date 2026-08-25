@@ -8,6 +8,7 @@ import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
 import dev.yashgarg.qbit.data.models.ServerPreferences
 import dev.yashgarg.qbit.notifications.AppNotificationManager
+import dev.yashgarg.qbit.utils.AppContextHolder
 import dev.yashgarg.qbit.utils.CrashHandler
 import javax.inject.Inject
 import kotlinx.coroutines.flow.first
@@ -27,6 +28,7 @@ class QbitApplication : Application(), Configuration.Provider {
         super.onCreate()
 
         CrashHandler.install(this)
+        AppContextHolder.init(this)
 
         // Apply the saved theme (Light / Dark / Follow system) before any activity is created.
         // Material You dynamic colors are applied Compose-side by QbitComposeTheme.

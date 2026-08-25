@@ -726,4 +726,19 @@
     <string name="status_rss_auto_downloading_update_failure">
         Failed to update RSS auto-downloading
     </string>
+
+    <!-- Byte-size units (data-transfer speeds/sizes) -->
+    <string name="unit_bytes">B</string>
+    <string name="unit_kibibytes">KiB</string>
+    <string name="unit_mebibytes">MiB</string>
+    <string name="unit_gibibytes">GiB</string>
+    <string name="unit_tebibytes">TiB</string>
+    <string name="unit_pebibytes">PiB</string>
+    <string name="unit_exbibytes">EiB</string>
+
+    <!-- Time-duration suffixes (days/hours/minutes/seconds) -->
+    <string name="unit_days_suffix">d</string>
+    <string name="unit_hours_suffix">h</string>
+    <string name="unit_minutes_suffix">m</string>
+    <string name="unit_seconds_suffix">s</string>
 </resources>
