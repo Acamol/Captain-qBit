@@ -103,6 +103,7 @@ private val LANGUAGE_OPTIONS =
     listOf(
         "" to CommonR.string.theme_system_default,
         "en" to CommonR.string.language_english,
+        "he" to CommonR.string.language_hebrew,
     )
 
 @Composable
