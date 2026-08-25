@@ -624,4 +624,12 @@
     <string name="status_rss_processing_update_failure">נכשל לעדכן את משיכת ה-RSS</string>
     <string name="status_rss_auto_downloading_updated">הורדה אוטומטית מ-RSS עודכנה</string>
     <string name="status_rss_auto_downloading_update_failure">נכשל לעדכן הורדה אוטומטית מ-RSS</string>
+    <plurals name="unit_days_suffix">
+        <item quantity="one">יום</item>
+        <item quantity="two">יומיים</item>
+        <item quantity="other">ימים</item>
+    </plurals>
+    <string name="unit_hours_suffix">שע׳</string>
+    <string name="unit_minutes_suffix">דק׳</string>
+    <string name="unit_seconds_suffix">שנ׳</string>
 </resources>
