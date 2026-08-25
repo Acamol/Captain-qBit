@@ -10,6 +10,16 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
 private object NumberFormat {
+    // These values are always LTR content (digits + Latin unit abbreviations). Isolating them
+    // with Unicode directional isolate marks stops the bidi algorithm from reordering them
+    // unpredictably when they're embedded in a larger RTL sentence (e.g. via a %s placeholder
+    // in a translated string template) - equivalent to android.text.BidiFormatter.unicodeWrap(),
+    // done in plain Kotlin so it works in JVM unit tests without Robolectric.
+    private const val LEFT_TO_RIGHT_ISOLATE = "\u2066"
+    private const val POP_DIRECTIONAL_ISOLATE = "\u2069"
+
+    private fun String.isolateLtr(): String = "$LEFT_TO_RIGHT_ISOLATE$this$POP_DIRECTIONAL_ISOLATE"
+
     // Indexed by unitIndex below: 0=Ki, 1=Mi, 2=Gi, 3=Ti, 4=Pi, 5=Ei.
     private val BYTE_UNIT_RES_IDS =
         intArrayOf(
@@ -25,7 +35,7 @@ private object NumberFormat {
         val context = AppContextHolder.context
         val absB = if (bytes == Long.MIN_VALUE) Long.MAX_VALUE else abs(bytes)
         if (absB < 1024) {
-            return "$bytes ${context.getString(CommonR.string.unit_bytes)}"
+            return "$bytes ${context.getString(CommonR.string.unit_bytes)}".isolateLtr()
         }
         var value = absB
         var unitIndex = 0
@@ -37,7 +47,7 @@ private object NumberFormat {
         }
         value *= java.lang.Long.signum(bytes).toLong()
         val unit = context.getString(BYTE_UNIT_RES_IDS[unitIndex])
-        return String.format("%.2f %s", value / 1024.0, unit).trim()
+        return String.format("%.2f %s", value / 1024.0, unit).trim().isolateLtr()
     }
 
     fun millisToDate(millis: Long, zoneId: ZoneId?): String {
@@ -45,7 +55,7 @@ private object NumberFormat {
         val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy, HH:mm:ss")
         val instant = Instant.ofEpochMilli(millisEpoch)
         val date = LocalDateTime.ofInstant(instant, zoneId ?: ZoneId.systemDefault())
-        return formatter.format(date).trim()
+        return formatter.format(date).trim().isolateLtr()
     }
 
     fun secondsToTime(seconds: Long): String {
@@ -74,7 +84,7 @@ private object NumberFormat {
             timeStr.append(" ${secs}${context.getString(CommonR.string.unit_seconds_suffix)}")
         }
 
-        return timeStr.toString().trim()
+        return timeStr.toString().trim().isolateLtr()
     }
 }
 

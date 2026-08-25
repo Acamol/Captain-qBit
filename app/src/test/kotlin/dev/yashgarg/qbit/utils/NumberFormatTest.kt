@@ -20,6 +20,10 @@ class NumberFormatTest {
     private val dateInMsEpoch = 1659354647L
     private val zoneId = ZoneId.of("GMT+05:30")
 
+    // toHumanReadable()/toTime()/toDate() wrap their result in Unicode directional isolate marks
+    // (U+2066/U+2069) so it renders correctly when embedded in RTL text - match that here.
+    private fun isolated(s: String) = "\u2066$s\u2069"
+
     @Before
     fun setUp() {
         val context = mock<Context>()
@@ -42,36 +46,36 @@ class NumberFormatTest {
 
     @Test
     fun testCorrectSizeIsValid() {
-        assertTrue(bytes.toHumanReadable() == "1.49 GiB")
+        assertTrue(bytes.toHumanReadable() == isolated("1.49 GiB"))
     }
 
     @Test
     fun testIncorrectSizeIsInvalid() {
-        assertFalse(bytes.toHumanReadable() == "1.1 GiB")
+        assertFalse(bytes.toHumanReadable() == isolated("1.1 GiB"))
     }
 
     @Test
     fun testMillisCorrectDateIsValid() {
-        assertTrue(dateInMsEpoch.toDate(zoneId) == "01/08/2022, 17:20:47")
+        assertTrue(dateInMsEpoch.toDate(zoneId) == isolated("01/08/2022, 17:20:47"))
     }
 
     @Test
     fun testMillisIncorrectDateIsInvalid() {
-        assertFalse(dateInMsEpoch.toDate(zoneId) == "12/08/2021, 12:30")
+        assertFalse(dateInMsEpoch.toDate(zoneId) == isolated("12/08/2021, 12:30"))
     }
 
     @Test
     fun testCorrectTimeIsValid() {
-        assertTrue(timeInSeconds.toTime() == "2m 16s")
+        assertTrue(timeInSeconds.toTime() == isolated("2m 16s"))
     }
 
     @Test
     fun testIncorrectTimeIsInvalid() {
-        assertFalse(timeInSeconds.toTime() == "5m 20s")
+        assertFalse(timeInSeconds.toTime() == isolated("5m 20s"))
     }
 
     @Test
     fun testTimeWithDaysUsesQuantityStringForDaySuffix() {
-        assertTrue(timeInSecondsWithDays.toTime() == "2d 4h 46m 40s")
+        assertTrue(timeInSecondsWithDays.toTime() == isolated("2d 4h 46m 40s"))
     }
 }

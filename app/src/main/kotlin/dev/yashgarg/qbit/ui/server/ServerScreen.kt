@@ -54,6 +54,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -72,9 +73,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -348,17 +351,24 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
             Column(Modifier.fillMaxSize().padding(padding)) {
                 val serverState = state.data?.serverState
                 if (!state.hasError && !state.dataLoading && serverState != null) {
-                    Text(
-                        stringResource(
-                            CommonR.string.status_speed_free_space,
-                            serverState.dlInfoSpeed.toHumanReadable(),
-                            serverState.upInfoSpeed.toHumanReadable(),
-                            serverState.freeSpace.toHumanReadable(),
-                        ),
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier =
-                            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp),
-                    )
+                    // Mixing RTL text with several independent LTR numeric/unit values makes the
+                    // Unicode bidi algorithm reorder things unpredictably depending on the actual
+                    // numbers involved. Force LTR here so this line's segments always render in
+                    // the fixed order the string template defines, regardless of locale.
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                        Text(
+                            stringResource(
+                                CommonR.string.status_speed_free_space,
+                                serverState.dlInfoSpeed.toHumanReadable(),
+                                serverState.upInfoSpeed.toHumanReadable(),
+                                serverState.freeSpace.toHumanReadable(),
+                            ),
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier =
+                                Modifier.fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 2.dp),
+                        )
+                    }
                 }
 
                 if (searchOpen) {
