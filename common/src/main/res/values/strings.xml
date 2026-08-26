@@ -70,7 +70,7 @@
     <string name="sort">Sort</string>
     <string name="connections_sub">%1$d (%2$d max)</string>
     <string name="sp_sub">%1$d (%2$d total)</string>
-    <string name="infinite">Inf.</string>
+    <string name="infinite">∞</string>
     <string name="dl_up_sub">%1$s (%2$s in this session)</string>
     <string name="dl_up_speed_sub">%1$s (%2$s avg.)</string>
 
