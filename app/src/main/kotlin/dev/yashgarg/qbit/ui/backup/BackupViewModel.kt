@@ -1,11 +1,10 @@
 package dev.yashgarg.qbit.ui.backup
 
-import android.content.Context
+import android.app.Application
 import android.net.Uri
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.backup.BackupManager
 import dev.yashgarg.qbit.data.backup.ConfigBackup
@@ -40,8 +39,8 @@ constructor(
     private val backupManager: BackupManager,
     private val configDao: ConfigDao,
     private val prefsStore: DataStore<ServerPreferences>,
-    @ApplicationContext context: Context,
-) : StatusViewModel(context) {
+    application: Application,
+) : StatusViewModel(application) {
 
     /** One-shot backup outcomes surfaced to the UI. */
     sealed interface BackupEvent {

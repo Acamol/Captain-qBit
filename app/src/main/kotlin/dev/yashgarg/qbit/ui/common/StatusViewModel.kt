@@ -1,6 +1,6 @@
 package dev.yashgarg.qbit.ui.common
 
-import android.content.Context
+import android.app.Application
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.ViewModel
@@ -15,27 +15,33 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 
-/** Base for ViewModels that report one-shot action outcomes as status toasts. */
-abstract class StatusViewModel(private val context: Context) : ViewModel() {
+/**
+ * Base for ViewModels that report one-shot action outcomes as status toasts.
+ *
+ * Takes an [Application] rather than a bare `Context` so "this is the process-lifetime context, not
+ * an Activity's" is enforced by the type instead of by convention — holding it for the ViewModel's
+ * lifetime then can't leak.
+ */
+abstract class StatusViewModel(private val application: Application) : ViewModel() {
     private val _status = MutableSharedFlow<String>()
     val status = _status.asSharedFlow()
 
     /** Resolves a string resource, for building [launchStatus]/[emitStatus] messages. */
     protected fun getString(resId: Int, vararg formatArgs: Any): String =
-        context.getString(resId, *formatArgs)
+        application.getString(resId, *formatArgs)
 
     /** Resolves a `<plurals>` resource, for building [launchStatus]/[emitStatus] messages. */
     protected fun getQuantityString(resId: Int, quantity: Int, vararg formatArgs: Any): String =
-        context.resources.getQuantityString(resId, quantity, *formatArgs)
+        application.resources.getQuantityString(resId, quantity, *formatArgs)
 
     /**
      * Member overload of the top-level [dev.yashgarg.qbit.utils.friendlyMessage] resolving against
-     * this ViewModel's own [context], so subclasses can keep calling
+     * this ViewModel's own [application], so subclasses can keep calling
      * `throwable.friendlyMessage(fallback)` without threading a resolver through themselves.
      */
     protected fun Throwable.friendlyMessage(
-        fallback: String = context.getString(CommonR.string.unknown_error)
-    ): String = friendlyMessage({ context.getString(it) }, fallback)
+        fallback: String = application.getString(CommonR.string.unknown_error)
+    ): String = friendlyMessage({ application.getString(it) }, fallback)
 
     /** For call sites whose success/failure shape doesn't fit [launchStatus]. */
     protected suspend fun emitStatus(message: String) {

@@ -1,6 +1,6 @@
 package dev.yashgarg.qbit.ui.server
 
-import android.content.Context
+import android.app.Application
 import android.util.Base64
 import androidx.core.net.toUri
 import androidx.datastore.core.DataStore
@@ -10,7 +10,6 @@ import com.github.michaelbull.result.get
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.QbitRepository
 import dev.yashgarg.qbit.data.daos.ConfigDao
@@ -47,8 +46,8 @@ constructor(
     private val configDao: ConfigDao,
     private val clientManager: ClientManager,
     private val pendingTorrentIntent: PendingTorrentIntent,
-    @ApplicationContext context: Context,
-) : StatusViewModel(context) {
+    application: Application,
+) : StatusViewModel(application) {
     private val _uiState = MutableStateFlow(ServerScreenState())
     val uiState = _uiState.asStateFlow()
 

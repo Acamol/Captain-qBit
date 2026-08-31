@@ -1,6 +1,7 @@
 package dev.yashgarg.qbit.data.models
 
 import androidx.annotation.Keep
+import androidx.appcompat.app.AppCompatDelegate
 import kotlinx.serialization.Serializable
 
 /** Per-server filter + sort selections, so each server restores its own view. */
@@ -60,9 +61,11 @@ data class ServerPreferences(
     // Set true when the RSS notification is turned ON, so the worker's next poll adopts every
     // feed's current article set as a silent baseline instead of alerting for the whole backlog.
     val notifRssRebaseline: Boolean = false,
-    // AppCompatDelegate night-mode constant. Defaults to MODE_NIGHT_YES (2) to preserve the
-    // app's original dark-only behaviour for existing installs.
-    val themeMode: Int = 2,
+    // Defaults to MODE_NIGHT_YES to preserve the app's original dark-only behaviour for existing
+    // installs. Annotated on the getter (not the constructor parameter, which is where a bare
+    // annotation would land) so reads flowing into AppCompatDelegate.setDefaultNightMode are
+    // type-checked against the valid night-mode constants.
+    @get:AppCompatDelegate.NightMode val themeMode: Int = AppCompatDelegate.MODE_NIGHT_YES,
     // Highest versionCode whose "What's New" has been shown. 0 = never recorded (fresh install),
     // so the dialog is skipped on first run and only appears after an upgrade.
     val lastSeenVersionCode: Int = 0,

@@ -2,17 +2,6 @@
 <issues format="6" by="lint 9.3.2" type="baseline" client="gradle" dependencies="false" name="AGP (9.3.2)" variant="all" version="9.3.2">
 
     <issue
-        id="WrongConstant"
-        message="Must be one of: AppCompatDelegate.MODE_NIGHT_NO, AppCompatDelegate.MODE_NIGHT_YES, AppCompatDelegate.MODE_NIGHT_AUTO_TIME, AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM, AppCompatDelegate.MODE_NIGHT_UNSPECIFIED, AppCompatDelegate.MODE_NIGHT_AUTO_BATTERY"
-        errorLine1="        AppCompatDelegate.setDefaultNightMode(prefs.themeMode)"
-        errorLine2="                                              ~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/kotlin/dev/yashgarg/qbit/QbitApplication.kt"
-            line="36"
-            column="47"/>
-    </issue>
-
-    <issue
         id="ObsoleteSdkInt"
         message="This folder configuration (`v26`) is unnecessary; `minSdkVersion` is 28. Merge all the resources in this folder into `font`.">
         <location
@@ -24,17 +13,6 @@
         message="This folder configuration (`v26`) is unnecessary; `minSdkVersion` is 28. Merge all the resources in this folder into `mipmap-anydpi`.">
         <location
             file="src/main/res/mipmap-anydpi-v26"/>
-    </issue>
-
-    <issue
-        id="StaticFieldLeak"
-        message="This field leaks a context object"
-        errorLine1="abstract class StatusViewModel(private val context: Context) : ViewModel() {"
-        errorLine2="                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/kotlin/dev/yashgarg/qbit/ui/common/StatusViewModel.kt"
-            line="19"
-            column="32"/>
     </issue>
 
     <issue

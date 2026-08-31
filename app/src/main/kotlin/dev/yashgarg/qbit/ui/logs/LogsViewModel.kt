@@ -1,11 +1,10 @@
 package dev.yashgarg.qbit.ui.logs
 
-import android.content.Context
+import android.app.Application
 import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.QbitRepository
 import dev.yashgarg.qbit.ui.common.StatusViewModel
@@ -18,8 +17,8 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class LogsViewModel
 @Inject
-constructor(private val repository: QbitRepository, @ApplicationContext context: Context) :
-    StatusViewModel(context) {
+constructor(private val repository: QbitRepository, application: Application) :
+    StatusViewModel(application) {
     private val _uiState = MutableStateFlow(LogsState())
     val uiState = _uiState.asStateFlow()
 

@@ -1,10 +1,9 @@
 package dev.yashgarg.qbit.ui.serverlist
 
-import android.content.Context
+import android.app.Application
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.daos.ConfigDao
 import dev.yashgarg.qbit.data.manager.ClientManager
@@ -27,8 +26,8 @@ constructor(
     private val prefsStore: DataStore<ServerPreferences>,
     private val configDao: ConfigDao,
     private val clientManager: ClientManager,
-    @ApplicationContext context: Context,
-) : StatusViewModel(context) {
+    application: Application,
+) : StatusViewModel(application) {
 
     val servers: StateFlow<List<ServerConfig>> =
         configDao.getConfigs().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())

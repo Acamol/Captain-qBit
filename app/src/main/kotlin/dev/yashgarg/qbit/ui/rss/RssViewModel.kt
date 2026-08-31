@@ -1,6 +1,6 @@
 package dev.yashgarg.qbit.ui.rss
 
-import android.content.Context
+import android.app.Application
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.Err
@@ -9,7 +9,6 @@ import com.github.michaelbull.result.coroutines.runSuspendCatching
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.QbitRepository
 import dev.yashgarg.qbit.data.manager.ClientManager
@@ -39,8 +38,8 @@ class RssViewModel
 constructor(
     private val repository: QbitRepository,
     savedStateHandle: SavedStateHandle,
-    @ApplicationContext context: Context,
-) : StatusViewModel(context) {
+    application: Application,
+) : StatusViewModel(application) {
     private val _uiState = MutableStateFlow(RssState())
     val uiState = _uiState.asStateFlow()
 
