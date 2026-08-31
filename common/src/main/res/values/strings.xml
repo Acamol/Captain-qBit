@@ -324,6 +324,11 @@
         Get a status notification with live transfer speeds, plus alerts when a torrent finishes
         downloading or checking. You can change this anytime in Settings.
     </string>
+    <string name="enable_local_network_title">Allow local network access?</string>
+    <string name="enable_local_network_message">
+        Captain qBit needs this to connect to a qBittorrent server on your local network (e.g. a
+        home NAS or PC). Servers reached over the internet aren\'t affected.
+    </string>
     <string name="not_now_action">Not now</string>
     <string name="press_back_again_to_exit">Press back again to exit</string>
     <string name="backup_passphrase_title">Backup passphrase</string>

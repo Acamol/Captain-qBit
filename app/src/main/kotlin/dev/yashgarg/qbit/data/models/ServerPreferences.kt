@@ -33,6 +33,9 @@ data class ServerPreferences(
     // Set once the notification-permission rationale dialog has been answered (either way), so it
     // only ever shows once per install rather than nagging on every launch.
     val notificationPermissionAsked: Boolean = false,
+    // Same idea for the local-network-permission rationale dialog (Android 17+, needed to reach a
+    // self-hosted server on the LAN).
+    val localNetworkPermissionAsked: Boolean = false,
     // Newest torrent completion_on (unix seconds) already accounted for by the complete-notifier,
     // keyed by server id. Lets completion alerts survive the worker process restarting: a torrent
     // whose completion_on is newer than this still fires. Written only when it advances.

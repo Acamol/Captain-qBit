@@ -88,7 +88,7 @@ android {
         // installed alongside the original app.
         applicationId = "dev.acamol.qbit"
         minSdk = 28
-        targetSdk = 35
+        targetSdk = 37
         versionCode = 12
         versionName = "1.3.0"
 

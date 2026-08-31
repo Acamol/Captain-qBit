@@ -2,6 +2,7 @@ package dev.yashgarg.qbit
 
 import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -23,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import androidx.datastore.core.DataStore
@@ -183,6 +185,74 @@ class MainActivity : AppCompatActivity() {
                                         lifecycleScope.launch {
                                             serverPrefsStore.updateData {
                                                 it.copy(notificationPermissionAsked = true)
+                                            }
+                                        }
+                                    }
+                                ) {
+                                    Text(stringResource(CommonR.string.not_now_action))
+                                }
+                            },
+                        )
+                    }
+                }
+
+                // API 37 (Android 17): a runtime permission is required for any socket to a
+                // local-network address - no named Build.VERSION_CODES constant exists for it
+                // yet, hence the literal. Asked once per install, same as notifications above;
+                // a denial just means local-network connections fail like any other unreachable
+                // server, already handled by the normal connection-error UI.
+                if (Build.VERSION.SDK_INT >= 37) {
+                    var showLocalNetworkRationale by remember { mutableStateOf(false) }
+                    val localNetworkPermissionLauncher =
+                        rememberLauncherForActivityResult(
+                            ActivityResultContracts.RequestPermission()
+                        ) {}
+                    LaunchedEffect(Unit) {
+                        val alreadyAsked =
+                            serverPrefsStore.data.map { it.localNetworkPermissionAsked }.first()
+                        if (
+                            !alreadyAsked &&
+                                ContextCompat.checkSelfPermission(
+                                    this@MainActivity,
+                                    Manifest.permission.ACCESS_LOCAL_NETWORK,
+                                ) != PackageManager.PERMISSION_GRANTED
+                        ) {
+                            showLocalNetworkRationale = true
+                        }
+                    }
+                    if (showLocalNetworkRationale) {
+                        AlertDialog(
+                            onDismissRequest = {},
+                            title = {
+                                Text(stringResource(CommonR.string.enable_local_network_title))
+                            },
+                            text = {
+                                Text(stringResource(CommonR.string.enable_local_network_message))
+                            },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = {
+                                        showLocalNetworkRationale = false
+                                        lifecycleScope.launch {
+                                            serverPrefsStore.updateData {
+                                                it.copy(localNetworkPermissionAsked = true)
+                                            }
+                                        }
+                                        localNetworkPermissionLauncher.launch(
+                                            Manifest.permission.ACCESS_LOCAL_NETWORK
+                                        )
+                                    }
+                                ) {
+                                    Text(stringResource(CommonR.string.enable_action))
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(
+                                    onClick = {
+                                        showLocalNetworkRationale = false
+                                        lifecycleScope.launch {
+                                            serverPrefsStore.updateData {
+                                                it.copy(localNetworkPermissionAsked = true)
                                             }
                                         }
                                     }
