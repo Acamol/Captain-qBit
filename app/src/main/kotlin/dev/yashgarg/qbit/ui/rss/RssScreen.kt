@@ -20,7 +20,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
@@ -42,7 +41,6 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryTabRow
@@ -83,6 +81,7 @@ import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.ui.compose.RssFeedTreeView
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
+import dev.yashgarg.qbit.ui.navigation.NoWindowInsets
 import dev.yashgarg.qbit.ui.server.TooltipIconButton
 import kotlinx.coroutines.launch
 import qbittorrent.models.RssFeed
@@ -123,15 +122,6 @@ fun RssScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewMode
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(CommonR.string.rss_title)) },
-                navigationIcon = {
-                    IconButton(onClick = { appNavigator.navigate(NavCommand.Back) }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription =
-                                stringResource(CommonR.string.content_description_back),
-                        )
-                    }
-                },
                 actions = {
                     TooltipIconButton(
                         label = stringResource(CommonR.string.refresh_action),
@@ -208,6 +198,8 @@ fun RssScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewMode
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        // No bottomBar here - see NoWindowInsets kdoc.
+        contentWindowInsets = NoWindowInsets,
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             PrimaryTabRow(selectedTabIndex = pagerState.currentPage) {

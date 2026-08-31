@@ -1,7 +1,7 @@
 package dev.yashgarg.qbit.ui.server
 
 import android.content.Context
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.get
@@ -702,21 +702,6 @@ constructor(
         persistViewPrefs()
     }
 
-    fun toggleSpeedLimits() {
-        viewModelScope.launch {
-            repository
-                .toggleSpeedLimitsMode()
-                .onOk { getSpeedLimitMode(true) }
-                .onErr {
-                    emitStatus(
-                        it.friendlyMessage(
-                            getString(CommonR.string.status_toggle_speed_limits_failure)
-                        )
-                    )
-                }
-        }
-    }
-
     private fun getQueueingState() {
         viewModelScope.launch {
             repository.isQueueingEnabled().onOk { enabled ->
@@ -735,38 +720,7 @@ constructor(
         }
     }
 
-    private fun getSpeedLimitMode(showToast: Boolean = false) {
-        viewModelScope.launch {
-            repository
-                .getSpeedLimitMode()
-                .onOk { mode ->
-                    _uiState.update { it.copy(speedLimitMode = mode) }
-                    if (showToast) {
-                        emitStatus(
-                            getString(
-                                if (mode == 0) CommonR.string.status_speed_limits_disabled
-                                else CommonR.string.status_speed_limits_enabled
-                            )
-                        )
-                    }
-                }
-                .onErr {
-                    // Only surface this on a user-initiated fetch. On background syncs it fires
-                    // for every unreachable-server poll, popping a spurious speed-limit toast
-                    // over whatever screen is showing; the sync-failure banner already covers it.
-                    if (showToast) {
-                        emitStatus(
-                            it.friendlyMessage(
-                                getString(CommonR.string.status_get_speed_limit_mode_failure)
-                            )
-                        )
-                    }
-                }
-        }
-    }
-
     private suspend fun syncData() {
-        getSpeedLimitMode()
         getQueueingState()
         coroutineScope {
             // Data: keep the last-known list on screen; retry quietly on error. The offline state
@@ -785,7 +739,7 @@ constructor(
                             mainData.torrents.values
                                 .mapNotNull { t -> t.tracker.takeIf { it.isNotBlank() } }
                                 .mapNotNull { url ->
-                                    Uri.parse(url).host?.takeIf { it.isNotBlank() }
+                                    url.toUri().host?.takeIf { it.isNotBlank() }
                                 }
                                 .distinct()
                                 .sorted()

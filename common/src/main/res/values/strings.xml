@@ -382,18 +382,13 @@
     <string name="trackers_section_title">Trackers</string>
     <string name="clear_all_action">Clear all</string>
     <string name="use_alternate_speed_limits_label">Use alternate speed limits</string>
-    <string name="use_alternate_speed_limits_description">
-        Switch between your normal speed limits and the alternate ones.
-    </string>
-    <string name="rss_feeds_label">RSS feeds</string>
-    <string name="rss_feeds_description">Browse RSS feeds and manage auto-download rules.</string>
     <string name="settings_label">Settings</string>
-    <string name="settings_description">Open the app\'s settings.</string>
     <string name="manage_named_action">Manage %1$s</string>
 
     <!-- Server screen -->
     <string name="torrent_already_exists">Torrent already exists</string>
     <string name="filters_label">Filters</string>
+    <string name="torrents_title">Torrents</string>
     <string name="status_speed_free_space">↓ %1$s/s  ↑ %2$s/s   %3$s free</string>
     <string name="retry_action">Retry</string>
     <string name="remove_torrents_count">Remove %1$d torrents</string>
@@ -648,10 +643,6 @@
         <item quantity="one">Failed to resume %1$d torrent</item>
         <item quantity="other">Failed to resume %1$d torrents</item>
     </plurals>
-    <string name="status_speed_limits_disabled">Alternative speed limits are disabled</string>
-    <string name="status_speed_limits_enabled">Alternative speed limits are enabled</string>
-    <string name="status_toggle_speed_limits_failure">Failed to toggle speed limits</string>
-    <string name="status_get_speed_limit_mode_failure">Failed to get speed limit mode</string>
     <string name="status_sync_data_failure">Failed to sync data</string>
 
     <string name="status_torrent_paused">Torrent paused</string>

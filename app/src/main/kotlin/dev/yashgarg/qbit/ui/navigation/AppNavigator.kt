@@ -42,17 +42,12 @@ sealed interface NavCommand {
 
     data class OpenTorrent(val hash: String) : NavCommand
 
-    data object OpenSettings : NavCommand
-
     data object OpenServerList : NavCommand
 
     data object OpenVersion : NavCommand
 
     /** Open the read-only viewer for the remote qBittorrent server's main log. */
     data object OpenLogs : NavCommand
-
-    /** Open the RSS feeds/articles/rules screen. */
-    data object OpenRss : NavCommand
 
     /** Open the article list for one feed. [itemPath] is the feed's `\`-joined tree path. */
     data class OpenRssArticles(val itemPath: String) : NavCommand

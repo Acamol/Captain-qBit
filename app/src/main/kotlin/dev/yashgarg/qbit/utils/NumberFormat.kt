@@ -6,6 +6,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
@@ -47,7 +48,10 @@ private object NumberFormat {
         }
         value *= java.lang.Long.signum(bytes).toLong()
         val unit = context.getString(BYTE_UNIT_RES_IDS[unitIndex])
-        return String.format("%.2f %s", value / 1024.0, unit).trim().isolateLtr()
+        // Locale.ROOT keeps the decimal separator a fixed "." regardless of device locale - the
+        // isolateLtr() below only fixes character order, not which character renders as the
+        // separator, so a locale-dependent format would still show "1,50" in e.g. German.
+        return String.format(Locale.ROOT, "%.2f %s", value / 1024.0, unit).trim().isolateLtr()
     }
 
     fun millisToDate(millis: Long, zoneId: ZoneId?): String {

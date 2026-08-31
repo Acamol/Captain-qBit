@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="white">#FFFFFF</color>
     <!-- Status colors (stalled/seeding/error) used for both text and progress fills. These are the
          LIGHT-mode shades, darkened for readable text on a light surface; the brighter dark-mode
          values live in values-night/colors.xml. -->
@@ -10,32 +9,6 @@
     <color name="grey">#5F6368</color>
 
     <color name="md_theme_dark_seed">#45CFEE</color>
-    <color name="md_theme_dark_bluegray_surface">#353A4E</color>
-    <color name="md_theme_dark_bluegray_surface_darker">#1F222E</color>
-
-    <color name="md_theme_dark_primary">#5CD4EF</color>
-    <color name="md_theme_dark_onPrimary">#00363F</color>
-    <color name="md_theme_dark_primaryContainer">#004E5B</color>
-    <color name="md_theme_dark_onPrimaryContainer">#B4EAFF</color>
-    <color name="md_theme_dark_secondary">#5CD4EF</color>
-    <color name="md_theme_dark_onSecondary">#00363F</color>
-    <color name="md_theme_dark_secondaryContainer">#004E5B</color>
-    <color name="md_theme_dark_onSecondaryContainer">#B4EAFF</color>
-    <color name="md_theme_dark_error">#FFB4AB</color>
-    <color name="md_theme_dark_errorContainer">#93000A</color>
-    <color name="md_theme_dark_onError">#690005</color>
-    <color name="md_theme_dark_onErrorContainer">#FFDAD6</color>
-    <color name="md_theme_dark_background">#262C3A</color>
-    <color name="md_theme_dark_onBackground">#FFFFFF</color>
-    <color name="md_theme_dark_surface">#262C3A</color>
-    <color name="md_theme_dark_onSurface">#FFFFFF</color>
-    <color name="md_theme_dark_surfaceVariant">#40484E</color>
-    <color name="md_theme_dark_onSurfaceVariant">#BFC8CE</color>
-    <color name="md_theme_dark_outline">#899298</color>
-    <color name="md_theme_dark_inverseOnSurface">#262C3A</color>
-    <color name="md_theme_dark_inverseSurface">#FFFFFF</color>
-    <color name="md_theme_dark_inversePrimary">#00687C</color>
-    <color name="md_theme_dark_surfaceTint">#5CD4EF</color>
 
     <!-- Theme color roles resolved per-mode: these are the LIGHT values; the dark equivalents
          live in values-night/colors.xml. The app theme references only these aliases so it can
@@ -62,5 +35,4 @@
     <color name="theme_inverse_on_surface">#EFF1F3</color>
     <color name="theme_inverse_surface">#2E3132</color>
     <color name="theme_inverse_primary">#5CD4EF</color>
-    <color name="theme_surface_tint">#00687C</color>
 </resources>

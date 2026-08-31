@@ -29,5 +29,4 @@
     <color name="theme_inverse_on_surface">#262C3A</color>
     <color name="theme_inverse_surface">#FFFFFF</color>
     <color name="theme_inverse_primary">#00687C</color>
-    <color name="theme_surface_tint">#5CD4EF</color>
 </resources>

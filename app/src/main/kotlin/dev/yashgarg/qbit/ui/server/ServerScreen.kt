@@ -29,7 +29,6 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
@@ -50,6 +49,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberTooltipState
@@ -87,6 +87,7 @@ import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.ui.dialogs.AddTorrentScreen
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
+import dev.yashgarg.qbit.ui.navigation.NoWindowInsets
 import dev.yashgarg.qbit.utils.TorrentHashUtil
 import dev.yashgarg.qbit.utils.friendlyMessage
 import dev.yashgarg.qbit.utils.rememberFriendlyMessageResolver
@@ -105,7 +106,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * The main torrent-list screen (native Compose port of `ServerFragment`). A [ModalNavigationDrawer]
- * (filter sidebar) wraps a [Scaffold] with a [BottomAppBar] (menu / search / sort, or bulk-action
+ * (filter sidebar) wraps a [Scaffold] with a [TopAppBar] (menu / search / sort, or bulk-action
  * icons while selecting) and an add-torrent FAB. Bulk pickers and management dialogs are driven by
  * [ServerDialogHost]; add/import uses the [AddTorrentScreen] full-screen Compose dialog.
  */
@@ -266,24 +267,22 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                     viewModel.clearFilters()
                     scope.launch { drawerState.close() }
                 },
-                onToggleSpeedLimits = { viewModel.toggleSpeedLimits() },
-                onRss = { appNavigator.navigate(NavCommand.OpenRss) },
-                onSettings = { appNavigator.navigate(NavCommand.OpenSettings) },
             )
         },
     ) {
         val hasSelection = selected.isNotEmpty()
         Scaffold(
-            bottomBar = {
-                BottomAppBar(
-                    // Ride above the keyboard so the bar stays reachable while searching.
-                    modifier = Modifier.imePadding(),
-                    actions = {
+            topBar = {
+                TopAppBar(
+                    title = { Text(stringResource(CommonR.string.torrents_title)) },
+                    navigationIcon = {
                         TooltipIconButton(
                             label = stringResource(CommonR.string.filters_label),
                             icon = Icons.Filled.Menu,
                             onClick = { scope.launch { drawerState.open() } },
                         )
+                    },
+                    actions = {
                         if (hasSelection) {
                             TooltipIconButton(
                                 label = stringResource(CommonR.string.pause_action),
@@ -336,17 +335,23 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                             )
                         }
                     },
-                    floatingActionButton = {
-                        FloatingActionButton(onClick = { openTorrentDialog() }) {
-                            Icon(
-                                Icons.Filled.Add,
-                                contentDescription =
-                                    stringResource(CommonR.string.content_description_add_torrent),
-                            )
-                        }
-                    },
                 )
-            }
+            },
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = { openTorrentDialog() },
+                    modifier = Modifier.imePadding(),
+                ) {
+                    Icon(
+                        Icons.Filled.Add,
+                        contentDescription =
+                            stringResource(CommonR.string.content_description_add_torrent),
+                    )
+                }
+            },
+            // This Scaffold has no bottomBar of its own - see NoWindowInsets kdoc; without this
+            // the FAB would sit an extra, unwanted amount above the outer NavigationBar.
+            contentWindowInsets = NoWindowInsets,
         ) { padding ->
             Column(Modifier.fillMaxSize().padding(padding)) {
                 val serverState = state.data?.serverState
@@ -611,7 +616,9 @@ private fun TorrentList(
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+        // Extra bottom padding so the last row clears the floating add-torrent FAB, which - unlike
+        // the old BottomAppBar-docked FAB - no longer reserves its own space below the content.
+        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 88.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(torrents, key = { it.hash }) { torrent ->

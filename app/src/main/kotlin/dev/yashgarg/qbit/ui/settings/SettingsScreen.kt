@@ -20,13 +20,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -61,6 +57,7 @@ import dev.yashgarg.qbit.ui.backup.BackupDialogs
 import dev.yashgarg.qbit.ui.backup.BackupViewModel
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
+import dev.yashgarg.qbit.ui.navigation.NoWindowInsets
 import dev.yashgarg.qbit.ui.rss.MaxArticlesPerFeedDialog
 import dev.yashgarg.qbit.ui.rss.RefreshIntervalDialog
 import dev.yashgarg.qbit.ui.server.SpeedLimitsDialog
@@ -274,20 +271,11 @@ fun SettingsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(CommonR.string.settings_label)) },
-                navigationIcon = {
-                    IconButton(onClick = { appNavigator.navigate(NavCommand.Back) }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription =
-                                stringResource(CommonR.string.content_description_back),
-                        )
-                    }
-                },
-            )
+            TopAppBar(title = { Text(stringResource(CommonR.string.settings_label)) })
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        // No bottomBar here - see NoWindowInsets kdoc.
+        contentWindowInsets = NoWindowInsets,
     ) { padding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())
