@@ -415,7 +415,7 @@
     <string name="error_connection_timed_out">תם הזמן המוקצב לחיבור</string>
     <string name="error_server_unreachable">לא ניתן להגיע לשרת — יש לבדוק את הכתובת והפורט</string>
     <string name="error_host_not_found">השרת לא נמצא — יש לבדוק את שם המארח</string>
-    <string name="error_ssl">שגיאת SSL — לתעודה בחתימה עצמית, יש להתקין אותה בהגדרות Android</string>
+    <string name="error_ssl">שגיאת SSL — יש לבדוק את תעודת השרת ולנסות שוב</string>
     <string name="error_torrent_already_exists">טורנט כבר קיים</string>
     <string name="error_authentication_failed">האימות נכשל — יש לבדוק את שם המשתמש והסיסמה</string>
     <string name="status_checking_connection">בודק חיבור, נא להמתין…</string>
@@ -624,4 +624,20 @@
     <string name="unit_hours_suffix">שע׳</string>
     <string name="unit_minutes_suffix">דק׳</string>
     <string name="unit_seconds_suffix">שנ׳</string>
+    <string name="untrusted_certificate_title">תעודה לא מהימנה</string>
+    <string name="untrusted_certificate_message">התעודה של שרת זה אינה חתומה על ידי רשות מהימנה. יש לבדוק את הפרטים שלהלן ולבחור אם לתת בה אמון עבור שרת זה בלבד.</string>
+    <string name="certificate_subject_label">נושא</string>
+    <string name="certificate_issuer_label">מנפיק</string>
+    <string name="certificate_fingerprint_label">טביעת אצבע SHA-256</string>
+    <string name="certificate_hostname_mismatch_warning">התעודה לא הונפקה עבור \"%1$s\" — ייתכן שמתן אמון בה לא יפתור את בעיית החיבור.</string>
+    <string name="trust_and_retry_action">אשר ונסה שוב</string>
+    <string name="pinned_certificate_active_label">תעודה מוצמדת עבור שרת זה</string>
+    <string name="clear_pinned_certificate_action">הסר</string>
+    <string name="clear_pinned_certificate_title">להסיר את התעודה המוצמדת?</string>
+    <string name="clear_pinned_certificate_message">החיבור הבא לשרת זה יצריך HTTPS מאומת על ידי המערכת, או תעודה חדשה שתאושר.</string>
+    <string name="enable_local_network_title">לאפשר גישה לרשת המקומית?</string>
+    <string name="enable_local_network_message">גישה זו נדרשת כדי להתחבר לשרת qBittorrent ברשת המקומית (למשל NAS או מחשב בבית). שרתים שאליהם מתחברים דרך האינטרנט אינם מושפעים.</string>
+    <string name="torrents_title">טורנטים</string>
+    <string name="review_certificate_action">בדוק תעודה</string>
+    <string name="error_ssl_untrusted_certificate">השרת הציג תעודה שאינה מהימנה. אפשר לבדוק את טביעת האצבע שלה ולבחור לתת בה אמון עבור שרת זה.</string>
 </resources>
