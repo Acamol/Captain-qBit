@@ -196,17 +196,12 @@ ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 
 dependencies {
     implementation(libs.androidx.appcompat)
-    implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.datastore)
-    implementation(libs.androidx.swiperefreshlayout)
     implementation(libs.androidx.lifecycle.ktx)
     implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.lifecycle.viewmodel)
-    implementation(libs.androidx.navigation.fragment.ktx)
-    implementation(libs.androidx.navigation.ui.ktx)
     implementation(libs.androidx.profileinstaller)
-    implementation(libs.androidx.recyclerview.selection)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
@@ -219,7 +214,6 @@ dependencies {
     implementation(libs.compose.navigation)
     implementation(libs.compose.hilt.navigation)
     implementation(libs.compose.lifecycle.runtime)
-    implementation(libs.androidx.fragment.compose)
 
     implementation(libs.google.material)
     implementation(libs.google.dagger.hilt)
@@ -237,8 +231,6 @@ dependencies {
     debugImplementation(libs.tools.leakcanary)
     implementation(libs.tools.kotlin.result)
     implementation(libs.tools.kotlin.result.coroutines)
-    implementation(libs.tools.cascade)
-    implementation(libs.tools.lottie)
     debugImplementation(libs.tools.whatthestack)
 
     testImplementation(libs.bundles.testing)
