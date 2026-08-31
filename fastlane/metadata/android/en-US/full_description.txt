@@ -17,7 +17,7 @@ Features:
 * Browse RSS feeds and articles, with auto-download rules and notifications for new matches
 * Encrypted backup and restore of your servers and settings
 * Clear failure reasons when a torrent errors, instead of a bare "error"
-* Optional HTTP Basic Auth for servers behind a reverse proxy, plus self-signed certificate support
+* Optional HTTP Basic Auth for servers behind a reverse proxy, plus self-signed certificate support — approve the certificate's fingerprint in-app, per server
 * Works with qBittorrent 4.x and 5.x
 
 Captain qBit began as a fork of qBittorrent Manager by Yash Garg and builds on that foundation. It is free and open source under the GPL-3.0 license.
