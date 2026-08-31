@@ -71,7 +71,7 @@
     <string name="no_file_selected">לא נבחר קובץ</string>
     <string name="torrent_file_fallback_name">קובץ טורנט</string>
     <string name="invalid_magnet_link">נא להזין קישור תקין!</string>
-    <string name="delete">מחיקה</string>
+    <string name="delete">מחק</string>
     <string name="edit">עריכה</string>
     <string name="edit_category_title">עריכת קטגוריה</string>
     <string name="ok">אישור</string>
@@ -276,7 +276,7 @@
     <string name="smart_episode_filter_subtitle">זוכר את הפרק האחרון שהכלל הזה התאים אליו ומתריע רק על פרקים חדשים יותר, כך שאין צורך לעדכן את מסנן הפרקים בכל פעם שהתוכנית משודרת</string>
     <string name="ignore_days_label">ימים להתעלמות אחרי התאמה אחרונה</string>
     <string name="use_global_default_label">שימוש בברירת המחדל הגלובלית</string>
-    <string name="started_label">מופעל</string>
+    <string name="started_label">מותחל</string>
     <string name="episode_filter_supporting_text">פורמט: 1x01;1x02-03;1x05- (עונה x פרק, טווחים מותרים); שדה ריק מתאים לכל פרק</string>
     <string name="not_now_action">לא כעת</string>
     <string name="press_back_again_to_exit">יש ללחוץ חזרה שוב כדי לצאת</string>
@@ -285,7 +285,7 @@
     <string name="crash_report_saved_locally">נשמר על מכשיר זה בלבד — כלום לא נשלח אוטומטית.</string>
     <string name="copy_action">העתקה</string>
     <string name="report_on_github_action">דיווח ב-GitHub</string>
-    <string name="magnet_url_placeholder">http://, https://, magnet: or bc://bt/</string>
+    <string name="magnet_url_placeholder">http://, https://, magnet: או bc://bt/</string>
     <string name="save_as_default_category_label">שמור כקטגוריית ברירת מחדל</string>
     <string name="content_description_clear">ניקוי</string>
     <string name="jump_to_newest">קפיצה לחדש ביותר</string>
@@ -306,11 +306,7 @@
     <string name="trackers_section_title">עוקבנים</string>
     <string name="clear_all_action">נקה הכל</string>
     <string name="use_alternate_speed_limits_label">שימוש בהגבלות מהירות חלופיות</string>
-    <string name="use_alternate_speed_limits_description">החלף בין מגבלות המהירות הרגילות לחלופיות.</string>
-    <string name="rss_feeds_label">הזנות RSS</string>
-    <string name="rss_feeds_description">דפדוף בהזנות RSS וניהול כללי הורדה אוטומטים.</string>
     <string name="settings_label">הגדרות</string>
-    <string name="settings_description">פתיחת הגדרות האפליקציה.</string>
     <string name="filters_label">מסננים</string>
     <string name="theme_light">בהיר</string>
     <string name="theme_dark">כהה</string>
@@ -369,7 +365,7 @@
     <string name="filter_stalled_downloading">הורדה ממתינה</string>
     <string name="server_logs_action">יומן שרת</string>
     <string name="manage_named_action">ניהול %1$s</string>
-    <string name="status_speed_free_space">%3$s פנוי ↑ %2$s/s ↓ %1$s/s</string>
+    <string name="status_speed_free_space">↓ %1$s/s ↑ %2$s/s %3$s פנוי</string>
     <string name="auto_tmm_default_label">ניהול טורנטים אוטומטי כברירת מחדל</string>
     <string name="global_speed_limits_subtitle">קביעת מגבלות מהירות ההורדה וההעלאה לכל השרת</string>
     <string name="alternate_speed_limits_label">מגבלות מהירות חלופיות</string>
@@ -459,7 +455,7 @@
     <string name="peer_flags_label">דגלים</string>
     <string name="peer_files_label">קבצים</string>
     <string name="ban_peer_action">החרמת עמית</string>
-    <string name="dismiss_action">ביטול</string>
+    <string name="dismiss_action">התעלם</string>
     <string name="private_torrent_trackers_fixed_message">טורנט פרטי — העוקבנים קבועים על ידי הטורנט ולא ניתן לשנותם.</string>
     <string name="add_tracker_action">הוספת עוקבן</string>
     <string name="no_trackers">אין עוקבנים</string>
@@ -556,10 +552,6 @@
         <item quantity="two">נכשל להחזיר שני טורנטים לרוץ</item>
         <item quantity="other">נכשל להחזיר %1$d טורנטים לרוץ</item>
     </plurals>
-    <string name="status_speed_limits_disabled">מגבלות המהירות החלופיות מושבתות</string>
-    <string name="status_speed_limits_enabled">מגבלות המהירות החלופיות מופעלות</string>
-    <string name="status_toggle_speed_limits_failure">נכשל להחליף מגבלות מהירות</string>
-    <string name="status_get_speed_limit_mode_failure">נכשל לקבל את מצב מגבלת המהירות</string>
     <string name="status_sync_data_failure">נכשל לסנכרן נתונים</string>
     <string name="status_torrent_paused">הטורנט הושהה</string>
     <string name="status_torrent_resumed">הטורנט חזר לרוץ</string>
