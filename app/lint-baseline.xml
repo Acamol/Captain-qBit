@@ -13,17 +13,6 @@
     </issue>
 
     <issue
-        id="AcceptsUserCertificates"
-        message="The Network Security Configuration allows the use of user certificates in the release version of your app"
-        errorLine1="            &lt;certificates src=&quot;user&quot; />"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/xml/network_security_config.xml"
-            line="13"
-            column="13"/>
-    </issue>
-
-    <issue
         id="ObsoleteSdkInt"
         message="This folder configuration (`v26`) is unnecessary; `minSdkVersion` is 28. Merge all the resources in this folder into `font`.">
         <location

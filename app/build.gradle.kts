@@ -231,8 +231,11 @@ dependencies {
     debugImplementation(libs.tools.leakcanary)
     implementation(libs.tools.kotlin.result)
     implementation(libs.tools.kotlin.result.coroutines)
+    implementation(libs.tools.okhttp.tls)
     debugImplementation(libs.tools.whatthestack)
 
     testImplementation(libs.bundles.testing)
     testImplementation(libs.ktor.client.mock)
+    testImplementation(libs.tools.okhttp.tls)
+    testImplementation(libs.tools.mockwebserver)
 }

@@ -86,6 +86,25 @@
     <string name="server_name">Server name</string>
     <string name="test_cfg">Test connection</string>
     <string name="save_cfg">Save</string>
+    <string name="untrusted_certificate_title">Untrusted certificate</string>
+    <string name="untrusted_certificate_message">
+        This server\'s certificate isn\'t signed by a trusted authority. Review it below, then
+        choose whether to trust it for this server only.
+    </string>
+    <string name="certificate_subject_label">Subject</string>
+    <string name="certificate_issuer_label">Issuer</string>
+    <string name="certificate_fingerprint_label">SHA-256 fingerprint</string>
+    <string name="certificate_hostname_mismatch_warning">
+        This certificate wasn\'t issued for \"%1$s\" — trusting it may not fix the connection.
+    </string>
+    <string name="trust_and_retry_action">Trust &amp; retry</string>
+    <string name="pinned_certificate_active_label">A certificate is pinned for this server</string>
+    <string name="clear_pinned_certificate_action">Clear</string>
+    <string name="clear_pinned_certificate_title">Clear pinned certificate?</string>
+    <string name="clear_pinned_certificate_message">
+        The next connection to this server will need system-trusted HTTPS or a newly-approved
+        certificate.
+    </string>
 
     <!-- Notifications -->
     <string name="status_channel_id" translatable="false">qBit-Channel-2</string>
@@ -396,6 +415,7 @@
     <string name="torrents_title">Torrents</string>
     <string name="status_speed_free_space">↓ %1$s/s  ↑ %2$s/s   %3$s free</string>
     <string name="retry_action">Retry</string>
+    <string name="review_certificate_action">Review certificate</string>
     <string name="remove_torrents_count">Remove %1$d torrents</string>
     <string name="remove_torrent_singular">Remove torrent</string>
     <string name="also_delete_the_files_on_disk">Also delete the files on disk</string>
@@ -501,7 +521,11 @@
     <string name="error_connection_timed_out">Connection timed out</string>
     <string name="error_server_unreachable">Could not reach server — check address and port</string>
     <string name="error_host_not_found">Server not found — check the hostname</string>
-    <string name="error_ssl">SSL error — for a self-signed certificate, install it in Android settings</string>
+    <string name="error_ssl">SSL error — check the server\'s certificate and try again</string>
+    <string name="error_ssl_untrusted_certificate">
+        Server presented a certificate that isn\'t trusted. You can review its fingerprint and
+        choose to trust it for this server.
+    </string>
     <string name="error_torrent_already_exists">Torrent already exists</string>
     <string name="error_authentication_failed">Authentication failed — check the username and password</string>
     <string name="status_checking_connection">Checking connection, please wait…</string>

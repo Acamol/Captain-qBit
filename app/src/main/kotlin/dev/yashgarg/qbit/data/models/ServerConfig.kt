@@ -21,4 +21,8 @@ data class ServerConfig(
     val basicAuthUsername: String? = null,
     val basicAuthPassword: String? = null,
     val position: Int = 0,
+    // Base64-encoded DER of a self-signed certificate the user has explicitly approved for this
+    // server only (see ClientManager.buildOkHttpClient). Not a hash: HandshakeCertificates needs
+    // an actual certificate object to add as a trust anchor.
+    val pinnedCertificate: String? = null,
 )

@@ -2,15 +2,16 @@
 <network-security-config xmlns:tools="http://schemas.android.com/tools">
     <!--
       Cleartext is permitted for self-hosted servers reached over plain HTTP on a LAN.
-      HTTPS is validated normally against the system CAs plus any certificate the user has
-      installed (so a self-signed server cert can be trusted securely, with full validation).
+      HTTPS is validated against system CAs only. Self-signed servers are no longer trusted at
+      the OS level via user-installed CAs - instead, the app pins a specific server's
+      certificate in-app (see ClientManager.buildOkHttpClient / CertificateProbe) after the user
+      explicitly reviews and approves its fingerprint for that one server.
     -->
     <base-config
         cleartextTrafficPermitted="true"
         tools:ignore="InsecureBaseConfiguration">
         <trust-anchors>
             <certificates src="system" />
-            <certificates src="user" />
         </trust-anchors>
     </base-config>
 </network-security-config>

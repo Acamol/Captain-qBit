@@ -1,9 +1,11 @@
 package dev.yashgarg.qbit.ui.server
 
 import android.content.Context
+import android.util.Base64
 import androidx.core.net.toUri
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.viewModelScope
+import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.get
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
@@ -12,6 +14,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.QbitRepository
 import dev.yashgarg.qbit.data.daos.ConfigDao
+import dev.yashgarg.qbit.data.manager.CertificateProbe
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.manager.PendingTorrentIntent
 import dev.yashgarg.qbit.data.models.ContentTreeItem
@@ -22,6 +25,7 @@ import dev.yashgarg.qbit.ui.common.StatusViewModel
 import dev.yashgarg.qbit.utils.TorrentFileParser
 import dev.yashgarg.qbit.utils.TransformUtil
 import dev.yashgarg.qbit.utils.friendlyMessage
+import java.security.cert.X509Certificate
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -30,6 +34,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import qbittorrent.models.Torrent
 import qbittorrent.models.TorrentFile
 
@@ -96,6 +101,25 @@ constructor(
                 val remaining = configDao.getConfigs().first().firstOrNull()
                 clientManager.setActiveServer(remaining?.configId ?: -1)
             }
+        }
+    }
+
+    /** Fetches the certificate a server presents, for the user to review before trusting it. */
+    suspend fun probeCertificate(host: String, port: Int): Result<X509Certificate, Throwable> =
+        CertificateProbe.fetchPresentedCertificate(host, port)
+
+    /**
+     * Approves a certificate for [id]. Persisting it here (rather than only from ConfigScreen) is
+     * what lets a connection that's failing right now on this screen recover without navigating
+     * away: ClientManagerImpl reactively rebuilds its client whenever this config row changes, so
+     * the next sync attempt picks up the pin automatically.
+     */
+    suspend fun pinCertificate(id: Int, der: ByteArray) {
+        withContext(Dispatchers.IO) {
+            val current = configDao.getConfigById(id) ?: return@withContext
+            configDao.addConfig(
+                current.copy(pinnedCertificate = Base64.encodeToString(der, Base64.NO_WRAP))
+            )
         }
     }
 

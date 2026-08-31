@@ -23,6 +23,8 @@ fun rememberFriendlyMessageResolver(): (Int) -> String {
             CommonR.string.error_host_not_found to
                 stringResource(CommonR.string.error_host_not_found),
             CommonR.string.error_ssl to stringResource(CommonR.string.error_ssl),
+            CommonR.string.error_ssl_untrusted_certificate to
+                stringResource(CommonR.string.error_ssl_untrusted_certificate),
             CommonR.string.error_torrent_already_exists to
                 stringResource(CommonR.string.error_torrent_already_exists),
             CommonR.string.error_authentication_failed to

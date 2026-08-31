@@ -1,5 +1,6 @@
 package dev.yashgarg.qbit.data.manager
 
+import android.util.Base64
 import android.util.Log
 import androidx.datastore.core.DataStore
 import com.github.michaelbull.result.coroutines.runSuspendCatching
@@ -113,13 +114,15 @@ constructor(
                         (CryptoManager.decrypt(config.basicAuthPassword)
                             ?: config.basicAuthPassword)
                 } else null
+            val pinnedCertificateDer =
+                config.pinnedCertificate?.let { Base64.decode(it, Base64.NO_WRAP) }
 
             QBittorrentClient(
                     "${config.connectionType.toString().lowercase()}://${config.baseUrl}$port$path",
                     config.username,
                     CryptoManager.decrypt(config.password) ?: config.password,
                     syncInterval = syncIntervalMs.milliseconds,
-                    httpClient = ClientManager.httpClient(basicAuth),
+                    httpClient = ClientManager.httpClient(basicAuth, pinnedCertificateDer),
                     dispatcher = Dispatchers.Default,
                 )
                 .also { client = it }

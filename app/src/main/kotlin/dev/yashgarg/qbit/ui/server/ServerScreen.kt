@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
@@ -82,6 +84,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.github.michaelbull.result.onOk
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.ui.dialogs.AddTorrentScreen
@@ -90,9 +93,13 @@ import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.ui.navigation.NoWindowInsets
 import dev.yashgarg.qbit.utils.TorrentHashUtil
 import dev.yashgarg.qbit.utils.friendlyMessage
+import dev.yashgarg.qbit.utils.isUntrustedCertificateError
+import dev.yashgarg.qbit.utils.matchesHost
 import dev.yashgarg.qbit.utils.rememberFriendlyMessageResolver
+import dev.yashgarg.qbit.utils.sha256Fingerprint
 import dev.yashgarg.qbit.utils.toHumanReadable
 import dev.yashgarg.qbit.validation.LinkValidator
+import java.security.cert.X509Certificate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -121,7 +128,18 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val torrents by viewModel.sortedTorrents.collectAsStateWithLifecycle()
     val categoryColors by viewModel.categoryColors.collectAsStateWithLifecycle()
+    val activeServerId by viewModel.activeServerId.collectAsStateWithLifecycle()
+    val servers by viewModel.servers.collectAsStateWithLifecycle()
+    // Mirrors ClientManagerImpl.resolveActiveConfig()'s fallback, so "Review certificate" probes
+    // the server that's actually showing this error even if activeServerId is stale/unset (-1).
+    val resolvedServerId =
+        remember(activeServerId, servers) {
+            servers.find { it.configId == activeServerId }?.configId
+                ?: servers.firstOrNull()?.configId
+                ?: -1
+        }
 
+    var pendingCertReview by remember { mutableStateOf<X509Certificate?>(null) }
     var serverDialog by remember { mutableStateOf<ServerDialog?>(null) }
     val linkValidator = remember { LinkValidator() }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -453,11 +471,36 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                                         style = MaterialTheme.typography.titleLarge,
                                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                     )
-                                    FilledTonalButton(
-                                        onClick = { viewModel.refresh() },
-                                        modifier = Modifier.padding(top = 16.dp),
-                                    ) {
-                                        Text(stringResource(CommonR.string.retry_action))
+                                    if (state.error?.isUntrustedCertificateError() == true) {
+                                        FilledTonalButton(
+                                            onClick = {
+                                                val target =
+                                                    servers.find { it.configId == resolvedServerId }
+                                                        ?: return@FilledTonalButton
+                                                scope.launch {
+                                                    viewModel
+                                                        .probeCertificate(
+                                                            target.baseUrl,
+                                                            target.port ?: 443,
+                                                        )
+                                                        .onOk { cert -> pendingCertReview = cert }
+                                                }
+                                            },
+                                            modifier = Modifier.padding(top = 16.dp),
+                                        ) {
+                                            Text(
+                                                stringResource(
+                                                    CommonR.string.review_certificate_action
+                                                )
+                                            )
+                                        }
+                                    } else {
+                                        FilledTonalButton(
+                                            onClick = { viewModel.refresh() },
+                                            modifier = Modifier.padding(top = 16.dp),
+                                        ) {
+                                            Text(stringResource(CommonR.string.retry_action))
+                                        }
                                     }
                                 }
                             }
@@ -551,6 +594,59 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
         viewModel = viewModel,
         appNavigator = appNavigator,
     )
+
+    pendingCertReview?.let { cert ->
+        val targetHost = servers.find { it.configId == resolvedServerId }?.baseUrl.orEmpty()
+        val fingerprint = remember(cert) { cert.sha256Fingerprint() }
+        val hostMismatch = remember(cert, targetHost) { !cert.matchesHost(targetHost) }
+        AlertDialog(
+            onDismissRequest = { pendingCertReview = null },
+            title = { Text(stringResource(CommonR.string.untrusted_certificate_title)) },
+            text = {
+                Column {
+                    Text(stringResource(CommonR.string.untrusted_certificate_message))
+                    Spacer(Modifier.size(8.dp))
+                    Text(
+                        "${stringResource(CommonR.string.certificate_subject_label)}: " +
+                            cert.subjectX500Principal.name
+                    )
+                    Text(
+                        "${stringResource(CommonR.string.certificate_issuer_label)}: " +
+                            cert.issuerX500Principal.name
+                    )
+                    Text(
+                        "${stringResource(CommonR.string.certificate_fingerprint_label)}: " +
+                            fingerprint
+                    )
+                    if (hostMismatch) {
+                        Spacer(Modifier.size(8.dp))
+                        Text(
+                            stringResource(
+                                CommonR.string.certificate_hostname_mismatch_warning,
+                                targetHost,
+                            ),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingCertReview = null
+                        scope.launch { viewModel.pinCertificate(resolvedServerId, cert.encoded) }
+                    }
+                ) {
+                    Text(stringResource(CommonR.string.trust_and_retry_action))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingCertReview = null }) {
+                    Text(stringResource(CommonR.string.cancel))
+                }
+            },
+        )
+    }
 
     if (showAddTorrent) {
         val prefs by viewModel.addTorrentPrefs.collectAsStateWithLifecycle()

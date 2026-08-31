@@ -4,7 +4,9 @@ import dev.yashgarg.qbit.common.R as CommonR
 import io.ktor.client.network.sockets.*
 import java.net.ConnectException
 import java.net.UnknownHostException
+import java.security.cert.CertPathValidatorException
 import javax.net.ssl.SSLException
+import javax.net.ssl.SSLHandshakeException
 import qbittorrent.QBittorrentException
 
 /** Broad classification of a caught [Throwable], independent of how it's ultimately worded. */
@@ -14,6 +16,7 @@ private enum class ErrorKind {
     SERVER_UNREACHABLE,
     HOST_NOT_FOUND,
     SSL_ERROR,
+    SSL_UNTRUSTED_CERTIFICATE,
     TORRENT_ALREADY_EXISTS,
     AUTHENTICATION_FAILED,
     UNKNOWN,
@@ -34,10 +37,16 @@ fun Throwable.friendlyMessage(
         ErrorKind.SERVER_UNREACHABLE -> getString(CommonR.string.error_server_unreachable)
         ErrorKind.HOST_NOT_FOUND -> getString(CommonR.string.error_host_not_found)
         ErrorKind.SSL_ERROR -> getString(CommonR.string.error_ssl)
+        ErrorKind.SSL_UNTRUSTED_CERTIFICATE ->
+            getString(CommonR.string.error_ssl_untrusted_certificate)
         ErrorKind.TORRENT_ALREADY_EXISTS -> getString(CommonR.string.error_torrent_already_exists)
         ErrorKind.AUTHENTICATION_FAILED -> getString(CommonR.string.error_authentication_failed)
         ErrorKind.UNKNOWN -> fallback
     }
+
+/** True when [this] is specifically an untrusted-CA chain failure, not any other SSL error. */
+fun Throwable.isUntrustedCertificateError(): Boolean =
+    ExceptionHandler.classify(this) == ErrorKind.SSL_UNTRUSTED_CERTIFICATE
 
 private object ExceptionHandler {
     fun classify(ex: Throwable): ErrorKind =
@@ -47,6 +56,14 @@ private object ExceptionHandler {
             is ConnectTimeoutException -> ErrorKind.CONNECTION_FAILED
             is ConnectException -> ErrorKind.SERVER_UNREACHABLE
             is UnknownHostException -> ErrorKind.HOST_NOT_FOUND
+            is SSLHandshakeException ->
+                if (
+                    ex.cause is CertPathValidatorException ||
+                        ex.cause?.cause is CertPathValidatorException ||
+                        ex.message?.contains("PKIX path", ignoreCase = true) == true
+                ) {
+                    ErrorKind.SSL_UNTRUSTED_CERTIFICATE
+                } else ErrorKind.SSL_ERROR
             is SSLException -> ErrorKind.SSL_ERROR
             is QBittorrentException ->
                 when {

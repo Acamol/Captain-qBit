@@ -1,5 +1,6 @@
 package dev.yashgarg.qbit.ui.config
 
+import android.util.Base64
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,6 +8,7 @@ import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.coroutines.runSuspendCatching
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.yashgarg.qbit.data.daos.ConfigDao
+import dev.yashgarg.qbit.data.manager.CertificateProbe
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.manager.CryptoManager
 import dev.yashgarg.qbit.data.models.ConnectionType
@@ -14,6 +16,7 @@ import dev.yashgarg.qbit.data.models.ServerConfig
 import dev.yashgarg.qbit.validation.HostValidator
 import dev.yashgarg.qbit.validation.PortValidator
 import dev.yashgarg.qbit.validation.StringValidator
+import java.security.cert.X509Certificate
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -22,6 +25,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import qbittorrent.*
 
 @HiltViewModel
@@ -241,6 +245,7 @@ constructor(
         password: String,
         basicAuthUsername: String?,
         basicAuthPassword: String?,
+        pinnedCertificateDer: ByteArray? = null,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val editing = serverId >= 0
@@ -249,6 +254,8 @@ constructor(
             val position =
                 if (editing) configDao.getConfigById(serverId)?.position ?: 0
                 else configDao.maxPosition() + 1
+            val existingPin =
+                if (editing) configDao.getConfigById(serverId)?.pinnedCertificate else null
             val config =
                 ServerConfig(
                     configId = newId,
@@ -265,6 +272,9 @@ constructor(
                     basicAuthUsername = basicAuthUsername?.trim()?.ifEmpty { null },
                     basicAuthPassword =
                         CryptoManager.encrypt(basicAuthPassword?.trim()?.ifEmpty { null }),
+                    pinnedCertificate =
+                        pinnedCertificateDer?.let { Base64.encodeToString(it, Base64.NO_WRAP) }
+                            ?: existingPin,
                 )
             configDao.addConfig(config)
             // First server ever added becomes the active one.
@@ -272,12 +282,41 @@ constructor(
         }
     }
 
+    /**
+     * Persists an approved certificate pin immediately for the server being edited, independent of
+     * the rest of the form (a no-op when adding a brand-new server - there's no row yet, so the pin
+     * travels via [insert]'s `pinnedCertificateDer` param instead).
+     */
+    suspend fun updatePinnedCertificate(der: ByteArray) {
+        if (!editing) return
+        withContext(Dispatchers.IO) {
+            val current = configDao.getConfigById(serverId) ?: return@withContext
+            configDao.addConfig(
+                current.copy(pinnedCertificate = Base64.encodeToString(der, Base64.NO_WRAP))
+            )
+        }
+    }
+
+    /** Clears a previously-approved pin (e.g. after the server's certificate rotated). */
+    suspend fun clearPinnedCertificate() {
+        if (!editing) return
+        withContext(Dispatchers.IO) {
+            val current = configDao.getConfigById(serverId) ?: return@withContext
+            configDao.addConfig(current.copy(pinnedCertificate = null))
+        }
+    }
+
+    /** Fetches the certificate a server presents, for the user to review before trusting it. */
+    suspend fun probeCertificate(host: String, port: Int): Result<X509Certificate, Throwable> =
+        CertificateProbe.fetchPresentedCertificate(host, port)
+
     suspend fun testConfig(
         baseUrl: String,
         username: String,
         password: String,
         basicAuthUsername: String?,
         basicAuthPassword: String?,
+        pinnedCertificateDer: ByteArray? = null,
     ): Result<String, Throwable> {
         return runSuspendCatching {
             val basicAuth =
@@ -289,7 +328,7 @@ constructor(
                     baseUrl,
                     username,
                     password,
-                    httpClient = ClientManager.httpClient(basicAuth),
+                    httpClient = ClientManager.httpClient(basicAuth, pinnedCertificateDer),
                     dispatcher = Dispatchers.Default,
                 )
             try {
