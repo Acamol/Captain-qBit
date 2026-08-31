@@ -306,11 +306,7 @@
     <string name="trackers_section_title">עוקבנים</string>
     <string name="clear_all_action">נקה הכל</string>
     <string name="use_alternate_speed_limits_label">שימוש בהגבלות מהירות חלופיות</string>
-    <string name="use_alternate_speed_limits_description">החלף בין מגבלות המהירות הרגילות לחלופיות.</string>
-    <string name="rss_feeds_label">הזנות RSS</string>
-    <string name="rss_feeds_description">דפדוף בהזנות RSS וניהול כללי הורדה אוטומטים.</string>
     <string name="settings_label">הגדרות</string>
-    <string name="settings_description">פתיחת הגדרות האפליקציה.</string>
     <string name="filters_label">מסננים</string>
     <string name="theme_light">בהיר</string>
     <string name="theme_dark">כהה</string>
@@ -556,10 +552,6 @@
         <item quantity="two">נכשל להחזיר שני טורנטים לרוץ</item>
         <item quantity="other">נכשל להחזיר %1$d טורנטים לרוץ</item>
     </plurals>
-    <string name="status_speed_limits_disabled">מגבלות המהירות החלופיות מושבתות</string>
-    <string name="status_speed_limits_enabled">מגבלות המהירות החלופיות מופעלות</string>
-    <string name="status_toggle_speed_limits_failure">נכשל להחליף מגבלות מהירות</string>
-    <string name="status_get_speed_limit_mode_failure">נכשל לקבל את מצב מגבלת המהירות</string>
     <string name="status_sync_data_failure">נכשל לסנכרן נתונים</string>
     <string name="status_torrent_paused">הטורנט הושהה</string>
     <string name="status_torrent_resumed">הטורנט חזר לרוץ</string>
