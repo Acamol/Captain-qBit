@@ -72,22 +72,34 @@ interface ClientManager {
          * certificate (approved once by the user via the "untrusted certificate" dialog, see
          * CertificateProbe) is a single additional trust anchor scoped to that request, never a
          * replacement for normal validation - there is no trust-all/bypass TrustManager here.
+         *
+         * With a pin present, the server's identity is established by the certificate itself rather
+         * than by matching a hostname against it: the connection is accepted only if the server
+         * presents byte-for-byte the certificate the user approved. That is what makes pinning
+         * usable for the certificates people actually generate for a home server - one with only a
+         * Common Name and no subjectAltName, which OkHttp's hostname verifier rejects outright -
+         * and it simultaneously prevents a pinned certificate that happens to carry CA:TRUE
+         * (openssl's default for `req -x509`) from vouching for any *other* certificate.
          */
         private fun buildOkHttpClient(pinnedCertificateDer: ByteArray?): OkHttpClient {
+            val pinnedCertificate = pinnedCertificateDer?.let(::parseCertificate)
             val handshakeCertificates =
                 HandshakeCertificates.Builder()
                     .addPlatformTrustedCertificates()
-                    .apply {
-                        pinnedCertificateDer?.let { der ->
-                            addTrustedCertificate(parseCertificate(der))
-                        }
-                    }
+                    .apply { pinnedCertificate?.let { addTrustedCertificate(it) } }
                     .build()
             return OkHttpClient.Builder()
                 .sslSocketFactory(
                     handshakeCertificates.sslSocketFactory(),
                     handshakeCertificates.trustManager,
                 )
+                .apply {
+                    if (pinnedCertificate != null) {
+                        hostnameVerifier { _, session ->
+                            session.peerCertificates.firstOrNull() == pinnedCertificate
+                        }
+                    }
+                }
                 .build()
         }
 

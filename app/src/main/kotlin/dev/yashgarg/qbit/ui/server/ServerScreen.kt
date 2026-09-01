@@ -84,6 +84,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.common.R as CommonR
@@ -93,11 +94,12 @@ import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.ui.navigation.NoWindowInsets
 import dev.yashgarg.qbit.utils.TorrentHashUtil
 import dev.yashgarg.qbit.utils.friendlyMessage
+import dev.yashgarg.qbit.utils.hasExpired
 import dev.yashgarg.qbit.utils.isUntrustedCertificateError
-import dev.yashgarg.qbit.utils.matchesHost
 import dev.yashgarg.qbit.utils.rememberFriendlyMessageResolver
 import dev.yashgarg.qbit.utils.sha256Fingerprint
 import dev.yashgarg.qbit.utils.toHumanReadable
+import dev.yashgarg.qbit.utils.validUntilText
 import dev.yashgarg.qbit.validation.LinkValidator
 import java.security.cert.X509Certificate
 import kotlinx.coroutines.Dispatchers
@@ -140,6 +142,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
         }
 
     var pendingCertReview by remember { mutableStateOf<X509Certificate?>(null) }
+    var probingCertificate by remember { mutableStateOf(false) }
     var serverDialog by remember { mutableStateOf<ServerDialog?>(null) }
     val linkValidator = remember { LinkValidator() }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -482,21 +485,39 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                                                     servers.find { it.configId == resolvedServerId }
                                                         ?: return@FilledTonalButton
                                                 scope.launch {
+                                                    probingCertificate = true
                                                     viewModel
                                                         .probeCertificate(
                                                             target.baseUrl,
                                                             target.port ?: 443,
                                                         )
                                                         .onOk { cert -> pendingCertReview = cert }
+                                                        .onErr { error ->
+                                                            Toast.makeText(
+                                                                    context,
+                                                                    error.friendlyMessage(
+                                                                        friendlyMessageResolver,
+                                                                        fallback,
+                                                                    ),
+                                                                    Toast.LENGTH_LONG,
+                                                                )
+                                                                .show()
+                                                        }
+                                                    probingCertificate = false
                                                 }
                                             },
+                                            enabled = !probingCertificate,
                                             modifier = Modifier.padding(top = 16.dp),
                                         ) {
-                                            Text(
-                                                stringResource(
-                                                    CommonR.string.review_certificate_action
+                                            if (probingCertificate) {
+                                                CircularProgressIndicator(Modifier.size(20.dp))
+                                            } else {
+                                                Text(
+                                                    stringResource(
+                                                        CommonR.string.review_certificate_action
+                                                    )
                                                 )
-                                            )
+                                            }
                                         }
                                     } else {
                                         FilledTonalButton(
@@ -602,7 +623,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
     pendingCertReview?.let { cert ->
         val targetHost = servers.find { it.configId == resolvedServerId }?.baseUrl.orEmpty()
         val fingerprint = remember(cert) { cert.sha256Fingerprint() }
-        val hostMismatch = remember(cert, targetHost) { !cert.matchesHost(targetHost) }
+        val expired = remember(cert) { cert.hasExpired() }
         AlertDialog(
             onDismissRequest = { pendingCertReview = null },
             title = { Text(stringResource(CommonR.string.untrusted_certificate_title)) },
@@ -622,12 +643,16 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                         "${stringResource(CommonR.string.certificate_fingerprint_label)}: " +
                             fingerprint
                     )
-                    if (hostMismatch) {
+                    Text(
+                        "${stringResource(CommonR.string.certificate_validity_label)}: " +
+                            cert.validUntilText()
+                    )
+                    if (expired) {
                         Spacer(Modifier.size(8.dp))
                         Text(
                             stringResource(
-                                CommonR.string.certificate_hostname_mismatch_warning,
-                                targetHost,
+                                CommonR.string.certificate_expired_warning,
+                                cert.validUntilText(),
                             ),
                             color = MaterialTheme.colorScheme.error,
                         )

@@ -60,10 +60,11 @@ import dev.yashgarg.qbit.data.manager.CryptoManager
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.utils.friendlyMessage
+import dev.yashgarg.qbit.utils.hasExpired
 import dev.yashgarg.qbit.utils.isUntrustedCertificateError
-import dev.yashgarg.qbit.utils.matchesHost
 import dev.yashgarg.qbit.utils.rememberFriendlyMessageResolver
 import dev.yashgarg.qbit.utils.sha256Fingerprint
+import dev.yashgarg.qbit.utils.validUntilText
 import java.security.cert.X509Certificate
 import kotlinx.coroutines.launch
 
@@ -192,6 +193,7 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                         basicUser,
                         basicPass,
                         approvedPinDer,
+                        pinCleared,
                     )
                     appNavigator.navigate(NavCommand.OpenServerAsRoot)
                 }
@@ -465,7 +467,7 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
 
     pendingCertReview?.let { cert ->
         val fingerprint = remember(cert) { cert.sha256Fingerprint() }
-        val hostMismatch = remember(cert, host) { !cert.matchesHost(host) }
+        val expired = remember(cert) { cert.hasExpired() }
         AlertDialog(
             onDismissRequest = { pendingCertReview = null },
             title = { Text(stringResource(CommonR.string.untrusted_certificate_title)) },
@@ -485,12 +487,16 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                         "${stringResource(CommonR.string.certificate_fingerprint_label)}: " +
                             fingerprint
                     )
-                    if (hostMismatch) {
+                    Text(
+                        "${stringResource(CommonR.string.certificate_validity_label)}: " +
+                            cert.validUntilText()
+                    )
+                    if (expired) {
                         Spacer(Modifier.size(8.dp))
                         Text(
                             stringResource(
-                                CommonR.string.certificate_hostname_mismatch_warning,
-                                host,
+                                CommonR.string.certificate_expired_warning,
+                                cert.validUntilText(),
                             ),
                             color = MaterialTheme.colorScheme.error,
                         )
@@ -566,7 +572,6 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                         showClearPinConfirm = false
                         pinCleared = true
                         approvedPinDer = null
-                        coroutineScope.launch { viewModel.clearPinnedCertificate() }
                     }
                 ) {
                     Text(stringResource(CommonR.string.clear_pinned_certificate_action))

@@ -629,7 +629,6 @@
     <string name="certificate_subject_label">נושא</string>
     <string name="certificate_issuer_label">מנפיק</string>
     <string name="certificate_fingerprint_label">טביעת אצבע SHA-256</string>
-    <string name="certificate_hostname_mismatch_warning">התעודה לא הונפקה עבור \"%1$s\" — ייתכן שמתן אמון בה לא יפתור את בעיית החיבור.</string>
     <string name="trust_and_retry_action">אשר ונסה שוב</string>
     <string name="pinned_certificate_active_label">תעודה מוצמדת עבור שרת זה</string>
     <string name="clear_pinned_certificate_action">הסר</string>

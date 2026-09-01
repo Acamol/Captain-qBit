@@ -3,6 +3,8 @@ package dev.yashgarg.qbit.data.manager
 import android.annotation.SuppressLint
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.coroutines.runSuspendCatching
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.security.cert.X509Certificate
 import javax.net.ssl.SNIHostName
 import javax.net.ssl.SSLContext
@@ -21,6 +23,7 @@ import kotlinx.coroutines.withContext
  * scoped to this one throwaway socket only and is never handed to that real client.
  */
 object CertificateProbe {
+    private const val CONNECT_TIMEOUT_MS = 5000
     private const val HANDSHAKE_TIMEOUT_MS = 5000
 
     // Lint's CustomX509TrustManager check exists because this exact pattern is commonly misused
@@ -54,11 +57,18 @@ object CertificateProbe {
                 SSLContext.getInstance("TLS").apply {
                     init(null, arrayOf(captureTrustManager), null)
                 }
-            (sslContext.socketFactory.createSocket(host, port) as SSLSocket).use { socket ->
-                socket.soTimeout = HANDSHAKE_TIMEOUT_MS
-                socket.sslParameters =
-                    socket.sslParameters.apply { serverNames = listOf(SNIHostName(host)) }
-                socket.startHandshake()
+            // Connect on a plain socket first: SSLSocketFactory.createSocket(host, port) connects
+            // during construction, leaving no chance to bound it, so an unreachable or filtered
+            // address would block for the OS-level SYN timeout (minutes) instead of seconds.
+            Socket().use { raw ->
+                raw.connect(InetSocketAddress(host, port), CONNECT_TIMEOUT_MS)
+                (sslContext.socketFactory.createSocket(raw, host, port, true) as SSLSocket).use {
+                    socket ->
+                    socket.soTimeout = HANDSHAKE_TIMEOUT_MS
+                    socket.sslParameters =
+                        socket.sslParameters.apply { serverNames = listOf(SNIHostName(host)) }
+                    socket.startHandshake()
+                }
             }
             requireNotNull(chain?.firstOrNull()) { "Server presented no certificate" }
         }

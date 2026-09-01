@@ -94,16 +94,18 @@
     <string name="certificate_subject_label">Subject</string>
     <string name="certificate_issuer_label">Issuer</string>
     <string name="certificate_fingerprint_label">SHA-256 fingerprint</string>
-    <string name="certificate_hostname_mismatch_warning">
-        This certificate wasn\'t issued for \"%1$s\" — trusting it may not fix the connection.
+    <string name="certificate_validity_label">Valid until</string>
+    <string name="certificate_expired_warning">
+        This certificate expired on %1$s. Trusting it won\'t restore the connection — the server
+        needs a renewed certificate.
     </string>
     <string name="trust_and_retry_action">Trust &amp; retry</string>
     <string name="pinned_certificate_active_label">A certificate is pinned for this server</string>
     <string name="clear_pinned_certificate_action">Clear</string>
     <string name="clear_pinned_certificate_title">Clear pinned certificate?</string>
     <string name="clear_pinned_certificate_message">
-        The next connection to this server will need system-trusted HTTPS or a newly-approved
-        certificate.
+        Once you save, the next connection to this server will need system-trusted HTTPS or a
+        newly-approved certificate.
     </string>
 
     <!-- Notifications -->

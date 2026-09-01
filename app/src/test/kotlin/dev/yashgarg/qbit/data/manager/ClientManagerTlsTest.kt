@@ -73,4 +73,56 @@ class ClientManagerTlsTest {
             client.close()
         }
     }
+
+    @Test
+    fun `a pinned certificate with no subjectAltName is accepted`() = runTest {
+        // What people actually generate for a home server: a Common Name and nothing else.
+        // OkHttp's hostname verifier rejects these outright, so pinning has to establish identity
+        // from the certificate itself for the feature to be usable at all.
+        val cnOnly = HeldCertificate.Builder().commonName("localhost").build()
+        val certs = HandshakeCertificates.Builder().heldCertificate(cnOnly).build()
+        val cnServer = MockWebServer()
+        cnServer.useHttps(certs.sslSocketFactory())
+        cnServer.start()
+        cnServer.enqueue(MockResponse(code = 200))
+
+        val client = ClientManager.httpClient(pinnedCertificateDer = cnOnly.certificate.encoded)
+        try {
+            assertEquals(200, client.get("https://localhost:${cnServer.port}/").status.value)
+        } finally {
+            client.close()
+            cnServer.close()
+        }
+    }
+
+    @Test
+    fun `pinning a CA certificate does not trust other certificates it signed`() = runTest {
+        // openssl's `req -x509` default sets CA:TRUE, so a pinned server certificate can happen to
+        // be a usable issuer. Approving one certificate must not silently vouch for another.
+        val ca = HeldCertificate.Builder().commonName("home-ca").certificateAuthority(0).build()
+        // A subjectAltName so this leaf would otherwise satisfy hostname verification - without it
+        // the connection would fail for that unrelated reason and the test would prove nothing.
+        val signed =
+            HeldCertificate.Builder()
+                .commonName("localhost")
+                .addSubjectAlternativeName("localhost")
+                .signedBy(ca)
+                .build()
+        val certs = HandshakeCertificates.Builder().heldCertificate(signed, ca.certificate).build()
+        val caServer = MockWebServer()
+        caServer.useHttps(certs.sslSocketFactory())
+        caServer.start()
+        caServer.enqueue(MockResponse(code = 200))
+
+        val client = ClientManager.httpClient(pinnedCertificateDer = ca.certificate.encoded)
+        try {
+            client.get("https://localhost:${caServer.port}/")
+            fail("a pin must only match the approved certificate, not others it signed")
+        } catch (_: Exception) {
+            // expected
+        } finally {
+            client.close()
+            caServer.close()
+        }
+    }
 }

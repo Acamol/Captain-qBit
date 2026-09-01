@@ -246,6 +246,7 @@ constructor(
         basicAuthUsername: String?,
         basicAuthPassword: String?,
         pinnedCertificateDer: ByteArray? = null,
+        clearPinnedCertificate: Boolean = false,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val editing = serverId >= 0
@@ -254,15 +255,27 @@ constructor(
             val position =
                 if (editing) configDao.getConfigById(serverId)?.position ?: 0
                 else configDao.maxPosition() + 1
-            val existingPin =
-                if (editing) configDao.getConfigById(serverId)?.pinnedCertificate else null
+            val trimmedHost = serverHost.trim()
+            val resolvedPort = if (port.isEmpty()) null else port.trim().toInt()
+            val previous = if (editing) configDao.getConfigById(serverId) else null
+            // A pin is only meaningful for the address it was approved against, so it does not
+            // survive an edit that repoints this server elsewhere - otherwise the old host's
+            // certificate would stay a trust anchor for a machine the user never approved.
+            val addressUnchanged =
+                previous != null &&
+                    previous.baseUrl == trimmedHost &&
+                    previous.port == resolvedPort &&
+                    previous.connectionType ==
+                        (if (connectionType.trim() == "http") ConnectionType.HTTP
+                        else ConnectionType.HTTPS)
+            val existingPin = if (addressUnchanged) previous.pinnedCertificate else null
             val config =
                 ServerConfig(
                     configId = newId,
                     position = position,
                     serverName = serverName.trim(),
-                    baseUrl = serverHost.trim(),
-                    port = if (port.isEmpty()) null else port.trim().toInt(),
+                    baseUrl = trimmedHost,
+                    port = resolvedPort,
                     path = if (path.isEmpty()) null else "/$path",
                     username = username.trim(),
                     password = CryptoManager.encrypt(password.trim()) ?: password.trim(),
@@ -273,8 +286,12 @@ constructor(
                     basicAuthPassword =
                         CryptoManager.encrypt(basicAuthPassword?.trim()?.ifEmpty { null }),
                     pinnedCertificate =
-                        pinnedCertificateDer?.let { Base64.encodeToString(it, Base64.NO_WRAP) }
-                            ?: existingPin,
+                        when {
+                            pinnedCertificateDer != null ->
+                                Base64.encodeToString(pinnedCertificateDer, Base64.NO_WRAP)
+                            clearPinnedCertificate -> null
+                            else -> existingPin
+                        },
                 )
             configDao.addConfig(config)
             // First server ever added becomes the active one.
@@ -294,15 +311,6 @@ constructor(
             configDao.addConfig(
                 current.copy(pinnedCertificate = Base64.encodeToString(der, Base64.NO_WRAP))
             )
-        }
-    }
-
-    /** Clears a previously-approved pin (e.g. after the server's certificate rotated). */
-    suspend fun clearPinnedCertificate() {
-        if (!editing) return
-        withContext(Dispatchers.IO) {
-            val current = configDao.getConfigById(serverId) ?: return@withContext
-            configDao.addConfig(current.copy(pinnedCertificate = null))
         }
     }
 
