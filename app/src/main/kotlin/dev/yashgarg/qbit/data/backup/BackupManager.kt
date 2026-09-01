@@ -9,8 +9,8 @@ import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.daos.ConfigDao
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.manager.CryptoManager
+import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.ServerConfig
-import dev.yashgarg.qbit.data.models.ServerPreferences
 import dev.yashgarg.qbit.utils.LocalizedContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -34,7 +34,7 @@ class BackupManager
 constructor(
     @param:ApplicationContext private val context: Context,
     private val configDao: ConfigDao,
-    private val prefsStore: DataStore<ServerPreferences>,
+    private val prefsStore: DataStore<AppPreferences>,
     private val clientManager: ClientManager,
 ) {
 
@@ -54,7 +54,7 @@ constructor(
         uri: Uri,
         passphrase: String,
         servers: List<ServerConfig>,
-        preferences: ServerPreferences?,
+        preferences: AppPreferences?,
         preferenceGroups: Set<PrefGroup>,
         categoryColors: Map<String, Int>?,
     ) =

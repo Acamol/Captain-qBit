@@ -17,9 +17,13 @@ data class ServerViewPrefs(
     val filterUntagged: Boolean = false,
 )
 
+/**
+ * App-wide settings, persisted via DataStore: appearance, notifications, polling intervals and the
+ * add-torrent and per-server view defaults. Nothing here is sent to a qBittorrent server.
+ */
 @Keep
 @Serializable
-data class ServerPreferences(
+data class AppPreferences(
     val addTorrentAutoTmm: Boolean = false,
     val addTorrentPaused: Boolean = false,
     val addTorrentCategory: String = "",

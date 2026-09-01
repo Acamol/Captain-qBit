@@ -14,8 +14,8 @@ import dev.yashgarg.qbit.data.backup.InvalidBackupException
 import dev.yashgarg.qbit.data.backup.PrefGroup
 import dev.yashgarg.qbit.data.backup.extractGroups
 import dev.yashgarg.qbit.data.daos.ConfigDao
+import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.ServerConfig
-import dev.yashgarg.qbit.data.models.ServerPreferences
 import dev.yashgarg.qbit.ui.common.StatusViewModel
 import javax.crypto.AEADBadTagException
 import javax.inject.Inject
@@ -38,7 +38,7 @@ class BackupViewModel
 constructor(
     private val backupManager: BackupManager,
     private val configDao: ConfigDao,
-    private val prefsStore: DataStore<ServerPreferences>,
+    private val prefsStore: DataStore<AppPreferences>,
     application: Application,
 ) : StatusViewModel(application) {
 

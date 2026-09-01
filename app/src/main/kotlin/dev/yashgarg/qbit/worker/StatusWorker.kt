@@ -23,7 +23,7 @@ import dev.yashgarg.qbit.MainActivity
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.manager.ClientManager
-import dev.yashgarg.qbit.data.models.ServerPreferences
+import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.ui.rss.flattenFeeds
 import dev.yashgarg.qbit.utils.LocalizedContext
@@ -45,7 +45,7 @@ constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val clientManager: ClientManager,
-    private val prefsStore: DataStore<ServerPreferences>,
+    private val prefsStore: DataStore<AppPreferences>,
 ) : CoroutineWorker(appContext, workerParams) {
 
     // Notification text has to honour the language chosen in the app, which the worker's
@@ -202,7 +202,7 @@ constructor(
      * (which don't change completion_on) never re-alert. The watermark is written only when it
      * moves.
      */
-    private suspend fun notifyCompletions(torrents: List<Torrent>, prefs: ServerPreferences) {
+    private suspend fun notifyCompletions(torrents: List<Torrent>, prefs: AppPreferences) {
         val serverId = prefs.activeServerId
         // Only actually-complete torrents carry a real completion_on; incomplete ones report -1.
         val completed = torrents.filter { it.progress >= 1f && it.completedOn > 0 }
@@ -250,7 +250,7 @@ constructor(
      * in-memory baseline. A torrent already done when we first watch is never in the set, so it
      * doesn't alert; one caught mid-check is recorded and alerts once it finishes.
      */
-    private suspend fun notifyRechecks(torrents: List<Torrent>, prefs: ServerPreferences) {
+    private suspend fun notifyRechecks(torrents: List<Torrent>, prefs: AppPreferences) {
         val serverId = prefs.activeServerId
         val byHash = torrents.associateBy(Torrent::hash)
         val nowChecking = torrents.filter { it.state.isChecking() }.map(Torrent::hash).toSet()
@@ -295,7 +295,7 @@ constructor(
      * notifications were turned on - is seeded silently rather than alerting for its whole existing
      * backlog.
      */
-    private suspend fun notifyNewRssArticles(items: List<RssItem>, prefs: ServerPreferences) {
+    private suspend fun notifyNewRssArticles(items: List<RssItem>, prefs: AppPreferences) {
         val serverId = prefs.activeServerId
         val feeds = items.flattenFeeds()
 

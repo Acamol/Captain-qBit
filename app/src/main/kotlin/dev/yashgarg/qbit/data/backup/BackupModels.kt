@@ -1,7 +1,7 @@
 package dev.yashgarg.qbit.data.backup
 
+import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.ServerConfig
-import dev.yashgarg.qbit.data.models.ServerPreferences
 import kotlinx.serialization.Serializable
 
 /** Independently selectable groups of app preferences for export/import. */
@@ -21,7 +21,7 @@ enum class PrefGroup {
 @Serializable
 data class ConfigBackup(
     val servers: List<ServerConfig>,
-    val preferences: ServerPreferences? = null,
+    val preferences: AppPreferences? = null,
     val preferenceGroups: Set<PrefGroup> = emptySet(),
     val categoryColors: Map<String, Int>? = null,
 )
@@ -38,7 +38,7 @@ fun ConfigBackup.availablePrefGroups(): Set<PrefGroup> =
     }
 
 /** Copies the fields belonging to [group] from [src] onto this preferences object. */
-fun ServerPreferences.overlayGroup(group: PrefGroup, src: ServerPreferences): ServerPreferences =
+fun AppPreferences.overlayGroup(group: PrefGroup, src: AppPreferences): AppPreferences =
     when (group) {
         PrefGroup.APPEARANCE ->
             copy(
@@ -70,8 +70,8 @@ fun ServerPreferences.overlayGroup(group: PrefGroup, src: ServerPreferences): Se
 /**
  * Builds a snapshot containing only [groups]' fields from this preferences object (rest default).
  */
-fun ServerPreferences.extractGroups(groups: Set<PrefGroup>): ServerPreferences =
-    groups.fold(ServerPreferences()) { acc, group -> acc.overlayGroup(group, this) }
+fun AppPreferences.extractGroups(groups: Set<PrefGroup>): AppPreferences =
+    groups.fold(AppPreferences()) { acc, group -> acc.overlayGroup(group, this) }
 
 /** How an import reconciles the backup's servers with the ones already saved. */
 enum class ImportMode {

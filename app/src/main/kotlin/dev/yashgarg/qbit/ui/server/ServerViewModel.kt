@@ -16,9 +16,9 @@ import dev.yashgarg.qbit.data.daos.ConfigDao
 import dev.yashgarg.qbit.data.manager.CertificateProbe
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.manager.PendingTorrentIntent
+import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.ContentTreeItem
 import dev.yashgarg.qbit.data.models.ServerConfig
-import dev.yashgarg.qbit.data.models.ServerPreferences
 import dev.yashgarg.qbit.data.models.ServerViewPrefs
 import dev.yashgarg.qbit.ui.common.StatusViewModel
 import dev.yashgarg.qbit.utils.TorrentFileParser
@@ -42,7 +42,7 @@ class ServerViewModel
 @Inject
 constructor(
     private val repository: QbitRepository,
-    private val prefsStore: DataStore<ServerPreferences>,
+    private val prefsStore: DataStore<AppPreferences>,
     private val configDao: ConfigDao,
     private val clientManager: ClientManager,
     private val pendingTorrentIntent: PendingTorrentIntent,
@@ -125,8 +125,8 @@ constructor(
     // Eagerly so the DataStore-backed flow starts collecting as soon as the ViewModel is created;
     // the add-torrent dialog reads .value directly (no long-lived collector), and WhileSubscribed
     // would leave it stuck on the default until something subscribed.
-    val addTorrentPrefs: StateFlow<ServerPreferences> =
-        prefsStore.data.stateIn(viewModelScope, SharingStarted.Eagerly, ServerPreferences())
+    val addTorrentPrefs: StateFlow<AppPreferences> =
+        prefsStore.data.stateIn(viewModelScope, SharingStarted.Eagerly, AppPreferences())
 
     fun saveAddTorrentPrefs(autoTmm: Boolean, paused: Boolean) {
         viewModelScope.launch {
@@ -203,7 +203,7 @@ constructor(
      * Restore [serverId]'s saved filters + sort into the UI state. Servers without a per-server
      * entry yet start from the defaults.
      */
-    private fun applyViewPrefs(prefs: ServerPreferences, serverId: Int) {
+    private fun applyViewPrefs(prefs: AppPreferences, serverId: Int) {
         val v = prefs.serverViewPrefs[serverId] ?: ServerViewPrefs()
         val option =
             try {

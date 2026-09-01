@@ -20,8 +20,8 @@ import dev.yashgarg.qbit.data.MIGRATION_6_7
 import dev.yashgarg.qbit.data.QbitRepository
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.manager.ClientManagerImpl
-import dev.yashgarg.qbit.data.models.ServerPreferences
-import dev.yashgarg.qbit.data.preferences.ServerPreferencesSerializer
+import dev.yashgarg.qbit.data.models.AppPreferences
+import dev.yashgarg.qbit.data.preferences.AppPreferencesSerializer
 import javax.inject.Qualifier
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
@@ -58,16 +58,15 @@ class AppModule {
 
     @Singleton
     @Provides
-    fun provideServerPreferencesDataStore(
+    fun provideAppPreferencesDataStore(
         @ApplicationContext appContext: Context
-    ): DataStore<ServerPreferences> {
+    ): DataStore<AppPreferences> {
         return DataStoreFactory.create(
-            serializer = ServerPreferencesSerializer,
-            corruptionHandler =
-                ReplaceFileCorruptionHandler(produceNewData = { ServerPreferences() }),
+            serializer = AppPreferencesSerializer,
+            corruptionHandler = ReplaceFileCorruptionHandler(produceNewData = { AppPreferences() }),
             scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
             produceFile = {
-                appContext.preferencesDataStoreFile(ServerPreferencesSerializer.SERVER_PREFS_NAME)
+                appContext.preferencesDataStoreFile(AppPreferencesSerializer.APP_PREFS_NAME)
             },
         )
     }

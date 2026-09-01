@@ -37,8 +37,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.manager.PendingTorrentIntent
+import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.ConfigStatus
-import dev.yashgarg.qbit.data.models.ServerPreferences
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.ui.backup.BackupDialogs
 import dev.yashgarg.qbit.ui.backup.BackupViewModel
@@ -68,7 +68,7 @@ import kotlinx.coroutines.withContext
 class MainActivity : AppCompatActivity() {
 
     @Inject lateinit var clientManager: ClientManager
-    @Inject lateinit var serverPrefsStore: DataStore<ServerPreferences>
+    @Inject lateinit var appPrefsStore: DataStore<AppPreferences>
     @Inject lateinit var appNavigator: AppNavigator
     @Inject lateinit var pendingTorrentIntent: PendingTorrentIntent
 
@@ -91,7 +91,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            val dynamicColorsFlow = remember { serverPrefsStore.data.map { it.dynamicColors } }
+            val dynamicColorsFlow = remember { appPrefsStore.data.map { it.dynamicColors } }
             val dynamicColors by dynamicColorsFlow.collectAsStateWithLifecycle(initialValue = false)
             QbitComposeTheme(dynamicColors = dynamicColors) {
                 QbitNavHost(appNavigator = appNavigator, onExitDoubleBack = ::onExitDoubleBack)
@@ -148,7 +148,7 @@ class MainActivity : AppCompatActivity() {
                     LaunchedEffect(Unit) {
                         if (openingBackupFile) return@LaunchedEffect
                         val alreadyAsked =
-                            serverPrefsStore.data.map { it.notificationPermissionAsked }.first()
+                            appPrefsStore.data.map { it.notificationPermissionAsked }.first()
                         if (
                             !alreadyAsked &&
                                 !AppNotificationManager.checkPermission(this@MainActivity)
@@ -170,7 +170,7 @@ class MainActivity : AppCompatActivity() {
                                     onClick = {
                                         showNotificationRationale = false
                                         lifecycleScope.launch {
-                                            serverPrefsStore.updateData {
+                                            appPrefsStore.updateData {
                                                 it.copy(notificationPermissionAsked = true)
                                             }
                                         }
@@ -187,7 +187,7 @@ class MainActivity : AppCompatActivity() {
                                     onClick = {
                                         showNotificationRationale = false
                                         lifecycleScope.launch {
-                                            serverPrefsStore.updateData {
+                                            appPrefsStore.updateData {
                                                 it.copy(notificationPermissionAsked = true)
                                             }
                                         }
@@ -216,7 +216,7 @@ class MainActivity : AppCompatActivity() {
                     LaunchedEffect(Unit) {
                         if (openingBackupFile) return@LaunchedEffect
                         val alreadyAsked =
-                            serverPrefsStore.data.map { it.localNetworkPermissionAsked }.first()
+                            appPrefsStore.data.map { it.localNetworkPermissionAsked }.first()
                         if (
                             !alreadyAsked &&
                                 ContextCompat.checkSelfPermission(
@@ -241,7 +241,7 @@ class MainActivity : AppCompatActivity() {
                                     onClick = {
                                         showLocalNetworkRationale = false
                                         lifecycleScope.launch {
-                                            serverPrefsStore.updateData {
+                                            appPrefsStore.updateData {
                                                 it.copy(localNetworkPermissionAsked = true)
                                             }
                                         }
@@ -258,7 +258,7 @@ class MainActivity : AppCompatActivity() {
                                     onClick = {
                                         showLocalNetworkRationale = false
                                         lifecycleScope.launch {
-                                            serverPrefsStore.updateData {
+                                            appPrefsStore.updateData {
                                                 it.copy(localNetworkPermissionAsked = true)
                                             }
                                         }
@@ -280,7 +280,7 @@ class MainActivity : AppCompatActivity() {
         // reactively by the Compose theme (see setContent), so no activity recreate is needed.
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                serverPrefsStore.data
+                appPrefsStore.data
                     .map { it.themeMode }
                     .distinctUntilChanged()
                     .collect { themeMode ->
@@ -302,7 +302,7 @@ class MainActivity : AppCompatActivity() {
         // applies its own selection directly and doesn't rely on this.
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                serverPrefsStore.data
+                appPrefsStore.data
                     .map { it.languageTag }
                     .distinctUntilChanged()
                     .drop(1)
@@ -361,7 +361,7 @@ class MainActivity : AppCompatActivity() {
                 // with a server configured.
                 combine(
                         clientManager.configStatus,
-                        serverPrefsStore.data
+                        appPrefsStore.data
                             .map {
                                 it.statusNotification ||
                                     it.notifyOnComplete ||

@@ -7,7 +7,7 @@ import androidx.datastore.core.DataStore
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
-import dev.yashgarg.qbit.data.models.ServerPreferences
+import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.utils.AppContextHolder
 import dev.yashgarg.qbit.utils.CrashHandler
@@ -21,7 +21,7 @@ class QbitApplication : Application(), Configuration.Provider {
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
 
-    @Inject lateinit var serverPrefsStore: DataStore<ServerPreferences>
+    @Inject lateinit var appPrefsStore: DataStore<AppPreferences>
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
@@ -34,7 +34,7 @@ class QbitApplication : Application(), Configuration.Provider {
 
         // Apply the saved theme (Light / Dark / Follow system) before any activity is created.
         // Material You dynamic colors are applied Compose-side by QbitComposeTheme.
-        val prefs = runBlocking { serverPrefsStore.data.first() }
+        val prefs = runBlocking { appPrefsStore.data.first() }
         AppCompatDelegate.setDefaultNightMode(prefs.themeMode)
 
         // Below API 33 setApplicationLocales holds the choice in memory only, so it has to be
