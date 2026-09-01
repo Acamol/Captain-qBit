@@ -33,7 +33,7 @@ private object NumberFormat {
         )
 
     fun bytesToHumanReadable(bytes: Long): String {
-        val context = AppContextHolder.context
+        val context = AppContextHolder.localized
         val absB = if (bytes == Long.MIN_VALUE) Long.MAX_VALUE else abs(bytes)
         if (absB < 1024) {
             return "$bytes ${context.getString(CommonR.string.unit_bytes)}".isolateLtr()
@@ -63,7 +63,7 @@ private object NumberFormat {
     }
 
     fun secondsToTime(seconds: Long): String {
-        val context = AppContextHolder.context
+        val context = AppContextHolder.localized
         var duration = seconds
         val days: Long = TimeUnit.SECONDS.toDays(duration)
         duration -= TimeUnit.DAYS.toSeconds(days)

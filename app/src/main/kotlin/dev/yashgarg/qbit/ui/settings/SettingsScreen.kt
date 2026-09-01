@@ -63,6 +63,7 @@ import dev.yashgarg.qbit.ui.navigation.NoWindowInsets
 import dev.yashgarg.qbit.ui.rss.MaxArticlesPerFeedDialog
 import dev.yashgarg.qbit.ui.rss.RefreshIntervalDialog
 import dev.yashgarg.qbit.ui.server.SpeedLimitsDialog
+import dev.yashgarg.qbit.utils.LocalizedContext
 import dev.yashgarg.qbit.worker.StatusWorker
 
 private val BACKUP_MIME_TYPES = arrayOf("application/json", "application/octet-stream", "*/*")
@@ -149,6 +150,8 @@ fun SettingsScreen(
 
     var showThemeDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
+    // Seeded from the live locale rather than the preference: on API 33+ the two can diverge
+    // if the language was changed from the system's per-app language screen.
     var currentLanguageTag by remember {
         mutableStateOf(AppCompatDelegate.getApplicationLocales().toLanguageTags())
     }
@@ -518,6 +521,22 @@ fun SettingsScreen(
     }
 
     if (showLanguageDialog) {
+        val selectLanguage: (String) -> Unit = { tag ->
+            // Applied here rather than left to MainActivity's observer, so this works even when the
+            // stored tag is stale - on API 33+ the system's own per-app language screen can change
+            // the locale without this app knowing. The preference is what makes the choice survive
+            // a cold start below API 33, where setApplicationLocales keeps it in memory only.
+            AppCompatDelegate.setApplicationLocales(
+                if (tag.isEmpty()) LocaleListCompat.getEmptyLocaleList()
+                else LocaleListCompat.forLanguageTags(tag)
+            )
+            viewModel.setLanguageTag(tag)
+            // Android caches channel names from creation time, so a new locale alone won't
+            // retranslate them. Recreating with the same ids updates the names in place.
+            AppNotificationManager.createNotificationChannel(LocalizedContext.of(context))
+            currentLanguageTag = tag
+            showLanguageDialog = false
+        }
         AlertDialog(
             onDismissRequest = { showLanguageDialog = false },
             title = { Text(stringResource(CommonR.string.language_label)) },
@@ -527,27 +546,13 @@ fun SettingsScreen(
                         Row(
                             modifier =
                                 Modifier.fillMaxWidth()
-                                    .clickable {
-                                        AppCompatDelegate.setApplicationLocales(
-                                            if (tag.isEmpty()) LocaleListCompat.getEmptyLocaleList()
-                                            else LocaleListCompat.forLanguageTags(tag)
-                                        )
-                                        currentLanguageTag = tag
-                                        showLanguageDialog = false
-                                    }
+                                    .clickable { selectLanguage(tag) }
                                     .padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             RadioButton(
                                 selected = currentLanguageTag == tag,
-                                onClick = {
-                                    AppCompatDelegate.setApplicationLocales(
-                                        if (tag.isEmpty()) LocaleListCompat.getEmptyLocaleList()
-                                        else LocaleListCompat.forLanguageTags(tag)
-                                    )
-                                    currentLanguageTag = tag
-                                    showLanguageDialog = false
-                                },
+                                onClick = { selectLanguage(tag) },
                             )
                             Spacer(Modifier.size(12.dp))
                             Text(stringResource(labelRes))

@@ -26,6 +26,7 @@ import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.models.ServerPreferences
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.ui.rss.flattenFeeds
+import dev.yashgarg.qbit.utils.LocalizedContext
 import dev.yashgarg.qbit.utils.toHumanReadable
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.delay
@@ -47,16 +48,22 @@ constructor(
     private val prefsStore: DataStore<ServerPreferences>,
 ) : CoroutineWorker(appContext, workerParams) {
 
+    // Notification text has to honour the language chosen in the app, which the worker's
+    // applicationContext does not below API 33. Channel ids are translatable="false" and stay on
+    // the raw context, as do the Intents and the notification manager itself.
+    private val localized: Context
+        get() = LocalizedContext.of(applicationContext)
+
     // Lets WorkManager start this as an expedited foreground service right away. Pick the channel
     // up front from the user's prefs so an events-only user never even briefly sees the louder
     // status notification.
     override suspend fun getForegroundInfo(): ForegroundInfo =
         if (prefsStore.data.first().statusNotification) {
-            createForegroundInfo(applicationContext.getString(CommonR.string.status_connecting), "")
+            createForegroundInfo(localized.getString(CommonR.string.status_connecting), "")
         } else {
             createForegroundInfo(
-                applicationContext.getString(CommonR.string.app_name),
-                applicationContext.getString(CommonR.string.status_alerts_are_on),
+                localized.getString(CommonR.string.app_name),
+                localized.getString(CommonR.string.status_alerts_are_on),
                 minimal = true,
             )
         }
@@ -113,10 +120,8 @@ constructor(
                         val info = client.getGlobalTransferInfo()
                         setForeground(
                             createForegroundInfo(
-                                applicationContext.getString(
-                                    CommonR.string.status_server_connected
-                                ),
-                                applicationContext.getString(
+                                localized.getString(CommonR.string.status_server_connected),
+                                localized.getString(
                                     CommonR.string.status_dl_ul_speed,
                                     info.dlInfoSpeed.toHumanReadable(),
                                     info.upInfoSpeed.toHumanReadable(),
@@ -130,8 +135,8 @@ constructor(
                         // readout.
                         setForeground(
                             createForegroundInfo(
-                                applicationContext.getString(CommonR.string.status_server_offline),
-                                applicationContext.getString(CommonR.string.status_reconnecting),
+                                localized.getString(CommonR.string.status_server_offline),
+                                localized.getString(CommonR.string.status_reconnecting),
                             )
                         )
                     }
@@ -143,8 +148,8 @@ constructor(
                 // instead of the speed readout.
                 setForeground(
                     createForegroundInfo(
-                        applicationContext.getString(CommonR.string.app_name),
-                        applicationContext.getString(CommonR.string.status_alerts_are_on),
+                        localized.getString(CommonR.string.app_name),
+                        localized.getString(CommonR.string.status_alerts_are_on),
                         minimal = true,
                     )
                 )
@@ -224,7 +229,7 @@ constructor(
             .forEach {
                 notifyEvent(
                     "complete:${it.hash}".hashCode(),
-                    applicationContext.getString(CommonR.string.status_download_complete),
+                    localized.getString(CommonR.string.status_download_complete),
                     it.name,
                     torrentHash = it.hash,
                 )
@@ -269,7 +274,7 @@ constructor(
                 byHash[hash]?.let {
                     notifyEvent(
                         "checked:$hash".hashCode(),
-                        applicationContext.getString(CommonR.string.status_check_complete),
+                        localized.getString(CommonR.string.status_check_complete),
                         it.name,
                     )
                 }
@@ -321,13 +326,13 @@ constructor(
             if (newArticles.isNotEmpty()) {
                 notifyEvent(
                     "rss:$key".hashCode(),
-                    applicationContext.resources.getQuantityString(
+                    localized.resources.getQuantityString(
                         CommonR.plurals.status_new_rss_articles,
                         newArticles.size,
                     ),
                     if (newArticles.size == 1) newArticles.first().title
                     else
-                        applicationContext.getString(
+                        localized.getString(
                             CommonR.string.status_new_articles_in_feed,
                             newArticles.size,
                             feed.name,
@@ -402,7 +407,7 @@ constructor(
                     listOf(
                         Action(
                             null,
-                            applicationContext.getString(CommonR.string.close_action),
+                            localized.getString(CommonR.string.close_action),
                             closeIntent,
                         )
                     ),

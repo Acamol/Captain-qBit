@@ -66,6 +66,10 @@ data class ServerPreferences(
     // annotation would land) so reads flowing into AppCompatDelegate.setDefaultNightMode are
     // type-checked against the valid night-mode constants.
     @get:AppCompatDelegate.NightMode val themeMode: Int = AppCompatDelegate.MODE_NIGHT_YES,
+    // The chosen per-app language as a BCP-47 tag; "" follows the system locale list. Persisted
+    // because below API 33 AppCompatDelegate.setApplicationLocales keeps the choice in memory only,
+    // so without this the app reverts to the system language on every cold start.
+    val languageTag: String = "",
     // Highest versionCode whose "What's New" has been shown. 0 = never recorded (fresh install),
     // so the dialog is skipped on first run and only appears after an upgrade.
     val lastSeenVersionCode: Int = 0,

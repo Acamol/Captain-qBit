@@ -141,6 +141,12 @@ android {
         }
     }
 
+    // The in-app language picker switches locale at runtime, which only works if every translation
+    // is present in the installed app. Releases here are APKs, so they always are - this keeps that
+    // true for anyone building an App Bundle, where Play would otherwise ship only the device
+    // language and leave the picker with nothing to switch to.
+    bundle { language { enableSplit = false } }
+
     lint {
         abortOnError = true
         checkReleaseBuilds = false

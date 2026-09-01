@@ -11,6 +11,7 @@ import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.manager.CryptoManager
 import dev.yashgarg.qbit.data.models.ServerConfig
 import dev.yashgarg.qbit.data.models.ServerPreferences
+import dev.yashgarg.qbit.utils.LocalizedContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +37,13 @@ constructor(
     private val prefsStore: DataStore<ServerPreferences>,
     private val clientManager: ClientManager,
 ) {
+
+    // These strings become exception messages that BackupViewModel re-surfaces verbatim as toasts,
+    // so they have to follow the language chosen in the app - which the injected application
+    // context does not below API 33.
+    private val localized: Context
+        get() = LocalizedContext.of(context)
+
     private val json = Json { ignoreUnknownKeys = true }
 
     /**
@@ -86,7 +94,7 @@ constructor(
 
             (context.contentResolver.openOutputStream(uri)
                     ?: throw InvalidBackupException(
-                        context.getString(CommonR.string.error_could_not_open_file)
+                        localized.getString(CommonR.string.error_could_not_open_file)
                     ))
                 .use { it.write(bytes) }
         }
@@ -101,7 +109,7 @@ constructor(
             val raw =
                 (context.contentResolver.openInputStream(uri)
                         ?: throw InvalidBackupException(
-                            context.getString(CommonR.string.error_could_not_open_file)
+                            localized.getString(CommonR.string.error_could_not_open_file)
                         ))
                     .use { it.readBytes() }
 
@@ -110,12 +118,12 @@ constructor(
                     json.decodeFromString(BackupEnvelope.serializer(), raw.decodeToString())
                 } catch (e: Exception) {
                     throw InvalidBackupException(
-                        context.getString(CommonR.string.error_not_a_backup_file)
+                        localized.getString(CommonR.string.error_not_a_backup_file)
                     )
                 }
             if (envelope.format != BackupEnvelope.FORMAT) {
                 throw InvalidBackupException(
-                    context.getString(CommonR.string.error_not_a_backup_file)
+                    localized.getString(CommonR.string.error_not_a_backup_file)
                 )
             }
 
@@ -139,7 +147,7 @@ constructor(
                 json.decodeFromString(ConfigBackup.serializer(), plaintext.decodeToString())
             if (backup.servers.isEmpty()) {
                 throw InvalidBackupException(
-                    context.getString(CommonR.string.error_backup_no_servers)
+                    localized.getString(CommonR.string.error_backup_no_servers)
                 )
             }
             backup

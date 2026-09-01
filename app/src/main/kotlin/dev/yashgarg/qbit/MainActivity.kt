@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import androidx.core.os.LocaleListCompat
 import androidx.core.view.WindowCompat
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.Lifecycle
@@ -50,12 +51,14 @@ import dev.yashgarg.qbit.ui.whatsnew.WhatsNewDialog
 import dev.yashgarg.qbit.ui.whatsnew.WhatsNewViewModel
 import dev.yashgarg.qbit.utils.CrashHandler
 import dev.yashgarg.qbit.utils.GitHubIssueLink
+import dev.yashgarg.qbit.utils.LocalizedContext
 import dev.yashgarg.qbit.utils.rememberCopyToClipboard
 import dev.yashgarg.qbit.worker.StatusWorker
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -283,6 +286,40 @@ class MainActivity : AppCompatActivity() {
                     .collect { themeMode ->
                         if (themeMode != AppCompatDelegate.getDefaultNightMode()) {
                             AppCompatDelegate.setDefaultNightMode(themeMode)
+                        }
+                    }
+            }
+        }
+
+        // Applies a language arriving from a restored backup, for the same reason the theme
+        // observer
+        // above exists: the import can tear down a screen collector before an event is seen.
+        //
+        // drop(1) discards DataStore's replay of the current value, so this only ever reacts to the
+        // preference actually changing. That matters on API 33+, where the system's own per-app
+        // language screen can change the locale without going through this app: enforcing the
+        // stored value on startup would undo that choice on every launch. The Settings picker
+        // applies its own selection directly and doesn't rely on this.
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                serverPrefsStore.data
+                    .map { it.languageTag }
+                    .distinctUntilChanged()
+                    .drop(1)
+                    .collect { languageTag ->
+                        if (
+                            languageTag !=
+                                AppCompatDelegate.getApplicationLocales().toLanguageTags()
+                        ) {
+                            AppCompatDelegate.setApplicationLocales(
+                                if (languageTag.isEmpty()) LocaleListCompat.getEmptyLocaleList()
+                                else LocaleListCompat.forLanguageTags(languageTag)
+                            )
+                            // Android caches channel names from creation time, so a new locale
+                            // alone won't retranslate them. Recreating with the same ids does.
+                            AppNotificationManager.createNotificationChannel(
+                                LocalizedContext.of(applicationContext)
+                            )
                         }
                     }
             }

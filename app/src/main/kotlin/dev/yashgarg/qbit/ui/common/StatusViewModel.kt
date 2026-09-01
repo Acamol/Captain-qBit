@@ -1,6 +1,7 @@
 package dev.yashgarg.qbit.ui.common
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.ViewModel
@@ -10,6 +11,7 @@ import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import dev.yashgarg.qbit.common.R as CommonR
+import dev.yashgarg.qbit.utils.LocalizedContext
 import dev.yashgarg.qbit.utils.friendlyMessage
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -26,13 +28,19 @@ abstract class StatusViewModel(private val application: Application) : ViewModel
     private val _status = MutableSharedFlow<String>()
     val status = _status.asSharedFlow()
 
+    // These messages are shown as toasts, so they have to honour the language chosen in the app -
+    // which the Application context on its own does not below API 33. Resolved per lookup rather
+    // than cached, so switching language takes effect without recreating the ViewModel.
+    private val localized: Context
+        get() = LocalizedContext.of(application)
+
     /** Resolves a string resource, for building [launchStatus]/[emitStatus] messages. */
     protected fun getString(resId: Int, vararg formatArgs: Any): String =
-        application.getString(resId, *formatArgs)
+        localized.getString(resId, *formatArgs)
 
     /** Resolves a `<plurals>` resource, for building [launchStatus]/[emitStatus] messages. */
     protected fun getQuantityString(resId: Int, quantity: Int, vararg formatArgs: Any): String =
-        application.resources.getQuantityString(resId, quantity, *formatArgs)
+        localized.resources.getQuantityString(resId, quantity, *formatArgs)
 
     /**
      * Member overload of the top-level [dev.yashgarg.qbit.utils.friendlyMessage] resolving against
@@ -40,8 +48,8 @@ abstract class StatusViewModel(private val application: Application) : ViewModel
      * `throwable.friendlyMessage(fallback)` without threading a resolver through themselves.
      */
     protected fun Throwable.friendlyMessage(
-        fallback: String = application.getString(CommonR.string.unknown_error)
-    ): String = friendlyMessage({ application.getString(it) }, fallback)
+        fallback: String = getString(CommonR.string.unknown_error)
+    ): String = friendlyMessage({ getString(it) }, fallback)
 
     /** For call sites whose success/failure shape doesn't fit [launchStatus]. */
     protected suspend fun emitStatus(message: String) {

@@ -255,6 +255,11 @@ constructor(
         viewModelScope.launch { prefsStore.updateData { it.copy(themeMode = mode) } }
     }
 
+    /** [tag] is a BCP-47 language tag, or "" to follow the system locale. */
+    fun setLanguageTag(tag: String) {
+        viewModelScope.launch { prefsStore.updateData { it.copy(languageTag = tag) } }
+    }
+
     fun setStatusNotification(enabled: Boolean) {
         viewModelScope.launch { prefsStore.updateData { it.copy(statusNotification = enabled) } }
     }

@@ -40,7 +40,12 @@ fun ConfigBackup.availablePrefGroups(): Set<PrefGroup> =
 /** Copies the fields belonging to [group] from [src] onto this preferences object. */
 fun ServerPreferences.overlayGroup(group: PrefGroup, src: ServerPreferences): ServerPreferences =
     when (group) {
-        PrefGroup.APPEARANCE -> copy(themeMode = src.themeMode, dynamicColors = src.dynamicColors)
+        PrefGroup.APPEARANCE ->
+            copy(
+                themeMode = src.themeMode,
+                dynamicColors = src.dynamicColors,
+                languageTag = src.languageTag,
+            )
         PrefGroup.NOTIFICATIONS ->
             copy(
                 statusNotification = src.statusNotification,
