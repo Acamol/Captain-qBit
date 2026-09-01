@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.res.Resources
 import dev.yashgarg.qbit.common.R as CommonR
 import java.time.ZoneId
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -36,11 +37,26 @@ class NumberFormatTest {
         whenever(context.getString(CommonR.string.unit_tebibytes)).thenReturn("TiB")
         whenever(context.getString(CommonR.string.unit_pebibytes)).thenReturn("PiB")
         whenever(context.getString(CommonR.string.unit_exbibytes)).thenReturn("EiB")
-        whenever(context.getString(CommonR.string.unit_hours_suffix)).thenReturn("h")
-        whenever(context.getString(CommonR.string.unit_minutes_suffix)).thenReturn("m")
-        whenever(context.getString(CommonR.string.unit_seconds_suffix)).thenReturn("s")
-        whenever(resources.getQuantityString(eq(CommonR.plurals.unit_days_suffix), any()))
-            .thenReturn("d")
+        // Duration segments carry their own count, so these stand in for the real resources by
+        // actually formatting the argument - a mock returning a bare suffix would hide whether the
+        // count reaches the string at all.
+        whenever(context.getString(eq(CommonR.string.unit_hours_suffix), any())).thenAnswer {
+            "${it.getArgument<Any>(1)}h"
+        }
+        whenever(context.getString(eq(CommonR.string.unit_minutes_suffix), any())).thenAnswer {
+            "${it.getArgument<Any>(1)}m"
+        }
+        whenever(context.getString(eq(CommonR.string.unit_seconds_suffix), any())).thenAnswer {
+            "${it.getArgument<Any>(1)}s"
+        }
+        whenever(
+                resources.getQuantityString(
+                    eq(CommonR.plurals.unit_days_suffix),
+                    any(),
+                    any<Any>(),
+                )
+            )
+            .thenAnswer { "${it.getArgument<Any>(2)}d" }
         AppContextHolder.context = context
     }
 
@@ -77,5 +93,37 @@ class NumberFormatTest {
     @Test
     fun testTimeWithDaysUsesQuantityStringForDaySuffix() {
         assertTrue(timeInSecondsWithDays.toTime() == isolated("2d 4h 46m 40s"))
+    }
+
+    @Test
+    fun `a translation controls its own spacing and may omit the count`() {
+        // Stands in for Hebrew, where units are words rather than single letters and the dual form
+        // ("two days") already carries the count. Concatenating the number onto the suffix would
+        // produce "2יומיים 4שע׳" here.
+        val context = mock<Context>()
+        val resources = mock<Resources>()
+        whenever(context.resources).thenReturn(resources)
+        whenever(context.getString(eq(CommonR.string.unit_hours_suffix), any())).thenAnswer {
+            "${it.getArgument<Any>(1)} שע׳"
+        }
+        whenever(context.getString(eq(CommonR.string.unit_minutes_suffix), any())).thenAnswer {
+            "${it.getArgument<Any>(1)} דק׳"
+        }
+        whenever(context.getString(eq(CommonR.string.unit_seconds_suffix), any())).thenAnswer {
+            "${it.getArgument<Any>(1)} שנ׳"
+        }
+        whenever(
+                resources.getQuantityString(
+                    eq(CommonR.plurals.unit_days_suffix),
+                    any(),
+                    any<Any>(),
+                )
+            )
+            .thenAnswer {
+                if (it.getArgument<Int>(1) == 2) "יומיים" else "${it.getArgument<Any>(2)} ימים"
+            }
+        AppContextHolder.context = context
+
+        assertEquals(isolated("יומיים 4 שע׳ 46 דק׳ 40 שנ׳"), timeInSecondsWithDays.toTime())
     }
 }

@@ -757,12 +757,14 @@
     <string name="unit_pebibytes" translatable="false">PiB</string>
     <string name="unit_exbibytes" translatable="false">EiB</string>
 
-    <!-- Time-duration suffixes (days/hours/minutes/seconds) -->
+    <!-- Time-duration segments (days/hours/minutes/seconds), joined with spaces to form e.g.
+         "2d 4h 46m". Each carries its own count so a translation can space it, or omit it where
+         the word already implies the number (Hebrew's dual form, for instance). -->
     <plurals name="unit_days_suffix">
-        <item quantity="one">d</item>
-        <item quantity="other">d</item>
+        <item quantity="one">%1$dd</item>
+        <item quantity="other">%1$dd</item>
     </plurals>
-    <string name="unit_hours_suffix">h</string>
-    <string name="unit_minutes_suffix">m</string>
-    <string name="unit_seconds_suffix">s</string>
+    <string name="unit_hours_suffix">%1$dh</string>
+    <string name="unit_minutes_suffix">%1$dm</string>
+    <string name="unit_seconds_suffix">%1$ds</string>
 </resources>

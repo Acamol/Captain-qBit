@@ -72,20 +72,30 @@ private object NumberFormat {
         val minutes: Long = TimeUnit.SECONDS.toMinutes(duration)
         duration -= TimeUnit.MINUTES.toSeconds(minutes)
         val secs: Long = TimeUnit.SECONDS.toSeconds(duration)
+        // Each unit's count is a format argument of its own string rather than being concatenated
+        // on, so a translation can place it, space it, or leave it out - Hebrew's dual form
+        // ("יומיים" = "two days") carries the count in the word itself and must not be prefixed
+        // with a numeral.
         val timeStr = StringBuilder()
         if (days != 0L) {
-            val daysSuffix =
-                context.resources.getQuantityString(CommonR.plurals.unit_days_suffix, days.toInt())
-            timeStr.append("${days}${daysSuffix}")
+            timeStr.append(
+                context.resources.getQuantityString(
+                    CommonR.plurals.unit_days_suffix,
+                    days.toInt(),
+                    days,
+                )
+            )
         }
         if (hours != 0L) {
-            timeStr.append(" ${hours}${context.getString(CommonR.string.unit_hours_suffix)}")
+            timeStr.append(" ").append(context.getString(CommonR.string.unit_hours_suffix, hours))
         }
         if (minutes != 0L) {
-            timeStr.append(" ${minutes}${context.getString(CommonR.string.unit_minutes_suffix)}")
+            timeStr
+                .append(" ")
+                .append(context.getString(CommonR.string.unit_minutes_suffix, minutes))
         }
         if (secs != 0L) {
-            timeStr.append(" ${secs}${context.getString(CommonR.string.unit_seconds_suffix)}")
+            timeStr.append(" ").append(context.getString(CommonR.string.unit_seconds_suffix, secs))
         }
 
         return timeStr.toString().trim().isolateLtr()

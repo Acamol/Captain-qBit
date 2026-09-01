@@ -619,11 +619,11 @@
     <plurals name="unit_days_suffix">
         <item quantity="one">יום</item>
         <item quantity="two">יומיים</item>
-        <item quantity="other">ימים</item>
+        <item quantity="other">%1$d ימים</item>
     </plurals>
-    <string name="unit_hours_suffix">שע׳</string>
-    <string name="unit_minutes_suffix">דק׳</string>
-    <string name="unit_seconds_suffix">שנ׳</string>
+    <string name="unit_hours_suffix">%1$d שע׳</string>
+    <string name="unit_minutes_suffix">%1$d דק׳</string>
+    <string name="unit_seconds_suffix">%1$d שנ׳</string>
     <string name="untrusted_certificate_title">תעודה לא מהימנה</string>
     <string name="untrusted_certificate_message">התעודה של שרת זה אינה חתומה על ידי רשות מהימנה. יש לבדוק את הפרטים שלהלן ולבחור אם לתת בה אמון עבור שרת זה בלבד.</string>
     <string name="certificate_subject_label">נושא</string>
