@@ -1,5 +1,6 @@
 package dev.yashgarg.qbit.ui.navigation
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -64,7 +65,16 @@ fun QbitNavHost(
     val navController = rememberNavController()
 
     androidx.compose.runtime.LaunchedEffect(navController) {
-        appNavigator.commands.collect { command -> navController.execute(command) }
+        // Caught (rather than left to propagate) so one bad command can't silently kill this
+        // collector for the rest of the composition's lifetime - every later command would
+        // otherwise go unprocessed with nothing in logcat to explain why.
+        appNavigator.commands.collect { command ->
+            try {
+                navController.execute(command)
+            } catch (e: Exception) {
+                Log.e("QbitNavHost", "Failed to execute nav command: $command", e)
+            }
+        }
     }
 
     // Root back handling: NavHost pops the back stack automatically; only at an effective root do
