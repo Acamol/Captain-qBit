@@ -127,8 +127,13 @@ class MainActivity : AppCompatActivity() {
                     )
                 }
 
+                // Shared by both permission rationales below: neither is dismissable, so only
+                // one may be on screen at a time, and both defer when this launch is opening a
+                // backup file (that flow shows its own native passphrase dialog from onCreate).
+                var showNotificationRationale by remember { mutableStateOf(false) }
+                val openingBackupFile = intent?.data?.let(::isBackupUri) == true
+
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    var showNotificationRationale by remember { mutableStateOf(false) }
                     val notificationPermissionLauncher =
                         rememberLauncherForActivityResult(
                             ActivityResultContracts.RequestPermission()
@@ -136,11 +141,7 @@ class MainActivity : AppCompatActivity() {
                             if (granted) launchWorkManager(true)
                         }
                     // Only ever asked once per install (tracked in prefs) - a denial doesn't nag
-                    // again on every later launch. Skipped entirely when this launch is opening a
-                    // backup file: that flow shows its own (native, non-Compose) passphrase dialog
-                    // immediately in onCreate, which would otherwise land on screen at the same
-                    // time as this one. Deferred to the next normal launch instead.
-                    val openingBackupFile = intent?.data?.let(::isBackupUri) == true
+                    // again on every later launch.
                     LaunchedEffect(Unit) {
                         if (openingBackupFile) return@LaunchedEffect
                         val alreadyAsked =
@@ -196,18 +197,21 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                // API 37 (Android 17): a runtime permission is required for any socket to a
-                // local-network address - no named Build.VERSION_CODES constant exists for it
-                // yet, hence the literal. Asked once per install, same as notifications above;
-                // a denial just means local-network connections fail like any other unreachable
-                // server, already handled by the normal connection-error UI.
-                if (Build.VERSION.SDK_INT >= 37) {
+                // Android 17 requires a runtime permission for any socket to a local-network
+                // address. Asked once per install, same as notifications above, and only when no
+                // notification rationale is already on screen - two undismissable dialogs must
+                // not stack.
+                if (
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN &&
+                        !showNotificationRationale
+                ) {
                     var showLocalNetworkRationale by remember { mutableStateOf(false) }
                     val localNetworkPermissionLauncher =
                         rememberLauncherForActivityResult(
                             ActivityResultContracts.RequestPermission()
                         ) {}
                     LaunchedEffect(Unit) {
+                        if (openingBackupFile) return@LaunchedEffect
                         val alreadyAsked =
                             serverPrefsStore.data.map { it.localNetworkPermissionAsked }.first()
                         if (

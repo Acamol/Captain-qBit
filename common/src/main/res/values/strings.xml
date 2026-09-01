@@ -95,6 +95,11 @@
     <string name="certificate_issuer_label">Issuer</string>
     <string name="certificate_fingerprint_label">SHA-256 fingerprint</string>
     <string name="certificate_validity_label">Valid until</string>
+    <string name="local_network_blocked_title">Local network access is off</string>
+    <string name="local_network_blocked_message">
+        Servers on your own network can\'t be reached until this is allowed.
+    </string>
+    <string name="grant_action">Allow</string>
     <string name="certificate_expired_warning">
         This certificate expired on %1$s. Trusting it won\'t restore the connection — the server
         needs a renewed certificate.

@@ -3,6 +3,7 @@ package dev.yashgarg.qbit.ui.settings
 import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
@@ -45,6 +46,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.core.os.LocaleListCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -164,11 +166,22 @@ fun SettingsScreen(
     var notificationsEnabled by remember {
         mutableStateOf(AppNotificationManager.notificationsEnabled(context))
     }
+    fun localNetworkGranted() =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_LOCAL_NETWORK) ==
+                PackageManager.PERMISSION_GRANTED
+
+    var localNetworkAllowed by remember { mutableStateOf(localNetworkGranted()) }
+    val localNetworkPermissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            localNetworkAllowed = granted
+        }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 notificationsEnabled = AppNotificationManager.notificationsEnabled(context)
+                localNetworkAllowed = localNetworkGranted()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -285,6 +298,19 @@ fun SettingsScreen(
                 title = stringResource(CommonR.string.servers_title),
                 onClick = { appNavigator.navigate(NavCommand.OpenServerList) },
             )
+
+            // Android 17 gates LAN sockets behind a runtime permission, and a denial there is
+            // fatal to reaching a self-hosted server. The one-time rationale on first launch is
+            // not a recovery path, so offer one here for as long as it stays denied.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN && !localNetworkAllowed) {
+                LocalNetworkBlockedBanner(
+                    onGrant = {
+                        localNetworkPermissionLauncher.launch(
+                            Manifest.permission.ACCESS_LOCAL_NETWORK
+                        )
+                    }
+                )
+            }
 
             HorizontalDivider()
             SectionHeader(stringResource(CommonR.string.server_section_title))
@@ -674,6 +700,28 @@ private fun openAppNotificationSettings(context: Context) {
         Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
             .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
     )
+}
+
+@Composable
+private fun LocalNetworkBlockedBanner(onGrant: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                stringResource(CommonR.string.local_network_blocked_title),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.error,
+            )
+            Text(
+                stringResource(CommonR.string.local_network_blocked_message),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        TextButton(onClick = onGrant) { Text(stringResource(CommonR.string.grant_action)) }
+    }
 }
 
 @Composable
