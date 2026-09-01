@@ -68,14 +68,14 @@ fun QbitNavHost(
     }
 
     // Root back handling: NavHost pops the back stack automatically; only at an effective root do
-    // we take over for the "press back twice to exit" behavior. HOME is the root on first run;
-    // once a server is configured, Server/RSS/Settings are the three top-level tabs
-    // (OpenServerAsRoot pops HOME), so all four count. Any other screen falls through to the
-    // NavHost, which pops back toward whichever tab pushed it.
+    // we take over for the "press back twice to exit" behavior. HOME is the root on first run, and
+    // Server once a server is configured (OpenServerAsRoot pops HOME). The RSS and Settings tabs
+    // are pushed above Server rather than replacing it, so back there pops to the torrent list -
+    // exiting from them would strand the user, and only Server is a genuine exit point.
     val backStackEntry by navController.currentBackStackEntryAsState()
     val route = backStackEntry?.destination?.route
     val topLevelRoutes = setOf(Routes.SERVER, Routes.RSS, Routes.SETTINGS)
-    val atRoot = route == Routes.HOME || route in topLevelRoutes
+    val atRoot = route == Routes.HOME || route == Routes.SERVER
     BackHandler(enabled = atRoot) { onExitDoubleBack() }
 
     // The NavHost default is a ~700ms crossfade, which feels sluggish; use a quick fade.

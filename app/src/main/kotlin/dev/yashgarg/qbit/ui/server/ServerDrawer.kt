@@ -8,12 +8,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -71,12 +73,13 @@ fun ServerDrawer(
     ModalDrawerSheet(
         drawerContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = Modifier.width(300.dp),
-        // The drawer's own bounds are already correctly confined above the persistent
-        // NavigationBar (via the outer Scaffold in QbitNavHost), so the default windowInsets here
-        // would reserve the bottom system-nav-bar inset a second time, leaving a blank gap below
-        // the pinned "Clear all" button. The top status-bar inset is still needed though - nothing
-        // else protects the drawer's own header from it - so keep that one.
-        windowInsets = WindowInsets.statusBars,
+        // Only the bottom inset is opted out of: the drawer's bounds already sit above the
+        // persistent NavigationBar (via the outer Scaffold in QbitNavHost), so reserving it again
+        // would leave a blank gap below the pinned "Clear all" button. Top and horizontal insets
+        // are still needed - nothing else keeps the header off the status bar, or the drawer's
+        // start edge clear of a landscape navigation bar or a display cutout.
+        windowInsets =
+            WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
     ) {
         Column(Modifier.fillMaxSize()) {
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())) {

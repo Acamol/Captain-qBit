@@ -143,6 +143,10 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
     var serverDialog by remember { mutableStateOf<ServerDialog?>(null) }
     val linkValidator = remember { LinkValidator() }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
+    // Drawer state is saved, and the bottom-nav tabs deliberately save/restore each tab's state, so
+    // leaving this tab with the filters open and coming back would restore it open - unexpected,
+    // since returning to a tab should show the list, not a menu the user left behind.
+    LaunchedEffect(Unit) { drawerState.close() }
     val selected = remember { mutableStateListOf<String>() }
     // Switching any filter (drawer, active-filter chips, or "Clear all") drops the current
     // selection, so bulk actions never apply to torrents scrolled out of the new filter.
