@@ -2,9 +2,14 @@ name: PR
 
 on:
   pull_request:
+  # Also on the long-lived branches: a pull_request run only proves the merge preview was green
+  # against the base at that moment. Direct pushes are allowed here, and a PR that passed against
+  # an older base can still break the branch it lands on.
+  push:
+    branches: [develop, main]
 
 concurrency:
-  group: pr-${{ github.ref }}
+  group: verify-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
