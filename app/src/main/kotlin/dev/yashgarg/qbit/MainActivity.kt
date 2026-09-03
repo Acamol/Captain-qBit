@@ -90,6 +90,11 @@ class MainActivity : AppCompatActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
 
+        // A non-null savedInstanceState means the nav host restores its own back stack, so the
+        // initial routing below has already happened for this session. Re-running it would re-root
+        // navigation and throw away wherever the user actually was - on every rotation.
+        navigatedToServer = savedInstanceState != null
+
         setContent {
             val dynamicColorsFlow = remember { appPrefsStore.data.map { it.dynamicColors } }
             val dynamicColors by dynamicColorsFlow.collectAsStateWithLifecycle(initialValue = false)
