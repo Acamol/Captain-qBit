@@ -1,9 +1,11 @@
 package dev.yashgarg.qbit.ui.settings
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
@@ -46,6 +48,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.os.LocaleListCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -178,6 +181,22 @@ fun SettingsScreen(
     val localNetworkPermissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             localNetworkAllowed = granted
+            // Once the permission is permanently denied the request returns denied without showing
+            // anything, so asking again is a no-op and the banner would never clear. Only the app's
+            // settings screen can still change it. Decided here rather than before the request,
+            // because shouldShowRequestPermissionRationale is also false when never asked - it is
+            // only conclusive after a denial.
+            val activity = context as? Activity
+            if (
+                !granted &&
+                    activity != null &&
+                    !ActivityCompat.shouldShowRequestPermissionRationale(
+                        activity,
+                        Manifest.permission.ACCESS_LOCAL_NETWORK,
+                    )
+            ) {
+                openAppDetailsSettings(context)
+            }
         }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -697,6 +716,16 @@ private fun IntervalDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
         },
+    )
+}
+
+/** The app's own settings page - the only place a permanently denied permission can be changed. */
+private fun openAppDetailsSettings(context: Context) {
+    context.startActivity(
+        Intent(
+            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            Uri.fromParts("package", context.packageName, null),
+        )
     )
 }
 
