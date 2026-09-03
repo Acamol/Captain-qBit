@@ -11,16 +11,6 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
 private object NumberFormat {
-    // These values are always LTR content (digits + Latin unit abbreviations). Isolating them
-    // with Unicode directional isolate marks stops the bidi algorithm from reordering them
-    // unpredictably when they're embedded in a larger RTL sentence (e.g. via a %s placeholder
-    // in a translated string template) - equivalent to android.text.BidiFormatter.unicodeWrap(),
-    // done in plain Kotlin so it works in JVM unit tests without Robolectric.
-    private const val LEFT_TO_RIGHT_ISOLATE = "\u2066"
-    private const val POP_DIRECTIONAL_ISOLATE = "\u2069"
-
-    private fun String.isolateLtr(): String = "$LEFT_TO_RIGHT_ISOLATE$this$POP_DIRECTIONAL_ISOLATE"
-
     // Indexed by unitIndex below: 0=Ki, 1=Mi, 2=Gi, 3=Ti, 4=Pi, 5=Ei.
     private val BYTE_UNIT_RES_IDS =
         intArrayOf(

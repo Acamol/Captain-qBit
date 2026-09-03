@@ -23,11 +23,15 @@ fun X509Certificate.hasExpired(): Boolean = notAfter.before(Date())
  */
 fun X509Certificate.isNotYetValid(): Boolean = notBefore.after(Date())
 
-/** Fixed pattern rather than a locale-dependent one, so the digit order can't surprise in RTL. */
+/** End of the validity window, shown against [hasExpired]. */
 fun X509Certificate.validUntilText(): String = formatDate(notAfter)
 
 /** Start of the validity window, shown when a certificate is not valid yet. */
 fun X509Certificate.validFromText(): String = formatDate(notBefore)
 
+// Locale.ROOT fixes which separators the pattern emits. isolateLtr is defensive rather than a fix
+// for an observed defect: with the current Hebrew wording the date renders correctly either way,
+// but both warnings interpolate it mid-sentence, so whether the neutral characters beside it stay
+// put otherwise depends on each translation's phrasing. Matches millisToDate, which isolates too.
 private fun formatDate(date: Date): String =
-    SimpleDateFormat("dd/MM/yyyy", Locale.ROOT).format(date)
+    SimpleDateFormat("dd/MM/yyyy", Locale.ROOT).format(date).isolateLtr()
