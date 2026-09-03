@@ -25,7 +25,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import qbittorrent.*
 
 @HiltViewModel
@@ -304,16 +303,6 @@ constructor(
      * the rest of the form (a no-op when adding a brand-new server - there's no row yet, so the pin
      * travels via [insert]'s `pinnedCertificateDer` param instead).
      */
-    suspend fun updatePinnedCertificate(der: ByteArray) {
-        if (!editing) return
-        withContext(Dispatchers.IO) {
-            val current = configDao.getConfigById(serverId) ?: return@withContext
-            configDao.addConfig(
-                current.copy(pinnedCertificate = Base64.encodeToString(der, Base64.NO_WRAP))
-            )
-        }
-    }
-
     /** Fetches the certificate a server presents, for the user to review before trusting it. */
     suspend fun probeCertificate(host: String, port: Int): Result<X509Certificate, Throwable> =
         CertificateProbe.fetchPresentedCertificate(host, port)

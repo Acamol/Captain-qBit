@@ -61,9 +61,11 @@ import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.utils.friendlyMessage
 import dev.yashgarg.qbit.utils.hasExpired
+import dev.yashgarg.qbit.utils.isNotYetValid
 import dev.yashgarg.qbit.utils.isUntrustedCertificateError
 import dev.yashgarg.qbit.utils.rememberFriendlyMessageResolver
 import dev.yashgarg.qbit.utils.sha256Fingerprint
+import dev.yashgarg.qbit.utils.validFromText
 import dev.yashgarg.qbit.utils.validUntilText
 import java.security.cert.X509Certificate
 import kotlinx.coroutines.launch
@@ -468,6 +470,7 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
     pendingCertReview?.let { cert ->
         val fingerprint = remember(cert) { cert.sha256Fingerprint() }
         val expired = remember(cert) { cert.hasExpired() }
+        val notYetValid = remember(cert) { cert.isNotYetValid() }
         AlertDialog(
             onDismissRequest = { pendingCertReview = null },
             title = { Text(stringResource(CommonR.string.untrusted_certificate_title)) },
@@ -491,13 +494,19 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                         "${stringResource(CommonR.string.certificate_validity_label)}: " +
                             cert.validUntilText()
                     )
-                    if (expired) {
+                    if (expired || notYetValid) {
                         Spacer(Modifier.size(8.dp))
                         Text(
-                            stringResource(
-                                CommonR.string.certificate_expired_warning,
-                                cert.validUntilText(),
-                            ),
+                            if (expired)
+                                stringResource(
+                                    CommonR.string.certificate_expired_warning,
+                                    cert.validUntilText(),
+                                )
+                            else
+                                stringResource(
+                                    CommonR.string.certificate_not_yet_valid_warning,
+                                    cert.validFromText(),
+                                ),
                             color = MaterialTheme.colorScheme.error,
                         )
                     }
@@ -507,12 +516,14 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                 TextButton(
                     onClick = {
                         val der = cert.encoded
+                        // Held in memory and persisted by Save, not written straight to the saved
+                        // row: the probe used whatever host is in the form right now, which may no
+                        // longer be the one the row points at. Writing here would pin the wrong
+                        // certificate to the saved server and make it unreachable, even if the edit
+                        // is then abandoned. The test below takes the certificate directly.
                         approvedPinDer = der
                         pinCleared = false
                         pendingCertReview = null
-                        if (viewModel.editing) {
-                            coroutineScope.launch { viewModel.updatePinnedCertificate(der) }
-                        }
                         coroutineScope.launch {
                             checking = true
                             val basicUser =
