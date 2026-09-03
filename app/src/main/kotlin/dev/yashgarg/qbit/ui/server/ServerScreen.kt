@@ -1,5 +1,6 @@
 package dev.yashgarg.qbit.ui.server
 
+import android.app.Activity
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
@@ -57,6 +58,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -150,8 +152,21 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     // Drawer state is saved, and the bottom-nav tabs deliberately save/restore each tab's state, so
     // leaving this tab with the filters open and coming back would restore it open - unexpected,
-    // since returning to a tab should show the list, not a menu the user left behind.
-    LaunchedEffect(Unit) { drawerState.close() }
+    // since returning to a tab should show the list, not a menu the user left behind. A
+    // configuration change tears this screen down the same way but should leave the drawer alone,
+    // so the two are told apart by isChangingConfigurations while unwinding.
+    LaunchedEffect(Unit) {
+        if (viewModel.closeDrawerOnEntry) {
+            viewModel.closeDrawerOnEntry = false
+            drawerState.close()
+        }
+    }
+    val activity = context as? Activity
+    DisposableEffect(Unit) {
+        onDispose {
+            if (activity?.isChangingConfigurations != true) viewModel.closeDrawerOnEntry = true
+        }
+    }
     val selected = remember { mutableStateListOf<String>() }
     // Switching any filter (drawer, active-filter chips, or "Clear all") drops the current
     // selection, so bulk actions never apply to torrents scrolled out of the new filter.

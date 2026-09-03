@@ -48,6 +48,13 @@ constructor(
     private val pendingTorrentIntent: PendingTorrentIntent,
     application: Application,
 ) : StatusViewModel(application) {
+
+    // Whether the filter drawer should be closed the next time this screen composes. Set when the
+    // screen is torn down by navigating away, cleared once acted on. Deliberately held here rather
+    // than in saved state: the ViewModel survives a configuration change, which is the one teardown
+    // that must not close the drawer, and a fresh ViewModel (first launch, or after process death)
+    // starts true so the screen always opens on the list.
+    var closeDrawerOnEntry = true
     private val _uiState = MutableStateFlow(ServerScreenState())
     val uiState = _uiState.asStateFlow()
 
