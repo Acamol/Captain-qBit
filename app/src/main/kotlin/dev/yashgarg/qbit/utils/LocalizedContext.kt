@@ -3,6 +3,7 @@ package dev.yashgarg.qbit.utils
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.Configuration
+import android.os.Build
 import android.os.LocaleList
 import androidx.appcompat.app.AppCompatDelegate
 
@@ -14,6 +15,8 @@ import androidx.appcompat.app.AppCompatDelegate
  * contexts, so string lookups made through the Application context - toasts raised from a
  * ViewModel, notification text built in a worker - would otherwise render in the device language
  * rather than the chosen one. Compose reads resources through the Activity and needs none of this.
+ *
+ * From API 33 the platform handles this itself, so [of] returns its argument unchanged there.
  */
 @SuppressLint("StaticFieldLeak") // caches only application contexts; see of()
 object LocalizedContext {
@@ -27,6 +30,14 @@ object LocalizedContext {
      */
     fun of(base: Context): Context =
         runCatching {
+                // From API 33 the framework applies the per-app locale to the app's own resources,
+                // so there is nothing to correct here. Returning early also keeps
+                // getApplicationLocales() off the hot path: on 33+ it walks AppCompat's set of live
+                // activity delegates and then makes a binder call into the system server, and the
+                // lookups behind this run per torrent row on every sync tick. Below 33 the same
+                // call just reads a static.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) return base
+
                 val tags = AppCompatDelegate.getApplicationLocales().toLanguageTags()
                 if (tags.isEmpty()) return base
 

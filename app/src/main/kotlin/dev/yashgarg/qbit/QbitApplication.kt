@@ -1,6 +1,7 @@
 package dev.yashgarg.qbit
 
 import android.app.Application
+import android.os.Build
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import androidx.datastore.core.DataStore
@@ -38,9 +39,13 @@ class QbitApplication : Application(), Configuration.Provider {
         AppCompatDelegate.setDefaultNightMode(prefs.themeMode)
 
         // Below API 33 setApplicationLocales holds the choice in memory only, so it has to be
-        // restored here or the app comes up in the system language after every cold start. On 33+
-        // the framework persists it itself and this just re-states the current value.
-        if (prefs.languageTag.isNotEmpty()) {
+        // restored here or the app comes up in the system language after every cold start. From 33
+        // the framework persists it, and it is also where the user may have set the language from
+        // Android's own per-app language screen - which this preference would not know about, so
+        // don't re-assert it there.
+        if (
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU && prefs.languageTag.isNotEmpty()
+        ) {
             AppCompatDelegate.setApplicationLocales(
                 LocaleListCompat.forLanguageTags(prefs.languageTag)
             )
