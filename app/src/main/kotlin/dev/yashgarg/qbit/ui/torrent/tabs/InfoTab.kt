@@ -95,8 +95,15 @@ fun InfoTab(state: TorrentDetailsState, modifier: Modifier = Modifier) {
                     props.upSpeedAvg.toHumanReadable(),
                 ),
             )
-            Row(stringResource(CommonR.string.dl_limit), props.dlLimit.toHumanReadable())
-            Row(stringResource(CommonR.string.up_limit), props.upLimit.toHumanReadable())
+            // qBittorrent reports no limit as -1, which would otherwise read as "-1 B".
+            Row(
+                stringResource(CommonR.string.dl_limit),
+                if (props.dlLimit < 0) infinite else props.dlLimit.toHumanReadable(),
+            )
+            Row(
+                stringResource(CommonR.string.up_limit),
+                if (props.upLimit < 0) infinite else props.upLimit.toHumanReadable(),
+            )
             Row(stringResource(CommonR.string.wasted), props.totalWasted.toHumanReadable())
             Row(stringResource(CommonR.string.ratio), "%.2f".format(props.shareRatio))
             Row(
