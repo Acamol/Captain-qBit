@@ -104,6 +104,10 @@
         This certificate expired on %1$s. Trusting it won\'t restore the connection — the server
         needs a renewed certificate.
     </string>
+    <string name="certificate_not_yet_valid_warning">
+        This certificate is not valid until %1$s. Trusting it won\'t restore the connection — check
+        the clock on the server that issued it.
+    </string>
     <string name="trust_and_retry_action">Trust &amp; retry</string>
     <string name="pinned_certificate_active_label">A certificate is pinned for this server</string>
     <string name="clear_pinned_certificate_action">Clear</string>

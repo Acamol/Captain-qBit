@@ -95,10 +95,12 @@ import dev.yashgarg.qbit.ui.navigation.NoWindowInsets
 import dev.yashgarg.qbit.utils.TorrentHashUtil
 import dev.yashgarg.qbit.utils.friendlyMessage
 import dev.yashgarg.qbit.utils.hasExpired
+import dev.yashgarg.qbit.utils.isNotYetValid
 import dev.yashgarg.qbit.utils.isUntrustedCertificateError
 import dev.yashgarg.qbit.utils.rememberFriendlyMessageResolver
 import dev.yashgarg.qbit.utils.sha256Fingerprint
 import dev.yashgarg.qbit.utils.toHumanReadable
+import dev.yashgarg.qbit.utils.validFromText
 import dev.yashgarg.qbit.utils.validUntilText
 import dev.yashgarg.qbit.validation.LinkValidator
 import java.security.cert.X509Certificate
@@ -621,9 +623,9 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
     )
 
     pendingCertReview?.let { cert ->
-        val targetHost = servers.find { it.configId == resolvedServerId }?.baseUrl.orEmpty()
         val fingerprint = remember(cert) { cert.sha256Fingerprint() }
         val expired = remember(cert) { cert.hasExpired() }
+        val notYetValid = remember(cert) { cert.isNotYetValid() }
         AlertDialog(
             onDismissRequest = { pendingCertReview = null },
             title = { Text(stringResource(CommonR.string.untrusted_certificate_title)) },
@@ -647,13 +649,19 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                         "${stringResource(CommonR.string.certificate_validity_label)}: " +
                             cert.validUntilText()
                     )
-                    if (expired) {
+                    if (expired || notYetValid) {
                         Spacer(Modifier.size(8.dp))
                         Text(
-                            stringResource(
-                                CommonR.string.certificate_expired_warning,
-                                cert.validUntilText(),
-                            ),
+                            if (expired)
+                                stringResource(
+                                    CommonR.string.certificate_expired_warning,
+                                    cert.validUntilText(),
+                                )
+                            else
+                                stringResource(
+                                    CommonR.string.certificate_not_yet_valid_warning,
+                                    cert.validFromText(),
+                                ),
                             color = MaterialTheme.colorScheme.error,
                         )
                     }
