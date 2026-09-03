@@ -639,4 +639,10 @@
     <string name="torrents_title">טורנטים</string>
     <string name="review_certificate_action">בדוק תעודה</string>
     <string name="error_ssl_untrusted_certificate">השרת הציג תעודה שאינה מהימנה. אפשר לבדוק את טביעת האצבע שלה ולבחור לתת בה אמון עבור שרת זה.</string>
+    <string name="certificate_validity_label">תקף עד</string>
+    <string name="local_network_blocked_title">הגישה לרשת המקומית כבויה</string>
+    <string name="local_network_blocked_message">לא ניתן להגיע לשרתים ברשת המקומית שלך עד שהגישה תאושר.</string>
+    <string name="grant_action">התר</string>
+    <string name="certificate_expired_warning">תוקף התעודה הזו פג ב-%1$s. אישור התעודה לא ישחזר את החיבור — השרת זקוק לתעודה מחודשת.</string>
+    <string name="certificate_not_yet_valid_warning">התעודה הזו אינה תקפה עד %1$s. אישור התעודה לא ישחזר את החיבור — יש לבדוק את השעון בשרת שהנפיק אותה.</string>
 </resources>
