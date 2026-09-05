@@ -1,0 +1,7 @@
+- New: complete Hebrew translation, and the language you pick now survives a restart
+- New: RSS and Settings are top-level tabs; the drawer is filters only
+- New: approve a self-signed certificate per server, instead of trusting one device-wide
+- New: Android 17 support
+- Fixed: rotating the screen sent you back to the torrent list
+- Fixed: unlimited speed limits showed as "-1 B"
+- Various other navigation, certificate and right-to-left fixes
