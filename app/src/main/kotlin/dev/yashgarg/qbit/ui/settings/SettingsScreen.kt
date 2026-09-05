@@ -1,8 +1,11 @@
 package dev.yashgarg.qbit.ui.settings
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
@@ -20,13 +23,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -49,6 +48,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.core.os.LocaleListCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -61,9 +62,11 @@ import dev.yashgarg.qbit.ui.backup.BackupDialogs
 import dev.yashgarg.qbit.ui.backup.BackupViewModel
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
+import dev.yashgarg.qbit.ui.navigation.NoWindowInsets
 import dev.yashgarg.qbit.ui.rss.MaxArticlesPerFeedDialog
 import dev.yashgarg.qbit.ui.rss.RefreshIntervalDialog
 import dev.yashgarg.qbit.ui.server.SpeedLimitsDialog
+import dev.yashgarg.qbit.utils.LocalizedContext
 import dev.yashgarg.qbit.worker.StatusWorker
 
 private val BACKUP_MIME_TYPES = arrayOf("application/json", "application/octet-stream", "*/*")
@@ -103,6 +106,7 @@ private val LANGUAGE_OPTIONS =
     listOf(
         "" to CommonR.string.theme_system_default,
         "en" to CommonR.string.language_english,
+        "he" to CommonR.string.language_hebrew,
     )
 
 @Composable
@@ -149,6 +153,8 @@ fun SettingsScreen(
 
     var showThemeDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
+    // Seeded from the live locale rather than the preference: on API 33+ the two can diverge
+    // if the language was changed from the system's per-app language screen.
     var currentLanguageTag by remember {
         mutableStateOf(AppCompatDelegate.getApplicationLocales().toLanguageTags())
     }
@@ -166,11 +172,38 @@ fun SettingsScreen(
     var notificationsEnabled by remember {
         mutableStateOf(AppNotificationManager.notificationsEnabled(context))
     }
+    fun localNetworkGranted() =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_LOCAL_NETWORK) ==
+                PackageManager.PERMISSION_GRANTED
+
+    var localNetworkAllowed by remember { mutableStateOf(localNetworkGranted()) }
+    val localNetworkPermissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            localNetworkAllowed = granted
+            // Once the permission is permanently denied the request returns denied without showing
+            // anything, so asking again is a no-op and the banner would never clear. Only the app's
+            // settings screen can still change it. Decided here rather than before the request,
+            // because shouldShowRequestPermissionRationale is also false when never asked - it is
+            // only conclusive after a denial.
+            val activity = context as? Activity
+            if (
+                !granted &&
+                    activity != null &&
+                    !ActivityCompat.shouldShowRequestPermissionRationale(
+                        activity,
+                        Manifest.permission.ACCESS_LOCAL_NETWORK,
+                    )
+            ) {
+                openAppDetailsSettings(context)
+            }
+        }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 notificationsEnabled = AppNotificationManager.notificationsEnabled(context)
+                localNetworkAllowed = localNetworkGranted()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -273,20 +306,11 @@ fun SettingsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(CommonR.string.settings_label)) },
-                navigationIcon = {
-                    IconButton(onClick = { appNavigator.navigate(NavCommand.Back) }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription =
-                                stringResource(CommonR.string.content_description_back),
-                        )
-                    }
-                },
-            )
+            TopAppBar(title = { Text(stringResource(CommonR.string.settings_label)) })
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        // No bottomBar here - see NoWindowInsets kdoc.
+        contentWindowInsets = NoWindowInsets,
     ) { padding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())
@@ -296,6 +320,19 @@ fun SettingsScreen(
                 title = stringResource(CommonR.string.servers_title),
                 onClick = { appNavigator.navigate(NavCommand.OpenServerList) },
             )
+
+            // Android 17 gates LAN sockets behind a runtime permission, and a denial there is
+            // fatal to reaching a self-hosted server. The one-time rationale on first launch is
+            // not a recovery path, so offer one here for as long as it stays denied.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN && !localNetworkAllowed) {
+                LocalNetworkBlockedBanner(
+                    onGrant = {
+                        localNetworkPermissionLauncher.launch(
+                            Manifest.permission.ACCESS_LOCAL_NETWORK
+                        )
+                    }
+                )
+            }
 
             HorizontalDivider()
             SectionHeader(stringResource(CommonR.string.server_section_title))
@@ -503,6 +540,22 @@ fun SettingsScreen(
     }
 
     if (showLanguageDialog) {
+        val selectLanguage: (String) -> Unit = { tag ->
+            // Applied here rather than left to MainActivity's observer, so this works even when the
+            // stored tag is stale - on API 33+ the system's own per-app language screen can change
+            // the locale without this app knowing. The preference is what makes the choice survive
+            // a cold start below API 33, where setApplicationLocales keeps it in memory only.
+            AppCompatDelegate.setApplicationLocales(
+                if (tag.isEmpty()) LocaleListCompat.getEmptyLocaleList()
+                else LocaleListCompat.forLanguageTags(tag)
+            )
+            viewModel.setLanguageTag(tag)
+            // Android caches channel names from creation time, so a new locale alone won't
+            // retranslate them. Recreating with the same ids updates the names in place.
+            AppNotificationManager.createNotificationChannel(LocalizedContext.of(context))
+            currentLanguageTag = tag
+            showLanguageDialog = false
+        }
         AlertDialog(
             onDismissRequest = { showLanguageDialog = false },
             title = { Text(stringResource(CommonR.string.language_label)) },
@@ -512,27 +565,13 @@ fun SettingsScreen(
                         Row(
                             modifier =
                                 Modifier.fillMaxWidth()
-                                    .clickable {
-                                        AppCompatDelegate.setApplicationLocales(
-                                            if (tag.isEmpty()) LocaleListCompat.getEmptyLocaleList()
-                                            else LocaleListCompat.forLanguageTags(tag)
-                                        )
-                                        currentLanguageTag = tag
-                                        showLanguageDialog = false
-                                    }
+                                    .clickable { selectLanguage(tag) }
                                     .padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             RadioButton(
                                 selected = currentLanguageTag == tag,
-                                onClick = {
-                                    AppCompatDelegate.setApplicationLocales(
-                                        if (tag.isEmpty()) LocaleListCompat.getEmptyLocaleList()
-                                        else LocaleListCompat.forLanguageTags(tag)
-                                    )
-                                    currentLanguageTag = tag
-                                    showLanguageDialog = false
-                                },
+                                onClick = { selectLanguage(tag) },
                             )
                             Spacer(Modifier.size(12.dp))
                             Text(stringResource(labelRes))
@@ -680,11 +719,43 @@ private fun IntervalDialog(
     )
 }
 
+/** The app's own settings page - the only place a permanently denied permission can be changed. */
+private fun openAppDetailsSettings(context: Context) {
+    context.startActivity(
+        Intent(
+            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            Uri.fromParts("package", context.packageName, null),
+        )
+    )
+}
+
 private fun openAppNotificationSettings(context: Context) {
     context.startActivity(
         Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
             .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
     )
+}
+
+@Composable
+private fun LocalNetworkBlockedBanner(onGrant: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                stringResource(CommonR.string.local_network_blocked_title),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.error,
+            )
+            Text(
+                stringResource(CommonR.string.local_network_blocked_message),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        TextButton(onClick = onGrant) { Text(stringResource(CommonR.string.grant_action)) }
+    }
 }
 
 @Composable

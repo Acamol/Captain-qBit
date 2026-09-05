@@ -23,9 +23,10 @@ import dev.yashgarg.qbit.MainActivity
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.manager.ClientManager
-import dev.yashgarg.qbit.data.models.ServerPreferences
+import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.ui.rss.flattenFeeds
+import dev.yashgarg.qbit.utils.LocalizedContext
 import dev.yashgarg.qbit.utils.toHumanReadable
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.delay
@@ -44,17 +45,27 @@ constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val clientManager: ClientManager,
-    private val prefsStore: DataStore<ServerPreferences>,
+    private val prefsStore: DataStore<AppPreferences>,
 ) : CoroutineWorker(appContext, workerParams) {
+
+    // Notification text has to honour the language chosen in the app, which the worker's
+    // applicationContext does not below API 33. Channel ids are translatable="false" and stay on
+    // the raw context, as do the Intents and the notification manager itself.
+    private val localized: Context
+        get() = LocalizedContext.of(applicationContext)
 
     // Lets WorkManager start this as an expedited foreground service right away. Pick the channel
     // up front from the user's prefs so an events-only user never even briefly sees the louder
     // status notification.
     override suspend fun getForegroundInfo(): ForegroundInfo =
         if (prefsStore.data.first().statusNotification) {
-            createForegroundInfo("Connecting…", "")
+            createForegroundInfo(localized.getString(CommonR.string.status_connecting), "")
         } else {
-            createForegroundInfo("Captain qBit", "Alerts are on", minimal = true)
+            createForegroundInfo(
+                localized.getString(CommonR.string.app_name),
+                localized.getString(CommonR.string.status_alerts_are_on),
+                minimal = true,
+            )
         }
 
     override suspend fun doWork(): Result {
@@ -109,8 +120,12 @@ constructor(
                         val info = client.getGlobalTransferInfo()
                         setForeground(
                             createForegroundInfo(
-                                "Server State • Connected",
-                                "DL: ${info.dlInfoSpeed.toHumanReadable()}/s | UL: ${info.upInfoSpeed.toHumanReadable()}/s",
+                                localized.getString(CommonR.string.status_server_connected),
+                                localized.getString(
+                                    CommonR.string.status_dl_ul_speed,
+                                    info.dlInfoSpeed.toHumanReadable(),
+                                    info.upInfoSpeed.toHumanReadable(),
+                                ),
                             )
                         )
                     } catch (e: CancellationException) {
@@ -119,7 +134,10 @@ constructor(
                         // Show the server is unreachable rather than freezing the last live
                         // readout.
                         setForeground(
-                            createForegroundInfo("Server State • Offline", "Reconnecting…")
+                            createForegroundInfo(
+                                localized.getString(CommonR.string.status_server_offline),
+                                localized.getString(CommonR.string.status_reconnecting),
+                            )
                         )
                     }
                     lastStatusFetch = now
@@ -128,7 +146,13 @@ constructor(
                 // Events/RSS-only: Android still requires an ongoing notification for the
                 // service, so show a minimal, min-importance one (no sound/status-bar icon)
                 // instead of the speed readout.
-                setForeground(createForegroundInfo("Captain qBit", "Alerts are on", minimal = true))
+                setForeground(
+                    createForegroundInfo(
+                        localized.getString(CommonR.string.app_name),
+                        localized.getString(CommonR.string.status_alerts_are_on),
+                        minimal = true,
+                    )
+                )
             }
 
             if (eventsOn && now - lastEventFetch >= prefs.eventPollIntervalMs) {
@@ -178,7 +202,7 @@ constructor(
      * (which don't change completion_on) never re-alert. The watermark is written only when it
      * moves.
      */
-    private suspend fun notifyCompletions(torrents: List<Torrent>, prefs: ServerPreferences) {
+    private suspend fun notifyCompletions(torrents: List<Torrent>, prefs: AppPreferences) {
         val serverId = prefs.activeServerId
         // Only actually-complete torrents carry a real completion_on; incomplete ones report -1.
         val completed = torrents.filter { it.progress >= 1f && it.completedOn > 0 }
@@ -205,7 +229,7 @@ constructor(
             .forEach {
                 notifyEvent(
                     "complete:${it.hash}".hashCode(),
-                    "Download complete",
+                    localized.getString(CommonR.string.status_download_complete),
                     it.name,
                     torrentHash = it.hash,
                 )
@@ -226,7 +250,7 @@ constructor(
      * in-memory baseline. A torrent already done when we first watch is never in the set, so it
      * doesn't alert; one caught mid-check is recorded and alerts once it finishes.
      */
-    private suspend fun notifyRechecks(torrents: List<Torrent>, prefs: ServerPreferences) {
+    private suspend fun notifyRechecks(torrents: List<Torrent>, prefs: AppPreferences) {
         val serverId = prefs.activeServerId
         val byHash = torrents.associateBy(Torrent::hash)
         val nowChecking = torrents.filter { it.state.isChecking() }.map(Torrent::hash).toSet()
@@ -248,7 +272,11 @@ constructor(
         wasChecking.forEach { hash ->
             if (hash !in nowChecking) {
                 byHash[hash]?.let {
-                    notifyEvent("checked:$hash".hashCode(), "Check complete", it.name)
+                    notifyEvent(
+                        "checked:$hash".hashCode(),
+                        localized.getString(CommonR.string.status_check_complete),
+                        it.name,
+                    )
                 }
             }
         }
@@ -267,7 +295,7 @@ constructor(
      * notifications were turned on - is seeded silently rather than alerting for its whole existing
      * backlog.
      */
-    private suspend fun notifyNewRssArticles(items: List<RssItem>, prefs: ServerPreferences) {
+    private suspend fun notifyNewRssArticles(items: List<RssItem>, prefs: AppPreferences) {
         val serverId = prefs.activeServerId
         val feeds = items.flattenFeeds()
 
@@ -298,9 +326,17 @@ constructor(
             if (newArticles.isNotEmpty()) {
                 notifyEvent(
                     "rss:$key".hashCode(),
-                    if (newArticles.size == 1) "New RSS article" else "New RSS articles",
+                    localized.resources.getQuantityString(
+                        CommonR.plurals.status_new_rss_articles,
+                        newArticles.size,
+                    ),
                     if (newArticles.size == 1) newArticles.first().title
-                    else "${newArticles.size} new in ${feed.name}",
+                    else
+                        localized.getString(
+                            CommonR.string.status_new_articles_in_feed,
+                            newArticles.size,
+                            feed.name,
+                        ),
                     rssItemPath = feed.path,
                 )
             }
@@ -367,7 +403,14 @@ constructor(
                 text,
                 R.drawable.ic_stat_qbit,
                 persistent = true,
-                actions = listOf(Action(null, "Close", closeIntent)),
+                actions =
+                    listOf(
+                        Action(
+                            null,
+                            localized.getString(CommonR.string.close_action),
+                            closeIntent,
+                        )
+                    ),
                 contentIntent = pendingIntent,
                 channelId = channelId,
                 priority =

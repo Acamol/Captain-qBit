@@ -5,11 +5,13 @@ import android.net.Uri
 import android.util.Base64
 import androidx.datastore.core.DataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.daos.ConfigDao
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.manager.CryptoManager
+import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.ServerConfig
-import dev.yashgarg.qbit.data.models.ServerPreferences
+import dev.yashgarg.qbit.utils.LocalizedContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
@@ -32,9 +34,16 @@ class BackupManager
 constructor(
     @param:ApplicationContext private val context: Context,
     private val configDao: ConfigDao,
-    private val prefsStore: DataStore<ServerPreferences>,
+    private val prefsStore: DataStore<AppPreferences>,
     private val clientManager: ClientManager,
 ) {
+
+    // These strings become exception messages that BackupViewModel re-surfaces verbatim as toasts,
+    // so they have to follow the language chosen in the app - which the injected application
+    // context does not below API 33.
+    private val localized: Context
+        get() = LocalizedContext.of(context)
+
     private val json = Json { ignoreUnknownKeys = true }
 
     /**
@@ -45,7 +54,7 @@ constructor(
         uri: Uri,
         passphrase: String,
         servers: List<ServerConfig>,
-        preferences: ServerPreferences?,
+        preferences: AppPreferences?,
         preferenceGroups: Set<PrefGroup>,
         categoryColors: Map<String, Int>?,
     ) =
@@ -84,7 +93,9 @@ constructor(
                 json.encodeToString(BackupEnvelope.serializer(), envelope).encodeToByteArray()
 
             (context.contentResolver.openOutputStream(uri)
-                    ?: throw InvalidBackupException("Could not open the selected file"))
+                    ?: throw InvalidBackupException(
+                        localized.getString(CommonR.string.error_could_not_open_file)
+                    ))
                 .use { it.write(bytes) }
         }
 
@@ -97,17 +108,23 @@ constructor(
         withContext(Dispatchers.IO) {
             val raw =
                 (context.contentResolver.openInputStream(uri)
-                        ?: throw InvalidBackupException("Could not open the selected file"))
+                        ?: throw InvalidBackupException(
+                            localized.getString(CommonR.string.error_could_not_open_file)
+                        ))
                     .use { it.readBytes() }
 
             val envelope =
                 try {
                     json.decodeFromString(BackupEnvelope.serializer(), raw.decodeToString())
                 } catch (e: Exception) {
-                    throw InvalidBackupException("This file isn't a Captain qBit backup")
+                    throw InvalidBackupException(
+                        localized.getString(CommonR.string.error_not_a_backup_file)
+                    )
                 }
             if (envelope.format != BackupEnvelope.FORMAT) {
-                throw InvalidBackupException("This file isn't a Captain qBit backup")
+                throw InvalidBackupException(
+                    localized.getString(CommonR.string.error_not_a_backup_file)
+                )
             }
 
             val chars = passphrase.toCharArray()
@@ -129,7 +146,9 @@ constructor(
             val backup =
                 json.decodeFromString(ConfigBackup.serializer(), plaintext.decodeToString())
             if (backup.servers.isEmpty()) {
-                throw InvalidBackupException("The backup contains no servers")
+                throw InvalidBackupException(
+                    localized.getString(CommonR.string.error_backup_no_servers)
+                )
             }
             backup
         }

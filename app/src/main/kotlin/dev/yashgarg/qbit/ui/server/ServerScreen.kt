@@ -1,5 +1,6 @@
 package dev.yashgarg.qbit.ui.server
 
+import android.app.Activity
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -29,7 +31,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
@@ -50,10 +52,13 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -72,22 +77,35 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.github.michaelbull.result.onErr
+import com.github.michaelbull.result.onOk
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.ui.dialogs.AddTorrentScreen
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
+import dev.yashgarg.qbit.ui.navigation.NoWindowInsets
 import dev.yashgarg.qbit.utils.TorrentHashUtil
 import dev.yashgarg.qbit.utils.friendlyMessage
+import dev.yashgarg.qbit.utils.hasExpired
+import dev.yashgarg.qbit.utils.isNotYetValid
+import dev.yashgarg.qbit.utils.isUntrustedCertificateError
+import dev.yashgarg.qbit.utils.rememberFriendlyMessageResolver
+import dev.yashgarg.qbit.utils.sha256Fingerprint
 import dev.yashgarg.qbit.utils.toHumanReadable
+import dev.yashgarg.qbit.utils.validFromText
+import dev.yashgarg.qbit.utils.validUntilText
 import dev.yashgarg.qbit.validation.LinkValidator
+import java.security.cert.X509Certificate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -101,7 +119,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * The main torrent-list screen (native Compose port of `ServerFragment`). A [ModalNavigationDrawer]
- * (filter sidebar) wraps a [Scaffold] with a [BottomAppBar] (menu / search / sort, or bulk-action
+ * (filter sidebar) wraps a [Scaffold] with a [TopAppBar] (menu / search / sort, or bulk-action
  * icons while selecting) and an add-torrent FAB. Bulk pickers and management dialogs are driven by
  * [ServerDialogHost]; add/import uses the [AddTorrentScreen] full-screen Compose dialog.
  */
@@ -116,10 +134,39 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val torrents by viewModel.sortedTorrents.collectAsStateWithLifecycle()
     val categoryColors by viewModel.categoryColors.collectAsStateWithLifecycle()
+    val activeServerId by viewModel.activeServerId.collectAsStateWithLifecycle()
+    val servers by viewModel.servers.collectAsStateWithLifecycle()
+    // Mirrors ClientManagerImpl.resolveActiveConfig()'s fallback, so "Review certificate" probes
+    // the server that's actually showing this error even if activeServerId is stale/unset (-1).
+    val resolvedServerId =
+        remember(activeServerId, servers) {
+            servers.find { it.configId == activeServerId }?.configId
+                ?: servers.firstOrNull()?.configId
+                ?: -1
+        }
 
+    var pendingCertReview by remember { mutableStateOf<X509Certificate?>(null) }
+    var probingCertificate by remember { mutableStateOf(false) }
     var serverDialog by remember { mutableStateOf<ServerDialog?>(null) }
     val linkValidator = remember { LinkValidator() }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
+    // Drawer state is saved, and the bottom-nav tabs deliberately save/restore each tab's state, so
+    // leaving this tab with the filters open and coming back would restore it open - unexpected,
+    // since returning to a tab should show the list, not a menu the user left behind. A
+    // configuration change tears this screen down the same way but should leave the drawer alone,
+    // so the two are told apart by isChangingConfigurations while unwinding.
+    LaunchedEffect(Unit) {
+        if (viewModel.closeDrawerOnEntry) {
+            viewModel.closeDrawerOnEntry = false
+            drawerState.close()
+        }
+    }
+    val activity = context as? Activity
+    DisposableEffect(Unit) {
+        onDispose {
+            if (activity?.isChangingConfigurations != true) viewModel.closeDrawerOnEntry = true
+        }
+    }
     val selected = remember { mutableStateListOf<String>() }
     // Switching any filter (drawer, active-filter chips, or "Clear all") drops the current
     // selection, so bulk actions never apply to torrents scrolled out of the new filter.
@@ -262,24 +309,22 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                     viewModel.clearFilters()
                     scope.launch { drawerState.close() }
                 },
-                onToggleSpeedLimits = { viewModel.toggleSpeedLimits() },
-                onRss = { appNavigator.navigate(NavCommand.OpenRss) },
-                onSettings = { appNavigator.navigate(NavCommand.OpenSettings) },
             )
         },
     ) {
         val hasSelection = selected.isNotEmpty()
         Scaffold(
-            bottomBar = {
-                BottomAppBar(
-                    // Ride above the keyboard so the bar stays reachable while searching.
-                    modifier = Modifier.imePadding(),
-                    actions = {
+            topBar = {
+                TopAppBar(
+                    title = { Text(stringResource(CommonR.string.torrents_title)) },
+                    navigationIcon = {
                         TooltipIconButton(
                             label = stringResource(CommonR.string.filters_label),
                             icon = Icons.Filled.Menu,
                             onClick = { scope.launch { drawerState.open() } },
                         )
+                    },
+                    actions = {
                         if (hasSelection) {
                             TooltipIconButton(
                                 label = stringResource(CommonR.string.pause_action),
@@ -332,32 +377,45 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                             )
                         }
                     },
-                    floatingActionButton = {
-                        FloatingActionButton(onClick = { openTorrentDialog() }) {
-                            Icon(
-                                Icons.Filled.Add,
-                                contentDescription =
-                                    stringResource(CommonR.string.content_description_add_torrent),
-                            )
-                        }
-                    },
                 )
-            }
+            },
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = { openTorrentDialog() },
+                    modifier = Modifier.imePadding(),
+                ) {
+                    Icon(
+                        Icons.Filled.Add,
+                        contentDescription =
+                            stringResource(CommonR.string.content_description_add_torrent),
+                    )
+                }
+            },
+            // This Scaffold has no bottomBar of its own - see NoWindowInsets kdoc; without this
+            // the FAB would sit an extra, unwanted amount above the outer NavigationBar.
+            contentWindowInsets = NoWindowInsets,
         ) { padding ->
             Column(Modifier.fillMaxSize().padding(padding)) {
                 val serverState = state.data?.serverState
                 if (!state.hasError && !state.dataLoading && serverState != null) {
-                    Text(
-                        stringResource(
-                            CommonR.string.status_speed_free_space,
-                            serverState.dlInfoSpeed.toHumanReadable(),
-                            serverState.upInfoSpeed.toHumanReadable(),
-                            serverState.freeSpace.toHumanReadable(),
-                        ),
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier =
-                            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp),
-                    )
+                    // Mixing RTL text with several independent LTR numeric/unit values makes the
+                    // Unicode bidi algorithm reorder things unpredictably depending on the actual
+                    // numbers involved. Force LTR here so this line's segments always render in
+                    // the fixed order the string template defines, regardless of locale.
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                        Text(
+                            stringResource(
+                                CommonR.string.status_speed_free_space,
+                                serverState.dlInfoSpeed.toHumanReadable(),
+                                serverState.upInfoSpeed.toHumanReadable(),
+                                serverState.freeSpace.toHumanReadable(),
+                            ),
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier =
+                                Modifier.fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 2.dp),
+                        )
+                    }
                 }
 
                 if (searchOpen) {
@@ -405,6 +463,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                     when {
                         state.hasError -> {
                             val fallback = stringResource(CommonR.string.error)
+                            val friendlyMessageResolver = rememberFriendlyMessageResolver()
                             // Scrollable so pull-to-refresh works on the error screen too (a static
                             // Column wouldn't feed the pull gesture); the Retry button stays as an
                             // explicit affordance.
@@ -429,15 +488,61 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                                         modifier = Modifier.padding(bottom = 8.dp).size(70.dp),
                                     )
                                     Text(
-                                        state.error?.friendlyMessage(fallback) ?: fallback,
+                                        state.error?.friendlyMessage(
+                                            friendlyMessageResolver,
+                                            fallback,
+                                        ) ?: fallback,
                                         style = MaterialTheme.typography.titleLarge,
                                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                     )
-                                    FilledTonalButton(
-                                        onClick = { viewModel.refresh() },
-                                        modifier = Modifier.padding(top = 16.dp),
-                                    ) {
-                                        Text(stringResource(CommonR.string.retry_action))
+                                    if (state.error?.isUntrustedCertificateError() == true) {
+                                        FilledTonalButton(
+                                            onClick = {
+                                                val target =
+                                                    servers.find { it.configId == resolvedServerId }
+                                                        ?: return@FilledTonalButton
+                                                scope.launch {
+                                                    probingCertificate = true
+                                                    viewModel
+                                                        .probeCertificate(
+                                                            target.baseUrl,
+                                                            target.port ?: 443,
+                                                        )
+                                                        .onOk { cert -> pendingCertReview = cert }
+                                                        .onErr { error ->
+                                                            Toast.makeText(
+                                                                    context,
+                                                                    error.friendlyMessage(
+                                                                        friendlyMessageResolver,
+                                                                        fallback,
+                                                                    ),
+                                                                    Toast.LENGTH_LONG,
+                                                                )
+                                                                .show()
+                                                        }
+                                                    probingCertificate = false
+                                                }
+                                            },
+                                            enabled = !probingCertificate,
+                                            modifier = Modifier.padding(top = 16.dp),
+                                        ) {
+                                            if (probingCertificate) {
+                                                CircularProgressIndicator(Modifier.size(20.dp))
+                                            } else {
+                                                Text(
+                                                    stringResource(
+                                                        CommonR.string.review_certificate_action
+                                                    )
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        FilledTonalButton(
+                                            onClick = { viewModel.refresh() },
+                                            modifier = Modifier.padding(top = 16.dp),
+                                        ) {
+                                            Text(stringResource(CommonR.string.retry_action))
+                                        }
                                     }
                                 }
                             }
@@ -532,6 +637,69 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
         appNavigator = appNavigator,
     )
 
+    pendingCertReview?.let { cert ->
+        val fingerprint = remember(cert) { cert.sha256Fingerprint() }
+        val expired = remember(cert) { cert.hasExpired() }
+        val notYetValid = remember(cert) { cert.isNotYetValid() }
+        AlertDialog(
+            onDismissRequest = { pendingCertReview = null },
+            title = { Text(stringResource(CommonR.string.untrusted_certificate_title)) },
+            text = {
+                Column {
+                    Text(stringResource(CommonR.string.untrusted_certificate_message))
+                    Spacer(Modifier.size(8.dp))
+                    Text(
+                        "${stringResource(CommonR.string.certificate_subject_label)}: " +
+                            cert.subjectX500Principal.name
+                    )
+                    Text(
+                        "${stringResource(CommonR.string.certificate_issuer_label)}: " +
+                            cert.issuerX500Principal.name
+                    )
+                    Text(
+                        "${stringResource(CommonR.string.certificate_fingerprint_label)}: " +
+                            fingerprint
+                    )
+                    Text(
+                        "${stringResource(CommonR.string.certificate_validity_label)}: " +
+                            cert.validUntilText()
+                    )
+                    if (expired || notYetValid) {
+                        Spacer(Modifier.size(8.dp))
+                        Text(
+                            if (expired)
+                                stringResource(
+                                    CommonR.string.certificate_expired_warning,
+                                    cert.validUntilText(),
+                                )
+                            else
+                                stringResource(
+                                    CommonR.string.certificate_not_yet_valid_warning,
+                                    cert.validFromText(),
+                                ),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingCertReview = null
+                        scope.launch { viewModel.pinCertificate(resolvedServerId, cert.encoded) }
+                    }
+                ) {
+                    Text(stringResource(CommonR.string.trust_and_retry_action))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingCertReview = null }) {
+                    Text(stringResource(CommonR.string.cancel))
+                }
+            },
+        )
+    }
+
     if (showAddTorrent) {
         val prefs by viewModel.addTorrentPrefs.collectAsStateWithLifecycle()
         AddTorrentScreen(
@@ -596,7 +764,9 @@ private fun TorrentList(
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+        // Extra bottom padding so the last row clears the floating add-torrent FAB, which - unlike
+        // the old BottomAppBar-docked FAB - no longer reserves its own space below the content.
+        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 88.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(torrents, key = { it.hash }) { torrent ->

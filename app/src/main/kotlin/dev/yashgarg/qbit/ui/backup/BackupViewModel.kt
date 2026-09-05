@@ -1,10 +1,11 @@
 package dev.yashgarg.qbit.ui.backup
 
+import android.app.Application
 import android.net.Uri
 import androidx.datastore.core.DataStore
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.backup.BackupManager
 import dev.yashgarg.qbit.data.backup.ConfigBackup
 import dev.yashgarg.qbit.data.backup.ImportMode
@@ -13,8 +14,9 @@ import dev.yashgarg.qbit.data.backup.InvalidBackupException
 import dev.yashgarg.qbit.data.backup.PrefGroup
 import dev.yashgarg.qbit.data.backup.extractGroups
 import dev.yashgarg.qbit.data.daos.ConfigDao
+import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.ServerConfig
-import dev.yashgarg.qbit.data.models.ServerPreferences
+import dev.yashgarg.qbit.ui.common.StatusViewModel
 import javax.crypto.AEADBadTagException
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -36,8 +38,9 @@ class BackupViewModel
 constructor(
     private val backupManager: BackupManager,
     private val configDao: ConfigDao,
-    private val prefsStore: DataStore<ServerPreferences>,
-) : ViewModel() {
+    private val prefsStore: DataStore<AppPreferences>,
+    application: Application,
+) : StatusViewModel(application) {
 
     /** One-shot backup outcomes surfaced to the UI. */
     sealed interface BackupEvent {
@@ -93,9 +96,14 @@ constructor(
                         prefGroups,
                         categoryColors,
                     )
-                    BackupEvent.Exported("Configuration exported")
+                    BackupEvent.Exported(getString(CommonR.string.status_config_exported))
                 } catch (e: Exception) {
-                    BackupEvent.Failed("Export failed: ${e.message ?: "unknown error"}")
+                    BackupEvent.Failed(
+                        getString(
+                            CommonR.string.status_export_failed,
+                            e.message ?: getString(CommonR.string.unknown_error),
+                        )
+                    )
                 }
             _backupEvents.emit(event)
         }
@@ -115,11 +123,16 @@ constructor(
                             .toSet()
                     BackupEvent.Loaded(backup, duplicateIds)
                 } catch (e: AEADBadTagException) {
-                    BackupEvent.Failed("Incorrect passphrase, or the file is corrupted")
+                    BackupEvent.Failed(getString(CommonR.string.status_incorrect_passphrase))
                 } catch (e: InvalidBackupException) {
-                    BackupEvent.Failed(e.message ?: "Invalid backup file")
+                    BackupEvent.Failed(e.message ?: getString(CommonR.string.unknown_error))
                 } catch (e: Exception) {
-                    BackupEvent.Failed("Import failed: ${e.message ?: "unknown error"}")
+                    BackupEvent.Failed(
+                        getString(
+                            CommonR.string.status_import_failed,
+                            e.message ?: getString(CommonR.string.unknown_error),
+                        )
+                    )
                 }
             _backupEvents.emit(event)
         }
@@ -147,21 +160,32 @@ constructor(
                     pendingImport = null
                     BackupEvent.Imported(summarize(result))
                 } catch (e: Exception) {
-                    BackupEvent.Failed("Import failed: ${e.message ?: "unknown error"}")
+                    BackupEvent.Failed(
+                        getString(
+                            CommonR.string.status_import_failed,
+                            e.message ?: getString(CommonR.string.unknown_error),
+                        )
+                    )
                 }
             _backupEvents.emit(event)
         }
     }
 
     private fun summarize(result: ImportResult): String {
-        fun servers(n: Int) = if (n == 1) "1 server" else "$n servers"
-        if (result.replaced) return "Replaced with ${servers(result.imported)}"
+        fun servers(n: Int) = getQuantityString(CommonR.plurals.server_count, n, n)
+        if (result.replaced) {
+            return getString(CommonR.string.status_replaced_with_servers, servers(result.imported))
+        }
         return when {
             result.imported == 0 && result.skipped > 0 ->
-                "No new servers — ${servers(result.skipped)} already added"
+                getString(CommonR.string.status_no_new_servers, servers(result.skipped))
             result.skipped > 0 ->
-                "Imported ${servers(result.imported)} (${result.skipped} skipped, already added)"
-            else -> "Imported ${servers(result.imported)}"
+                getString(
+                    CommonR.string.status_imported_servers_with_skipped,
+                    servers(result.imported),
+                    result.skipped,
+                )
+            else -> getString(CommonR.string.status_imported_servers, servers(result.imported))
         }
     }
 }

@@ -7,10 +7,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -23,21 +28,13 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.PlainTooltip
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -67,9 +64,6 @@ fun ServerDrawer(
     onTagLongPress: (String) -> Unit,
     onManageTags: () -> Unit,
     onClearFilters: () -> Unit,
-    onToggleSpeedLimits: () -> Unit,
-    onRss: () -> Unit,
-    onSettings: () -> Unit,
 ) {
     val torrents = state.data?.torrents?.values?.toList() ?: emptyList()
     val total = torrents.size
@@ -79,203 +73,160 @@ fun ServerDrawer(
     ModalDrawerSheet(
         drawerContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = Modifier.width(300.dp),
+        // Only the bottom inset is opted out of: the drawer's bounds already sit above the
+        // persistent NavigationBar (via the outer Scaffold in QbitNavHost), so reserving it again
+        // would leave a blank gap below the pinned "Clear all" button. Top and horizontal insets
+        // are still needed - nothing else keeps the header off the status bar, or the drawer's
+        // start edge clear of a landscape navigation bar or a display cutout.
+        windowInsets =
+            WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
     ) {
-        Column(
-            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 12.dp)
-        ) {
-            // Header: server switcher + statistics
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+        Column(Modifier.fillMaxSize()) {
+            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())) {
+                // Header: server switcher + statistics
                 Row(
                     modifier =
-                        Modifier.weight(1f)
-                            .combinedClickable(onClick = onServerPicker)
-                            .padding(vertical = 8.dp),
+                        Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        state.serverName ?: stringResource(CommonR.string.servers_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
+                    Row(
+                        modifier =
+                            Modifier.weight(1f)
+                                .combinedClickable(onClick = onServerPicker)
+                                .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            state.serverName ?: stringResource(CommonR.string.servers_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                        )
+                        Text(" ▾", fontSize = 12.sp)
+                    }
+                    TooltipIconButton(
+                        label = stringResource(CommonR.string.server_logs_action),
+                        icon = Icons.Filled.Description,
+                        onClick = onLogs,
+                        position = TooltipAnchorPosition.Below,
                     )
-                    Text(" ▾", fontSize = 12.sp)
-                }
-                TooltipIconButton(
-                    label = stringResource(CommonR.string.server_logs_action),
-                    icon = Icons.Filled.Description,
-                    onClick = onLogs,
-                    position = TooltipAnchorPosition.Below,
-                )
-                TooltipIconButton(
-                    label = stringResource(CommonR.string.statistics_action),
-                    icon = Icons.Filled.BarChart,
-                    onClick = onStats,
-                    position = TooltipAnchorPosition.Below,
-                )
-            }
-
-            // Status
-            SectionHeader(stringResource(CommonR.string.status_section_title))
-            val allLabel = stringResource(CommonR.string.all_label)
-            StateFilter.entries
-                // The Queued filter is only meaningful when the server has torrent queueing on.
-                .filter { it != StateFilter.QUEUED || state.queueingEnabled }
-                .forEach { filter ->
-                    SidebarItem(
-                        text = stringResource(filter.labelRes),
-                        selected = filter == state.selectedFilter,
-                        count = torrents.count { it.matchesFilter(filter) },
-                        onClick = {
-                            onFilter(
-                                if (filter == state.selectedFilter) StateFilter.ALL else filter
-                            )
-                        },
+                    TooltipIconButton(
+                        label = stringResource(CommonR.string.statistics_action),
+                        icon = Icons.Filled.BarChart,
+                        onClick = onStats,
+                        position = TooltipAnchorPosition.Below,
                     )
                 }
 
-            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                // Status
+                SectionHeader(stringResource(CommonR.string.status_section_title))
+                val allLabel = stringResource(CommonR.string.all_label)
+                StateFilter.entries
+                    // The Queued filter is only meaningful when the server has torrent queueing on.
+                    .filter { it != StateFilter.QUEUED || state.queueingEnabled }
+                    .forEach { filter ->
+                        SidebarItem(
+                            text = stringResource(filter.labelRes),
+                            selected = filter == state.selectedFilter,
+                            count = torrents.count { it.matchesFilter(filter) },
+                            onClick = {
+                                onFilter(
+                                    if (filter == state.selectedFilter) StateFilter.ALL else filter
+                                )
+                            },
+                        )
+                    }
 
-            // Categories
-            SectionHeaderWithAction(
-                stringResource(CommonR.string.categories_section_title),
-                onManageCategories,
-            )
-            SidebarItem(
-                text = allLabel,
-                selected = state.selectedCategory == null,
-                count = total,
-                onClick = { onCategory(null) },
-            )
-            flat.forEach { node ->
-                val isReal = node.path in state.availableCategories
-                SidebarItem(
-                    text = node.name,
-                    selected = node.path == state.selectedCategory,
-                    count = torrents.count { it.matchesCategory(node.path) },
-                    indent = node.depth,
-                    chevron = if (node.children.isNotEmpty()) node.path in collapsedPaths else null,
-                    onChevron = {
-                        if (!collapsedPaths.remove(node.path)) collapsedPaths.add(node.path)
-                    },
-                    onClick = {
-                        onCategory(if (node.path == state.selectedCategory) null else node.path)
-                    },
-                    onLongClick = if (isReal) ({ onCategoryLongPress(node.path) }) else null,
-                )
-            }
-
-            HorizontalDivider(Modifier.padding(vertical = 8.dp))
-
-            // Tags
-            SectionHeaderWithAction(stringResource(CommonR.string.tags_section_title), onManageTags)
-            val noneSelected = !state.filterUntagged && state.selectedTags.isEmpty()
-            SidebarItem(text = allLabel, selected = noneSelected, count = total) {
-                onFilterUntagged(false)
-            }
-            SidebarItem(
-                text = stringResource(CommonR.string.untagged_label),
-                selected = state.filterUntagged,
-                count = torrents.count { it.tags.isEmpty() },
-                onClick = { onFilterUntagged(!state.filterUntagged) },
-            )
-            state.availableTags.forEach { tag ->
-                SidebarItem(
-                    text = tag,
-                    selected = state.selectedTags.contains(tag),
-                    count = torrents.count { it.tags.contains(tag) },
-                    onClick = { onToggleTag(tag) },
-                    onLongClick = { onTagLongPress(tag) },
-                )
-            }
-
-            // Trackers
-            if (state.availableTrackers.isNotEmpty()) {
                 HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                SectionHeader(stringResource(CommonR.string.trackers_section_title))
+
+                // Categories
+                SectionHeaderWithAction(
+                    stringResource(CommonR.string.categories_section_title),
+                    onManageCategories,
+                )
                 SidebarItem(
                     text = allLabel,
-                    selected = state.selectedTracker == null,
+                    selected = state.selectedCategory == null,
                     count = total,
-                    onClick = { onTracker(null) },
+                    onClick = { onCategory(null) },
                 )
-                state.availableTrackers.forEach { host ->
+                flat.forEach { node ->
+                    val isReal = node.path in state.availableCategories
                     SidebarItem(
-                        text = host,
-                        selected = host == state.selectedTracker,
-                        count = torrents.count { it.matchesTracker(host) },
-                        onClick = { onTracker(if (host == state.selectedTracker) null else host) },
+                        text = node.name,
+                        selected = node.path == state.selectedCategory,
+                        count = torrents.count { it.matchesCategory(node.path) },
+                        indent = node.depth,
+                        chevron =
+                            if (node.children.isNotEmpty()) node.path in collapsedPaths else null,
+                        onChevron = {
+                            if (!collapsedPaths.remove(node.path)) collapsedPaths.add(node.path)
+                        },
+                        onClick = {
+                            onCategory(if (node.path == state.selectedCategory) null else node.path)
+                        },
+                        onLongClick = if (isReal) ({ onCategoryLongPress(node.path) }) else null,
                     )
                 }
-            }
 
-            // Footer
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+
+                // Tags
+                SectionHeaderWithAction(
+                    stringResource(CommonR.string.tags_section_title),
+                    onManageTags,
+                )
+                val noneSelected = !state.filterUntagged && state.selectedTags.isEmpty()
+                SidebarItem(text = allLabel, selected = noneSelected, count = total) {
+                    onFilterUntagged(false)
+                }
+                SidebarItem(
+                    text = stringResource(CommonR.string.untagged_label),
+                    selected = state.filterUntagged,
+                    count = torrents.count { it.tags.isEmpty() },
+                    onClick = { onFilterUntagged(!state.filterUntagged) },
+                )
+                state.availableTags.forEach { tag ->
+                    SidebarItem(
+                        text = tag,
+                        selected = state.selectedTags.contains(tag),
+                        count = torrents.count { it.tags.contains(tag) },
+                        onClick = { onToggleTag(tag) },
+                        onLongClick = { onTagLongPress(tag) },
+                    )
+                }
+
+                // Trackers
+                if (state.availableTrackers.isNotEmpty()) {
+                    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                    SectionHeader(stringResource(CommonR.string.trackers_section_title))
+                    SidebarItem(
+                        text = allLabel,
+                        selected = state.selectedTracker == null,
+                        count = total,
+                        onClick = { onTracker(null) },
+                    )
+                    state.availableTrackers.forEach { host ->
+                        SidebarItem(
+                            text = host,
+                            selected = host == state.selectedTracker,
+                            count = torrents.count { it.matchesTracker(host) },
+                            onClick = {
+                                onTracker(if (host == state.selectedTracker) null else host)
+                            },
+                        )
+                    }
+                }
+            }
+            // Footer, pinned to the bottom of the drawer instead of scrolling with the filters -
+            // always reachable, and doesn't leave a blank gap when the filter list is short.
+            HorizontalDivider()
             FilledTonalButton(
                 onClick = onClearFilters,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
             ) {
                 Text(stringResource(CommonR.string.clear_all_action))
             }
-            HorizontalDivider()
-            // Long-press any option for a haptic buzz + a tooltip describing what it does.
-            DrawerOption(
-                label = stringResource(CommonR.string.use_alternate_speed_limits_label),
-                description = stringResource(CommonR.string.use_alternate_speed_limits_description),
-                onClick = onToggleSpeedLimits,
-            ) {
-                Switch(
-                    checked = state.speedLimitMode != 0,
-                    onCheckedChange = { onToggleSpeedLimits() },
-                )
-            }
-            DrawerOption(
-                label = stringResource(CommonR.string.rss_feeds_label),
-                description = stringResource(CommonR.string.rss_feeds_description),
-                onClick = onRss,
-            )
-            DrawerOption(
-                label = stringResource(CommonR.string.settings_label),
-                description = stringResource(CommonR.string.settings_description),
-                onClick = onSettings,
-            )
-        }
-    }
-}
-
-/**
- * A footer option row. Tap runs [onClick]; long-press buzzes and shows a [description] tooltip
- * (same feel as [TooltipIconButton]). [trailing] is an optional control such as a Switch.
- */
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
-@Composable
-private fun DrawerOption(
-    label: String,
-    description: String,
-    onClick: () -> Unit,
-    trailing: (@Composable () -> Unit)? = null,
-) {
-    val tooltipState = rememberTooltipState()
-    val haptics = LocalHapticFeedback.current
-    LaunchedEffect(tooltipState.isVisible) {
-        if (tooltipState.isVisible) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-    }
-    TooltipBox(
-        positionProvider =
-            TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-        tooltip = { PlainTooltip { Text(description) } },
-        state = tooltipState,
-    ) {
-        Row(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .combinedClickable(onClick = onClick)
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(label, Modifier.weight(1f), fontSize = 14.sp)
-            trailing?.invoke()
         }
     }
 }

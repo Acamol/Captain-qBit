@@ -1,0 +1,15 @@
+New: a complete Hebrew translation, the first community language to ship. The whole app is now properly right-to-left — mirrored icons, and numbers, sizes and dates that stay the right way round inside translated sentences.
+
+New: the language you pick in Settings now survives a restart. Below Android 13 it was kept in memory only, so the app reverted to your device language on every cold start, and notifications and toasts stayed in the device language even while the rest of the app was translated.
+
+New: RSS and Settings are top-level tabs at the bottom of the screen, so they're reachable from anywhere. The drawer is now only what it always showed — filters for the torrent list.
+
+New: self-signed certificates are approved per server. Previously the app trusted every certificate your device trusted; now you review a certificate's fingerprint and approve it for one server, and that server alone. Expired certificates — and ones whose start date hasn't arrived yet, usually a wrong clock on the server — say so up front, since approving those can't fix the connection.
+
+New: Android 17 support, including the local network permission it requires to reach a self-hosted server. If you deny it, Settings offers a way back rather than leaving you stuck.
+
+Fixed: rotating the screen threw away where you were and sent you back to the torrent list. The filter drawer also stayed open across a rotation instead of closing.
+
+Fixed: pressing back from the RSS or Settings tab now returns to the torrent list rather than leaving the app.
+
+Fixed: an unlimited speed limit read as "-1 B", and a torrent that had just been added showed nothing at all for "time active".

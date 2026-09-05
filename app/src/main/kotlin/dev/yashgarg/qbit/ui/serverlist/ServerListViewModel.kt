@@ -1,15 +1,14 @@
 package dev.yashgarg.qbit.ui.serverlist
 
-import android.content.Context
+import android.app.Application
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.daos.ConfigDao
 import dev.yashgarg.qbit.data.manager.ClientManager
+import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.ServerConfig
-import dev.yashgarg.qbit.data.models.ServerPreferences
 import dev.yashgarg.qbit.ui.common.StatusViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -24,11 +23,11 @@ import kotlinx.coroutines.launch
 class ServerListViewModel
 @Inject
 constructor(
-    private val prefsStore: DataStore<ServerPreferences>,
+    private val prefsStore: DataStore<AppPreferences>,
     private val configDao: ConfigDao,
     private val clientManager: ClientManager,
-    @ApplicationContext context: Context,
-) : StatusViewModel(context) {
+    application: Application,
+) : StatusViewModel(application) {
 
     val servers: StateFlow<List<ServerConfig>> =
         configDao.getConfigs().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())

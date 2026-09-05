@@ -2,6 +2,7 @@ package dev.yashgarg.qbit
 
 import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -23,7 +24,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import androidx.core.os.LocaleListCompat
 import androidx.core.view.WindowCompat
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.Lifecycle
@@ -34,8 +37,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.manager.PendingTorrentIntent
+import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.ConfigStatus
-import dev.yashgarg.qbit.data.models.ServerPreferences
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.ui.backup.BackupDialogs
 import dev.yashgarg.qbit.ui.backup.BackupViewModel
@@ -48,12 +51,14 @@ import dev.yashgarg.qbit.ui.whatsnew.WhatsNewDialog
 import dev.yashgarg.qbit.ui.whatsnew.WhatsNewViewModel
 import dev.yashgarg.qbit.utils.CrashHandler
 import dev.yashgarg.qbit.utils.GitHubIssueLink
+import dev.yashgarg.qbit.utils.LocalizedContext
 import dev.yashgarg.qbit.utils.rememberCopyToClipboard
 import dev.yashgarg.qbit.worker.StatusWorker
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -63,7 +68,7 @@ import kotlinx.coroutines.withContext
 class MainActivity : AppCompatActivity() {
 
     @Inject lateinit var clientManager: ClientManager
-    @Inject lateinit var serverPrefsStore: DataStore<ServerPreferences>
+    @Inject lateinit var appPrefsStore: DataStore<AppPreferences>
     @Inject lateinit var appNavigator: AppNavigator
     @Inject lateinit var pendingTorrentIntent: PendingTorrentIntent
 
@@ -85,8 +90,13 @@ class MainActivity : AppCompatActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
 
+        // A non-null savedInstanceState means the nav host restores its own back stack, so the
+        // initial routing below has already happened for this session. Re-running it would re-root
+        // navigation and throw away wherever the user actually was - on every rotation.
+        navigatedToServer = savedInstanceState != null
+
         setContent {
-            val dynamicColorsFlow = remember { serverPrefsStore.data.map { it.dynamicColors } }
+            val dynamicColorsFlow = remember { appPrefsStore.data.map { it.dynamicColors } }
             val dynamicColors by dynamicColorsFlow.collectAsStateWithLifecycle(initialValue = false)
             QbitComposeTheme(dynamicColors = dynamicColors) {
                 QbitNavHost(appNavigator = appNavigator, onExitDoubleBack = ::onExitDoubleBack)
@@ -125,8 +135,13 @@ class MainActivity : AppCompatActivity() {
                     )
                 }
 
+                // Shared by both permission rationales below: neither is dismissable, so only
+                // one may be on screen at a time, and both defer when this launch is opening a
+                // backup file (that flow shows its own native passphrase dialog from onCreate).
+                var showNotificationRationale by remember { mutableStateOf(false) }
+                val openingBackupFile = intent?.data?.let(::isBackupUri) == true
+
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    var showNotificationRationale by remember { mutableStateOf(false) }
                     val notificationPermissionLauncher =
                         rememberLauncherForActivityResult(
                             ActivityResultContracts.RequestPermission()
@@ -134,15 +149,11 @@ class MainActivity : AppCompatActivity() {
                             if (granted) launchWorkManager(true)
                         }
                     // Only ever asked once per install (tracked in prefs) - a denial doesn't nag
-                    // again on every later launch. Skipped entirely when this launch is opening a
-                    // backup file: that flow shows its own (native, non-Compose) passphrase dialog
-                    // immediately in onCreate, which would otherwise land on screen at the same
-                    // time as this one. Deferred to the next normal launch instead.
-                    val openingBackupFile = intent?.data?.let(::isBackupUri) == true
+                    // again on every later launch.
                     LaunchedEffect(Unit) {
                         if (openingBackupFile) return@LaunchedEffect
                         val alreadyAsked =
-                            serverPrefsStore.data.map { it.notificationPermissionAsked }.first()
+                            appPrefsStore.data.map { it.notificationPermissionAsked }.first()
                         if (
                             !alreadyAsked &&
                                 !AppNotificationManager.checkPermission(this@MainActivity)
@@ -164,7 +175,7 @@ class MainActivity : AppCompatActivity() {
                                     onClick = {
                                         showNotificationRationale = false
                                         lifecycleScope.launch {
-                                            serverPrefsStore.updateData {
+                                            appPrefsStore.updateData {
                                                 it.copy(notificationPermissionAsked = true)
                                             }
                                         }
@@ -181,8 +192,79 @@ class MainActivity : AppCompatActivity() {
                                     onClick = {
                                         showNotificationRationale = false
                                         lifecycleScope.launch {
-                                            serverPrefsStore.updateData {
+                                            appPrefsStore.updateData {
                                                 it.copy(notificationPermissionAsked = true)
+                                            }
+                                        }
+                                    }
+                                ) {
+                                    Text(stringResource(CommonR.string.not_now_action))
+                                }
+                            },
+                        )
+                    }
+                }
+
+                // Android 17 requires a runtime permission for any socket to a local-network
+                // address. Asked once per install, same as notifications above, and only when no
+                // notification rationale is already on screen - two undismissable dialogs must
+                // not stack.
+                if (
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN &&
+                        !showNotificationRationale
+                ) {
+                    var showLocalNetworkRationale by remember { mutableStateOf(false) }
+                    val localNetworkPermissionLauncher =
+                        rememberLauncherForActivityResult(
+                            ActivityResultContracts.RequestPermission()
+                        ) {}
+                    LaunchedEffect(Unit) {
+                        if (openingBackupFile) return@LaunchedEffect
+                        val alreadyAsked =
+                            appPrefsStore.data.map { it.localNetworkPermissionAsked }.first()
+                        if (
+                            !alreadyAsked &&
+                                ContextCompat.checkSelfPermission(
+                                    this@MainActivity,
+                                    Manifest.permission.ACCESS_LOCAL_NETWORK,
+                                ) != PackageManager.PERMISSION_GRANTED
+                        ) {
+                            showLocalNetworkRationale = true
+                        }
+                    }
+                    if (showLocalNetworkRationale) {
+                        AlertDialog(
+                            onDismissRequest = {},
+                            title = {
+                                Text(stringResource(CommonR.string.enable_local_network_title))
+                            },
+                            text = {
+                                Text(stringResource(CommonR.string.enable_local_network_message))
+                            },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = {
+                                        showLocalNetworkRationale = false
+                                        lifecycleScope.launch {
+                                            appPrefsStore.updateData {
+                                                it.copy(localNetworkPermissionAsked = true)
+                                            }
+                                        }
+                                        localNetworkPermissionLauncher.launch(
+                                            Manifest.permission.ACCESS_LOCAL_NETWORK
+                                        )
+                                    }
+                                ) {
+                                    Text(stringResource(CommonR.string.enable_action))
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(
+                                    onClick = {
+                                        showLocalNetworkRationale = false
+                                        lifecycleScope.launch {
+                                            appPrefsStore.updateData {
+                                                it.copy(localNetworkPermissionAsked = true)
                                             }
                                         }
                                     }
@@ -203,12 +285,46 @@ class MainActivity : AppCompatActivity() {
         // reactively by the Compose theme (see setContent), so no activity recreate is needed.
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                serverPrefsStore.data
+                appPrefsStore.data
                     .map { it.themeMode }
                     .distinctUntilChanged()
                     .collect { themeMode ->
                         if (themeMode != AppCompatDelegate.getDefaultNightMode()) {
                             AppCompatDelegate.setDefaultNightMode(themeMode)
+                        }
+                    }
+            }
+        }
+
+        // Applies a language arriving from a restored backup, for the same reason the theme
+        // observer
+        // above exists: the import can tear down a screen collector before an event is seen.
+        //
+        // drop(1) discards DataStore's replay of the current value, so this only ever reacts to the
+        // preference actually changing. That matters on API 33+, where the system's own per-app
+        // language screen can change the locale without going through this app: enforcing the
+        // stored value on startup would undo that choice on every launch. The Settings picker
+        // applies its own selection directly and doesn't rely on this.
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                appPrefsStore.data
+                    .map { it.languageTag }
+                    .distinctUntilChanged()
+                    .drop(1)
+                    .collect { languageTag ->
+                        if (
+                            languageTag !=
+                                AppCompatDelegate.getApplicationLocales().toLanguageTags()
+                        ) {
+                            AppCompatDelegate.setApplicationLocales(
+                                if (languageTag.isEmpty()) LocaleListCompat.getEmptyLocaleList()
+                                else LocaleListCompat.forLanguageTags(languageTag)
+                            )
+                            // Android caches channel names from creation time, so a new locale
+                            // alone won't retranslate them. Recreating with the same ids does.
+                            AppNotificationManager.createNotificationChannel(
+                                LocalizedContext.of(applicationContext)
+                            )
                         }
                     }
             }
@@ -250,7 +366,7 @@ class MainActivity : AppCompatActivity() {
                 // with a server configured.
                 combine(
                         clientManager.configStatus,
-                        serverPrefsStore.data
+                        appPrefsStore.data
                             .map {
                                 it.statusNotification ||
                                     it.notifyOnComplete ||

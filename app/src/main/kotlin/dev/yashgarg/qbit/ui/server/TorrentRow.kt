@@ -355,7 +355,10 @@ fun SwipeableTorrentRow(
             }
             RevealAction(
                 icon = if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-                label = if (paused) "Resume" else "Pause",
+                label =
+                    stringResource(
+                        if (paused) CommonR.string.resume else CommonR.string.pause_action
+                    ),
                 container = MaterialTheme.colorScheme.secondaryContainer,
                 content = MaterialTheme.colorScheme.onSecondaryContainer,
                 width = actionWidth,
@@ -366,7 +369,7 @@ fun SwipeableTorrentRow(
             )
             RevealAction(
                 icon = Icons.Filled.Delete,
-                label = "Delete",
+                label = stringResource(CommonR.string.delete),
                 container = MaterialTheme.colorScheme.errorContainer,
                 content = MaterialTheme.colorScheme.onErrorContainer,
                 width = actionWidth,

@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -27,6 +28,7 @@ import cafe.adriel.bonsai.core.node.Leaf
 import cafe.adriel.bonsai.core.node.Node
 import cafe.adriel.bonsai.core.tree.Tree
 import cafe.adriel.bonsai.core.tree.TreeScope
+import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.models.ContentTreeItem
 import dev.yashgarg.qbit.ui.compose.theme.SpaceGrotesk
 
@@ -73,6 +75,10 @@ private fun torrentContentStyle(): BonsaiStyle<ContentTreeItem> {
     val iconTint = ColorFilter.tint(MaterialTheme.colorScheme.onSurfaceVariant)
     return BonsaiStyle(
         toggleIconColorFilter = iconTint,
+        toggleIconExpandedContentDescription =
+            stringResource(CommonR.string.content_description_collapse_folder),
+        toggleIconCollapsedContentDescription =
+            stringResource(CommonR.string.content_description_expand_folder),
         nodeCollapsedIcon = { node ->
             rememberVectorPainter(
                 if (node is BranchNode) Icons.Rounded.Folder else Icons.Default.FileCopy

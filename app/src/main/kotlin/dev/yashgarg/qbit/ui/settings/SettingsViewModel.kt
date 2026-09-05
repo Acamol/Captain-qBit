@@ -7,7 +7,7 @@ import com.github.michaelbull.result.get
 import com.github.michaelbull.result.onOk
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.yashgarg.qbit.data.QbitRepository
-import dev.yashgarg.qbit.data.models.ServerPreferences
+import dev.yashgarg.qbit.data.models.AppPreferences
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 class SettingsViewModel
 @Inject
 constructor(
-    private val prefsStore: DataStore<ServerPreferences>,
+    private val prefsStore: DataStore<AppPreferences>,
     private val repository: QbitRepository,
 ) : ViewModel() {
 
@@ -253,6 +253,11 @@ constructor(
 
     fun setThemeMode(mode: Int) {
         viewModelScope.launch { prefsStore.updateData { it.copy(themeMode = mode) } }
+    }
+
+    /** [tag] is a BCP-47 language tag, or "" to follow the system locale. */
+    fun setLanguageTag(tag: String) {
+        viewModelScope.launch { prefsStore.updateData { it.copy(languageTag = tag) } }
     }
 
     fun setStatusNotification(enabled: Boolean) {

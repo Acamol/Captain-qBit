@@ -10,7 +10,7 @@ import dev.yashgarg.qbit.data.models.ServerConfig
 
 @Database(
     entities = [ServerConfig::class],
-    version = 6,
+    version = 7,
     autoMigrations = [AutoMigration(from = 2, to = 3)],
     exportSchema = true,
 )
@@ -66,6 +66,14 @@ val MIGRATION_5_6 =
                 "UPDATE configs SET position = " +
                     "(SELECT COUNT(*) FROM configs AS c2 WHERE c2.config_id < configs.config_id)"
             )
+        }
+    }
+
+// Adds the pinned-certificate column backing per-server certificate pinning.
+val MIGRATION_6_7 =
+    object : Migration(6, 7) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE configs ADD COLUMN pinnedCertificate TEXT DEFAULT NULL")
         }
     }
 

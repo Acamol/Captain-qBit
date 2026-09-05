@@ -1,27 +1,30 @@
 package dev.yashgarg.qbit.ui.server
 
-import android.content.Context
-import android.net.Uri
+import android.app.Application
+import android.util.Base64
+import androidx.core.net.toUri
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.viewModelScope
+import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.get
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.QbitRepository
 import dev.yashgarg.qbit.data.daos.ConfigDao
+import dev.yashgarg.qbit.data.manager.CertificateProbe
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.manager.PendingTorrentIntent
+import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.ContentTreeItem
 import dev.yashgarg.qbit.data.models.ServerConfig
-import dev.yashgarg.qbit.data.models.ServerPreferences
 import dev.yashgarg.qbit.data.models.ServerViewPrefs
 import dev.yashgarg.qbit.ui.common.StatusViewModel
 import dev.yashgarg.qbit.utils.TorrentFileParser
 import dev.yashgarg.qbit.utils.TransformUtil
 import dev.yashgarg.qbit.utils.friendlyMessage
+import java.security.cert.X509Certificate
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -30,6 +33,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import qbittorrent.models.Torrent
 import qbittorrent.models.TorrentFile
 
@@ -38,12 +42,19 @@ class ServerViewModel
 @Inject
 constructor(
     private val repository: QbitRepository,
-    private val prefsStore: DataStore<ServerPreferences>,
+    private val prefsStore: DataStore<AppPreferences>,
     private val configDao: ConfigDao,
     private val clientManager: ClientManager,
     private val pendingTorrentIntent: PendingTorrentIntent,
-    @ApplicationContext context: Context,
-) : StatusViewModel(context) {
+    application: Application,
+) : StatusViewModel(application) {
+
+    // Whether the filter drawer should be closed the next time this screen composes. Set when the
+    // screen is torn down by navigating away, cleared once acted on. Deliberately held here rather
+    // than in saved state: the ViewModel survives a configuration change, which is the one teardown
+    // that must not close the drawer, and a fresh ViewModel (first launch, or after process death)
+    // starts true so the screen always opens on the list.
+    var closeDrawerOnEntry = true
     private val _uiState = MutableStateFlow(ServerScreenState())
     val uiState = _uiState.asStateFlow()
 
@@ -99,11 +110,30 @@ constructor(
         }
     }
 
+    /** Fetches the certificate a server presents, for the user to review before trusting it. */
+    suspend fun probeCertificate(host: String, port: Int): Result<X509Certificate, Throwable> =
+        CertificateProbe.fetchPresentedCertificate(host, port)
+
+    /**
+     * Approves a certificate for [id]. Persisting it here (rather than only from ConfigScreen) is
+     * what lets a connection that's failing right now on this screen recover without navigating
+     * away: ClientManagerImpl reactively rebuilds its client whenever this config row changes, so
+     * the next sync attempt picks up the pin automatically.
+     */
+    suspend fun pinCertificate(id: Int, der: ByteArray) {
+        withContext(Dispatchers.IO) {
+            val current = configDao.getConfigById(id) ?: return@withContext
+            configDao.addConfig(
+                current.copy(pinnedCertificate = Base64.encodeToString(der, Base64.NO_WRAP))
+            )
+        }
+    }
+
     // Eagerly so the DataStore-backed flow starts collecting as soon as the ViewModel is created;
     // the add-torrent dialog reads .value directly (no long-lived collector), and WhileSubscribed
     // would leave it stuck on the default until something subscribed.
-    val addTorrentPrefs: StateFlow<ServerPreferences> =
-        prefsStore.data.stateIn(viewModelScope, SharingStarted.Eagerly, ServerPreferences())
+    val addTorrentPrefs: StateFlow<AppPreferences> =
+        prefsStore.data.stateIn(viewModelScope, SharingStarted.Eagerly, AppPreferences())
 
     fun saveAddTorrentPrefs(autoTmm: Boolean, paused: Boolean) {
         viewModelScope.launch {
@@ -180,7 +210,7 @@ constructor(
      * Restore [serverId]'s saved filters + sort into the UI state. Servers without a per-server
      * entry yet start from the defaults.
      */
-    private fun applyViewPrefs(prefs: ServerPreferences, serverId: Int) {
+    private fun applyViewPrefs(prefs: AppPreferences, serverId: Int) {
         val v = prefs.serverViewPrefs[serverId] ?: ServerViewPrefs()
         val option =
             try {
@@ -489,7 +519,12 @@ constructor(
 
     fun bulkSetCategory(hashes: List<String>, category: String) {
         launchStatus(
-            successMessage = getString(CommonR.string.status_bulk_category_set, hashes.size),
+            successMessage =
+                getQuantityString(
+                    CommonR.plurals.status_bulk_category_set,
+                    hashes.size,
+                    hashes.size,
+                ),
             failureMessage = getString(CommonR.string.status_set_category_failure),
         ) {
             repository.setTorrentCategory(hashes, category)
@@ -498,7 +533,12 @@ constructor(
 
     fun bulkAddTags(hashes: List<String>, tags: List<String>) {
         launchStatus(
-            successMessage = getString(CommonR.string.status_bulk_tags_updated, hashes.size),
+            successMessage =
+                getQuantityString(
+                    CommonR.plurals.status_bulk_tags_updated,
+                    hashes.size,
+                    hashes.size,
+                ),
             failureMessage = getString(CommonR.string.status_update_tags_failure),
         ) {
             repository.addTorrentTags(hashes, tags)
@@ -507,7 +547,12 @@ constructor(
 
     fun bulkRemoveTags(hashes: List<String>, tags: List<String>) {
         launchStatus(
-            successMessage = getString(CommonR.string.status_bulk_tags_updated, hashes.size),
+            successMessage =
+                getQuantityString(
+                    CommonR.plurals.status_bulk_tags_updated,
+                    hashes.size,
+                    hashes.size,
+                ),
             failureMessage = getString(CommonR.string.status_update_tags_failure),
         ) {
             repository.removeTorrentTags(hashes, tags)
@@ -525,7 +570,8 @@ constructor(
 
     fun deleteTags(tags: List<String>) {
         launchStatus(
-            successMessage = getString(CommonR.string.status_tags_deleted, tags.size),
+            successMessage =
+                getQuantityString(CommonR.plurals.status_tags_deleted, tags.size, tags.size),
             failureMessage = getString(CommonR.string.status_delete_tags_failure),
             onSuccess = {
                 _uiState.update { it.copy(selectedTags = it.selectedTags - tags.toSet()) }
@@ -547,7 +593,12 @@ constructor(
 
     fun deleteCategories(names: List<String>) {
         launchStatus(
-            successMessage = getString(CommonR.string.status_categories_deleted, names.size),
+            successMessage =
+                getQuantityString(
+                    CommonR.plurals.status_categories_deleted,
+                    names.size,
+                    names.size,
+                ),
             failureMessage = getString(CommonR.string.status_delete_categories_failure),
         ) {
             repository.deleteCategories(names)
@@ -565,7 +616,12 @@ constructor(
 
     fun removeTorrents(hashes: List<String>, deleteFiles: Boolean = false) {
         launchStatus(
-            successMessage = getString(CommonR.string.status_torrents_removed, hashes.size),
+            successMessage =
+                getQuantityString(
+                    CommonR.plurals.status_torrents_removed,
+                    hashes.size,
+                    hashes.size,
+                ),
             failureMessage = getString(CommonR.string.status_remove_torrents_failure),
         ) {
             repository.removeTorrents(hashes, deleteFiles)
@@ -575,11 +631,31 @@ constructor(
     fun toggleTorrentsState(pause: Boolean, hashes: List<String>) {
         launchStatus(
             successMessage =
-                if (pause) getString(CommonR.string.status_torrents_paused, hashes.size)
-                else getString(CommonR.string.status_torrents_resumed, hashes.size),
+                if (pause)
+                    getQuantityString(
+                        CommonR.plurals.status_torrents_paused,
+                        hashes.size,
+                        hashes.size,
+                    )
+                else
+                    getQuantityString(
+                        CommonR.plurals.status_torrents_resumed,
+                        hashes.size,
+                        hashes.size,
+                    ),
             failureMessage =
-                if (pause) getString(CommonR.string.status_pause_torrents_failure, hashes.size)
-                else getString(CommonR.string.status_resume_torrents_failure, hashes.size),
+                if (pause)
+                    getQuantityString(
+                        CommonR.plurals.status_pause_torrents_failure,
+                        hashes.size,
+                        hashes.size,
+                    )
+                else
+                    getQuantityString(
+                        CommonR.plurals.status_resume_torrents_failure,
+                        hashes.size,
+                        hashes.size,
+                    ),
         ) {
             repository.toggleTorrentsState(hashes, pause)
         }
@@ -656,21 +732,6 @@ constructor(
         persistViewPrefs()
     }
 
-    fun toggleSpeedLimits() {
-        viewModelScope.launch {
-            repository
-                .toggleSpeedLimitsMode()
-                .onOk { getSpeedLimitMode(true) }
-                .onErr {
-                    emitStatus(
-                        it.friendlyMessage(
-                            getString(CommonR.string.status_toggle_speed_limits_failure)
-                        )
-                    )
-                }
-        }
-    }
-
     private fun getQueueingState() {
         viewModelScope.launch {
             repository.isQueueingEnabled().onOk { enabled ->
@@ -689,38 +750,7 @@ constructor(
         }
     }
 
-    private fun getSpeedLimitMode(showToast: Boolean = false) {
-        viewModelScope.launch {
-            repository
-                .getSpeedLimitMode()
-                .onOk { mode ->
-                    _uiState.update { it.copy(speedLimitMode = mode) }
-                    if (showToast) {
-                        emitStatus(
-                            getString(
-                                if (mode == 0) CommonR.string.status_speed_limits_disabled
-                                else CommonR.string.status_speed_limits_enabled
-                            )
-                        )
-                    }
-                }
-                .onErr {
-                    // Only surface this on a user-initiated fetch. On background syncs it fires
-                    // for every unreachable-server poll, popping a spurious speed-limit toast
-                    // over whatever screen is showing; the sync-failure banner already covers it.
-                    if (showToast) {
-                        emitStatus(
-                            it.friendlyMessage(
-                                getString(CommonR.string.status_get_speed_limit_mode_failure)
-                            )
-                        )
-                    }
-                }
-        }
-    }
-
     private suspend fun syncData() {
-        getSpeedLimitMode()
         getQueueingState()
         coroutineScope {
             // Data: keep the last-known list on screen; retry quietly on error. The offline state
@@ -739,7 +769,7 @@ constructor(
                             mainData.torrents.values
                                 .mapNotNull { t -> t.tracker.takeIf { it.isNotBlank() } }
                                 .mapNotNull { url ->
-                                    Uri.parse(url).host?.takeIf { it.isNotBlank() }
+                                    url.toUri().host?.takeIf { it.isNotBlank() }
                                 }
                                 .distinct()
                                 .sorted()

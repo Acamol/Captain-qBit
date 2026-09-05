@@ -41,21 +41,30 @@ fun InfoTab(state: TorrentDetailsState, modifier: Modifier = Modifier) {
         modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        SectionCard("Transfer") {
+        SectionCard(stringResource(CommonR.string.transfer)) {
             Row(
-                "Connections",
+                stringResource(CommonR.string.connections),
                 stringResource(
                     CommonR.string.connections_sub,
                     props.nbConnections,
                     props.nbConnectionsLimit,
                 ),
             )
-            Row("Seeds", stringResource(CommonR.string.sp_sub, props.seeds, props.seedsTotal))
-            Row("Peers", stringResource(CommonR.string.sp_sub, props.peers, props.peersTotal))
-            Row("Time active", props.timeElapsed.toTime())
-            Row("ETA", if (props.eta == 8640000L) infinite else props.eta.toTime())
             Row(
-                "Downloaded",
+                stringResource(CommonR.string.seeds),
+                stringResource(CommonR.string.sp_sub, props.seeds, props.seedsTotal),
+            )
+            Row(
+                stringResource(CommonR.string.peers),
+                stringResource(CommonR.string.sp_sub, props.peers, props.peersTotal),
+            )
+            Row(stringResource(CommonR.string.time_active), props.timeElapsed.toTime())
+            Row(
+                stringResource(CommonR.string.eta),
+                if (props.eta == 8640000L) infinite else props.eta.toTime(),
+            )
+            Row(
+                stringResource(CommonR.string.downloaded),
                 stringResource(
                     CommonR.string.dl_up_sub,
                     props.totalDownloaded.toHumanReadable(),
@@ -63,7 +72,7 @@ fun InfoTab(state: TorrentDetailsState, modifier: Modifier = Modifier) {
                 ),
             )
             Row(
-                "Uploaded",
+                stringResource(CommonR.string.uploaded),
                 stringResource(
                     CommonR.string.dl_up_sub,
                     props.totalUploaded.toHumanReadable(),
@@ -71,7 +80,7 @@ fun InfoTab(state: TorrentDetailsState, modifier: Modifier = Modifier) {
                 ),
             )
             Row(
-                "Down speed",
+                stringResource(CommonR.string.dl_speed),
                 stringResource(
                     CommonR.string.dl_up_speed_sub,
                     props.dlSpeed.toHumanReadable(),
@@ -79,32 +88,42 @@ fun InfoTab(state: TorrentDetailsState, modifier: Modifier = Modifier) {
                 ),
             )
             Row(
-                "Up speed",
+                stringResource(CommonR.string.up_speed),
                 stringResource(
                     CommonR.string.dl_up_speed_sub,
                     props.upSpeed.toHumanReadable(),
                     props.upSpeedAvg.toHumanReadable(),
                 ),
             )
-            Row("Down limit", props.dlLimit.toHumanReadable())
-            Row("Up limit", props.upLimit.toHumanReadable())
-            Row("Wasted", props.totalWasted.toHumanReadable())
-            Row("Ratio", "%.2f".format(props.shareRatio))
-            Row("Re-announce", if (props.reannounce == 0L) infinite else props.reannounce.toTime())
-            Row("Last seen complete", props.lastSeen.toDate())
-            Row("Priority", torrent.priority.toString())
+            // qBittorrent reports no limit as -1, which would otherwise read as "-1 B".
+            Row(
+                stringResource(CommonR.string.dl_limit),
+                if (props.dlLimit < 0) infinite else props.dlLimit.toHumanReadable(),
+            )
+            Row(
+                stringResource(CommonR.string.up_limit),
+                if (props.upLimit < 0) infinite else props.upLimit.toHumanReadable(),
+            )
+            Row(stringResource(CommonR.string.wasted), props.totalWasted.toHumanReadable())
+            Row(stringResource(CommonR.string.ratio), "%.2f".format(props.shareRatio))
+            Row(
+                stringResource(CommonR.string.reannounce),
+                if (props.reannounce == 0L) infinite else props.reannounce.toTime(),
+            )
+            Row(stringResource(CommonR.string.last_complete), props.lastSeen.toDate())
+            Row(stringResource(CommonR.string.priority), torrent.priority.toString())
         }
 
-        SectionCard("Torrent info") {
-            Row("Total size", props.totalSize.toHumanReadable())
-            Row("Created by", props.createdBy.ifEmpty { unspecified })
-            Row("Added on", props.additionDate.toDate())
-            Row("Completed on", props.completionDate.toDate())
-            Row("Created on", props.creationDate.toDate())
-            Row("Save path", props.savePath)
-            Row("Category", torrent.category.ifEmpty { unspecified })
-            Row("Hash", torrent.hash)
-            Row("Comment", props.comment.ifEmpty { unspecified })
+        SectionCard(stringResource(CommonR.string.torrent_info)) {
+            Row(stringResource(CommonR.string.total_size), props.totalSize.toHumanReadable())
+            Row(stringResource(CommonR.string.created_by), props.createdBy.ifEmpty { unspecified })
+            Row(stringResource(CommonR.string.added_on), props.additionDate.toDate())
+            Row(stringResource(CommonR.string.completed_on), props.completionDate.toDate())
+            Row(stringResource(CommonR.string.created_on), props.creationDate.toDate())
+            Row(stringResource(CommonR.string.save_path), props.savePath)
+            Row(stringResource(CommonR.string.category), torrent.category.ifEmpty { unspecified })
+            Row(stringResource(CommonR.string.torrent_hash), torrent.hash)
+            Row(stringResource(CommonR.string.comment), props.comment.ifEmpty { unspecified })
         }
     }
 }
@@ -127,11 +146,12 @@ private fun SectionCard(title: String, content: @Composable ColumnScope.() -> Un
 @Composable
 private fun Row(label: String, value: String) {
     val copy = rememberCopyToClipboard()
+    val copiedToClipboardMessage = stringResource(CommonR.string.clipboard_copied)
     ListTile(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
         title = label,
         subtitle = value,
         // Long-press any field to copy its value.
-        onLongClick = { copy(label, value, "Copied $label") },
+        onLongClick = { copy(label, value, copiedToClipboardMessage) },
     )
 }

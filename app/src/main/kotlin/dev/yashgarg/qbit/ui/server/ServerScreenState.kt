@@ -5,7 +5,6 @@ import qbittorrent.models.MainData
 data class ServerScreenState(
     val dataLoading: Boolean = true,
     val data: MainData? = null,
-    val speedLimitMode: Int = 0,
     /** Whether the server has torrent queueing enabled. */
     val queueingEnabled: Boolean = false,
     val serverName: String? = null,

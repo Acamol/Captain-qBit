@@ -33,7 +33,11 @@ class SpotlessPlugin : Plugin<Project> {
 
             format("xml") {
                 target("**/*.xml")
-                targetExclude("**/build/", ".idea/")
+                // Translation resources are written by Weblate, which never runs this formatter,
+                // so its output (notably locale stubs with no trailing newline) would fail the
+                // check on every rolling translation PR. The default-locale values/strings.xml is
+                // hand-authored and stays covered - only the hyphenated locale variants are not.
+                targetExclude("**/build/", ".idea/", "**/res/values-*/strings.xml")
                 trimTrailingWhitespace()
                 leadingTabsToSpaces()
                 endWithNewline()

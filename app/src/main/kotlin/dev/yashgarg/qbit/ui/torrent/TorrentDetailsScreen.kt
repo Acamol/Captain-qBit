@@ -72,8 +72,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -120,13 +122,22 @@ fun TorrentDetailsScreen(
         topBar = {
             TopAppBar(
                 title = {
+                    // basicMarquee() overflows its bounds and swallows the navigationIcon's touches
+                    // when the ambient layout direction is RTL, so only scroll in LTR and just
+                    // ellipsize otherwise.
+                    val marquee =
+                        if (LocalLayoutDirection.current == LayoutDirection.Ltr) {
+                            Modifier.basicMarquee()
+                        } else {
+                            Modifier
+                        }
                     Text(
                         torrent?.name.orEmpty(),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         // Long-press the title to copy the torrent name.
                         modifier =
-                            Modifier.basicMarquee().pointerInput(torrent?.name) {
+                            marquee.pointerInput(torrent?.name) {
                                 detectTapGestures(
                                     onLongPress = {
                                         torrent?.let { copy("name", it.name, copiedNameMessage) }

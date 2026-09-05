@@ -1,6 +1,6 @@
 package dev.yashgarg.qbit.ui.torrent
 
-import android.content.Context
+import android.app.Application
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
@@ -9,7 +9,6 @@ import com.github.michaelbull.result.get
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.QbitRepository
 import dev.yashgarg.qbit.data.models.ContentTreeItem
@@ -40,8 +39,8 @@ class TorrentDetailsViewModel
 constructor(
     private val repository: QbitRepository,
     state: SavedStateHandle,
-    @ApplicationContext context: Context,
-) : StatusViewModel(context) {
+    application: Application,
+) : StatusViewModel(application) {
     private val _uiState = MutableStateFlow(TorrentDetailsState())
     val uiState = _uiState.asStateFlow()
 

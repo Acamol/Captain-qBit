@@ -23,6 +23,8 @@ over its Web API — control your self-hosted server from your phone. Written in
 - Detailed per-torrent view with a browsable file tree, trackers, and live peer info
 - Manage multiple servers, with encrypted backup/restore of your whole setup
 - Light, Dark, or System theme, plus optional Material You dynamic colours
+- Per-app language override, independent of your device's system language, with community
+  translations via Weblate
 - Smart notifications that jump straight to a finished download, with battery-friendly refresh
   rates you control
 - Browse RSS feeds and articles, with auto-download rules and notifications for new matches
@@ -32,9 +34,17 @@ over its Web API — control your self-hosted server from your phone. Written in
 See the [F-Droid listing](https://f-droid.org/packages/dev.acamol.qbit/) for the full feature list.
 
 > **Self-signed HTTPS:** certificates are validated properly (no blanket "trust everything"
-> option). To use a self-signed cert, install it on your device via **Settings → Security →
-> Install a certificate** — the app then trusts it with full validation. Plain HTTP on a LAN and
+> option, and nothing to install on your device). The first time you connect to a server whose
+> certificate isn't signed by a trusted authority, you'll be shown its fingerprint and asked to
+> approve it — once approved, that certificate is trusted for that server only. Review or clear
+> the pinned certificate later from that server's settings. Plain HTTP on a LAN and
 > normally-signed HTTPS work without any setup.
+>
+> **Upgrading from an older version:** if you previously trusted a self-signed server by
+> installing its certificate on your device (Settings → Security → Install a certificate), you'll
+> need to approve it once more in-app after this update — the app no longer trusts
+> device-installed certificates for HTTPS, only certificates you've explicitly approved per
+> server.
 
 ## Roadmap
 - **Alternate speed-limit scheduler** — choose the time window and days when the alternate limits automatically take over

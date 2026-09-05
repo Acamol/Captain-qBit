@@ -53,6 +53,11 @@ data class BonsaiStyle<T>(
     val toggleIconColorFilter: ColorFilter? = null,
     val toggleShape: Shape = CircleShape,
     val toggleIconRotationDegrees: Float = 90f,
+    // Null by default (as with any decorative icon) since this generic tree-view module has no
+    // strings of its own to translate - callers that want the toggle announced by a screen reader
+    // supply their own localized text here.
+    val toggleIconExpandedContentDescription: String? = null,
+    val toggleIconCollapsedContentDescription: String? = null,
     val nodeIconSize: Dp = 24.dp,
     val nodePadding: PaddingValues = PaddingValues(all = 4.dp),
     val nodeShape: Shape = RoundedCornerShape(size = 4.dp),

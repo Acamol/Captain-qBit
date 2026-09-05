@@ -14,6 +14,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.backup.ConfigBackup
 import dev.yashgarg.qbit.data.backup.ImportMode
 import dev.yashgarg.qbit.data.backup.PrefGroup
@@ -49,7 +50,7 @@ object BackupDialogs {
             }
         val passField =
             EditText(context).apply {
-                hint = "Passphrase"
+                hint = context.getString(CommonR.string.passphrase_label)
                 inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
             }
         container.addView(passField)
@@ -57,7 +58,7 @@ object BackupDialogs {
             if (confirm) {
                 EditText(context)
                     .apply {
-                        hint = "Confirm passphrase"
+                        hint = context.getString(CommonR.string.confirm_passphrase_label)
                         inputType =
                             InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
                     }
@@ -68,17 +69,19 @@ object BackupDialogs {
             MaterialAlertDialogBuilder(context)
                 .setTitle(title)
                 .setView(container)
-                .setNegativeButton("Cancel", null)
-                .setPositiveButton("OK", null)
+                .setNegativeButton(context.getString(CommonR.string.cancel), null)
+                .setPositiveButton(context.getString(CommonR.string.ok), null)
                 .create()
 
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val passphrase = passField.text?.toString().orEmpty()
                 when {
-                    passphrase.isEmpty() -> passField.error = "Enter a passphrase"
+                    passphrase.isEmpty() ->
+                        passField.error = context.getString(CommonR.string.enter_a_passphrase_error)
                     confirm && passphrase != confirmField?.text?.toString() ->
-                        confirmField?.error = "Passphrases don't match"
+                        confirmField?.error =
+                            context.getString(CommonR.string.passphrases_dont_match_error)
                     else -> {
                         dialog.dismiss()
                         onOk(passphrase)
@@ -107,12 +110,18 @@ object BackupDialogs {
     ) {
         val (container, content) = selectionContainer(context)
 
-        content.addView(sectionHeader(context, "App settings", first = true))
+        content.addView(
+            sectionHeader(
+                context,
+                context.getString(CommonR.string.app_settings_section_header),
+                first = true,
+            )
+        )
         val groupBoxes =
             PrefGroup.entries.map { group ->
                 val box =
                     CheckBox(context).apply {
-                        text = prefGroupLabel(group)
+                        text = prefGroupLabel(context, group)
                         isChecked = true
                     }
                 content.addView(box)
@@ -120,12 +129,14 @@ object BackupDialogs {
             }
         val colorsBox =
             CheckBox(context).apply {
-                text = "Category colors"
+                text = context.getString(CommonR.string.category_colors_label)
                 isChecked = true
             }
         content.addView(colorsBox)
 
-        content.addView(sectionHeader(context, "Servers", first = false))
+        content.addView(
+            sectionHeader(context, context.getString(CommonR.string.servers_title), first = false)
+        )
         val serverBoxes = servers.map { server ->
             val box =
                 CheckBox(context).apply {
@@ -138,10 +149,10 @@ object BackupDialogs {
 
         val dialog =
             MaterialAlertDialogBuilder(context)
-                .setTitle("Export configuration")
+                .setTitle(context.getString(CommonR.string.export_configuration_label))
                 .setView(container)
-                .setNegativeButton("Cancel", null)
-                .setPositiveButton("Export", null)
+                .setNegativeButton(context.getString(CommonR.string.cancel), null)
+                .setPositiveButton(context.getString(CommonR.string.export_action), null)
                 .create()
 
         dialog.setOnShowListener {
@@ -182,17 +193,23 @@ object BackupDialogs {
     ) {
         val (container, content) = selectionContainer(context)
 
-        content.addView(sectionHeader(context, "Import mode", first = true))
+        content.addView(
+            sectionHeader(
+                context,
+                context.getString(CommonR.string.import_mode_section_header),
+                first = true,
+            )
+        )
         val modeGroup = RadioGroup(context).apply { orientation = RadioGroup.VERTICAL }
         val mergeButton =
             RadioButton(context).apply {
                 id = View.generateViewId()
-                text = "Merge with current"
+                text = context.getString(CommonR.string.merge_with_current_label)
             }
         val replaceButton =
             RadioButton(context).apply {
                 id = View.generateViewId()
-                text = "Replace everything"
+                text = context.getString(CommonR.string.replace_everything_label)
             }
         modeGroup.addView(mergeButton)
         modeGroup.addView(replaceButton)
@@ -204,7 +221,13 @@ object BackupDialogs {
         val hasCategoryColors =
             !(backup.categoryColors ?: backup.preferences?.categoryColors).isNullOrEmpty()
         if (availableGroups.isNotEmpty() || hasCategoryColors) {
-            content.addView(sectionHeader(context, "App settings", first = false))
+            content.addView(
+                sectionHeader(
+                    context,
+                    context.getString(CommonR.string.app_settings_section_header),
+                    first = false,
+                )
+            )
         }
         val groupBoxes =
             PrefGroup.entries
@@ -212,7 +235,7 @@ object BackupDialogs {
                 .map { group ->
                     val box =
                         CheckBox(context).apply {
-                            text = prefGroupLabel(group)
+                            text = prefGroupLabel(context, group)
                             isChecked = true
                         }
                     content.addView(box)
@@ -222,21 +245,27 @@ object BackupDialogs {
             if (hasCategoryColors) {
                 CheckBox(context)
                     .apply {
-                        text = "Category colors"
+                        text = context.getString(CommonR.string.category_colors_label)
                         isChecked = true
                     }
                     .also(content::addView)
             } else null
 
-        content.addView(sectionHeader(context, "Servers", first = false))
+        content.addView(
+            sectionHeader(context, context.getString(CommonR.string.servers_title), first = false)
+        )
         val serverBoxes =
             backup.servers.map { server ->
                 val duplicate = server.configId in duplicateServerIds
                 val box =
                     CheckBox(context).apply {
                         text =
-                            if (duplicate) "${server.serverName} (already added)"
-                            else server.serverName
+                            if (duplicate) {
+                                context.getString(
+                                    CommonR.string.backup_server_already_added,
+                                    server.serverName,
+                                )
+                            } else server.serverName
                         isChecked = true
                     }
                 content.addView(box)
@@ -245,10 +274,10 @@ object BackupDialogs {
 
         val dialog =
             MaterialAlertDialogBuilder(context)
-                .setTitle("Import configuration")
+                .setTitle(context.getString(CommonR.string.import_configuration_label))
                 .setView(container)
-                .setNegativeButton("Cancel", null)
-                .setPositiveButton("Import", null)
+                .setNegativeButton(context.getString(CommonR.string.cancel), null)
+                .setPositiveButton(context.getString(CommonR.string.import_action), null)
                 .create()
 
         dialog.setOnShowListener {
@@ -284,11 +313,12 @@ object BackupDialogs {
     }
 
     /** User-facing label for a preference group checkbox. */
-    private fun prefGroupLabel(group: PrefGroup): String =
+    private fun prefGroupLabel(context: Context, group: PrefGroup): String =
         when (group) {
-            PrefGroup.APPEARANCE -> "Appearance"
-            PrefGroup.NOTIFICATIONS -> "Notifications"
-            PrefGroup.FILTERS -> "Filters & sorting"
+            PrefGroup.APPEARANCE -> context.getString(CommonR.string.appearance_section_title)
+            PrefGroup.NOTIFICATIONS ->
+                context.getString(CommonR.string.notifications_section_header)
+            PrefGroup.FILTERS -> context.getString(CommonR.string.filters_and_sorting_label)
         }
 
     /** A bold, emphasized section label separating groups of options in a selection dialog. */

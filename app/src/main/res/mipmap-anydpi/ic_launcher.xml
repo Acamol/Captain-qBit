@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The only launcher-icon variant: adaptive icons are available on every API level this app
+  supports, so there are no legacy density-bucket bitmaps to fall back to. <adaptive-icon> itself
+  needs API 26, which an unqualified folder is fine for while minSdk stays at or above that - a
+  lower minSdk would need this back under mipmap-anydpi-v26 alongside ic_launcher.png fallbacks.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+  <background android:drawable="@mipmap/ic_launcher_background"/>
+  <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+  <monochrome android:drawable="@mipmap/ic_launcher_monochrome" />
+</adaptive-icon>

@@ -48,6 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -455,7 +456,12 @@ fun MatchingArticlesResultDialog(
         title = {
             Text(
                 if (totalMatches == 0) stringResource(CommonR.string.no_matches_yet_title)
-                else stringResource(CommonR.string.matching_articles_count, totalMatches)
+                else
+                    pluralStringResource(
+                        CommonR.plurals.matching_articles_count,
+                        totalMatches,
+                        totalMatches,
+                    )
             )
         },
         text = {

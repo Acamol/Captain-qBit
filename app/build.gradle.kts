@@ -88,9 +88,9 @@ android {
         // installed alongside the original app.
         applicationId = "dev.acamol.qbit"
         minSdk = 28
-        targetSdk = 35
-        versionCode = 12
-        versionName = "1.3.0"
+        targetSdk = 37
+        versionCode = 13
+        versionName = "1.4.0"
 
         multiDexEnabled = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -140,6 +140,12 @@ android {
             }
         }
     }
+
+    // The in-app language picker switches locale at runtime, which only works if every translation
+    // is present in the installed app. Releases here are APKs, so they always are - this keeps that
+    // true for anyone building an App Bundle, where Play would otherwise ship only the device
+    // language and leave the picker with nothing to switch to.
+    bundle { language { enableSplit = false } }
 
     lint {
         abortOnError = true
@@ -196,17 +202,12 @@ ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 
 dependencies {
     implementation(libs.androidx.appcompat)
-    implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.datastore)
-    implementation(libs.androidx.swiperefreshlayout)
     implementation(libs.androidx.lifecycle.ktx)
     implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.lifecycle.viewmodel)
-    implementation(libs.androidx.navigation.fragment.ktx)
-    implementation(libs.androidx.navigation.ui.ktx)
     implementation(libs.androidx.profileinstaller)
-    implementation(libs.androidx.recyclerview.selection)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
@@ -219,7 +220,6 @@ dependencies {
     implementation(libs.compose.navigation)
     implementation(libs.compose.hilt.navigation)
     implementation(libs.compose.lifecycle.runtime)
-    implementation(libs.androidx.fragment.compose)
 
     implementation(libs.google.material)
     implementation(libs.google.dagger.hilt)
@@ -237,10 +237,11 @@ dependencies {
     debugImplementation(libs.tools.leakcanary)
     implementation(libs.tools.kotlin.result)
     implementation(libs.tools.kotlin.result.coroutines)
-    implementation(libs.tools.cascade)
-    implementation(libs.tools.lottie)
+    implementation(libs.tools.okhttp.tls)
     debugImplementation(libs.tools.whatthestack)
 
     testImplementation(libs.bundles.testing)
     testImplementation(libs.ktor.client.mock)
+    testImplementation(libs.tools.okhttp.tls)
+    testImplementation(libs.tools.mockwebserver)
 }

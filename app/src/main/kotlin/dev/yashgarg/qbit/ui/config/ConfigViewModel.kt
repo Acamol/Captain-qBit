@@ -1,5 +1,6 @@
 package dev.yashgarg.qbit.ui.config
 
+import android.util.Base64
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,6 +8,7 @@ import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.coroutines.runSuspendCatching
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.yashgarg.qbit.data.daos.ConfigDao
+import dev.yashgarg.qbit.data.manager.CertificateProbe
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.manager.CryptoManager
 import dev.yashgarg.qbit.data.models.ConnectionType
@@ -14,6 +16,7 @@ import dev.yashgarg.qbit.data.models.ServerConfig
 import dev.yashgarg.qbit.validation.HostValidator
 import dev.yashgarg.qbit.validation.PortValidator
 import dev.yashgarg.qbit.validation.StringValidator
+import java.security.cert.X509Certificate
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -241,6 +244,8 @@ constructor(
         password: String,
         basicAuthUsername: String?,
         basicAuthPassword: String?,
+        pinnedCertificateDer: ByteArray? = null,
+        clearPinnedCertificate: Boolean = false,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val editing = serverId >= 0
@@ -249,13 +254,27 @@ constructor(
             val position =
                 if (editing) configDao.getConfigById(serverId)?.position ?: 0
                 else configDao.maxPosition() + 1
+            val trimmedHost = serverHost.trim()
+            val resolvedPort = if (port.isEmpty()) null else port.trim().toInt()
+            val previous = if (editing) configDao.getConfigById(serverId) else null
+            // A pin is only meaningful for the address it was approved against, so it does not
+            // survive an edit that repoints this server elsewhere - otherwise the old host's
+            // certificate would stay a trust anchor for a machine the user never approved.
+            val addressUnchanged =
+                previous != null &&
+                    previous.baseUrl == trimmedHost &&
+                    previous.port == resolvedPort &&
+                    previous.connectionType ==
+                        (if (connectionType.trim() == "http") ConnectionType.HTTP
+                        else ConnectionType.HTTPS)
+            val existingPin = if (addressUnchanged) previous.pinnedCertificate else null
             val config =
                 ServerConfig(
                     configId = newId,
                     position = position,
                     serverName = serverName.trim(),
-                    baseUrl = serverHost.trim(),
-                    port = if (port.isEmpty()) null else port.trim().toInt(),
+                    baseUrl = trimmedHost,
+                    port = resolvedPort,
                     path = if (path.isEmpty()) null else "/$path",
                     username = username.trim(),
                     password = CryptoManager.encrypt(password.trim()) ?: password.trim(),
@@ -265,6 +284,13 @@ constructor(
                     basicAuthUsername = basicAuthUsername?.trim()?.ifEmpty { null },
                     basicAuthPassword =
                         CryptoManager.encrypt(basicAuthPassword?.trim()?.ifEmpty { null }),
+                    pinnedCertificate =
+                        when {
+                            pinnedCertificateDer != null ->
+                                Base64.encodeToString(pinnedCertificateDer, Base64.NO_WRAP)
+                            clearPinnedCertificate -> null
+                            else -> existingPin
+                        },
                 )
             configDao.addConfig(config)
             // First server ever added becomes the active one.
@@ -272,12 +298,22 @@ constructor(
         }
     }
 
+    /**
+     * Persists an approved certificate pin immediately for the server being edited, independent of
+     * the rest of the form (a no-op when adding a brand-new server - there's no row yet, so the pin
+     * travels via [insert]'s `pinnedCertificateDer` param instead).
+     */
+    /** Fetches the certificate a server presents, for the user to review before trusting it. */
+    suspend fun probeCertificate(host: String, port: Int): Result<X509Certificate, Throwable> =
+        CertificateProbe.fetchPresentedCertificate(host, port)
+
     suspend fun testConfig(
         baseUrl: String,
         username: String,
         password: String,
         basicAuthUsername: String?,
         basicAuthPassword: String?,
+        pinnedCertificateDer: ByteArray? = null,
     ): Result<String, Throwable> {
         return runSuspendCatching {
             val basicAuth =
@@ -289,7 +325,7 @@ constructor(
                     baseUrl,
                     username,
                     password,
-                    httpClient = ClientManager.httpClient(basicAuth),
+                    httpClient = ClientManager.httpClient(basicAuth, pinnedCertificateDer),
                     dispatcher = Dispatchers.Default,
                 )
             try {

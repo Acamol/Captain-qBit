@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
@@ -25,6 +26,7 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -32,12 +34,14 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,6 +60,15 @@ import dev.yashgarg.qbit.data.manager.CryptoManager
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.utils.friendlyMessage
+import dev.yashgarg.qbit.utils.hasExpired
+import dev.yashgarg.qbit.utils.isNotYetValid
+import dev.yashgarg.qbit.utils.isUntrustedCertificateError
+import dev.yashgarg.qbit.utils.rememberFriendlyMessageResolver
+import dev.yashgarg.qbit.utils.sha256Fingerprint
+import dev.yashgarg.qbit.utils.validFromText
+import dev.yashgarg.qbit.utils.validUntilText
+import java.security.cert.X509Certificate
+import kotlinx.coroutines.launch
 
 private val CONNECTION_TYPES = listOf("HTTP", "HTTPS")
 
@@ -67,6 +80,10 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
     val existing by viewModel.existingConfig.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val genericError = stringResource(CommonR.string.error)
+    val checkingConnectionMessage = stringResource(CommonR.string.status_checking_connection)
+    val clientVersionTemplate = stringResource(CommonR.string.status_client_version)
+    val testFailedTemplate = stringResource(CommonR.string.status_test_failed)
+    val friendlyMessageResolver = rememberFriendlyMessageResolver()
 
     var name by remember { mutableStateOf("") }
     var host by remember { mutableStateOf("") }
@@ -83,6 +100,17 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
     var basicPassVisible by remember { mutableStateOf(false) }
     var checking by remember { mutableStateOf(false) }
     var prefilled by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+    var pendingCertReview by remember { mutableStateOf<X509Certificate?>(null) }
+    var approvedPinDer by remember { mutableStateOf<ByteArray?>(null) }
+    var pinCleared by remember { mutableStateOf(false) }
+    var showClearPinConfirm by remember { mutableStateOf(false) }
+
+    fun buildBaseUrl(): String {
+        val portPart = if (port.isNotEmpty()) ":$port" else ""
+        val pathPart = if (path.isNotEmpty()) "/$path" else ""
+        return "${connectionType.lowercase()}://$host$portPart$pathPart"
+    }
 
     LaunchedEffect(existing) {
         val config = existing ?: return@LaunchedEffect
@@ -112,29 +140,46 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
             when ((event as ConfigViewModel.ValidationEvent.Success).action) {
                 ConfigViewModel.FormAction.TEST -> {
                     checking = true
-                    snackbarHostState.showSnackbar("Checking connection, please wait…")
-                    val portPart = if (port.isNotEmpty()) ":$port" else ""
-                    val pathPart = if (path.isNotEmpty()) "/$path" else ""
+                    snackbarHostState.showSnackbar(checkingConnectionMessage)
                     viewModel
                         .testConfig(
-                            "$type://$host$portPart$pathPart",
+                            buildBaseUrl(),
                             username,
                             password,
                             basicUser,
                             basicPass,
+                            approvedPinDer,
                         )
                         .onOk { version ->
                             Toast.makeText(
                                     context,
-                                    "Success! Client version is $version",
+                                    clientVersionTemplate.format(version),
                                     Toast.LENGTH_LONG,
                                 )
                                 .show()
                         }
                         .onErr { error ->
-                            snackbarHostState.showSnackbar(
-                                "Failed! ${error.friendlyMessage(genericError)}"
-                            )
+                            if (error.isUntrustedCertificateError()) {
+                                viewModel
+                                    .probeCertificate(host, port.toIntOrNull() ?: 443)
+                                    .onOk { cert -> pendingCertReview = cert }
+                                    .onErr {
+                                        snackbarHostState.showSnackbar(
+                                            testFailedTemplate.format(
+                                                error.friendlyMessage(
+                                                    friendlyMessageResolver,
+                                                    genericError,
+                                                )
+                                            )
+                                        )
+                                    }
+                            } else {
+                                snackbarHostState.showSnackbar(
+                                    testFailedTemplate.format(
+                                        error.friendlyMessage(friendlyMessageResolver, genericError)
+                                    )
+                                )
+                            }
                         }
                     checking = false
                 }
@@ -149,6 +194,8 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                         password,
                         basicUser,
                         basicPass,
+                        approvedPinDer,
+                        pinCleared,
                     )
                     appNavigator.navigate(NavCommand.OpenServerAsRoot)
                 }
@@ -166,7 +213,11 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                 title = { Text(title) },
                 navigationIcon = {
                     IconButton(onClick = { appNavigator.navigate(NavCommand.Back) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription =
+                                stringResource(CommonR.string.content_description_back),
+                        )
                     }
                 },
             )
@@ -348,6 +399,22 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                 )
             }
 
+            if (viewModel.editing && existing?.pinnedCertificate != null && !pinCleared) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        stringResource(CommonR.string.pinned_certificate_active_label),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    TextButton(onClick = { showClearPinConfirm = true }, enabled = !checking) {
+                        Text(stringResource(CommonR.string.clear_pinned_certificate_action))
+                    }
+                }
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -398,6 +465,135 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                 }
             }
         }
+    }
+
+    pendingCertReview?.let { cert ->
+        val fingerprint = remember(cert) { cert.sha256Fingerprint() }
+        val expired = remember(cert) { cert.hasExpired() }
+        val notYetValid = remember(cert) { cert.isNotYetValid() }
+        AlertDialog(
+            onDismissRequest = { pendingCertReview = null },
+            title = { Text(stringResource(CommonR.string.untrusted_certificate_title)) },
+            text = {
+                Column {
+                    Text(stringResource(CommonR.string.untrusted_certificate_message))
+                    Spacer(Modifier.size(8.dp))
+                    Text(
+                        "${stringResource(CommonR.string.certificate_subject_label)}: " +
+                            cert.subjectX500Principal.name
+                    )
+                    Text(
+                        "${stringResource(CommonR.string.certificate_issuer_label)}: " +
+                            cert.issuerX500Principal.name
+                    )
+                    Text(
+                        "${stringResource(CommonR.string.certificate_fingerprint_label)}: " +
+                            fingerprint
+                    )
+                    Text(
+                        "${stringResource(CommonR.string.certificate_validity_label)}: " +
+                            cert.validUntilText()
+                    )
+                    if (expired || notYetValid) {
+                        Spacer(Modifier.size(8.dp))
+                        Text(
+                            if (expired)
+                                stringResource(
+                                    CommonR.string.certificate_expired_warning,
+                                    cert.validUntilText(),
+                                )
+                            else
+                                stringResource(
+                                    CommonR.string.certificate_not_yet_valid_warning,
+                                    cert.validFromText(),
+                                ),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val der = cert.encoded
+                        // Held in memory and persisted by Save, not written straight to the saved
+                        // row: the probe used whatever host is in the form right now, which may no
+                        // longer be the one the row points at. Writing here would pin the wrong
+                        // certificate to the saved server and make it unreachable, even if the edit
+                        // is then abandoned. The test below takes the certificate directly.
+                        approvedPinDer = der
+                        pinCleared = false
+                        pendingCertReview = null
+                        coroutineScope.launch {
+                            checking = true
+                            val basicUser =
+                                if (useBasicAuth) basicAuthUser.ifEmpty { null } else null
+                            val basicPass =
+                                if (useBasicAuth) basicAuthPass.ifEmpty { null } else null
+                            viewModel
+                                .testConfig(
+                                    buildBaseUrl(),
+                                    username,
+                                    password,
+                                    basicUser,
+                                    basicPass,
+                                    der,
+                                )
+                                .onOk { version ->
+                                    Toast.makeText(
+                                            context,
+                                            clientVersionTemplate.format(version),
+                                            Toast.LENGTH_LONG,
+                                        )
+                                        .show()
+                                }
+                                .onErr { error ->
+                                    snackbarHostState.showSnackbar(
+                                        testFailedTemplate.format(
+                                            error.friendlyMessage(
+                                                friendlyMessageResolver,
+                                                genericError,
+                                            )
+                                        )
+                                    )
+                                }
+                            checking = false
+                        }
+                    }
+                ) {
+                    Text(stringResource(CommonR.string.trust_and_retry_action))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingCertReview = null }) {
+                    Text(stringResource(CommonR.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (showClearPinConfirm) {
+        AlertDialog(
+            onDismissRequest = { showClearPinConfirm = false },
+            title = { Text(stringResource(CommonR.string.clear_pinned_certificate_title)) },
+            text = { Text(stringResource(CommonR.string.clear_pinned_certificate_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showClearPinConfirm = false
+                        pinCleared = true
+                        approvedPinDer = null
+                    }
+                ) {
+                    Text(stringResource(CommonR.string.clear_pinned_certificate_action))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearPinConfirm = false }) {
+                    Text(stringResource(CommonR.string.cancel))
+                }
+            },
+        )
     }
 }
 
@@ -456,7 +652,11 @@ private fun PasswordField(
             IconButton(onClick = onToggleVisible) {
                 Icon(
                     if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                    contentDescription = if (visible) "Hide password" else "Show password",
+                    contentDescription =
+                        stringResource(
+                            if (visible) CommonR.string.content_description_hide_password
+                            else CommonR.string.content_description_show_password
+                        ),
                 )
             }
         },

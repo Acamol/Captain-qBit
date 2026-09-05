@@ -1,14 +1,15 @@
 package dev.yashgarg.qbit.data.manager
 
+import android.util.Base64
 import android.util.Log
 import androidx.datastore.core.DataStore
 import com.github.michaelbull.result.coroutines.runSuspendCatching
 import com.github.michaelbull.result.get
 import com.github.michaelbull.result.onErr
 import dev.yashgarg.qbit.data.daos.ConfigDao
+import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.ConfigStatus
 import dev.yashgarg.qbit.data.models.ServerConfig
-import dev.yashgarg.qbit.data.models.ServerPreferences
 import dev.yashgarg.qbit.di.ApplicationScope
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -29,7 +30,7 @@ class ClientManagerImpl
 @Inject
 constructor(
     private val configDao: ConfigDao,
-    private val prefsStore: DataStore<ServerPreferences>,
+    private val prefsStore: DataStore<AppPreferences>,
     @ApplicationScope coroutineScope: CoroutineScope,
 ) : ClientManager {
     private val _configStatus = MutableSharedFlow<ConfigStatus>(replay = 1)
@@ -113,13 +114,15 @@ constructor(
                         (CryptoManager.decrypt(config.basicAuthPassword)
                             ?: config.basicAuthPassword)
                 } else null
+            val pinnedCertificateDer =
+                config.pinnedCertificate?.let { Base64.decode(it, Base64.NO_WRAP) }
 
             QBittorrentClient(
                     "${config.connectionType.toString().lowercase()}://${config.baseUrl}$port$path",
                     config.username,
                     CryptoManager.decrypt(config.password) ?: config.password,
                     syncInterval = syncIntervalMs.milliseconds,
-                    httpClient = ClientManager.httpClient(basicAuth),
+                    httpClient = ClientManager.httpClient(basicAuth, pinnedCertificateDer),
                     dispatcher = Dispatchers.Default,
                 )
                 .also { client = it }

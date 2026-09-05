@@ -1,7 +1,7 @@
 package dev.yashgarg.qbit.ui.server
 
-import android.net.Uri
 import androidx.annotation.StringRes
+import androidx.core.net.toUri
 import dev.yashgarg.qbit.common.R
 import qbittorrent.models.Torrent
 
@@ -88,7 +88,7 @@ fun Torrent.matchesCategory(category: String?): Boolean =
 
 /** Matches on the tracker URL's host, which is what the drawer's tracker rows hold. */
 fun Torrent.matchesTracker(host: String?): Boolean =
-    host == null || Uri.parse(tracker).host.equals(host, ignoreCase = true)
+    host == null || tracker.toUri().host.equals(host, ignoreCase = true)
 
 fun Torrent.matchesTags(selectedTags: Set<String>, filterUntagged: Boolean): Boolean =
     when {

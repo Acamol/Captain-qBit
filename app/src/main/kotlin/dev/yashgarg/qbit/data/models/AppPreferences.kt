@@ -1,6 +1,7 @@
 package dev.yashgarg.qbit.data.models
 
 import androidx.annotation.Keep
+import androidx.appcompat.app.AppCompatDelegate
 import kotlinx.serialization.Serializable
 
 /** Per-server filter + sort selections, so each server restores its own view. */
@@ -16,9 +17,13 @@ data class ServerViewPrefs(
     val filterUntagged: Boolean = false,
 )
 
+/**
+ * App-wide settings, persisted via DataStore: appearance, notifications, polling intervals and the
+ * add-torrent and per-server view defaults. Nothing here is sent to a qBittorrent server.
+ */
 @Keep
 @Serializable
-data class ServerPreferences(
+data class AppPreferences(
     val addTorrentAutoTmm: Boolean = false,
     val addTorrentPaused: Boolean = false,
     val addTorrentCategory: String = "",
@@ -33,6 +38,9 @@ data class ServerPreferences(
     // Set once the notification-permission rationale dialog has been answered (either way), so it
     // only ever shows once per install rather than nagging on every launch.
     val notificationPermissionAsked: Boolean = false,
+    // Same idea for the local-network-permission rationale dialog (Android 17+, needed to reach a
+    // self-hosted server on the LAN).
+    val localNetworkPermissionAsked: Boolean = false,
     // Newest torrent completion_on (unix seconds) already accounted for by the complete-notifier,
     // keyed by server id. Lets completion alerts survive the worker process restarting: a torrent
     // whose completion_on is newer than this still fires. Written only when it advances.
@@ -57,9 +65,15 @@ data class ServerPreferences(
     // Set true when the RSS notification is turned ON, so the worker's next poll adopts every
     // feed's current article set as a silent baseline instead of alerting for the whole backlog.
     val notifRssRebaseline: Boolean = false,
-    // AppCompatDelegate night-mode constant. Defaults to MODE_NIGHT_YES (2) to preserve the
-    // app's original dark-only behaviour for existing installs.
-    val themeMode: Int = 2,
+    // Defaults to MODE_NIGHT_YES to preserve the app's original dark-only behaviour for existing
+    // installs. Annotated on the getter (not the constructor parameter, which is where a bare
+    // annotation would land) so reads flowing into AppCompatDelegate.setDefaultNightMode are
+    // type-checked against the valid night-mode constants.
+    @get:AppCompatDelegate.NightMode val themeMode: Int = AppCompatDelegate.MODE_NIGHT_YES,
+    // The chosen per-app language as a BCP-47 tag; "" follows the system locale list. Persisted
+    // because below API 33 AppCompatDelegate.setApplicationLocales keeps the choice in memory only,
+    // so without this the app reverts to the system language on every cold start.
+    val languageTag: String = "",
     // Highest versionCode whose "What's New" has been shown. 0 = never recorded (fresh install),
     // so the dialog is skipped on first run and only appears after an upgrade.
     val lastSeenVersionCode: Int = 0,

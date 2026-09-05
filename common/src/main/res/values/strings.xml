@@ -1,11 +1,9 @@
 <resources>
     <string name="app_name" translatable="false">Captain qBit</string>
     <string name="add_server">Add server</string>
-    <string name="edit_server">Edit server</string>
     <string name="server_settings">Server settings</string>
     <string name="status_cannot_delete_last_server">Can\'t delete the only server</string>
     <string name="welcome_text">Welcome to Captain qBit</string>
-    <string name="press_button">Use the button below to add a server</string>
     <string name="restore_from_backup">Restore from backup</string>
 
     <string name="invalid_url">Please enter a valid host</string>
@@ -13,10 +11,7 @@
     <string name="invalid_name">Name cannot be empty</string>
     <string name="invalid_username">Username cannot be empty</string>
     <string name="invalid_password">Password cannot be empty</string>
-    <string name="invalid_type">Select a value</string>
 
-    <string name="version">App Version - %1$s\nApi Version - v%2$s</string>
-    <string name="server_info">Server Information</string>
     <string name="about">About</string>
     <string name="seed_status">Downloading • %1$d/%2$d seeds</string>
     <string name="speed_status">▼ %1$s/s • ▲ %2$s/s</string>
@@ -43,75 +38,111 @@
     <string name="state_missing_files">Missing files</string>
     <string name="state_unknown">Unknown</string>
 
-    <!-- Torrent Info Fragment -->
-    <!-- Titles-->
+    <!-- Torrent details: Info tab -->
     <string name="transfer">Transfer</string>
     <string name="connections">Connections</string>
     <string name="seeds">Seeds</string>
     <string name="peers">Peers</string>
-    <string name="time_active">Time Active</string>
+    <string name="time_active">Time active</string>
     <string name="eta">ETA</string>
     <string name="downloaded">Downloaded</string>
     <string name="uploaded">Uploaded</string>
-    <string name="dl_speed">Down Speed</string>
-    <string name="up_speed">Upload Speed</string>
-    <string name="dl_limit">Download Limit</string>
-    <string name="up_limit">Upload Limit</string>
+    <string name="dl_speed">Down speed</string>
+    <string name="up_speed">Up speed</string>
+    <string name="dl_limit">Down limit</string>
+    <string name="up_limit">Up limit</string>
     <string name="wasted">Wasted</string>
     <string name="ratio">Ratio</string>
-    <string name="reannounce">Reannounce In</string>
-    <string name="last_complete">Last Seen Complete</string>
+    <string name="reannounce">Re-announce</string>
+    <string name="last_complete">Last seen complete</string>
     <string name="priority">Priority</string>
-    <string name="torrent_info">Information</string>
-    <string name="total_size">Total Size</string>
-    <string name="created_by">Created By</string>
-    <string name="added_on">Added On</string>
-    <string name="completed_on">Completed On</string>
-    <string name="save_path">Save Path</string>
+    <string name="torrent_info">Torrent info</string>
+    <string name="total_size">Total size</string>
+    <string name="created_by">Created by</string>
+    <string name="added_on">Added on</string>
+    <string name="completed_on">Completed on</string>
+    <string name="save_path">Save path</string>
     <string name="category">Category</string>
     <string name="unspecified">Unspecified</string>
-    <string name="torrent_hash">Torrent Hash</string>
+    <string name="torrent_hash">Hash</string>
     <string name="comment">Comment</string>
-    <string name="created_on">Created On</string>
-    <string name="toggle_limits">Toggle speed limits</string>
+    <string name="created_on">Created on</string>
     <string name="sort">Sort</string>
-    <!-- Subtitles-->
     <string name="connections_sub">%1$d (%2$d max)</string>
     <string name="sp_sub">%1$d (%2$d total)</string>
-    <string name="infinite">Inf.</string>
+    <string name="infinite">∞</string>
     <string name="dl_up_sub">%1$s (%2$s in this session)</string>
     <string name="dl_up_speed_sub">%1$s (%2$s avg.)</string>
 
     <!-- Config Fragment -->
     <string name="type">Type</string>
     <string name="password">Password</string>
+    <string name="content_description_hide_password">Hide password</string>
+    <string name="content_description_show_password">Show password</string>
     <string name="username">Username</string>
     <string name="port">Port (optional)</string>
     <string name="path">Path (optional)</string>
     <string name="host_or_ip">Host or IP</string>
     <string name="server_name">Server name</string>
-    <string name="save_and_test_cfg">Save and test config</string>
     <string name="test_cfg">Test connection</string>
     <string name="save_cfg">Save</string>
+    <string name="untrusted_certificate_title">Untrusted certificate</string>
+    <string name="untrusted_certificate_message">
+        This server\'s certificate isn\'t signed by a trusted authority. Review it below, then
+        choose whether to trust it for this server only.
+    </string>
+    <string name="certificate_subject_label">Subject</string>
+    <string name="certificate_issuer_label">Issuer</string>
+    <string name="certificate_fingerprint_label">SHA-256 fingerprint</string>
+    <string name="certificate_validity_label">Valid until</string>
+    <string name="local_network_blocked_title">Local network access is off</string>
+    <string name="local_network_blocked_message">
+        Servers on your own network can\'t be reached until this is allowed.
+    </string>
+    <string name="grant_action">Allow</string>
+    <string name="certificate_expired_warning">
+        This certificate expired on %1$s. Trusting it won\'t restore the connection — the server
+        needs a renewed certificate.
+    </string>
+    <string name="certificate_not_yet_valid_warning">
+        This certificate is not valid until %1$s. Trusting it won\'t restore the connection — check
+        the clock on the server that issued it.
+    </string>
+    <string name="trust_and_retry_action">Trust &amp; retry</string>
+    <string name="pinned_certificate_active_label">A certificate is pinned for this server</string>
+    <string name="clear_pinned_certificate_action">Clear</string>
+    <string name="clear_pinned_certificate_title">Clear pinned certificate?</string>
+    <string name="clear_pinned_certificate_message">
+        Once you save, the next connection to this server will need system-trusted HTTPS or a
+        newly-approved certificate.
+    </string>
 
     <!-- Notifications -->
-    <string name="status_channel_id">qBit-Channel-2</string>
+    <string name="status_channel_id" translatable="false">qBit-Channel-2</string>
     <string name="status_updates">Status Updates</string>
     <string name="events_channel_id" translatable="false">qBit-Events</string>
     <string name="events_channel_name">Torrent events</string>
     <string name="monitor_channel_id" translatable="false">qBit-Monitor</string>
     <string name="monitor_channel_name">Background monitor</string>
+    <string name="status_connecting">Connecting…</string>
+    <string name="status_alerts_are_on">Alerts are on</string>
+    <string name="status_server_connected">Server State • Connected</string>
+    <string name="status_dl_ul_speed">DL: %1$s/s | UL: %2$s/s</string>
+    <string name="status_server_offline">Server State • Offline</string>
+    <string name="status_reconnecting">Reconnecting…</string>
+    <string name="status_download_complete">Download complete</string>
+    <string name="status_check_complete">Check complete</string>
+    <string name="status_new_articles_in_feed">%1$d new in %2$s</string>
+    <plurals name="status_new_rss_articles">
+        <item quantity="one">New RSS article</item>
+        <item quantity="other">New RSS articles</item>
+    </plurals>
 
     <!-- Dialogs -->
-    <string name="confirm_delete_torrents">Are you sure you want to delete the torrent(s)?</string>
-    <string name="yes">Yes</string>
-    <string name="no">No</string>
     <string name="rename_torrent_title">Rename torrent</string>
     <string name="cancel">Cancel</string>
     <string name="rename">Rename</string>
-    <string name="invalid_torrent_name">Please enter a valid name</string>
     <string name="add_torrent_title">Add Torrent</string>
-    <string name="upload_file">Upload File</string>
     <string name="add">Add</string>
     <string name="no_file_selected">No file selected</string>
     <string name="selected_file">Selected file</string>
@@ -257,6 +288,9 @@
     <string name="folder_label">Folder</string>
     <string name="root_label">Root</string>
     <string name="move_to_folder_action">Move to folder</string>
+    <string name="content_description_drag_to_move">Drag to move</string>
+    <string name="content_description_collapse_folder">Collapse folder</string>
+    <string name="content_description_expand_folder">Expand folder</string>
     <string name="remove_feed_action">Remove feed</string>
     <string name="remove_folder_action">Remove folder (and its feeds)</string>
     <string name="rss_refresh_interval_title">RSS refresh interval</string>
@@ -304,7 +338,10 @@
     <string name="remove_rule_confirm_title">Remove rule \"%1$s\"?</string>
     <string name="remove_action">Remove</string>
     <string name="no_matches_yet_title">No matches yet</string>
-    <string name="matching_articles_count">%1$d matching article(s)</string>
+    <plurals name="matching_articles_count">
+        <item quantity="one">%1$d matching article</item>
+        <item quantity="other">%1$d matching articles</item>
+    </plurals>
     <string name="rule_no_matches_message">
         This rule hasn\'t matched any article currently cached in its affected feeds.
     </string>
@@ -316,6 +353,11 @@
     <string name="enable_notifications_message">
         Get a status notification with live transfer speeds, plus alerts when a torrent finishes
         downloading or checking. You can change this anytime in Settings.
+    </string>
+    <string name="enable_local_network_title">Allow local network access?</string>
+    <string name="enable_local_network_message">
+        Captain qBit needs this to connect to a qBittorrent server on your local network (e.g. a
+        home NAS or PC). Servers reached over the internet aren\'t affected.
     </string>
     <string name="not_now_action">Not now</string>
     <string name="press_back_again_to_exit">Press back again to exit</string>
@@ -336,6 +378,7 @@
 
     <!-- Logs screen -->
     <string name="server_logs_title">Server logs</string>
+    <string name="status_load_logs_failure">Couldn\'t load the server log</string>
     <string name="content_description_close_search">Close search</string>
     <string name="content_description_search">Search</string>
     <string name="search_log_messages_placeholder">Search log messages</string>
@@ -374,20 +417,16 @@
     <string name="trackers_section_title">Trackers</string>
     <string name="clear_all_action">Clear all</string>
     <string name="use_alternate_speed_limits_label">Use alternate speed limits</string>
-    <string name="use_alternate_speed_limits_description">
-        Switch between your normal speed limits and the alternate ones.
-    </string>
-    <string name="rss_feeds_label">RSS feeds</string>
-    <string name="rss_feeds_description">Browse RSS feeds and manage auto-download rules.</string>
     <string name="settings_label">Settings</string>
-    <string name="settings_description">Open the app\'s settings.</string>
     <string name="manage_named_action">Manage %1$s</string>
 
     <!-- Server screen -->
     <string name="torrent_already_exists">Torrent already exists</string>
     <string name="filters_label">Filters</string>
+    <string name="torrents_title">Torrents</string>
     <string name="status_speed_free_space">↓ %1$s/s  ↑ %2$s/s   %3$s free</string>
     <string name="retry_action">Retry</string>
+    <string name="review_certificate_action">Review certificate</string>
     <string name="remove_torrents_count">Remove %1$d torrents</string>
     <string name="remove_torrent_singular">Remove torrent</string>
     <string name="also_delete_the_files_on_disk">Also delete the files on disk</string>
@@ -474,6 +513,50 @@
     <string name="export_configuration_label">Export configuration</string>
     <string name="import_configuration_label">Import configuration</string>
     <string name="encrypt_backup_title">Encrypt backup</string>
+    <string name="passphrase_label">Passphrase</string>
+    <string name="confirm_passphrase_label">Confirm passphrase</string>
+    <string name="enter_a_passphrase_error">Enter a passphrase</string>
+    <string name="passphrases_dont_match_error">Passphrases don\'t match</string>
+    <string name="app_settings_section_header">App settings</string>
+    <string name="category_colors_label">Category colors</string>
+    <string name="export_action">Export</string>
+    <string name="import_action">Import</string>
+    <string name="import_mode_section_header">Import mode</string>
+    <string name="merge_with_current_label">Merge with current</string>
+    <string name="replace_everything_label">Replace everything</string>
+    <string name="backup_server_already_added">%1$s (already added)</string>
+    <string name="notifications_section_header">Notifications</string>
+    <string name="filters_and_sorting_label">Filters &amp; sorting</string>
+    <string name="unknown_error">Unknown error</string>
+    <string name="error_connection_failed">Failed to connect to server</string>
+    <string name="error_connection_timed_out">Connection timed out</string>
+    <string name="error_server_unreachable">Could not reach server — check address and port</string>
+    <string name="error_host_not_found">Server not found — check the hostname</string>
+    <string name="error_ssl">SSL error — check the server\'s certificate and try again</string>
+    <string name="error_ssl_untrusted_certificate">
+        Server presented a certificate that isn\'t trusted. You can review its fingerprint and
+        choose to trust it for this server.
+    </string>
+    <string name="error_torrent_already_exists">Torrent already exists</string>
+    <string name="error_authentication_failed">Authentication failed — check the username and password</string>
+    <string name="status_checking_connection">Checking connection, please wait…</string>
+    <string name="status_client_version">Success! Client version is %1$s</string>
+    <string name="status_test_failed">Failed! %1$s</string>
+    <string name="status_config_exported">Configuration exported</string>
+    <string name="status_export_failed">Export failed: %1$s</string>
+    <string name="status_import_failed">Import failed: %1$s</string>
+    <string name="status_incorrect_passphrase">Incorrect passphrase, or the file is corrupted</string>
+    <string name="error_could_not_open_file">Could not open the selected file</string>
+    <string name="error_not_a_backup_file">This file isn\'t a Captain qBit backup</string>
+    <string name="error_backup_no_servers">The backup contains no servers</string>
+    <string name="status_replaced_with_servers">Replaced with %1$s</string>
+    <string name="status_no_new_servers">No new servers — %1$s already added</string>
+    <string name="status_imported_servers_with_skipped">Imported %1$s (%2$d skipped, already added)</string>
+    <string name="status_imported_servers">Imported %1$s</string>
+    <plurals name="server_count">
+        <item quantity="one">%d server</item>
+        <item quantity="other">%d servers</item>
+    </plurals>
     <string name="notifications_blocked_title">Notifications are blocked</string>
     <string name="notifications_blocked_message">
         These switches won\'t show anything until notifications are re-enabled for this app in
@@ -515,8 +598,8 @@
 
     <!-- Version / About screen -->
     <string name="version_name_code">Version %1$s (%2$d)</string>
-    <string name="qbittorrent_version_label">qBittorrent %1$s</string>
-    <string name="web_api_version_label">Web API v%1$s</string>
+    <string name="qbittorrent_version_label" translatable="false">qBittorrent %1$s</string>
+    <string name="web_api_version_label" translatable="false">Web API v%1$s</string>
     <string name="fork_attribution_message">A fork of qBittorrent Manager by Yash Garg.</string>
     <string name="license_message">Free and open source · GPL-3.0</string>
     <string name="whats_new_link_label">What\'s New</string>
@@ -530,14 +613,18 @@
 
     <!-- Language picker -->
     <string name="language_label">Language</string>
-    <string name="language_english">English</string>
+    <string name="language_english" translatable="false">English</string>
+    <string name="language_hebrew" translatable="false">עברית</string>
 
     <!-- ViewModel status messages -->
     <string name="status_add_torrent_url_success">Successfully added torrent</string>
     <string name="status_add_torrent_url_failure">Failed to add torrent</string>
     <string name="status_add_torrent_file_success">Successfully added file</string>
     <string name="status_add_torrent_file_failure">Failed to add file</string>
-    <string name="status_bulk_category_set">Category set on %1$d torrent(s)</string>
+    <plurals name="status_bulk_category_set">
+        <item quantity="one">Category set on %1$d torrent</item>
+        <item quantity="other">Category set on %1$d torrents</item>
+    </plurals>
     <string name="status_set_category_failure">Failed to set category</string>
     <string name="status_set_priority_failure">Failed to set priority</string>
     <string name="file_priority_title">Priority</string>
@@ -556,26 +643,46 @@
     <string name="files_placeholder">Enter a magnet link or choose a .torrent file to see its contents</string>
     <string name="files_unavailable">File selection isn\'t available for this torrent</string>
     <string name="status_file_selection_failed">Torrent added, but the file selection couldn\'t be applied</string>
-    <string name="status_bulk_tags_updated">Tags updated on %1$d torrent(s)</string>
+    <plurals name="status_bulk_tags_updated">
+        <item quantity="one">Tags updated on %1$d torrent</item>
+        <item quantity="other">Tags updated on %1$d torrents</item>
+    </plurals>
     <string name="status_update_tags_failure">Failed to update tags</string>
     <string name="status_tag_created">Tag \"%1$s\" created</string>
     <string name="status_create_tag_failure">Failed to create tag</string>
-    <string name="status_tags_deleted">Deleted %1$d tag(s)</string>
+    <plurals name="status_tags_deleted">
+        <item quantity="one">Deleted %1$d tag</item>
+        <item quantity="other">Deleted %1$d tags</item>
+    </plurals>
     <string name="status_delete_tags_failure">Failed to delete tags</string>
     <string name="status_category_created">Category \"%1$s\" created</string>
     <string name="status_create_category_failure">Failed to create category</string>
-    <string name="status_categories_deleted">Deleted %1$d category(ies)</string>
+    <plurals name="status_categories_deleted">
+        <item quantity="one">Deleted %1$d category</item>
+        <item quantity="other">Deleted %1$d categories</item>
+    </plurals>
     <string name="status_delete_categories_failure">Failed to delete categories</string>
-    <string name="status_torrents_removed">Successfully deleted %1$d file(s)</string>
+    <plurals name="status_torrents_removed">
+        <item quantity="one">Successfully deleted %1$d file</item>
+        <item quantity="other">Successfully deleted %1$d files</item>
+    </plurals>
     <string name="status_remove_torrents_failure">Failed to remove</string>
-    <string name="status_torrents_paused">Paused %1$d torrent(s)</string>
-    <string name="status_torrents_resumed">Resumed %1$d torrent(s)</string>
-    <string name="status_pause_torrents_failure">Failed to pause %1$d torrent(s)</string>
-    <string name="status_resume_torrents_failure">Failed to resume %1$d torrent(s)</string>
-    <string name="status_speed_limits_disabled">Alternative speed limits are disabled</string>
-    <string name="status_speed_limits_enabled">Alternative speed limits are enabled</string>
-    <string name="status_toggle_speed_limits_failure">Failed to toggle speed limits</string>
-    <string name="status_get_speed_limit_mode_failure">Failed to get speed limit mode</string>
+    <plurals name="status_torrents_paused">
+        <item quantity="one">Paused %1$d torrent</item>
+        <item quantity="other">Paused %1$d torrents</item>
+    </plurals>
+    <plurals name="status_torrents_resumed">
+        <item quantity="one">Resumed %1$d torrent</item>
+        <item quantity="other">Resumed %1$d torrents</item>
+    </plurals>
+    <plurals name="status_pause_torrents_failure">
+        <item quantity="one">Failed to pause %1$d torrent</item>
+        <item quantity="other">Failed to pause %1$d torrents</item>
+    </plurals>
+    <plurals name="status_resume_torrents_failure">
+        <item quantity="one">Failed to resume %1$d torrent</item>
+        <item quantity="other">Failed to resume %1$d torrents</item>
+    </plurals>
     <string name="status_sync_data_failure">Failed to sync data</string>
 
     <string name="status_torrent_paused">Torrent paused</string>
@@ -651,4 +758,24 @@
     <string name="status_rss_auto_downloading_update_failure">
         Failed to update RSS auto-downloading
     </string>
+
+    <!-- Byte-size units (data-transfer speeds/sizes) - kept in Latin script in every locale -->
+    <string name="unit_bytes" translatable="false">B</string>
+    <string name="unit_kibibytes" translatable="false">KiB</string>
+    <string name="unit_mebibytes" translatable="false">MiB</string>
+    <string name="unit_gibibytes" translatable="false">GiB</string>
+    <string name="unit_tebibytes" translatable="false">TiB</string>
+    <string name="unit_pebibytes" translatable="false">PiB</string>
+    <string name="unit_exbibytes" translatable="false">EiB</string>
+
+    <!-- Time-duration segments (days/hours/minutes/seconds), joined with spaces to form e.g.
+         "2d 4h 46m". Each carries its own count so a translation can space it, or omit it where
+         the word already implies the number (Hebrew's dual form, for instance). -->
+    <plurals name="unit_days_suffix">
+        <item quantity="one">%1$dd</item>
+        <item quantity="other">%1$dd</item>
+    </plurals>
+    <string name="unit_hours_suffix">%1$dh</string>
+    <string name="unit_minutes_suffix">%1$dm</string>
+    <string name="unit_seconds_suffix">%1$ds</string>
 </resources>

@@ -1,13 +1,13 @@
 package dev.yashgarg.qbit.data.preferences
 
-import dev.yashgarg.qbit.data.models.ServerPreferences
+import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.ServerViewPrefs
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-class ServerPreferencesSerializerTest {
+class AppPreferencesSerializerTest {
 
     /**
      * An install from before 1.0.0 stored the now-removed global filter/sort keys. Decoding must
@@ -34,7 +34,7 @@ class ServerPreferencesSerializerTest {
             """
                 .trimIndent()
 
-        val prefs = ServerPreferencesSerializer.readFrom(legacyJson.byteInputStream())
+        val prefs = AppPreferencesSerializer.readFrom(legacyJson.byteInputStream())
 
         // Kept fields survive; the removed keys are silently dropped (no crash).
         assertEquals("linux", prefs.addTorrentCategory)
@@ -51,15 +51,15 @@ class ServerPreferencesSerializerTest {
     @Test
     fun `round-trips custom poll intervals`() = runTest {
         val original =
-            ServerPreferences(
+            AppPreferences(
                 statusRefreshIntervalMs = 60_000L,
                 eventPollIntervalMs = 10_000L,
                 syncIntervalMs = 30_000L,
             )
 
         val out = ByteArrayOutputStream()
-        ServerPreferencesSerializer.writeTo(original, out)
-        val restored = ServerPreferencesSerializer.readFrom(out.toByteArray().inputStream())
+        AppPreferencesSerializer.writeTo(original, out)
+        val restored = AppPreferencesSerializer.readFrom(out.toByteArray().inputStream())
 
         assertEquals(original, restored)
     }
@@ -68,15 +68,15 @@ class ServerPreferencesSerializerTest {
     @Test
     fun `round-trips current prefs without the legacy keys`() = runTest {
         val original =
-            ServerPreferences(
+            AppPreferences(
                 activeServerId = 5,
                 serverViewPrefs = mapOf(5 to ServerViewPrefs(sortOptionName = "RATIO")),
                 themeMode = 2,
             )
 
         val out = ByteArrayOutputStream()
-        ServerPreferencesSerializer.writeTo(original, out)
-        val restored = ServerPreferencesSerializer.readFrom(out.toByteArray().inputStream())
+        AppPreferencesSerializer.writeTo(original, out)
+        val restored = AppPreferencesSerializer.readFrom(out.toByteArray().inputStream())
 
         assertEquals(original, restored)
     }

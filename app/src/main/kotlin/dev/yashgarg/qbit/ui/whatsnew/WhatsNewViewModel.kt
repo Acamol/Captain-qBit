@@ -7,7 +7,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.yashgarg.qbit.BuildConfig
-import dev.yashgarg.qbit.data.models.ServerPreferences
+import dev.yashgarg.qbit.data.models.AppPreferences
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,7 +26,7 @@ class WhatsNewViewModel
 @Inject
 constructor(
     @ApplicationContext private val context: Context,
-    private val prefsStore: DataStore<ServerPreferences>,
+    private val prefsStore: DataStore<AppPreferences>,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(WhatsNewState())
