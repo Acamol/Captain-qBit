@@ -84,7 +84,9 @@ private object NumberFormat {
                 .append(" ")
                 .append(context.getString(CommonR.string.unit_minutes_suffix, minutes))
         }
-        if (secs != 0L) {
+        // Also when every larger unit was zero, so a torrent that has just started reads "0s"
+        // rather than coming out blank.
+        if (secs != 0L || timeStr.isEmpty()) {
             timeStr.append(" ").append(context.getString(CommonR.string.unit_seconds_suffix, secs))
         }
 

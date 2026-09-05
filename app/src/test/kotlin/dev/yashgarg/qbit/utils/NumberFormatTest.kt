@@ -96,6 +96,13 @@ class NumberFormatTest {
     }
 
     @Test
+    fun `a zero duration reads as zero seconds rather than coming out blank`() {
+        // Every segment is skipped when its unit is zero, so without a floor the whole value would
+        // be empty - which is what a just-added torrent's "time active" reports.
+        assertEquals(isolated("0s"), 0L.toTime())
+    }
+
+    @Test
     fun `a translation controls its own spacing and may omit the count`() {
         // Stands in for Hebrew, where units are words rather than single letters and the dual form
         // ("two days") already carries the count. Concatenating the number onto the suffix would
