@@ -44,7 +44,13 @@ constructor(
     private val localized: Context
         get() = LocalizedContext.of(context)
 
-    private val json = Json { ignoreUnknownKeys = true }
+    // coerceInputValues for the same reason as the preferences serializer: a backup written by a
+    // newer build may carry an enum value this one doesn't know, and that shouldn't fail the
+    // import.
+    private val json = Json {
+        ignoreUnknownKeys = true
+        coerceInputValues = true
+    }
 
     /**
      * Encrypts [servers] (and [preferences], when non-null) to the file at [uri]. The caller is
