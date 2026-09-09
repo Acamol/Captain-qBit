@@ -8,6 +8,7 @@ import com.github.michaelbull.result.onOk
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.yashgarg.qbit.data.QbitRepository
 import dev.yashgarg.qbit.data.models.AppPreferences
+import dev.yashgarg.qbit.data.models.EventAlertMode
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -283,6 +284,34 @@ constructor(
                     notifyOnChecked = enabled,
                     notifCheckedRebaseline = enabled || it.notifCheckedRebaseline,
                 )
+            }
+        }
+    }
+
+    val eventAlertMode: StateFlow<EventAlertMode> =
+        prefsStore.data
+            .map { it.eventAlertMode }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, EventAlertMode.ALWAYS)
+
+    val quietHoursStartMinutes: StateFlow<Int> =
+        prefsStore.data
+            .map { it.quietHoursStartMinutes }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, 22 * 60)
+
+    val quietHoursEndMinutes: StateFlow<Int> =
+        prefsStore.data
+            .map { it.quietHoursEndMinutes }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, 7 * 60)
+
+    fun setEventAlertMode(mode: EventAlertMode) {
+        viewModelScope.launch { prefsStore.updateData { it.copy(eventAlertMode = mode) } }
+    }
+
+    /** Both are minutes since midnight. */
+    fun setQuietHours(startMinutes: Int, endMinutes: Int) {
+        viewModelScope.launch {
+            prefsStore.updateData {
+                it.copy(quietHoursStartMinutes = startMinutes, quietHoursEndMinutes = endMinutes)
             }
         }
     }

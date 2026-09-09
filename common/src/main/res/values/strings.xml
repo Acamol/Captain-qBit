@@ -124,6 +124,8 @@
     <string name="events_channel_name">Torrent events</string>
     <string name="monitor_channel_id" translatable="false">qBit-Monitor</string>
     <string name="monitor_channel_name">Background monitor</string>
+    <string name="events_quiet_channel_id" translatable="false">qBit-Events-Quiet</string>
+    <string name="events_quiet_channel_name">Torrent events (quiet hours)</string>
     <string name="status_connecting">Connecting…</string>
     <string name="status_alerts_are_on">Alerts are on</string>
     <string name="status_server_connected">Server State • Connected</string>
@@ -137,6 +139,17 @@
         <item quantity="one">New RSS article</item>
         <item quantity="other">New RSS articles</item>
     </plurals>
+
+    <string name="alert_sound_label">Alert sound</string>
+    <string name="alert_sound_always">Always</string>
+    <string name="alert_sound_never">Never</string>
+    <string name="alert_sound_outside_quiet_hours">Except during quiet hours</string>
+    <string name="alert_sound_explanation">
+        A silenced alert still appears — it just doesn\'t make a sound, so an overnight download
+        won\'t wake you and is still waiting in the morning.
+    </string>
+    <string name="quiet_hours_start_label">Starts at</string>
+    <string name="quiet_hours_end_label">Ends at</string>
 
     <!-- Dialogs -->
     <string name="rename_torrent_title">Rename torrent</string>

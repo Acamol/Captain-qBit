@@ -57,6 +57,13 @@ data class AppPreferences(
     val notifCompleteRebaseline: Boolean = false,
     val notifCheckedRebaseline: Boolean = false,
     val notifyOnNewRssArticles: Boolean = false,
+    // When a torrent/RSS alert may make a sound. A silenced alert is posted to a silent channel
+    // rather than dropped, so an overnight completion is still waiting in the morning.
+    val eventAlertMode: EventAlertMode = EventAlertMode.ALWAYS,
+    // The window used by EventAlertMode.OUTSIDE_QUIET_HOURS, as minutes since midnight. May wrap
+    // past midnight, which is the usual case (22:00 to 07:00).
+    val quietHoursStartMinutes: Int = 22 * 60,
+    val quietHoursEndMinutes: Int = 7 * 60,
     // Article ids already accounted for by the RSS notifier, keyed by "$serverId|$feedPath" (a
     // feed path alone isn't unique across servers). Ids for articles no longer present in a feed's
     // current fetch are dropped on the next poll, so this stays bounded by each feed's own

@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.text.format.DateFormat
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -34,7 +35,9 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -57,6 +60,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.common.R as CommonR
+import dev.yashgarg.qbit.data.models.EventAlertMode
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.ui.backup.BackupDialogs
 import dev.yashgarg.qbit.ui.backup.BackupViewModel
@@ -67,7 +71,9 @@ import dev.yashgarg.qbit.ui.rss.MaxArticlesPerFeedDialog
 import dev.yashgarg.qbit.ui.rss.RefreshIntervalDialog
 import dev.yashgarg.qbit.ui.server.SpeedLimitsDialog
 import dev.yashgarg.qbit.utils.LocalizedContext
+import dev.yashgarg.qbit.utils.isolateLtr
 import dev.yashgarg.qbit.worker.StatusWorker
+import java.util.Calendar
 
 private val BACKUP_MIME_TYPES = arrayOf("application/json", "application/octet-stream", "*/*")
 
@@ -116,6 +122,37 @@ private fun languageLabel(tag: String): String =
             ?: CommonR.string.theme_system_default
     )
 
+private val ALERT_MODE_OPTIONS =
+    listOf(
+        EventAlertMode.ALWAYS to CommonR.string.alert_sound_always,
+        EventAlertMode.OUTSIDE_QUIET_HOURS to CommonR.string.alert_sound_outside_quiet_hours,
+        EventAlertMode.NEVER to CommonR.string.alert_sound_never,
+    )
+
+@Composable
+private fun alertModeLabel(mode: EventAlertMode): String =
+    stringResource(
+        ALERT_MODE_OPTIONS.firstOrNull { it.first == mode }?.second
+            ?: CommonR.string.alert_sound_always
+    )
+
+/** Which end of the quiet-hours window a time picker is editing. */
+private enum class QuietEdge {
+    START,
+    END,
+}
+
+// Formatted through the platform's own time format so it follows the device's 12/24-hour setting,
+// and isolated because a time is LTR content that may sit in an RTL sentence.
+private fun timeOfDayLabel(context: Context, minutesOfDay: Int): String {
+    val calendar =
+        Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, minutesOfDay / 60)
+            set(Calendar.MINUTE, minutesOfDay % 60)
+        }
+    return DateFormat.getTimeFormat(context).format(calendar.time).isolateLtr()
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -147,6 +184,9 @@ fun SettingsScreen(
     val notifyComplete by viewModel.notifyOnComplete.collectAsStateWithLifecycle()
     val notifyChecked by viewModel.notifyOnChecked.collectAsStateWithLifecycle()
     val notifyRssUpdates by viewModel.notifyOnNewRssArticles.collectAsStateWithLifecycle()
+    val eventAlertMode by viewModel.eventAlertMode.collectAsStateWithLifecycle()
+    val quietHoursStart by viewModel.quietHoursStartMinutes.collectAsStateWithLifecycle()
+    val quietHoursEnd by viewModel.quietHoursEndMinutes.collectAsStateWithLifecycle()
     val statusRefreshIntervalMs by viewModel.statusRefreshIntervalMs.collectAsStateWithLifecycle()
     val eventPollIntervalMs by viewModel.eventPollIntervalMs.collectAsStateWithLifecycle()
     val syncIntervalMs by viewModel.syncIntervalMs.collectAsStateWithLifecycle()
@@ -165,6 +205,9 @@ fun SettingsScreen(
     var showAltLimitsDialog by remember { mutableStateOf(false) }
     var showRssIntervalDialog by remember { mutableStateOf(false) }
     var showRssMaxArticlesDialog by remember { mutableStateOf(false) }
+    // Which end of the quiet window the time picker is editing, null when it's closed.
+    var editingQuietEdge by remember { mutableStateOf<QuietEdge?>(null) }
+    var showAlertModeDialog by remember { mutableStateOf(false) }
     var pendingExport by remember { mutableStateOf<PendingExport?>(null) }
 
     // Re-checked on resume so coming back from the system notification settings screen (via the
@@ -464,6 +507,23 @@ fun SettingsScreen(
                 applyNotificationPrefs(statusNotif, notifyComplete, notifyChecked, it)
             }
             ClickableRow(
+                title = stringResource(CommonR.string.alert_sound_label),
+                subtitle = alertModeLabel(eventAlertMode),
+                onClick = { showAlertModeDialog = true },
+            )
+            if (eventAlertMode == EventAlertMode.OUTSIDE_QUIET_HOURS) {
+                ClickableRow(
+                    title = stringResource(CommonR.string.quiet_hours_start_label),
+                    subtitle = timeOfDayLabel(context, quietHoursStart),
+                    onClick = { editingQuietEdge = QuietEdge.START },
+                )
+                ClickableRow(
+                    title = stringResource(CommonR.string.quiet_hours_end_label),
+                    subtitle = timeOfDayLabel(context, quietHoursEnd),
+                    onClick = { editingQuietEdge = QuietEdge.END },
+                )
+            }
+            ClickableRow(
                 title = stringResource(CommonR.string.notification_refresh_interval_label),
                 subtitle = intervalLabel(statusRefreshIntervalMs),
                 onClick = { showStatusIntervalDialog = true },
@@ -660,6 +720,62 @@ fun SettingsScreen(
             onDismiss = { showRssMaxArticlesDialog = false },
         )
     }
+
+    if (showAlertModeDialog) {
+        AlertDialog(
+            onDismissRequest = { showAlertModeDialog = false },
+            title = { Text(stringResource(CommonR.string.alert_sound_label)) },
+            text = {
+                Column {
+                    Text(
+                        stringResource(CommonR.string.alert_sound_explanation),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.size(8.dp))
+                    ALERT_MODE_OPTIONS.forEach { (mode, labelRes) ->
+                        val choose: () -> Unit = {
+                            viewModel.setEventAlertMode(mode)
+                            showAlertModeDialog = false
+                        }
+                        Row(
+                            modifier =
+                                Modifier.fillMaxWidth()
+                                    .clickable(onClick = choose)
+                                    .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(selected = eventAlertMode == mode, onClick = choose)
+                            Spacer(Modifier.size(12.dp))
+                            Text(stringResource(labelRes))
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAlertModeDialog = false }) {
+                    Text(stringResource(CommonR.string.cancel))
+                }
+            },
+        )
+    }
+
+    editingQuietEdge?.let { edge ->
+        QuietHoursTimeDialog(
+            title =
+                stringResource(
+                    if (edge == QuietEdge.START) CommonR.string.quiet_hours_start_label
+                    else CommonR.string.quiet_hours_end_label
+                ),
+            initialMinutesOfDay = if (edge == QuietEdge.START) quietHoursStart else quietHoursEnd,
+            onConfirm = { minutes ->
+                if (edge == QuietEdge.START) viewModel.setQuietHours(minutes, quietHoursEnd)
+                else viewModel.setQuietHours(quietHoursStart, minutes)
+                editingQuietEdge = null
+            },
+            onDismiss = { editingQuietEdge = null },
+        )
+    }
 }
 
 /** The selection + passphrase, held until the user picks an export destination. */
@@ -840,4 +956,35 @@ private fun SwitchRow(
         }
         Switch(checked = checked, onCheckedChange = onChange, enabled = enabled)
     }
+}
+
+/** Time picker for one end of the quiet-hours window. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun QuietHoursTimeDialog(
+    title: String,
+    initialMinutesOfDay: Int,
+    onConfirm: (Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    val state =
+        rememberTimePickerState(
+            initialHour = initialMinutesOfDay / 60,
+            initialMinute = initialMinutesOfDay % 60,
+            is24Hour = DateFormat.is24HourFormat(context),
+        )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = { TimePicker(state = state) },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(state.hour * 60 + state.minute) }) {
+                Text(stringResource(CommonR.string.ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
+        },
+    )
 }
