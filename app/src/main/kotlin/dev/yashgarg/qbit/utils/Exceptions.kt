@@ -48,6 +48,10 @@ fun Throwable.friendlyMessage(
 fun Throwable.isUntrustedCertificateError(): Boolean =
     ExceptionHandler.classify(this) == ErrorKind.SSL_UNTRUSTED_CERTIFICATE
 
+/** True when the server rejected our credentials, as opposed to being unreachable. */
+fun Throwable.isAuthenticationError(): Boolean =
+    ExceptionHandler.classify(this) == ErrorKind.AUTHENTICATION_FAILED
+
 private object ExceptionHandler {
     fun classify(ex: Throwable): ErrorKind =
         when (ex) {

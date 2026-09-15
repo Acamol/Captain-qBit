@@ -10,7 +10,7 @@ import dev.yashgarg.qbit.data.models.ServerConfig
 
 @Database(
     entities = [ServerConfig::class],
-    version = 7,
+    version = 8,
     autoMigrations = [AutoMigration(from = 2, to = 3)],
     exportSchema = true,
 )
@@ -74,6 +74,14 @@ val MIGRATION_6_7 =
     object : Migration(6, 7) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE configs ADD COLUMN pinnedCertificate TEXT DEFAULT NULL")
+        }
+    }
+
+// Adds the qBittorrent API key column (qBittorrent >= 5.2 Bearer authentication).
+val MIGRATION_7_8 =
+    object : Migration(7, 8) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE configs ADD COLUMN apiKey TEXT DEFAULT NULL")
         }
     }
 

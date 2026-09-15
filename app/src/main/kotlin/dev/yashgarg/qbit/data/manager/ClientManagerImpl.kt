@@ -121,6 +121,7 @@ constructor(
                     "${config.connectionType.toString().lowercase()}://${config.baseUrl}$port$path",
                     config.username,
                     CryptoManager.decrypt(config.password) ?: config.password,
+                    apiKey = CryptoManager.decrypt(config.apiKey),
                     syncInterval = syncIntervalMs.milliseconds,
                     httpClient = ClientManager.httpClient(basicAuth, pinnedCertificateDer),
                     dispatcher = Dispatchers.Default,

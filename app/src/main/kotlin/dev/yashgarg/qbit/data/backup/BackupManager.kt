@@ -295,6 +295,7 @@ constructor(
         copy(
             password = CryptoManager.decrypt(password) ?: password,
             basicAuthPassword = CryptoManager.decrypt(basicAuthPassword),
+            apiKey = CryptoManager.decrypt(apiKey),
         )
 
     /**
@@ -306,6 +307,7 @@ constructor(
         copy(
             password = CryptoManager.encrypt(CryptoManager.decrypt(password)) ?: password,
             basicAuthPassword = CryptoManager.encrypt(CryptoManager.decrypt(basicAuthPassword)),
+            apiKey = CryptoManager.encrypt(CryptoManager.decrypt(apiKey)),
         )
 
     /** Identity keys ([identityKey]) of the servers currently saved, for duplicate detection. */

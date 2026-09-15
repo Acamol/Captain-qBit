@@ -244,6 +244,7 @@ constructor(
         connectionType: String,
         username: String,
         password: String,
+        apiKey: String?,
         basicAuthUsername: String?,
         basicAuthPassword: String?,
         pinnedCertificateDer: ByteArray? = null,
@@ -286,6 +287,7 @@ constructor(
                     basicAuthUsername = basicAuthUsername?.trim()?.ifEmpty { null },
                     basicAuthPassword =
                         CryptoManager.encrypt(basicAuthPassword?.trim()?.ifEmpty { null }),
+                    apiKey = CryptoManager.encrypt(apiKey?.trim()?.ifEmpty { null }),
                     pinnedCertificate =
                         when {
                             pinnedCertificateDer != null ->
@@ -313,6 +315,7 @@ constructor(
         baseUrl: String,
         username: String,
         password: String,
+        apiKey: String?,
         basicAuthUsername: String?,
         basicAuthPassword: String?,
         pinnedCertificateDer: ByteArray? = null,
@@ -327,6 +330,7 @@ constructor(
                     baseUrl,
                     username,
                     password,
+                    apiKey = apiKey,
                     httpClient = ClientManager.httpClient(basicAuth, pinnedCertificateDer),
                     dispatcher = Dispatchers.Default,
                 )
