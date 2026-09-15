@@ -81,6 +81,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
@@ -560,9 +561,23 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(bottom = 8.dp).size(70.dp),
                                 )
+                                // An empty list means either the server really has no torrents or
+                                // the active filters hid them all - saying which one saves the
+                                // user wondering where their torrents went.
+                                val filtering =
+                                    state.selectedFilter != StateFilter.ALL ||
+                                        state.selectedCategory != null ||
+                                        state.selectedTracker != null ||
+                                        state.filterUntagged ||
+                                        state.selectedTags.isNotEmpty() ||
+                                        state.searchQuery.isNotEmpty()
                                 Text(
-                                    stringResource(CommonR.string.no_queue),
+                                    stringResource(
+                                        if (filtering) CommonR.string.no_torrents_match_filter
+                                        else CommonR.string.no_torrents
+                                    ),
                                     style = MaterialTheme.typography.titleLarge,
+                                    textAlign = TextAlign.Center,
                                 )
                             }
                         else ->

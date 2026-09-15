@@ -17,7 +17,8 @@
     <string name="speed_status">▼ %1$s/s • ▲ %2$s/s</string>
     <string name="percent_done">%1$s / %2$s • %3$d%%</string>
     <string name="seeding">Seeding</string>
-    <string name="no_queue">Nothing in queue</string>
+    <string name="no_torrents">No torrents</string>
+    <string name="no_torrents_match_filter">No torrents match the current filters</string>
     <string name="error">Something went wrong</string>
     <string name="enter_url">Magnet Url</string>
     <string name="api_key">API key</string>

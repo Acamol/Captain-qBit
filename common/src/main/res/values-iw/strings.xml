@@ -6,7 +6,6 @@
     <string name="welcome_text">ברוכים הבאים ל-Captain qBit</string>
     <string name="restore_from_backup">שיחזור מגיבוי</string>
     <string name="error">משהו השתבש</string>
-    <string name="no_queue">התור ריק</string>
     <string name="invalid_username">נא להזין שם משתמש</string>
     <string name="invalid_password">נא להזין סיסמה</string>
     <string name="invalid_url">נא להזין כתובת מארח תקינה</string>
