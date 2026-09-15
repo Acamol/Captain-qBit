@@ -26,6 +26,12 @@ internal class AuthHandler {
     private val lastAuthResponse = MutableStateFlow<HttpResponse?>(null)
     val lastAuthResponseState: StateFlow<HttpResponse?> = lastAuthResponse
 
+    // Blank credentials mean the server needs no qBittorrent session - it is fronted by something
+    // that authenticates on its behalf, or it bypasses auth for this client. A login could not
+    // succeed with nothing to send, so there is no point spending a round-trip on one per request.
+    private val hasCredentials: Boolean
+        get() = config.username.isNotEmpty() || config.password.isNotEmpty()
+
     suspend fun tryAuth(http: HttpClient): Boolean {
         val response = authMutex.withLock {
             if (lastAuthResponse.value?.isValidForAuth() == true) {
@@ -54,7 +60,7 @@ internal class AuthHandler {
                 }
 
                 // Does the request have the SID cookie
-                if (context.cookies().none { it.name == "SID" }) {
+                if (context.cookies().none { it.name == "SID" } && plugin.hasCredentials) {
                     // No SID, authenticate before user request
                     plugin.tryAuth(scope)
                 }
@@ -62,7 +68,7 @@ internal class AuthHandler {
                 // Attempt user's request, authentication may or may not have been successful,
                 // or the session may have become invalid.  In any case make one last auth attempt.
                 val call = proceed() as HttpClientCall
-                if (call.response.status == Forbidden) {
+                if (call.response.status == Forbidden && plugin.hasCredentials) {
                     plugin.lastAuthResponse.value = call.response
                     // Authentication required
                     if (plugin.tryAuth(scope)) {

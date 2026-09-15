@@ -356,11 +356,11 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                         // Prefill basic-auth credentials from the client ones when turning it on,
                         // without clobbering anything the user already typed. They can still edit.
                         if (it) {
-                            if (basicAuthUser.isEmpty()) {
+                            if (basicAuthUser.isEmpty() && username.isNotEmpty()) {
                                 basicAuthUser = username
                                 viewModel.validateBasicAuthUsername(username)
                             }
-                            if (basicAuthPass.isEmpty()) {
+                            if (basicAuthPass.isEmpty() && password.isNotEmpty()) {
                                 basicAuthPass = password
                                 viewModel.validateBasicAuthPassword(password)
                             }
