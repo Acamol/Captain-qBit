@@ -24,6 +24,16 @@ from urllib.parse import urlparse, parse_qs
 
 PORT = int(os.environ.get("MOCK_PORT", "8080"))
 
+# Set MOCK_API_KEY to make the mock behave like qBittorrent >= 5.2 with an API key:
+# every request must carry "Authorization: Bearer <key>", and the auth endpoints
+# reject keys outright the way the real server does. Unset, credentials are ignored
+# as before and any client can connect.
+API_KEY = os.environ.get("MOCK_API_KEY") or None
+
+# Set MOCK_VERBOSE to log every request and how it authenticated. Off by default so
+# screenshot runs stay quiet. Only whether the key matched is logged, never the key.
+VERBOSE = bool(os.environ.get("MOCK_VERBOSE"))
+
 BASE_TS = 1719800000  # fixed "now-ish" epoch so timestamps are stable
 INF_ETA = 8640000     # qBittorrent's "infinite" ETA sentinel
 
@@ -885,8 +895,39 @@ class Handler(BaseHTTPRequestHandler):
     def _qs(self):
         return parse_qs(urlparse(self.path).query)
 
+    def _trace(self, method, path):
+        if not VERBOSE:
+            return
+        auth = self.headers.get("Authorization")
+        how = (
+            "no-auth-header"
+            if not auth
+            else "bearer-match"
+            if auth == f"Bearer {API_KEY}"
+            else f"bearer-mismatch({auth.split(' ')[0]})"
+        )
+        import sys
+
+        print(f"[mock] {method} {path} -> {how}", file=sys.stderr, flush=True)
+
+    def _api_key_ok(self, path):
+        """False (and a 403 already sent) when API-key mode rejects this request."""
+        if not API_KEY:
+            return True
+        if path in ("/api/v2/auth/login", "/api/v2/auth/logout"):
+            # Real qBittorrent refuses to let a key touch the auth endpoints at all.
+            self._send("Forbidden", "text/plain", code=403)
+            return False
+        if self.headers.get("Authorization") != f"Bearer {API_KEY}":
+            self._send("Forbidden", "text/plain", code=403)
+            return False
+        return True
+
     def do_POST(self):
         path = urlparse(self.path).path
+        self._trace("POST", path)
+        if not self._api_key_ok(path):
+            return
         if path == "/api/v2/auth/login":
             self._send("Ok.", "text/plain", cookie=True)
             return
@@ -956,6 +997,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = urlparse(self.path).path
+        self._trace("GET", path)
+        if not self._api_key_ok(path):
+            return
         qs = self._qs()
         if path == "/api/v2/sync/maindata":
             self._send(json.dumps(maindata_response()))
@@ -964,9 +1008,10 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/v2/transfer/speedLimitsMode":
             self._send("0", "text/plain")  # 0 = normal limits (alt speed off)
         elif path == "/api/v2/app/version":
-            self._send("v4.6.0", "text/plain")
+            # API keys only exist from 5.2, so report a matching version in that mode.
+            self._send("v5.2.0" if API_KEY else "v4.6.0", "text/plain")
         elif path == "/api/v2/app/webapiVersion":
-            self._send("2.9.3", "text/plain")
+            self._send("2.14.1" if API_KEY else "2.9.3", "text/plain")
         elif path == "/api/v2/app/preferences":
             self._send(json.dumps(PREFERENCES))
         elif path == "/api/v2/torrents/properties":

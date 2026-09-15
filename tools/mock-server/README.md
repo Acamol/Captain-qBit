@@ -36,6 +36,15 @@ python3 tools/mock-server/mock_qbit.py          # binds 0.0.0.0:8080
 MOCK_PORT=9090 python3 tools/mock-server/mock_qbit.py
 ```
 
+Set `MOCK_API_KEY` to impersonate qBittorrent 5.2 with API-key authentication:
+every request must then carry `Authorization: Bearer <key>`, the auth endpoints
+return 403 the way the real server does, and the reported version becomes
+v5.2.0 / WebAPI 2.14.1. Useful for exercising the app's API key field.
+
+```bash
+MOCK_API_KEY=qbt_testkey000000000000000000 python3 tools/mock-server/mock_qbit.py
+```
+
 It prints this machine's LAN IP on startup.
 
 ## Connect the app
