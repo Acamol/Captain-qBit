@@ -118,7 +118,16 @@ internal abstract class DataSync<T>(
     }
 
     private fun MutableMap<String, JsonElement>.applyPatch(newObject: JsonObject): T {
-        merge(newObject, nestedObjectKeys)
+        // full_update marks a complete snapshot rather than a delta, which the server also sends
+        // mid-stream when it no longer recognises our rid. Merging one would keep anything the
+        // server has since dropped: [merge] only ever adds entries, and the *_removed lists that
+        // normally delete them are absent from a snapshot.
+        if (newObject.isFullUpdate()) {
+            clear()
+            putAll(newObject)
+        } else {
+            merge(newObject, nestedObjectKeys)
+        }
         nestedObjectKeys.forEach { key -> dropRemoved(key) }
         dropRemovedStrings("tags")
 

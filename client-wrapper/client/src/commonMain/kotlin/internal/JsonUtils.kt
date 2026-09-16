@@ -4,6 +4,10 @@ import kotlinx.serialization.json.*
 
 internal val emptyArray = buildJsonArray {}
 
+/** Whether a sync response is a complete snapshot rather than a delta to merge. */
+internal fun JsonObject.isFullUpdate(): Boolean =
+    get("full_update")?.jsonPrimitive?.booleanOrNull == true
+
 internal fun MutableMap<String, JsonElement>.resetRemoved(key: String) {
     put("${key}_removed", emptyArray)
 }
