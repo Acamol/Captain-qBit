@@ -3,7 +3,7 @@ axCore = "1.19.0"
 axAppcompat = "1.8.0"
 axActivity = "1.13.0"
 axDatastore = "1.2.1"
-axNavigation = "2.10.0"
+axNavigation = "2.10.1"
 axWork = "2.11.2"
 binary_compat = "0.18.2"
 coroutines = "1.11.0"
@@ -14,11 +14,11 @@ hilt = "2.60.1"
 axHilt = "1.4.0"
 ktor = "3.5.2"
 lifecycle = "2.11.0"
-kotlin = "2.4.10"
-ksp = "2.3.11"
+kotlin = "2.4.20"
+ksp = "2.3.12"
 mockito = "5.23.0"
 okhttp = "5.5.0"
-room = "2.8.4"
+room = "2.8.5"
 spotless = "8.10.2"
 uiautomator = "2.4.0"
 serialization = "1.11.0"
@@ -27,7 +27,7 @@ serialization = "1.11.0"
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "axCore" }
 androidx-activity = { module = "androidx.activity:activity-ktx", version.ref = "axActivity" }
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "axAppcompat" }
-androidx-benchmark-junit = "androidx.benchmark:benchmark-macro-junit4:1.4.1"
+androidx-benchmark-junit = "androidx.benchmark:benchmark-macro-junit4:1.5.0"
 androidx-datastore = { module = "androidx.datastore:datastore-preferences", version.ref = "axDatastore" }
 androidx-lifecycle-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
 androidx-lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "lifecycle" }
