@@ -196,7 +196,8 @@ androidComponents {
     }
 }
 
-base.archivesName.set("dev.acamol.qbit-1.1.0-$commitHash")
+// Derived from versionName so the APK filename can't drift from the version the app reports.
+base.archivesName.set("dev.acamol.qbit-${android.defaultConfig.versionName}-$commitHash")
 
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 
