@@ -9,6 +9,7 @@ import io.ktor.http.*
 import io.ktor.util.*
 import io.ktor.util.date.*
 import io.ktor.utils.io.*
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * A Ktor client plugin which forwards errors that occur before requests execute with a dummy
@@ -30,6 +31,11 @@ internal object ErrorTransformer : HttpClientPlugin<ErrorTransformer, ErrorTrans
         scope.requestPipeline.intercept(HttpRequestPipeline.State) {
             try {
                 proceed()
+            } catch (e: CancellationException) {
+                // Cancellation is the caller going away, not a server error. Turning it into a
+                // failed response would report it as one, and would also swallow the cancellation
+                // the coroutine machinery needs to see.
+                throw e
             } catch (e: Throwable) {
                 val responseData =
                     HttpResponseData(
