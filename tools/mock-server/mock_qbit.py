@@ -368,12 +368,17 @@ def trackers_for(hash_):
 # ---- torrent list (torrents/info) + peers (sync/torrentPeers) -------------
 def torrents_info(qs):
     """The GET /torrents/info list endpoint (used by the background StatusWorker).
+
+    Reads the same mutable TORRENTS the sync endpoint does. Serving the original _TORRENTS
+    list instead would keep returning torrents that `torrents/delete` has removed, so a
+    notification test after a delete would see stale data and look like an app bug.
+
     Honors the optional `hashes` filter; otherwise returns every torrent."""
     hashes = (qs.get("hashes") or [""])[0]
     if hashes:
         wanted = set(hashes.split("|"))
-        return [t for t in _TORRENTS if t["hash"] in wanted]
-    return _TORRENTS
+        return [t for t in TORRENTS.values() if t["hash"] in wanted]
+    return list(TORRENTS.values())
 
 
 # TEST-NET documentation IPs (RFC 5737) — never real peers.
