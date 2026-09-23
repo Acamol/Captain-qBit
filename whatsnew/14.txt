@@ -1,0 +1,15 @@
+New: sign in with an API key. qBittorrent 5.2 added stateless API keys, and a server can now be set up with one instead of a username and password. The key is sent with every request and never establishes a login session, which is what qBittorrent expects — its login endpoints reject keys outright. It replaces a username and password rather than adding to them, so the two can't both be set, and it's stored with the same device-backed encryption as a password.
+
+New: the username and password are optional. A server behind a reverse proxy that authenticates on its behalf has no credentials to type, and the form no longer insists on them. Left empty, the app skips the login round-trip it would otherwise spend before every request.
+
+New: choose when alerts may make a sound — always, never, or everything outside a quiet-hours window you set. A silenced alert still appears in the shade; it just doesn't make a sound, so a download finishing overnight won't wake you and is still waiting in the morning.
+
+Fixed: a torrent deleted on the server could stay in the list until the app was restarted. When the server sent a complete snapshot rather than an incremental update — which it does whenever it stops recognising the app's place in the sync stream, for instance after a server restart — the app merged it instead of replacing what it had, so anything the server had dropped never disappeared.
+
+Fixed: switching between servers flashed "failed to sync data". Closing the connection to the old server was being reported as a failure rather than treated as part of changing servers.
+
+Fixed: an empty torrent list said "Nothing in queue" whatever the reason. It now distinguishes a server with no torrents from filters that are hiding all of them.
+
+Fixed: adding a torrent from an RSS article showed a temporary file name on the add screen instead of the article's name.
+
+Fixed: one unrecognised value in the settings file reset every setting. Settings written by a newer version now fall back to their defaults individually, the same way a missing one already did.
