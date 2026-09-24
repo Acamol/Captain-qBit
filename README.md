@@ -30,6 +30,10 @@ over its Web API — control your self-hosted server from your phone. Written in
 - Browse RSS feeds and articles, with auto-download rules and notifications for new matches
 - Works with qBittorrent 4.x and 5.x over HTTP or HTTPS (including self-signed certs), with
   optional HTTP Basic Auth for servers behind a reverse proxy
+- Sign in with a qBittorrent 5.2 API key instead of a username and password, or leave both empty
+  for a server whose reverse proxy authenticates on its behalf
+- Choose when alerts may make a sound — always, never, or everything outside a quiet-hours window
+  you set, so an overnight download doesn't wake you and is still waiting in the morning
 
 See the [F-Droid listing](https://f-droid.org/packages/dev.acamol.qbit/) for the full feature list.
 
@@ -48,7 +52,6 @@ See the [F-Droid listing](https://f-droid.org/packages/dev.acamol.qbit/) for the
 
 ## Roadmap
 - **Alternate speed-limit scheduler** — choose the time window and days when the alternate limits automatically take over
-- **Quiet hours for notifications** — set the times when notifications stay silent, so a torrent finishing or an RSS article arriving at 2am doesn't wake you
 
 ## Support
 
