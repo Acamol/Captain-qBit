@@ -25,7 +25,8 @@
     <string name="api_key_hint">Used instead of a username and password. Needs qBittorrent 5.2 or newer.</string>
     <string name="api_key_blocks_basic_auth">Unavailable while an API key is set — both use the same HTTP header.</string>
     <string name="api_key_replaces_credentials">Not used while an API key is set.</string>
-    <string name="error_api_key_rejected">The server rejected the API key. Check that you copied it correctly and that the server runs qBittorrent 5.2 or newer — older versions ignore API keys.</string>
+    <string name="api_key_needs_empty_credentials">Clear the username and password to use an API key instead.</string>
+    <string name="error_api_key_rejected">The server rejected the request. Check the API key was copied correctly and that the server runs qBittorrent 5.2 or newer — older versions ignore API keys. A server can also refuse requests after repeated failed sign-ins.</string>
     <string name="use_basic_auth">Use HTTP Basic Auth</string>
     <string name="basic_auth_username">Basic Auth Username</string>
     <string name="basic_auth_password">Basic Auth Password</string>
