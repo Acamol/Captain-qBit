@@ -20,6 +20,10 @@ data class ServerConfig(
     val connectionType: ConnectionType,
     val basicAuthUsername: String? = null,
     val basicAuthPassword: String? = null,
+    // qBittorrent >= 5.2 API key, sent as "Authorization: Bearer". An alternative to
+    // username/password rather than an addition: a key cannot use the auth endpoints at all, so a
+    // server configured with one never logs in.
+    val apiKey: String? = null,
     val position: Int = 0,
     // Base64-encoded DER of a self-signed certificate the user has explicitly approved for this
     // server only (see ClientManager.buildOkHttpClient). Not a hash: HandshakeCertificates needs

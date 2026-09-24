@@ -48,11 +48,24 @@ object AppNotificationManager {
                     NotificationManager.IMPORTANCE_MIN,
                 )
 
+            // Sound and vibration are channel properties from API 26 on, so silencing a single
+            // notification isn't possible - NotificationCompat.setSilent only clears the legacy
+            // pre-26 fields. A second, LOW-importance events channel is how quiet hours are
+            // honoured
+            // instead: the alert still lands in the shade, it just doesn't make a sound.
+            val quietEventsChannel =
+                NotificationChannel(
+                    context.getString(R.string.events_quiet_channel_id),
+                    context.getString(R.string.events_quiet_channel_name),
+                    NotificationManager.IMPORTANCE_LOW,
+                )
+
             val notificationManager =
                 context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(statusChannel)
             notificationManager.createNotificationChannel(eventsChannel)
             notificationManager.createNotificationChannel(monitorChannel)
+            notificationManager.createNotificationChannel(quietEventsChannel)
         }
     }
 
@@ -97,13 +110,17 @@ object AppNotificationManager {
         return builder.build()
     }
 
-    /** A one-off, dismissible notification on the alerting "events" channel. */
+    /**
+     * A one-off, dismissible notification on the "events" channel - the silent one when [quiet], so
+     * an alert arriving during the user's quiet hours is still shown without making a sound.
+     */
     fun createEventNotification(
         context: Context,
         title: String,
         content: String,
         @DrawableRes smallIcon: Int,
         contentIntent: PendingIntent? = null,
+        quiet: Boolean = false,
     ): Notification =
         createNotification(
             context = context,
@@ -112,8 +129,12 @@ object AppNotificationManager {
             smallIcon = smallIcon,
             persistent = false,
             contentIntent = contentIntent,
-            channelId = context.getString(R.string.events_channel_id),
-            priority = NotificationCompat.PRIORITY_DEFAULT,
+            channelId =
+                context.getString(
+                    if (quiet) R.string.events_quiet_channel_id else R.string.events_channel_id
+                ),
+            priority =
+                if (quiet) NotificationCompat.PRIORITY_LOW else NotificationCompat.PRIORITY_DEFAULT,
         )
 
     // We already check for permissions later in the process, so we can suppress this lint

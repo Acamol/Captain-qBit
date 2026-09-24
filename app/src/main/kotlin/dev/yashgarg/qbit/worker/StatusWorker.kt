@@ -27,6 +27,8 @@ import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.ui.rss.flattenFeeds
 import dev.yashgarg.qbit.utils.LocalizedContext
+import dev.yashgarg.qbit.utils.nowMinutesOfDay
+import dev.yashgarg.qbit.utils.shouldSilenceEventAlert
 import dev.yashgarg.qbit.utils.toHumanReadable
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.delay
@@ -349,7 +351,19 @@ constructor(
 
     private fun feedKey(serverId: Int, feedPath: String) = "$serverId|$feedPath"
 
-    private fun notifyEvent(
+    // Read at post time rather than passed down from the poll loop, so a window that opens or
+    // closes between polls takes effect on the very next alert.
+    private suspend fun inQuietHours(): Boolean {
+        val prefs = prefsStore.data.first()
+        return shouldSilenceEventAlert(
+            prefs.eventAlertMode,
+            nowMinutesOfDay(),
+            prefs.quietHoursStartMinutes,
+            prefs.quietHoursEndMinutes,
+        )
+    }
+
+    private suspend fun notifyEvent(
         id: Int,
         title: String,
         content: String,
@@ -371,6 +385,7 @@ constructor(
                 content,
                 R.drawable.ic_stat_qbit,
                 pendingIntent,
+                quiet = inQuietHours(),
             )
         AppNotificationManager.sendNotification(applicationContext, id, notification)
     }

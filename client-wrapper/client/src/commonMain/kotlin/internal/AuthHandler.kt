@@ -26,6 +26,14 @@ internal class AuthHandler {
     private val lastAuthResponse = MutableStateFlow<HttpResponse?>(null)
     val lastAuthResponseState: StateFlow<HttpResponse?> = lastAuthResponse
 
+    // A cookie session is only worth establishing when there is something to establish it with and
+    // no API key. An API key authenticates every request on its own and is rejected by the auth
+    // endpoints outright; blank credentials could not succeed either. In both cases the login would
+    // be a wasted round-trip before every request.
+    private val usesSessionAuth: Boolean
+        get() =
+            config.apiKey == null && (config.username.isNotEmpty() || config.password.isNotEmpty())
+
     suspend fun tryAuth(http: HttpClient): Boolean {
         val response = authMutex.withLock {
             if (lastAuthResponse.value?.isValidForAuth() == true) {
@@ -54,7 +62,7 @@ internal class AuthHandler {
                 }
 
                 // Does the request have the SID cookie
-                if (context.cookies().none { it.name == "SID" }) {
+                if (context.cookies().none { it.name == "SID" } && plugin.usesSessionAuth) {
                     // No SID, authenticate before user request
                     plugin.tryAuth(scope)
                 }
@@ -62,7 +70,7 @@ internal class AuthHandler {
                 // Attempt user's request, authentication may or may not have been successful,
                 // or the session may have become invalid.  In any case make one last auth attempt.
                 val call = proceed() as HttpClientCall
-                if (call.response.status == Forbidden) {
+                if (call.response.status == Forbidden && plugin.usesSessionAuth) {
                     plugin.lastAuthResponse.value = call.response
                     // Authentication required
                     if (plugin.tryAuth(scope)) {

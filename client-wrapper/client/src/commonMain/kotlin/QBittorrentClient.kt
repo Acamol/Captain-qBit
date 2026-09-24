@@ -79,6 +79,7 @@ class QBittorrentClient(
     baseUrl: String,
     username: String = "admin",
     password: String = "adminadmin",
+    apiKey: String? = null,
     syncInterval: Duration = 5.seconds,
     httpClient: HttpClient = HttpClient(),
     dispatcher: CoroutineDispatcher = Default,
@@ -96,6 +97,7 @@ class QBittorrentClient(
         val baseUrl: String,
         val username: String,
         val password: String,
+        val apiKey: String?,
         val syncInterval: Duration,
     )
 
@@ -108,13 +110,17 @@ class QBittorrentClient(
         }
     }
 
-    internal val config = Config(baseUrl, username, password, syncInterval)
+    internal val config =
+        Config(baseUrl, username, password, apiKey?.ifBlank { null }, syncInterval)
 
     internal val http: HttpClient = httpClient.config {
         install(ErrorTransformer)
         install(AuthHandler) { config = this@QBittorrentClient.config }
         install(ContentNegotiation) { json(json) }
         install(HttpCookies) { storage = RawCookiesStorage(AcceptAllCookiesStorage()) }
+        config.apiKey?.let { key ->
+            defaultRequest { header(HttpHeaders.Authorization, "Bearer $key") }
+        }
     }
     private val syncScope = CoroutineScope(SupervisorJob() + dispatcher + http.coroutineContext)
     private val mainDataSync = MainDataSync(http, config, syncScope)

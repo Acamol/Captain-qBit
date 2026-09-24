@@ -61,6 +61,7 @@ import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.utils.friendlyMessage
 import dev.yashgarg.qbit.utils.hasExpired
+import dev.yashgarg.qbit.utils.isAuthenticationError
 import dev.yashgarg.qbit.utils.isNotYetValid
 import dev.yashgarg.qbit.utils.isUntrustedCertificateError
 import dev.yashgarg.qbit.utils.rememberFriendlyMessageResolver
@@ -80,6 +81,7 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
     val existing by viewModel.existingConfig.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val genericError = stringResource(CommonR.string.error)
+    val apiKeyRejectedMessage = stringResource(CommonR.string.error_api_key_rejected)
     val checkingConnectionMessage = stringResource(CommonR.string.status_checking_connection)
     val clientVersionTemplate = stringResource(CommonR.string.status_client_version)
     val testFailedTemplate = stringResource(CommonR.string.status_test_failed)
@@ -92,6 +94,8 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var connectionType by remember { mutableStateOf(CONNECTION_TYPES.first()) }
+    var apiKey by remember { mutableStateOf("") }
+    var apiKeyVisible by remember { mutableStateOf(false) }
     var useBasicAuth by remember { mutableStateOf(false) }
     var basicAuthUser by remember { mutableStateOf("") }
     var basicAuthPass by remember { mutableStateOf("") }
@@ -112,6 +116,13 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
         return "${connectionType.lowercase()}://$host$portPart$pathPart"
     }
 
+    // A rejected key and a wrong password both surface as the same 401/403, but the causes differ
+    // enough to be worth separating: a server older than 5.2 ignores the key entirely, and the
+    // version can't be checked up front because every version endpoint needs authentication.
+    fun connectionFailure(error: Throwable): String =
+        if (apiKey.isNotBlank() && error.isAuthenticationError()) apiKeyRejectedMessage
+        else error.friendlyMessage(friendlyMessageResolver, genericError)
+
     LaunchedEffect(existing) {
         val config = existing ?: return@LaunchedEffect
         if (prefilled) return@LaunchedEffect
@@ -122,6 +133,7 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
         path = config.path?.removePrefix("/").orEmpty()
         username = config.username
         password = CryptoManager.decrypt(config.password).orEmpty()
+        apiKey = CryptoManager.decrypt(config.apiKey).orEmpty()
         connectionType = config.connectionType.name
         if (!config.basicAuthUsername.isNullOrEmpty()) {
             useBasicAuth = true
@@ -137,6 +149,7 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
             val type = connectionType.lowercase()
             val basicUser = if (useBasicAuth) basicAuthUser.ifEmpty { null } else null
             val basicPass = if (useBasicAuth) basicAuthPass.ifEmpty { null } else null
+            val key = apiKey.trim().ifEmpty { null }
             when ((event as ConfigViewModel.ValidationEvent.Success).action) {
                 ConfigViewModel.FormAction.TEST -> {
                     checking = true
@@ -146,6 +159,7 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                             buildBaseUrl(),
                             username,
                             password,
+                            key,
                             basicUser,
                             basicPass,
                             approvedPinDer,
@@ -165,19 +179,12 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                                     .onOk { cert -> pendingCertReview = cert }
                                     .onErr {
                                         snackbarHostState.showSnackbar(
-                                            testFailedTemplate.format(
-                                                error.friendlyMessage(
-                                                    friendlyMessageResolver,
-                                                    genericError,
-                                                )
-                                            )
+                                            testFailedTemplate.format(connectionFailure(error))
                                         )
                                     }
                             } else {
                                 snackbarHostState.showSnackbar(
-                                    testFailedTemplate.format(
-                                        error.friendlyMessage(friendlyMessageResolver, genericError)
-                                    )
+                                    testFailedTemplate.format(connectionFailure(error))
                                 )
                             }
                         }
@@ -192,6 +199,7 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                         type,
                         username,
                         password,
+                        key,
                         basicUser,
                         basicPass,
                         approvedPinDer,
@@ -321,6 +329,11 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                 prefix = "/",
                 enabled = !checking,
             )
+            // An API key replaces a username and password rather than supplementing them, so only
+            // one of the two can be filled in at a time.
+            val usingApiKey = apiKey.isNotBlank()
+            val usingCredentials = username.isNotEmpty() || password.isNotEmpty()
+
             Field(
                 value = username,
                 onChange = {
@@ -331,7 +344,7 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                 placeholder = "e.g. admin",
                 isError = state.showUsernameError,
                 errorText = stringResource(CommonR.string.invalid_username),
-                enabled = !checking,
+                enabled = !checking && !usingApiKey,
             )
             PasswordField(
                 value = password,
@@ -344,7 +357,27 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                 errorText = stringResource(CommonR.string.invalid_password),
                 visible = passwordVisible,
                 onToggleVisible = { passwordVisible = !passwordVisible },
-                enabled = !checking,
+                enabled = !checking && !usingApiKey,
+            )
+            if (usingApiKey) {
+                Text(
+                    stringResource(CommonR.string.api_key_replaces_credentials),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            PasswordField(
+                value = apiKey,
+                onChange = { apiKey = it },
+                label = stringResource(CommonR.string.api_key),
+                visible = apiKeyVisible,
+                onToggleVisible = { apiKeyVisible = !apiKeyVisible },
+                enabled = !checking && !usingCredentials && !useBasicAuth,
+            )
+            Text(
+                stringResource(CommonR.string.api_key_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -356,20 +389,29 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                         // Prefill basic-auth credentials from the client ones when turning it on,
                         // without clobbering anything the user already typed. They can still edit.
                         if (it) {
-                            if (basicAuthUser.isEmpty()) {
+                            if (basicAuthUser.isEmpty() && username.isNotEmpty()) {
                                 basicAuthUser = username
                                 viewModel.validateBasicAuthUsername(username)
                             }
-                            if (basicAuthPass.isEmpty()) {
+                            if (basicAuthPass.isEmpty() && password.isNotEmpty()) {
                                 basicAuthPass = password
                                 viewModel.validateBasicAuthPassword(password)
                             }
                         }
                     },
-                    enabled = !checking,
+                    enabled = !checking && !usingApiKey,
                 )
                 Spacer(Modifier.size(12.dp))
-                Text(stringResource(CommonR.string.use_basic_auth))
+                Column {
+                    Text(stringResource(CommonR.string.use_basic_auth))
+                    if (usingApiKey) {
+                        Text(
+                            stringResource(CommonR.string.api_key_blocks_basic_auth),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
 
             if (useBasicAuth) {
@@ -535,6 +577,7 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                                     buildBaseUrl(),
                                     username,
                                     password,
+                                    apiKey.trim().ifEmpty { null },
                                     basicUser,
                                     basicPass,
                                     der,
@@ -549,12 +592,7 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                                 }
                                 .onErr { error ->
                                     snackbarHostState.showSnackbar(
-                                        testFailedTemplate.format(
-                                            error.friendlyMessage(
-                                                friendlyMessageResolver,
-                                                genericError,
-                                            )
-                                        )
+                                        testFailedTemplate.format(connectionFailure(error))
                                     )
                                 }
                             checking = false
@@ -631,11 +669,12 @@ private fun PasswordField(
     value: String,
     onChange: (String) -> Unit,
     label: String,
-    isError: Boolean,
-    errorText: String,
     visible: Boolean,
     onToggleVisible: () -> Unit,
     enabled: Boolean,
+    // The API key has no format we enforce, so it never reports an error.
+    isError: Boolean = false,
+    errorText: String = "",
 ) {
     OutlinedTextField(
         value = value,

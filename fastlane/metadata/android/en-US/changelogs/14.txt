@@ -1,0 +1,6 @@
+- New: sign in with a qBittorrent 5.2 API key instead of a password
+- New: leave the username and password empty for a server behind a reverse proxy
+- New: choose when alerts may make a sound — always, never, or outside quiet hours
+- Fixed: torrents deleted on the server could linger in the list until a restart
+- Fixed: switching servers flashed "failed to sync data"
+- Various other empty-list, RSS and preferences fixes

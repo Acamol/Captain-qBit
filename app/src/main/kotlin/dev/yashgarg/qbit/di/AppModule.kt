@@ -17,6 +17,7 @@ import dev.yashgarg.qbit.data.MIGRATION_3_4
 import dev.yashgarg.qbit.data.MIGRATION_4_5
 import dev.yashgarg.qbit.data.MIGRATION_5_6
 import dev.yashgarg.qbit.data.MIGRATION_6_7
+import dev.yashgarg.qbit.data.MIGRATION_7_8
 import dev.yashgarg.qbit.data.QbitRepository
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.manager.ClientManagerImpl
@@ -43,6 +44,7 @@ class AppModule {
                 MIGRATION_4_5,
                 MIGRATION_5_6,
                 MIGRATION_6_7,
+                MIGRATION_7_8,
             )
             .build()
 

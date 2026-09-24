@@ -18,7 +18,7 @@ dependencyResolutionManagement {
     }
 }
 
-plugins { id("com.gradle.develocity") version "4.5.0" }
+plugins { id("com.gradle.develocity") version "4.5.1" }
 
 develocity {
     buildScan {

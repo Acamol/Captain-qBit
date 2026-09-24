@@ -1,5 +1,6 @@
 package dev.yashgarg.qbit.ui.rss
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -62,6 +63,7 @@ import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.ui.server.ServerViewModel
 import dev.yashgarg.qbit.ui.server.TooltipIconButton
+import dev.yashgarg.qbit.utils.torrentFileName
 import java.io.File
 import java.time.Instant
 import java.time.format.DateTimeFormatter
@@ -233,10 +235,9 @@ fun RssArticlesScreen(
                                                         fetchingArticle = null
                                                         if (bytes != null) {
                                                             val file =
-                                                                File.createTempFile(
-                                                                    "rss-",
-                                                                    ".torrent",
-                                                                    context.cacheDir,
+                                                                cachedTorrentFile(
+                                                                    context,
+                                                                    article.title,
                                                                 )
                                                             file.writeBytes(bytes)
                                                             pendingAdd =
@@ -366,4 +367,13 @@ private fun findFeed(items: List<RssItem>, path: String): RssFeed? {
         }
     }
     return null
+}
+
+// The article's .torrent is fetched here and handed to AddTorrentScreen as a file:// URI, which
+// shows the file's own name as "Selected file" - there is no DISPLAY_NAME for that scheme. Naming
+// the file after the article means the user sees the article title there instead of a random temp
+// name. The name is also stable, so re-adding the same article reuses one cache entry.
+private fun cachedTorrentFile(context: Context, articleTitle: String): File {
+    val dir = File(context.cacheDir, "rss-torrents").apply { mkdirs() }
+    return File(dir, "${torrentFileName(articleTitle)}.torrent")
 }

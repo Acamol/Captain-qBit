@@ -89,8 +89,8 @@ android {
         applicationId = "dev.acamol.qbit"
         minSdk = 28
         targetSdk = 37
-        versionCode = 13
-        versionName = "1.4.0"
+        versionCode = 14
+        versionName = "1.5.0"
 
         multiDexEnabled = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -196,7 +196,8 @@ androidComponents {
     }
 }
 
-base.archivesName.set("dev.acamol.qbit-1.1.0-$commitHash")
+// Derived from versionName so the APK filename can't drift from the version the app reports.
+base.archivesName.set("dev.acamol.qbit-${android.defaultConfig.versionName}-$commitHash")
 
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 

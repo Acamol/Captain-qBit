@@ -4,6 +4,7 @@ import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.util.reflect.*
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -98,6 +99,11 @@ internal abstract class DataSync<T>(
 
                 delay(config.syncInterval)
             }
+        } catch (e: CancellationException) {
+            // Closing the client (switching servers) or losing the last subscriber cancels this
+            // scope mid-poll. That is lifecycle, not a sync failure - reporting it flashed a
+            // "failed to sync data" error every time the user switched server.
+            throw e
         } catch (e: Exception) {
             // Failed to fetch patch, keep current MainData and add the error
             println("DataSync: sync failed for $endpointUrl: ${e.message}")
@@ -118,7 +124,16 @@ internal abstract class DataSync<T>(
     }
 
     private fun MutableMap<String, JsonElement>.applyPatch(newObject: JsonObject): T {
-        merge(newObject, nestedObjectKeys)
+        // full_update marks a complete snapshot rather than a delta, which the server also sends
+        // mid-stream when it no longer recognises our rid. Merging one would keep anything the
+        // server has since dropped: [merge] only ever adds entries, and the *_removed lists that
+        // normally delete them are absent from a snapshot.
+        if (newObject.isFullUpdate()) {
+            clear()
+            putAll(newObject)
+        } else {
+            merge(newObject, nestedObjectKeys)
+        }
         nestedObjectKeys.forEach { key -> dropRemoved(key) }
         dropRemovedStrings("tags")
 

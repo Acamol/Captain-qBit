@@ -191,8 +191,10 @@ constructor(
         val serverNameValid = textValidator.isValid(serverName)
         val serverHostValid = hostValidator.isValid(serverHost)
         val portValid = portValidator.isValid(port)
-        val usernameValid = textValidator.isValid(username)
-        val passwordValid = textValidator.isValid(password)
+        // Optional: a server fronted by a reverse proxy that authenticates on its behalf has no
+        // credentials to enter. There is nothing to send, so there is nothing to require.
+        val usernameValid = true
+        val passwordValid = true
         val connectionTypeValid = textValidator.isValid(connectionType)
         val basicAuthUsernameValid = !useBasicAuth || textValidator.isValid(basicAuthUsername)
         val basicAuthPasswordValid = !useBasicAuth || textValidator.isValid(basicAuthPassword)
@@ -242,6 +244,7 @@ constructor(
         connectionType: String,
         username: String,
         password: String,
+        apiKey: String?,
         basicAuthUsername: String?,
         basicAuthPassword: String?,
         pinnedCertificateDer: ByteArray? = null,
@@ -284,6 +287,7 @@ constructor(
                     basicAuthUsername = basicAuthUsername?.trim()?.ifEmpty { null },
                     basicAuthPassword =
                         CryptoManager.encrypt(basicAuthPassword?.trim()?.ifEmpty { null }),
+                    apiKey = CryptoManager.encrypt(apiKey?.trim()?.ifEmpty { null }),
                     pinnedCertificate =
                         when {
                             pinnedCertificateDer != null ->
@@ -311,6 +315,7 @@ constructor(
         baseUrl: String,
         username: String,
         password: String,
+        apiKey: String?,
         basicAuthUsername: String?,
         basicAuthPassword: String?,
         pinnedCertificateDer: ByteArray? = null,
@@ -325,6 +330,7 @@ constructor(
                     baseUrl,
                     username,
                     password,
+                    apiKey = apiKey,
                     httpClient = ClientManager.httpClient(basicAuth, pinnedCertificateDer),
                     dispatcher = Dispatchers.Default,
                 )

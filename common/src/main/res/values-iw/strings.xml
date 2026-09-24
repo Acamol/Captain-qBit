@@ -6,7 +6,6 @@
     <string name="welcome_text">ברוכים הבאים ל-Captain qBit</string>
     <string name="restore_from_backup">שיחזור מגיבוי</string>
     <string name="error">משהו השתבש</string>
-    <string name="no_queue">התור ריק</string>
     <string name="invalid_username">נא להזין שם משתמש</string>
     <string name="invalid_password">נא להזין סיסמה</string>
     <string name="invalid_url">נא להזין כתובת מארח תקינה</string>
@@ -645,4 +644,19 @@
     <string name="grant_action">התר</string>
     <string name="certificate_expired_warning">תוקף התעודה הזו פג ב-%1$s. אישור התעודה לא ישחזר את החיבור — השרת זקוק לתעודה מחודשת.</string>
     <string name="certificate_not_yet_valid_warning">התעודה הזו אינה תקפה עד %1$s. אישור התעודה לא ישחזר את החיבור — יש לבדוק את השעון בשרת שהנפיק אותה.</string>
+    <string name="no_torrents">אין טורנטים</string>
+    <string name="no_torrents_match_filter">אף טורנט אינו תואם למסננים הנוכחיים</string>
+    <string name="api_key">מפתח API</string>
+    <string name="api_key_hint">בשימוש במקום שם משתמש וסיסמה. דורש qBittorrent 5.2 או עדכני יותר.</string>
+    <string name="api_key_blocks_basic_auth">לא זמין כאשר מפתח API מוגדר — שניהם משתמשים באותה כותרת HTTP.</string>
+    <string name="api_key_replaces_credentials">לא בשימוש כאשר מפתח API מוגדר.</string>
+    <string name="error_api_key_rejected">השרת דחה את מפתח ה-API. יש לבדוק שהוא הועתק נכון ושהשרת מריץ qBittorrent 5.2 או עדכני יותר — גרסאות ישנות יותר מתעלמות ממפתחות API.</string>
+    <string name="events_quiet_channel_name">אירועי טורנטים (שעות שקטות)</string>
+    <string name="alert_sound_label">צליל התראה</string>
+    <string name="alert_sound_always">תמיד</string>
+    <string name="alert_sound_never">לעולם לא</string>
+    <string name="alert_sound_outside_quiet_hours">פרט לשעות השקטות</string>
+    <string name="alert_sound_explanation">התראה מושתקת עדיין מופיעה — היא רק לא משמיעה צליל, כך שהורדה באמצע הלילה לא תעיר אף אחד ועדיין תחכה בבוקר.</string>
+    <string name="quiet_hours_start_label">התחלה</string>
+    <string name="quiet_hours_end_label">סיום</string>
 </resources>

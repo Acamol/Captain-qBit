@@ -48,6 +48,7 @@ See the [F-Droid listing](https://f-droid.org/packages/dev.acamol.qbit/) for the
 
 ## Roadmap
 - **Alternate speed-limit scheduler** — choose the time window and days when the alternate limits automatically take over
+- **Quiet hours for notifications** — set the times when notifications stay silent, so a torrent finishing or an RSS article arriving at 2am doesn't wake you
 
 ## Support
 

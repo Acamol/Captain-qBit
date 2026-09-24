@@ -20,7 +20,14 @@ object AppPreferencesSerializer : Serializer<AppPreferences> {
     // since removed, e.g. the pre-per-server global filter/sort keys) decodes instead of throwing
     // CorruptionException — which would reset every saved preference. Removed keys are simply
     // dropped on the next write.
-    private val json = Json { ignoreUnknownKeys = true }
+    //
+    // coerceInputValues covers the same hazard from the other direction: an enum value this build
+    // doesn't know (a newer install's, after a downgrade) falls back to the property's default
+    // instead of failing the whole file.
+    private val json = Json {
+        ignoreUnknownKeys = true
+        coerceInputValues = true
+    }
 
     override suspend fun readFrom(input: InputStream): AppPreferences {
         try {
