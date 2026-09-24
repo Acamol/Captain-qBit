@@ -35,16 +35,21 @@ import dev.yashgarg.qbit.common.R as CommonR
  * A single text field with validation. [validate] returns an error message to show beneath the
  * field, or null to accept the (trimmed) value and call [onConfirm]. [extraContent] adds further
  * controls below the field for dialogs that need more than one input.
+ *
+ * [label] and [supportingText] are optional: a field whose dialog title already says what it holds
+ * needs neither. An error from [validate] replaces [supportingText] while it is showing.
  */
 @Composable
 fun TextInputDialog(
     title: String,
-    label: String,
     confirmLabel: String,
     validate: (String) -> String?,
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
+    label: String? = null,
+    supportingText: String? = null,
     initial: String = "",
+    singleLine: Boolean = true,
     extraContent: @Composable (() -> Unit)? = null,
 ) {
     var value by remember { mutableStateOf(initial) }
@@ -54,16 +59,17 @@ fun TextInputDialog(
         title = { Text(title) },
         text = {
             Column {
+                val hint = error ?: supportingText
                 OutlinedTextField(
                     value = value,
                     onValueChange = {
                         value = it
                         error = null
                     },
-                    label = { Text(label) },
+                    label = label?.let { { Text(it) } },
                     isError = error != null,
-                    supportingText = error?.let { { Text(it) } },
-                    singleLine = true,
+                    supportingText = hint?.let { { Text(it) } },
+                    singleLine = singleLine,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 extraContent?.invoke()

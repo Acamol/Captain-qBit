@@ -14,7 +14,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -32,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.models.TrackerStatus
+import dev.yashgarg.qbit.ui.compose.TextInputDialog
 import dev.yashgarg.qbit.ui.torrent.TorrentDetailsState
 
 // qBittorrent lists the DHT/PeX/LSD pseudo-sources as trackers whose URL is bracketed like
@@ -133,8 +133,11 @@ fun TrackersTab(
 
     when (val current = dialog) {
         TrackerDialog.Add ->
-            TrackerInputDialog(
+            TextInputDialog(
                 title = stringResource(CommonR.string.add_trackers_title),
+                confirmLabel = stringResource(CommonR.string.ok),
+                validate = { null },
+                singleLine = false,
                 initial = "",
                 // One tracker URL per line, matching the qBittorrent desktop dialog.
                 supportingText = stringResource(CommonR.string.one_url_per_line),
@@ -146,8 +149,11 @@ fun TrackersTab(
                 onDismiss = { dialog = null },
             )
         is TrackerDialog.Edit ->
-            TrackerInputDialog(
+            TextInputDialog(
                 title = stringResource(CommonR.string.edit_tracker_label),
+                confirmLabel = stringResource(CommonR.string.ok),
+                validate = { null },
+                singleLine = false,
                 initial = current.url,
                 onConfirm = { newUrl ->
                     val trimmed = newUrl.trim()
@@ -189,32 +195,4 @@ private sealed interface TrackerDialog {
     data class Edit(val url: String) : TrackerDialog
 
     data class Remove(val url: String) : TrackerDialog
-}
-
-@Composable
-private fun TrackerInputDialog(
-    title: String,
-    initial: String,
-    onConfirm: (String) -> Unit,
-    onDismiss: () -> Unit,
-    supportingText: String? = null,
-) {
-    var value by remember { mutableStateOf(initial) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            OutlinedTextField(
-                value = value,
-                onValueChange = { value = it },
-                supportingText = supportingText?.let { { Text(it) } },
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(value) }) { Text(stringResource(CommonR.string.ok)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
-        },
-    )
 }

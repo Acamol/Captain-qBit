@@ -80,6 +80,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.common.R
+import dev.yashgarg.qbit.ui.compose.TextInputDialog
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.ui.server.isPaused
@@ -380,6 +381,8 @@ fun TorrentDetailsScreen(
             if (torrent != null) {
                 TextInputDialog(
                     title = stringResource(R.string.rename_torrent_title),
+                    confirmLabel = stringResource(R.string.ok),
+                    validate = { null },
                     initial = torrent.name,
                     onConfirm = {
                         viewModel.renameTorrent(it, torrent.hash)
@@ -402,6 +405,8 @@ fun TorrentDetailsScreen(
             if (torrent != null) {
                 TextInputDialog(
                     title = stringResource(R.string.save_path_hint),
+                    confirmLabel = stringResource(R.string.ok),
+                    validate = { null },
                     initial = state.torrentProperties?.savePath ?: torrent.savePath,
                     onConfirm = {
                         viewModel.setSavePath(it)
@@ -463,6 +468,8 @@ fun TorrentDetailsScreen(
         DetailDialog.CreateCategory ->
             TextInputDialog(
                 title = stringResource(R.string.new_category_title),
+                confirmLabel = stringResource(R.string.ok),
+                validate = { null },
                 initial = "",
                 onConfirm = {
                     if (it.isNotBlank()) viewModel.createCategory(it)
@@ -486,6 +493,8 @@ fun TorrentDetailsScreen(
         DetailDialog.CreateTag ->
             TextInputDialog(
                 title = stringResource(R.string.new_tag_title),
+                confirmLabel = stringResource(R.string.ok),
+                validate = { null },
                 initial = "",
                 onConfirm = {
                     if (it.isNotBlank()) viewModel.setTags(listOf(it), emptyList())
@@ -794,29 +803,6 @@ private fun LimitModeOption(mode: LimitMode, selected: Boolean, onSelect: () -> 
             )
         )
     }
-}
-
-@Composable
-private fun TextInputDialog(
-    title: String,
-    initial: String,
-    onConfirm: (String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var value by remember { mutableStateOf(initial) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            OutlinedTextField(value = value, onValueChange = { value = it }, singleLine = true)
-        },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(value) }) { Text(stringResource(R.string.ok)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
-        },
-    )
 }
 
 @Composable
