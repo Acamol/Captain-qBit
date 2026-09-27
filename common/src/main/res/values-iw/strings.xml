@@ -650,7 +650,7 @@
     <string name="api_key_hint">בשימוש במקום שם משתמש וסיסמה. דורש qBittorrent 5.2 או עדכני יותר.</string>
     <string name="api_key_blocks_basic_auth">לא זמין כאשר מפתח API מוגדר — שניהם משתמשים באותה כותרת HTTP.</string>
     <string name="api_key_replaces_credentials">לא בשימוש כאשר מפתח API מוגדר.</string>
-    <string name="error_api_key_rejected">השרת דחה את מפתח ה-API. יש לבדוק שהוא הועתק נכון ושהשרת מריץ qBittorrent 5.2 או עדכני יותר — גרסאות ישנות יותר מתעלמות ממפתחות API.</string>
+    <string name="error_api_key_rejected">השרת דחה את הבקשה. יש לבדוק שמפתח ה-API הועתק נכון ושהשרת מריץ qBittorrent 5.2 או עדכני יותר — גרסאות ישנות יותר מתעלמות ממפתחות API. שרת יכול גם לדחות בקשות לאחר ניסיונות אימות כושלים חוזרים.</string>
     <string name="events_quiet_channel_name">אירועי טורנטים (שעות שקטות)</string>
     <string name="alert_sound_label">צליל התראה</string>
     <string name="alert_sound_always">תמיד</string>
@@ -659,4 +659,6 @@
     <string name="alert_sound_explanation">התראה מושתקת עדיין מופיעה — היא רק לא משמיעה צליל, כך שהורדה באמצע הלילה לא תעיר אף אחד ועדיין תחכה בבוקר.</string>
     <string name="quiet_hours_start_label">התחלה</string>
     <string name="quiet_hours_end_label">סיום</string>
+    <string name="invalid_feed_url">נא להזין כתובת הזנה</string>
+    <string name="api_key_needs_empty_credentials">יש למחוק את שם המשתמש והסיסמה כדי להשתמש במפתח API במקומם.</string>
 </resources>
