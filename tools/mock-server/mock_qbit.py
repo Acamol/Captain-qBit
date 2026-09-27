@@ -263,6 +263,9 @@ def maindata_response():
     ss = dict(SERVER_STATE)
     ss["dl_info_speed"] = max(0, int(_DL + math.sin(_poll / 2.0) * 300 * 1024))
     ss["up_info_speed"] = max(0, int(_UP + math.cos(_poll / 2.0) * 150 * 1024))
+    # The real server reports the alt-speed state here too, which is how the app notices the
+    # schedule switching limits over without being told.
+    ss["use_alt_speed_limits"] = SPEED_LIMITS["alt_mode"]
     resp = dict(MAINDATA)
     resp["rid"] = _poll
     resp["server_state"] = ss
@@ -276,12 +279,24 @@ TRANSFER_INFO = {
     "connection_status": "connected",
 }
 
+# Global speed limits live on the transfer endpoints rather than in app preferences, so they
+# need their own state for reads and writes to round-trip. 0 = unlimited.
+SPEED_LIMITS = {"dl": 0, "up": 0, "alt_mode": False}
+
 # ---- app preferences (alt speed limits, queueing, RSS refresh interval) --
 PREFERENCES = {
     "alt_dl_limit": -1,
     "alt_up_limit": -1,
     "queueing_enabled": False,
     "rss_refresh_interval": 30,
+    # Alternate-speed schedule. setPreferences writes straight back into this dict, so the
+    # app's reads and writes round-trip the way they do against a real server.
+    "scheduler_enabled": False,
+    "schedule_from_hour": 8,
+    "schedule_from_min": 0,
+    "schedule_to_hour": 20,
+    "schedule_to_min": 0,
+    "scheduler_days": 0,
 }
 
 # ---- torrent details data (files/properties/trackers) --------------------
@@ -997,6 +1012,12 @@ class Handler(BaseHTTPRequestHandler):
             RSS_RULES.pop(form.get("ruleName", [""])[0], None)
         elif path == "/api/v2/app/setPreferences":
             PREFERENCES.update(json.loads(form.get("json", ["{}"])[0]))
+        elif path == "/api/v2/transfer/setDownloadLimit":
+            SPEED_LIMITS["dl"] = int(form.get("limit", ["0"])[0])
+        elif path == "/api/v2/transfer/setUploadLimit":
+            SPEED_LIMITS["up"] = int(form.get("limit", ["0"])[0])
+        elif path == "/api/v2/transfer/toggleSpeedLimitsMode":
+            SPEED_LIMITS["alt_mode"] = not SPEED_LIMITS["alt_mode"]
 
         self._send("Ok.", "text/plain")  # generic success for any other action
 
@@ -1011,7 +1032,11 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/v2/transfer/info":
             self._send(json.dumps(TRANSFER_INFO))
         elif path == "/api/v2/transfer/speedLimitsMode":
-            self._send("0", "text/plain")  # 0 = normal limits (alt speed off)
+            self._send("1" if SPEED_LIMITS["alt_mode"] else "0", "text/plain")
+        elif path == "/api/v2/transfer/downloadLimit":
+            self._send(str(SPEED_LIMITS["dl"]), "text/plain")
+        elif path == "/api/v2/transfer/uploadLimit":
+            self._send(str(SPEED_LIMITS["up"]), "text/plain")
         elif path == "/api/v2/app/version":
             # API keys only exist from 5.2, so report a matching version in that mode.
             self._send("v5.2.0" if API_KEY else "v4.6.0", "text/plain")
