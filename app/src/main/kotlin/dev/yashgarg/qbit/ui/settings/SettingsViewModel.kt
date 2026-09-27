@@ -10,11 +10,14 @@ import dev.yashgarg.qbit.data.QbitRepository
 import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.EventAlertMode
 import javax.inject.Inject
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import qbittorrent.models.AltSpeedSchedule
@@ -149,11 +152,44 @@ constructor(
         viewModelScope.launch {
             repository.getSpeedLimitMode().onOk { _speedLimitMode.value = it }
         }
+        // The schedule flips this on the server with nothing to tell us, so follow the sync
+        // stream rather than only the values we write ourselves.
+        viewModelScope.launch {
+            repository
+                .observeMainData()
+                .map { if (it.serverState.useAltSpeedLimits) 1 else 0 }
+                .distinctUntilChanged()
+                // Retry rather than catch: catching ends the flow, so one blip would stop the
+                // switch tracking the server for good. Retrying also re-resolves the client, which
+                // is what picks up a server switch.
+                .retry {
+                    delay(SYNC_RETRY_MS)
+                    true
+                }
+                .collect { serverMode ->
+                    // A poll issued before our own toggle still carries the old value; showing it
+                    // would bounce the switch back before the next poll corrects it again.
+                    if (pendingSpeedLimitMode != null && serverMode != pendingSpeedLimitMode) {
+                        return@collect
+                    }
+                    pendingSpeedLimitMode = null
+                    _speedLimitMode.value = serverMode
+                }
+        }
     }
 
+    /** The mode we asked for and are still waiting for the server to report back. */
+    private var pendingSpeedLimitMode: Int? = null
+
     fun toggleSpeedLimits() {
+        val target = if (_speedLimitMode.value == 0) 1 else 0
+        // Move the switch now. The round trip takes long enough that waiting for it reads as a
+        // stuck control.
+        pendingSpeedLimitMode = target
+        _speedLimitMode.value = target
         viewModelScope.launch {
-            repository.toggleSpeedLimitsMode().onOk {
+            if (repository.toggleSpeedLimitsMode().get() == null) {
+                pendingSpeedLimitMode = null
                 repository.getSpeedLimitMode().onOk { _speedLimitMode.value = it }
             }
         }
@@ -366,3 +402,6 @@ constructor(
         viewModelScope.launch { prefsStore.updateData { it.copy(syncIntervalMs = ms) } }
     }
 }
+
+/** Matches the torrent list's sync retry pacing. */
+private const val SYNC_RETRY_MS = 5000L
