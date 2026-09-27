@@ -4,19 +4,25 @@ import androidx.datastore.core.DataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.get
+import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.yashgarg.qbit.data.QbitRepository
 import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.EventAlertMode
 import javax.inject.Inject
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import qbittorrent.models.AltSpeedSchedule
 
 @HiltViewModel
 class SettingsViewModel
@@ -205,6 +211,61 @@ constructor(
         }
     }
 
+    private val _altSpeedSchedule = MutableStateFlow<AltSpeedSchedule?>(null)
+
+    /** The schedule the server last confirmed, restored when a write fails. */
+    private var confirmedAltSpeedSchedule: AltSpeedSchedule? = null
+
+    /** Every write sends the whole schedule, so they go out one at a time, in order. */
+    private val altSpeedScheduleWrites = Mutex()
+
+    /**
+     * When the server switches to its alternate limits, and on which days. Null until it has been
+     * read: every write sends the whole schedule, so editing before then would overwrite the
+     * server's with placeholders. The read is retried while the Speed limits screen is visible.
+     */
+    val altSpeedSchedule: StateFlow<AltSpeedSchedule?> =
+        channelFlow {
+                launch { loadAltSpeedSchedule() }
+                _altSpeedSchedule.collect { send(it) }
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(SUBSCRIPTION_TIMEOUT_MS), null)
+
+    private suspend fun loadAltSpeedSchedule() {
+        while (_altSpeedSchedule.value == null) {
+            val loaded =
+                repository
+                    .getAltSpeedSchedule()
+                    .onOk {
+                        confirmedAltSpeedSchedule = it
+                        _altSpeedSchedule.value = it
+                    }
+                    .isOk
+            if (!loaded) delay(SYNC_RETRY_MS)
+        }
+    }
+
+    /**
+     * Shown at once, so an edit made before the previous write returns builds on it rather than on
+     * the server's older copy.
+     */
+    fun setAltSpeedSchedule(schedule: AltSpeedSchedule) {
+        _altSpeedSchedule.value = schedule
+        viewModelScope.launch {
+            altSpeedScheduleWrites.withLock {
+                repository
+                    .setAltSpeedSchedule(schedule)
+                    .onOk { confirmedAltSpeedSchedule = schedule }
+                    .onErr {
+                        // A newer edit is already queued and will send its own copy.
+                        if (_altSpeedSchedule.value == schedule) {
+                            _altSpeedSchedule.value = confirmedAltSpeedSchedule
+                        }
+                    }
+            }
+        }
+    }
+
     val dynamicColors: StateFlow<Boolean> =
         prefsStore.data
             .map { it.dynamicColors }
@@ -339,3 +400,9 @@ constructor(
         viewModelScope.launch { prefsStore.updateData { it.copy(syncIntervalMs = ms) } }
     }
 }
+
+/** Matches the torrent list's sync retry pacing. */
+private const val SYNC_RETRY_MS = 5000L
+
+/** Keeps the poll alive across a configuration change, which re-subscribes within moments. */
+private const val SUBSCRIPTION_TIMEOUT_MS = 5000L

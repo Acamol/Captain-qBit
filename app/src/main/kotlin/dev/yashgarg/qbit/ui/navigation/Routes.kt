@@ -11,6 +11,7 @@ object Routes {
     const val SETTINGS = "settings"
     const val VERSION = "version"
     const val LOGS = "logs"
+    const val SPEED_LIMITS = "speedLimits"
 
     const val CONFIG = "config"
     const val ARG_SERVER_ID = "serverId"

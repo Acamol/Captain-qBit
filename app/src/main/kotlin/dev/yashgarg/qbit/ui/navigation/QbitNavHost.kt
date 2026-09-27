@@ -38,6 +38,7 @@ import dev.yashgarg.qbit.ui.rss.RssScreen
 import dev.yashgarg.qbit.ui.server.ServerScreen
 import dev.yashgarg.qbit.ui.serverlist.ServerListScreen
 import dev.yashgarg.qbit.ui.settings.SettingsScreen
+import dev.yashgarg.qbit.ui.settings.SpeedLimitsScreen
 import dev.yashgarg.qbit.ui.torrent.TorrentDetailsScreen
 import dev.yashgarg.qbit.ui.version.VersionScreen
 
@@ -114,6 +115,7 @@ fun QbitNavHost(
             composable(Routes.SETTINGS) { SettingsScreen(appNavigator = appNavigator) }
             composable(Routes.VERSION) { VersionScreen(appNavigator = appNavigator) }
             composable(Routes.LOGS) { LogsScreen(appNavigator = appNavigator) }
+            composable(Routes.SPEED_LIMITS) { SpeedLimitsScreen(appNavigator = appNavigator) }
             composable(Routes.RSS) { RssScreen(appNavigator = appNavigator) }
 
             composable(
@@ -223,6 +225,7 @@ private fun NavController.execute(command: NavCommand) {
         NavCommand.OpenServerList -> navigate(Routes.SERVERS)
         NavCommand.OpenVersion -> navigate(Routes.VERSION)
         NavCommand.OpenLogs -> navigate(Routes.LOGS)
+        NavCommand.OpenSpeedLimits -> navigate(Routes.SPEED_LIMITS)
         is NavCommand.OpenRssArticles -> navigate(Routes.rssArticles(command.itemPath))
         is NavCommand.OpenRssRuleEditor -> navigate(Routes.rssRuleEditor(command.ruleName))
         NavCommand.Back -> {
