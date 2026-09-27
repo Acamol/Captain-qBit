@@ -49,6 +49,9 @@ sealed interface NavCommand {
     /** Open the read-only viewer for the remote qBittorrent server's main log. */
     data object OpenLogs : NavCommand
 
+    /** The server speed-limit settings: global, alternate, and the schedule. */
+    data object OpenSpeedLimits : NavCommand
+
     /** Open the article list for one feed. [itemPath] is the feed's `\`-joined tree path. */
     data class OpenRssArticles(val itemPath: String) : NavCommand
 

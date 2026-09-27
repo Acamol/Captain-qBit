@@ -495,6 +495,21 @@
     <string name="alternate_speed_limits_subtitle">
         Set the limits used while \"use alternate speed limits\" is on
     </string>
+    <string name="speed_limits_title">Speed limits</string>
+    <string name="speed_limits_subtitle">Global and alternate limits, and when to switch</string>
+    <string name="global_speed_limits_section_title">Global</string>
+    <string name="alternate_speed_limits_section_title">Alternate</string>
+    <string name="alt_speed_schedule_label">Schedule</string>
+    <string name="alt_speed_schedule_subtitle">
+        Switch to the alternate limits automatically during a time window
+    </string>
+    <string name="alt_speed_schedule_from_label">From</string>
+    <string name="alt_speed_schedule_to_label">To</string>
+    <string name="alt_speed_schedule_days_label">Days</string>
+    <string name="schedule_days_every_day">Every day</string>
+    <string name="schedule_days_weekday">Weekdays</string>
+    <string name="schedule_days_weekend">Weekends</string>
+    <string name="alt_speed_schedule_next_day">%1$s (next day)</string>
     <string name="torrent_queueing_label">Torrent queueing</string>
     <string name="torrent_queueing_subtitle">
         Cap how many torrents are active at once; enables queue positions

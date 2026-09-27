@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import qbittorrent.models.AltSpeedSchedule
+import qbittorrent.models.SchedulerDays
 
 @HiltViewModel
 class SettingsViewModel
@@ -202,6 +204,31 @@ constructor(
                 _altDownloadLimit.value = downloadBytesPerSec
                 _altUploadLimit.value = uploadBytesPerSec
             }
+        }
+    }
+
+    private val _altSpeedSchedule =
+        MutableStateFlow(
+            AltSpeedSchedule(
+                enabled = false,
+                fromMinutesOfDay = 8 * 60,
+                toMinutesOfDay = 20 * 60,
+                days = SchedulerDays.EVERY_DAY,
+            )
+        )
+
+    /** When the server switches to its alternate limits, and on which days. */
+    val altSpeedSchedule: StateFlow<AltSpeedSchedule> = _altSpeedSchedule.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            repository.getAltSpeedSchedule().onOk { _altSpeedSchedule.value = it }
+        }
+    }
+
+    fun setAltSpeedSchedule(schedule: AltSpeedSchedule) {
+        viewModelScope.launch {
+            repository.setAltSpeedSchedule(schedule).onOk { _altSpeedSchedule.value = schedule }
         }
     }
 
