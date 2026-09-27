@@ -34,6 +34,8 @@ over its Web API — control your self-hosted server from your phone. Written in
   for a server whose reverse proxy authenticates on its behalf
 - Choose when alerts may make a sound — always, never, or everything outside a quiet-hours window
   you set, so an overnight download doesn't wake you and is still waiting in the morning
+- Schedule the alternate speed limits: pick the time window and the days it applies to, and the
+  server switches between your normal and alternate limits on its own
 
 See the [F-Droid listing](https://f-droid.org/packages/dev.acamol.qbit/) for the full feature list.
 
@@ -49,9 +51,6 @@ See the [F-Droid listing](https://f-droid.org/packages/dev.acamol.qbit/) for the
 > need to approve it once more in-app after this update — the app no longer trusts
 > device-installed certificates for HTTPS, only certificates you've explicitly approved per
 > server.
-
-## Roadmap
-- **Alternate speed-limit scheduler** — choose the time window and days when the alternate limits automatically take over
 
 ## Support
 
