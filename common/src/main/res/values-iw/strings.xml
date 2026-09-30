@@ -661,4 +661,17 @@
     <string name="quiet_hours_end_label">סיום</string>
     <string name="invalid_feed_url">נא להזין כתובת הזנה</string>
     <string name="api_key_needs_empty_credentials">יש למחוק את שם המשתמש והסיסמה כדי להשתמש במפתח API במקומם.</string>
+    <string name="speed_limits_title">מגבלות מהירות</string>
+    <string name="speed_limits_subtitle">מגבלות גלובליות וחלופיות, ומתי לעבור ביניהן</string>
+    <string name="global_speed_limits_section_title">גלובליות</string>
+    <string name="alternate_speed_limits_section_title">חלופיות</string>
+    <string name="alt_speed_schedule_label">תזמון</string>
+    <string name="alt_speed_schedule_subtitle">מעבר אוטומטי למגבלות החלופיות בטווח שעות מוגדר</string>
+    <string name="alt_speed_schedule_from_label">התחלה</string>
+    <string name="alt_speed_schedule_to_label">סיום</string>
+    <string name="alt_speed_schedule_days_label">ימים</string>
+    <string name="schedule_days_every_day">כל יום</string>
+    <string name="schedule_days_weekday">ימי חול</string>
+    <string name="schedule_days_weekend">סופי שבוע</string>
+    <string name="alt_speed_schedule_next_day">%1$s (למחרת)</string>
 </resources>
