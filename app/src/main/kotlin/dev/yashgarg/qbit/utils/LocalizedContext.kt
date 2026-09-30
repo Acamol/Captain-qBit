@@ -28,38 +28,37 @@ object LocalizedContext {
      * language is set or a wrapper cannot be built. Never throws: callers are usually about to show
      * a message, and failing to localise it is not worth losing it over.
      */
-    fun of(base: Context): Context =
-        runCatching {
-                // From API 33 the framework applies the per-app locale to the app's own resources,
-                // so there is nothing to correct here. Returning early also keeps
-                // getApplicationLocales() off the hot path: on 33+ it walks AppCompat's set of live
-                // activity delegates and then makes a binder call into the system server, and the
-                // lookups behind this run per torrent row on every sync tick. Below 33 the same
-                // call just reads a static.
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) return base
+    fun of(base: Context): Context = runCatching {
+        // From API 33 the framework applies the per-app locale to the app's own resources,
+        // so there is nothing to correct here. Returning early also keeps
+        // getApplicationLocales() off the hot path: on 33+ it walks AppCompat's set of live
+        // activity delegates and then makes a binder call into the system server, and the
+        // lookups behind this run per torrent row on every sync tick. Below 33 the same
+        // call just reads a static.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) return base
 
-                val tags = AppCompatDelegate.getApplicationLocales().toLanguageTags()
-                if (tags.isEmpty()) return base
+        val tags = AppCompatDelegate.getApplicationLocales().toLanguageTags()
+        if (tags.isEmpty()) return base
 
-                // Wrapping the application context rather than [base] keeps this cache incapable of
-                // retaining an Activity, whatever a caller passes in. Only string lookups go
-                // through here, for which the two are equivalent.
-                val appContext = base.applicationContext ?: return base
+        // Wrapping the application context rather than [base] keeps this cache incapable of
+        // retaining an Activity, whatever a caller passes in. Only string lookups go
+        // through here, for which the two are equivalent.
+        val appContext = base.applicationContext ?: return base
 
-                // Rebuilt only when the language changes. The lookups behind this run per torrent
-                // row (see NumberFormat), so creating a configuration context each time would be
-                // hot, while comparing the tags is not.
-                synchronized(this) {
-                    if (tags != cachedTags || cached == null) {
-                        val config =
-                            Configuration(appContext.resources.configuration).apply {
-                                setLocales(LocaleList.forLanguageTags(tags))
-                            }
-                        cached = appContext.createConfigurationContext(config)
-                        cachedTags = tags
+        // Rebuilt only when the language changes. The lookups behind this run per torrent
+        // row (see NumberFormat), so creating a configuration context each time would be
+        // hot, while comparing the tags is not.
+        synchronized(this) {
+            if (tags != cachedTags || cached == null) {
+                val config =
+                    Configuration(appContext.resources.configuration).apply {
+                        setLocales(LocaleList.forLanguageTags(tags))
                     }
-                    cached ?: base
-                }
+                cached = appContext.createConfigurationContext(config)
+                cachedTags = tags
             }
-            .getOrDefault(base)
+            cached ?: base
+        }
+    }
+        .getOrDefault(base)
 }

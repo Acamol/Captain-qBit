@@ -167,15 +167,14 @@ constructor(
      * rather than only the values we write ourselves. That stream polls the server, so it only runs
      * while something collects this: the Speed limits screen, while it is visible.
      */
-    val speedLimitMode: StateFlow<Int> =
-        channelFlow {
-                launch { followServerSpeedLimitMode() }
-                combine(reportedSpeedLimitMode, pendingSpeedLimitMode) { reported, pending ->
-                        pending ?: reported
-                    }
-                    .collect { send(it) }
+    val speedLimitMode: StateFlow<Int> = channelFlow {
+        launch { followServerSpeedLimitMode() }
+        combine(reportedSpeedLimitMode, pendingSpeedLimitMode) { reported, pending ->
+                pending ?: reported
             }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(SUBSCRIPTION_TIMEOUT_MS), 0)
+            .collect { send(it) }
+    }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(SUBSCRIPTION_TIMEOUT_MS), 0)
 
     private suspend fun followServerSpeedLimitMode() {
         discardNextPoll = false
@@ -280,12 +279,11 @@ constructor(
      * read: every write sends the whole schedule, so editing before then would overwrite the
      * server's with placeholders. The read is retried while the Speed limits screen is visible.
      */
-    val altSpeedSchedule: StateFlow<AltSpeedSchedule?> =
-        channelFlow {
-                launch { loadAltSpeedSchedule() }
-                _altSpeedSchedule.collect { send(it) }
-            }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(SUBSCRIPTION_TIMEOUT_MS), null)
+    val altSpeedSchedule: StateFlow<AltSpeedSchedule?> = channelFlow {
+        launch { loadAltSpeedSchedule() }
+        _altSpeedSchedule.collect { send(it) }
+    }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(SUBSCRIPTION_TIMEOUT_MS), null)
 
     private suspend fun loadAltSpeedSchedule() {
         while (_altSpeedSchedule.value == null) {
