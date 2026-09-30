@@ -343,8 +343,10 @@ private fun ArticleCard(
  * +0000") per the RSS spec. Malformed/missing dates return null so callers can fall back without
  * crashing.
  */
-private fun parseArticleDate(date: String): Instant? =
-    runCatching { Instant.from(DateTimeFormatter.RFC_1123_DATE_TIME.parse(date)) }.getOrNull()
+private fun parseArticleDate(date: String): Instant? = runCatching {
+    Instant.from(DateTimeFormatter.RFC_1123_DATE_TIME.parse(date))
+}
+    .getOrNull()
 
 /**
  * AND-of-words, order-independent, case-insensitive - the same semantics as a single line of an RSS

@@ -509,13 +509,15 @@ private fun FilesTab(
 // opaque document id, e.g. "primary:Download/foo.torrent").
 private fun displayName(context: Context, uri: Uri): String =
     runCatching {
-            context.contentResolver
-                .query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
-                ?.use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
-        }
+        context.contentResolver
+            .query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+            ?.use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
+    }
         .getOrNull()
         ?: uri.lastPathSegment
         ?: context.getString(CommonR.string.torrent_file_fallback_name)
 
-private fun readUriBytes(context: Context, uri: Uri): ByteArray? =
-    runCatching { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
+private fun readUriBytes(context: Context, uri: Uri): ByteArray? = runCatching {
+    context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+}
+    .getOrNull()
