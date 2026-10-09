@@ -674,4 +674,17 @@
     <string name="schedule_days_weekday">ימי חול</string>
     <string name="schedule_days_weekend">סופי שבוע</string>
     <string name="alt_speed_schedule_next_day">%1$s (למחרת)</string>
+    <string name="unit_pebibytes" translatable="false"></string>
+    <string name="language_hebrew" translatable="false"></string>
+    <string name="unit_tebibytes" translatable="false"></string>
+    <string name="unit_exbibytes" translatable="false"></string>
+    <string name="unit_bytes" translatable="false"></string>
+    <string name="events_channel_id" translatable="false"></string>
+    <string name="unit_mebibytes" translatable="false"></string>
+    <string name="unit_kibibytes" translatable="false"></string>
+    <string name="app_name" translatable="false"></string>
+    <string name="unit_gibibytes" translatable="false"></string>
+    <string name="status_channel_id" translatable="false"></string>
+    <string name="monitor_channel_id" translatable="false"></string>
+    <string name="events_quiet_channel_id" translatable="false"></string>
 </resources>
