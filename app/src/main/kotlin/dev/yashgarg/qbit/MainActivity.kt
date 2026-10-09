@@ -483,12 +483,12 @@ class MainActivity : AppCompatActivity() {
         val name =
             if (uri.scheme == "content") {
                 runCatching {
-                        contentResolver
-                            .query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
-                            ?.use { cursor ->
-                                if (cursor.moveToFirst()) cursor.getString(0) else null
-                            }
-                    }
+                    contentResolver
+                        .query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+                        ?.use { cursor ->
+                            if (cursor.moveToFirst()) cursor.getString(0) else null
+                        }
+                }
                     .getOrNull()
             } else null
         val resolved = name ?: uri.lastPathSegment

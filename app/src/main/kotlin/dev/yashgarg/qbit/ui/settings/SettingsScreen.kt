@@ -69,7 +69,6 @@ import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.ui.navigation.NoWindowInsets
 import dev.yashgarg.qbit.ui.rss.MaxArticlesPerFeedDialog
 import dev.yashgarg.qbit.ui.rss.RefreshIntervalDialog
-import dev.yashgarg.qbit.ui.server.SpeedLimitsDialog
 import dev.yashgarg.qbit.utils.LocalizedContext
 import dev.yashgarg.qbit.utils.isolateLtr
 import dev.yashgarg.qbit.worker.StatusWorker
@@ -144,7 +143,7 @@ private enum class QuietEdge {
 
 // Formatted through the platform's own time format so it follows the device's 12/24-hour setting,
 // and isolated because a time is LTR content that may sit in an RTL sentence.
-private fun timeOfDayLabel(context: Context, minutesOfDay: Int): String {
+internal fun timeOfDayLabel(context: Context, minutesOfDay: Int): String {
     val calendar =
         Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, minutesOfDay / 60)
@@ -175,11 +174,6 @@ fun SettingsScreen(
     val rssAutoDownloadingEnabled by
         viewModel.rssAutoDownloadingEnabled.collectAsStateWithLifecycle()
     val queueingEnabled by viewModel.queueingEnabled.collectAsStateWithLifecycle()
-    val speedLimitMode by viewModel.speedLimitMode.collectAsStateWithLifecycle()
-    val globalDownloadLimit by viewModel.globalDownloadLimit.collectAsStateWithLifecycle()
-    val globalUploadLimit by viewModel.globalUploadLimit.collectAsStateWithLifecycle()
-    val altDownloadLimit by viewModel.altDownloadLimit.collectAsStateWithLifecycle()
-    val altUploadLimit by viewModel.altUploadLimit.collectAsStateWithLifecycle()
     val statusNotif by viewModel.statusNotification.collectAsStateWithLifecycle()
     val notifyComplete by viewModel.notifyOnComplete.collectAsStateWithLifecycle()
     val notifyChecked by viewModel.notifyOnChecked.collectAsStateWithLifecycle()
@@ -201,8 +195,6 @@ fun SettingsScreen(
     var showStatusIntervalDialog by remember { mutableStateOf(false) }
     var showEventIntervalDialog by remember { mutableStateOf(false) }
     var showSyncIntervalDialog by remember { mutableStateOf(false) }
-    var showGlobalLimitsDialog by remember { mutableStateOf(false) }
-    var showAltLimitsDialog by remember { mutableStateOf(false) }
     var showRssIntervalDialog by remember { mutableStateOf(false) }
     var showRssMaxArticlesDialog by remember { mutableStateOf(false) }
     // Which end of the quiet window the time picker is editing, null when it's closed.
@@ -416,22 +408,10 @@ fun SettingsScreen(
             ) {
                 viewModel.setRssAutoDownloadingEnabled(it)
             }
-            SwitchRow(
-                stringResource(CommonR.string.use_alternate_speed_limits_label),
-                speedLimitMode != 0,
-                subtitle = stringResource(CommonR.string.use_alternate_speed_limits_subtitle),
-            ) {
-                viewModel.toggleSpeedLimits()
-            }
             ClickableRow(
-                title = stringResource(CommonR.string.global_speed_limits_label),
-                subtitle = stringResource(CommonR.string.global_speed_limits_subtitle),
-                onClick = { showGlobalLimitsDialog = true },
-            )
-            ClickableRow(
-                title = stringResource(CommonR.string.alternate_speed_limits_label),
-                subtitle = stringResource(CommonR.string.alternate_speed_limits_subtitle),
-                onClick = { showAltLimitsDialog = true },
+                title = stringResource(CommonR.string.speed_limits_title),
+                subtitle = stringResource(CommonR.string.speed_limits_subtitle),
+                onClick = { appNavigator.navigate(NavCommand.OpenSpeedLimits) },
             )
             SwitchRow(
                 stringResource(CommonR.string.torrent_queueing_label),
@@ -682,24 +662,6 @@ fun SettingsScreen(
             onDismiss = { showSyncIntervalDialog = false },
         )
     }
-    if (showGlobalLimitsDialog) {
-        SpeedLimitsDialog(
-            title = stringResource(CommonR.string.global_speed_limits_label),
-            initialDownloadBytes = globalDownloadLimit,
-            initialUploadBytes = globalUploadLimit,
-            onConfirm = { dl, ul -> viewModel.setGlobalLimits(dl, ul) },
-            onDismiss = { showGlobalLimitsDialog = false },
-        )
-    }
-    if (showAltLimitsDialog) {
-        SpeedLimitsDialog(
-            title = stringResource(CommonR.string.alternate_speed_limits_label),
-            initialDownloadBytes = altDownloadLimit,
-            initialUploadBytes = altUploadLimit,
-            onConfirm = { dl, ul -> viewModel.setAltLimits(dl, ul) },
-            onDismiss = { showAltLimitsDialog = false },
-        )
-    }
     if (showRssIntervalDialog) {
         RefreshIntervalDialog(
             currentMinutes = rssRefreshIntervalMinutes,
@@ -761,7 +723,7 @@ fun SettingsScreen(
     }
 
     editingQuietEdge?.let { edge ->
-        QuietHoursTimeDialog(
+        TimeOfDayDialog(
             title =
                 stringResource(
                     if (edge == QuietEdge.START) CommonR.string.quiet_hours_start_label
@@ -899,7 +861,7 @@ private fun NotificationsBlockedBanner(onOpenSettings: () -> Unit) {
 }
 
 @Composable
-private fun SectionHeader(text: String) {
+internal fun SectionHeader(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.titleSmall,
@@ -909,7 +871,7 @@ private fun SectionHeader(text: String) {
 }
 
 @Composable
-private fun ClickableRow(title: String, subtitle: String? = null, onClick: () -> Unit) {
+internal fun ClickableRow(title: String, subtitle: String? = null, onClick: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -926,7 +888,7 @@ private fun ClickableRow(title: String, subtitle: String? = null, onClick: () ->
 }
 
 @Composable
-private fun SwitchRow(
+internal fun SwitchRow(
     title: String,
     checked: Boolean,
     subtitle: String? = null,
@@ -961,7 +923,7 @@ private fun SwitchRow(
 /** Time picker for one end of the quiet-hours window. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun QuietHoursTimeDialog(
+internal fun TimeOfDayDialog(
     title: String,
     initialMinutesOfDay: Int,
     onConfirm: (Int) -> Unit,

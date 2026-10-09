@@ -4,19 +4,27 @@ import androidx.datastore.core.DataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.get
+import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.yashgarg.qbit.data.QbitRepository
 import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.EventAlertMode
 import javax.inject.Inject
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import qbittorrent.models.AltSpeedSchedule
 
 @HiltViewModel
 class SettingsViewModel
@@ -138,21 +146,74 @@ constructor(
         }
     }
 
-    private val _speedLimitMode = MutableStateFlow(0)
+    /** The last mode the server reported, through the sync stream or a direct read. */
+    private val reportedSpeedLimitMode = MutableStateFlow(0)
 
-    /** 0 = normal speed limits, nonzero = alternate speed limits are active. */
-    val speedLimitMode: StateFlow<Int> = _speedLimitMode.asStateFlow()
+    /** The mode we asked for, shown until the toggle's round trip has settled. */
+    private val pendingSpeedLimitMode = MutableStateFlow<Int?>(null)
 
-    init {
-        viewModelScope.launch {
-            repository.getSpeedLimitMode().onOk { _speedLimitMode.value = it }
-        }
+    private var togglesInFlight = 0
+
+    /**
+     * Set when a toggle settles: the next poll may have been sent before it did, so it would carry
+     * the old mode.
+     */
+    private var discardNextPoll = false
+
+    /**
+     * 0 = normal speed limits, nonzero = alternate speed limits are active.
+     *
+     * The schedule flips this on the server with nothing to tell us, so it follows the sync stream
+     * rather than only the values we write ourselves. That stream polls the server, so it only runs
+     * while something collects this: the Speed limits screen, while it is visible.
+     */
+    val speedLimitMode: StateFlow<Int> = channelFlow {
+        launch { followServerSpeedLimitMode() }
+        combine(reportedSpeedLimitMode, pendingSpeedLimitMode) { reported, pending ->
+                pending ?: reported
+            }
+            .collect { send(it) }
+    }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(SUBSCRIPTION_TIMEOUT_MS), 0)
+
+    private suspend fun followServerSpeedLimitMode() {
+        discardNextPoll = false
+        repository
+            .observeMainData()
+            .map { if (it.serverState.useAltSpeedLimits) 1 else 0 }
+            // Retry rather than catch: catching ends the flow, so one blip would stop the switch
+            // tracking the server for good. Retrying also re-resolves the client, which is what
+            // picks up a server switch.
+            .retry {
+                delay(SYNC_RETRY_MS)
+                true
+            }
+            .collect { serverMode ->
+                // While a toggle is in flight, a poll may predate it and would bounce the switch
+                // back; the toggle settles the value itself once it completes.
+                when {
+                    togglesInFlight > 0 -> Unit
+                    discardNextPoll -> discardNextPoll = false
+                    else -> reportedSpeedLimitMode.value = serverMode
+                }
+            }
     }
 
     fun toggleSpeedLimits() {
+        // The server only offers a toggle, so ask for the opposite of what is shown.
+        pendingSpeedLimitMode.value = if (speedLimitMode.value == 0) 1 else 0
+        togglesInFlight++
         viewModelScope.launch {
-            repository.toggleSpeedLimitsMode().onOk {
-                repository.getSpeedLimitMode().onOk { _speedLimitMode.value = it }
+            try {
+                repository.toggleSpeedLimitsMode()
+                // Read the result back rather than trusting the target: the server may have moved
+                // on its own since the switch was last updated.
+                repository.getSpeedLimitMode().onOk { reportedSpeedLimitMode.value = it }
+            } finally {
+                if (--togglesInFlight == 0) {
+                    pendingSpeedLimitMode.value = null
+                    discardNextPoll = true
+                }
             }
         }
     }
@@ -201,6 +262,60 @@ constructor(
             repository.setAltSpeedLimits(downloadBytesPerSec, uploadBytesPerSec).onOk {
                 _altDownloadLimit.value = downloadBytesPerSec
                 _altUploadLimit.value = uploadBytesPerSec
+            }
+        }
+    }
+
+    private val _altSpeedSchedule = MutableStateFlow<AltSpeedSchedule?>(null)
+
+    /** The schedule the server last confirmed, restored when a write fails. */
+    private var confirmedAltSpeedSchedule: AltSpeedSchedule? = null
+
+    /** Every write sends the whole schedule, so they go out one at a time, in order. */
+    private val altSpeedScheduleWrites = Mutex()
+
+    /**
+     * When the server switches to its alternate limits, and on which days. Null until it has been
+     * read: every write sends the whole schedule, so editing before then would overwrite the
+     * server's with placeholders. The read is retried while the Speed limits screen is visible.
+     */
+    val altSpeedSchedule: StateFlow<AltSpeedSchedule?> = channelFlow {
+        launch { loadAltSpeedSchedule() }
+        _altSpeedSchedule.collect { send(it) }
+    }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(SUBSCRIPTION_TIMEOUT_MS), null)
+
+    private suspend fun loadAltSpeedSchedule() {
+        while (_altSpeedSchedule.value == null) {
+            val loaded =
+                repository
+                    .getAltSpeedSchedule()
+                    .onOk {
+                        confirmedAltSpeedSchedule = it
+                        _altSpeedSchedule.value = it
+                    }
+                    .isOk
+            if (!loaded) delay(SYNC_RETRY_MS)
+        }
+    }
+
+    /**
+     * Shown at once, so an edit made before the previous write returns builds on it rather than on
+     * the server's older copy.
+     */
+    fun setAltSpeedSchedule(schedule: AltSpeedSchedule) {
+        _altSpeedSchedule.value = schedule
+        viewModelScope.launch {
+            altSpeedScheduleWrites.withLock {
+                repository
+                    .setAltSpeedSchedule(schedule)
+                    .onOk { confirmedAltSpeedSchedule = schedule }
+                    .onErr {
+                        // A newer edit is already queued and will send its own copy.
+                        if (_altSpeedSchedule.value == schedule) {
+                            _altSpeedSchedule.value = confirmedAltSpeedSchedule
+                        }
+                    }
             }
         }
     }
@@ -339,3 +454,9 @@ constructor(
         viewModelScope.launch { prefsStore.updateData { it.copy(syncIntervalMs = ms) } }
     }
 }
+
+/** Matches the torrent list's sync retry pacing. */
+private const val SYNC_RETRY_MS = 5000L
+
+/** Keeps the poll alive across a configuration change, which re-subscribes within moments. */
+private const val SUBSCRIPTION_TIMEOUT_MS = 5000L

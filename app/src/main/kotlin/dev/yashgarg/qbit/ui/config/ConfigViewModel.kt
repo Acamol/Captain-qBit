@@ -90,31 +90,17 @@ constructor(
         _uiState.update { state -> state.copy(isPortValid = true, showPortError = !isValid) }
     }
 
+    // Credentials are optional, so neither of these ever reports an error - flagging one would
+    // leave the user an error they cannot clear next to a field the form no longer requires.
     fun validateUsername(user: String) {
-        if (user.isEmpty()) {
-            _uiState.update { state ->
-                state.copy(isUsernameValid = false, showUsernameError = false)
-            }
-            return
-        }
-
-        val isValid = textValidator.isValid(user)
         _uiState.update { state ->
-            state.copy(isUsernameValid = true, showUsernameError = !isValid)
+            state.copy(isUsernameValid = true, showUsernameError = false)
         }
     }
 
     fun validatePassword(text: String) {
-        if (text.isEmpty()) {
-            _uiState.update { state ->
-                state.copy(isPasswordValid = false, showPasswordError = false)
-            }
-            return
-        }
-
-        val isValid = textValidator.isValid(text)
         _uiState.update { state ->
-            state.copy(isPasswordValid = true, showPasswordError = !isValid)
+            state.copy(isPasswordValid = true, showPasswordError = false)
         }
     }
 

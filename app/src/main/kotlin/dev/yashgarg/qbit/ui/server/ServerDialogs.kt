@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -24,12 +23,10 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -49,6 +46,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.models.ServerConfig
+import dev.yashgarg.qbit.ui.compose.CheckboxRow
+import dev.yashgarg.qbit.ui.compose.ConfirmDialog
+import dev.yashgarg.qbit.ui.compose.SelectableRow
+import dev.yashgarg.qbit.ui.compose.SingleChoiceDialog
+import dev.yashgarg.qbit.ui.compose.TextInputDialog
+import dev.yashgarg.qbit.ui.compose.ThreeActionDialog
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.utils.toHumanReadable
@@ -687,122 +690,6 @@ fun ServerDialogHost(
 
 // ---- Shared building blocks ------------------------------------------------------------------
 
-@Composable
-private fun TextInputDialog(
-    title: String,
-    label: String,
-    confirmLabel: String,
-    validate: (String) -> String?,
-    onConfirm: (String) -> Unit,
-    onDismiss: () -> Unit,
-    initial: String = "",
-    extraContent: @Composable (() -> Unit)? = null,
-) {
-    var value by remember { mutableStateOf(initial) }
-    var error by remember { mutableStateOf<String?>(null) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = value,
-                    onValueChange = {
-                        value = it
-                        error = null
-                    },
-                    label = { Text(label) },
-                    isError = error != null,
-                    supportingText = error?.let { { Text(it) } },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                extraContent?.invoke()
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val err = validate(value.trim())
-                    if (err != null) error = err else onConfirm(value)
-                }
-            ) {
-                Text(confirmLabel)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
-        },
-    )
-}
-
-@Composable
-private fun ConfirmDialog(
-    title: String,
-    confirmLabel: String,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        confirmButton = { TextButton(onClick = onConfirm) { Text(confirmLabel) } },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
-        },
-    )
-}
-
-@Composable
-private fun ThreeActionDialog(
-    title: String,
-    positiveLabel: String,
-    onPositive: () -> Unit,
-    neutralLabel: String,
-    onNeutral: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        confirmButton = { TextButton(onClick = onPositive) { Text(positiveLabel) } },
-        dismissButton = {
-            Row {
-                TextButton(onClick = onNeutral) { Text(neutralLabel) }
-                TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
-            }
-        },
-    )
-}
-
-@Composable
-private fun SingleChoiceDialog(
-    title: String,
-    labels: List<String>,
-    selectedIndex: Int,
-    onSelect: (Int) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                labels.forEachIndexed { i, label ->
-                    SelectableRow(
-                        label = label,
-                        selected = i == selectedIndex,
-                        onClick = { onSelect(i) },
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
-        },
-    )
-}
-
 /**
  * Two KiB/s inputs (download/upload) for a pair of speed limits. Values are passed in/out as
  * bytes/s (0 = unlimited); the fields display and accept KiB/s, matching qBittorrent's own dialogs.
@@ -869,30 +756,6 @@ internal fun SpeedLimitsDialog(
             TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
         },
     )
-}
-
-@Composable
-private fun SelectableRow(label: String, selected: Boolean, onClick: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth()
-            .selectable(selected = selected, onClick = onClick)
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(selected = selected, onClick = null)
-        Text(label, Modifier.padding(start = 12.dp))
-    }
-}
-
-@Composable
-private fun CheckboxRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().clickable { onCheckedChange(!checked) }.padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Checkbox(checked = checked, onCheckedChange = null)
-        Text(label, Modifier.padding(start = 12.dp))
-    }
 }
 
 @Composable

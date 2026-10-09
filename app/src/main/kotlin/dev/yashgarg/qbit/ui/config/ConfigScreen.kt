@@ -375,7 +375,12 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                 enabled = !checking && !usingCredentials && !useBasicAuth,
             )
             Text(
-                stringResource(CommonR.string.api_key_hint),
+                // Servers saved before API keys existed always have credentials, so say how to
+                // free the field rather than leaving it greyed out with no explanation.
+                stringResource(
+                    if (usingCredentials) CommonR.string.api_key_needs_empty_credentials
+                    else CommonR.string.api_key_hint
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

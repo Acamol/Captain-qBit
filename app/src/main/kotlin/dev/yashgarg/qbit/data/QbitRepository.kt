@@ -12,10 +12,12 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import qbittorrent.*
+import qbittorrent.models.AltSpeedSchedule
 import qbittorrent.models.LogEntry
 import qbittorrent.models.MainData
 import qbittorrent.models.RssItem
 import qbittorrent.models.RssRule
+import qbittorrent.models.SchedulerDays
 import qbittorrent.models.Torrent
 import qbittorrent.models.TorrentFile
 import qbittorrent.models.TorrentPeers
@@ -284,6 +286,41 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
 
     suspend fun setRssAutoDownloadingEnabled(enabled: Boolean): Result<Unit, Throwable> {
         return runSuspendCatching { client().setRssAutoDownloadingEnabled(enabled) }
+    }
+
+    /**
+     * The window during which the server swaps to its alternate speed limits, and on which days.
+     * Times are minutes from midnight, matching the app's other time-of-day settings.
+     */
+    suspend fun getAltSpeedSchedule(): Result<AltSpeedSchedule, Throwable> {
+        return runSuspendCatching {
+            val prefs = client().getPreferences()
+            fun int(key: String) = prefs[key]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+            AltSpeedSchedule(
+                enabled = prefs["scheduler_enabled"]?.jsonPrimitive?.booleanOrNull ?: false,
+                fromMinutesOfDay = int("schedule_from_hour") * 60 + int("schedule_from_min"),
+                toMinutesOfDay = int("schedule_to_hour") * 60 + int("schedule_to_min"),
+                days = SchedulerDays.fromValue(int("scheduler_days")),
+            )
+        }
+    }
+
+    suspend fun setAltSpeedSchedule(schedule: AltSpeedSchedule): Result<Unit, Throwable> {
+        return runSuspendCatching {
+            client()
+                .setPreferences(
+                    buildJsonObject {
+                        put("scheduler_enabled", schedule.enabled)
+                        // The server only applies a time when both halves of the pair are present,
+                        // so hour and minute always travel together.
+                        put("schedule_from_hour", schedule.fromMinutesOfDay / 60)
+                        put("schedule_from_min", schedule.fromMinutesOfDay % 60)
+                        put("schedule_to_hour", schedule.toMinutesOfDay / 60)
+                        put("schedule_to_min", schedule.toMinutesOfDay % 60)
+                        put("scheduler_days", schedule.days.value)
+                    }
+                )
+        }
     }
 
     // Preference limit (-1 = no limit) as app-side bytes/s (0 = unlimited).

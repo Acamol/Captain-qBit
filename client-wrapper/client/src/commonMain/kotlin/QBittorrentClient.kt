@@ -71,7 +71,8 @@ internal val json = Json {
  * @param password The qBittorrent password, default: adminadmin
  * @param syncInterval The sync endpoint polling rate when subscribed to a [Flow], defaults to 5
  *   seconds.
- * @param httpClient Custom HTTPClient, useful when a default client engine is not used
+ * @param httpClient Custom HTTPClient, useful when a default client engine is not used. The client
+ *   takes ownership of it and closes it in [close].
  * @param dispatcher Coroutine dispatcher for flow API processing, defaults to
  *   [Dispatchers.Default].
  */
@@ -112,6 +113,10 @@ class QBittorrentClient(
 
     internal val config =
         Config(baseUrl, username, password, apiKey?.ifBlank { null }, syncInterval)
+
+    // [http] is derived from this one and shares its engine, which only closes once every client
+    // using it has closed.
+    private val baseHttp: HttpClient = httpClient
 
     internal val http: HttpClient = httpClient.config {
         install(ErrorTransformer)
@@ -318,6 +323,7 @@ class QBittorrentClient(
     fun close() {
         syncScope.cancel()
         http.close()
+        baseHttp.close()
     }
 }
 

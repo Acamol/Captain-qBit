@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -31,6 +30,7 @@ import dev.yashgarg.qbit.ui.compose.FILE_PRIORITY_HIGH
 import dev.yashgarg.qbit.ui.compose.FILE_PRIORITY_MAXIMAL
 import dev.yashgarg.qbit.ui.compose.FILE_PRIORITY_NORMAL
 import dev.yashgarg.qbit.ui.compose.FILE_PRIORITY_SKIP
+import dev.yashgarg.qbit.ui.compose.TextInputDialog
 import dev.yashgarg.qbit.ui.compose.TorrentContentTreeView
 import dev.yashgarg.qbit.ui.compose.isSkipped
 import dev.yashgarg.qbit.ui.torrent.TorrentDetailsState
@@ -170,39 +170,20 @@ fun FilesTab(
     }
 
     renameItem?.let { item ->
-        var value by remember(item) { mutableStateOf(item.name) }
-        AlertDialog(
-            onDismissRequest = { renameItem = null },
-            title = {
-                Text(
-                    stringResource(
-                        if (item.item == null) CommonR.string.rename_folder_title
-                        else CommonR.string.rename_file_title
-                    )
-                )
+        TextInputDialog(
+            title =
+                stringResource(
+                    if (item.item == null) CommonR.string.rename_folder_title
+                    else CommonR.string.rename_file_title
+                ),
+            confirmLabel = stringResource(CommonR.string.rename),
+            validate = { null },
+            initial = item.name,
+            onConfirm = {
+                onRename(item, it)
+                renameItem = null
             },
-            text = {
-                OutlinedTextField(
-                    value = value,
-                    onValueChange = { value = it },
-                    singleLine = true,
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onRename(item, value)
-                        renameItem = null
-                    }
-                ) {
-                    Text(stringResource(CommonR.string.rename))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { renameItem = null }) {
-                    Text(stringResource(CommonR.string.cancel))
-                }
-            },
+            onDismiss = { renameItem = null },
         )
     }
 }

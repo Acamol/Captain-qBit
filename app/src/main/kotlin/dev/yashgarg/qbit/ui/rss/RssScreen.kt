@@ -79,6 +79,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.ui.compose.RssFeedTreeView
+import dev.yashgarg.qbit.ui.compose.TextInputDialog
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.ui.navigation.NoWindowInsets
@@ -498,36 +499,23 @@ private fun AddFeedDialog(
     onConfirm: (url: String, path: String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var url by remember { mutableStateOf("") }
     var path by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(CommonR.string.add_feed_title)) },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = url,
-                    onValueChange = { url = it },
-                    label = { Text(stringResource(CommonR.string.feed_url_label)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.size(8.dp))
-                FolderPickerField(
-                    label = stringResource(CommonR.string.folder_label),
-                    selected = path,
-                    folders = folders,
-                    onSelect = { path = it },
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(url, path) }, enabled = url.isNotBlank()) {
-                Text(stringResource(CommonR.string.add))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
+    val urlEmptyError = stringResource(CommonR.string.invalid_feed_url)
+    TextInputDialog(
+        title = stringResource(CommonR.string.add_feed_title),
+        label = stringResource(CommonR.string.feed_url_label),
+        confirmLabel = stringResource(CommonR.string.add),
+        validate = { url -> if (url.isBlank()) urlEmptyError else null },
+        onConfirm = { url -> onConfirm(url, path) },
+        onDismiss = onDismiss,
+        extraContent = {
+            Spacer(Modifier.size(8.dp))
+            FolderPickerField(
+                label = stringResource(CommonR.string.folder_label),
+                selected = path,
+                folders = folders,
+                onSelect = { path = it },
+            )
         },
     )
 }
@@ -801,36 +789,23 @@ private fun AddFolderDialog(
     onConfirm: (name: String, parent: String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var name by remember { mutableStateOf("") }
     var parent by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(CommonR.string.new_folder_title)) },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text(stringResource(CommonR.string.folder_name_label)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.size(8.dp))
-                FolderPickerField(
-                    label = stringResource(CommonR.string.parent_folder_label),
-                    selected = parent,
-                    folders = folders,
-                    onSelect = { parent = it },
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(name, parent) }, enabled = name.isNotBlank()) {
-                Text(stringResource(CommonR.string.add))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
+    val nameEmptyError = stringResource(CommonR.string.invalid_name)
+    TextInputDialog(
+        title = stringResource(CommonR.string.new_folder_title),
+        label = stringResource(CommonR.string.folder_name_label),
+        confirmLabel = stringResource(CommonR.string.add),
+        validate = { name -> if (name.isBlank()) nameEmptyError else null },
+        onConfirm = { name -> onConfirm(name, parent) },
+        onDismiss = onDismiss,
+        extraContent = {
+            Spacer(Modifier.size(8.dp))
+            FolderPickerField(
+                label = stringResource(CommonR.string.parent_folder_label),
+                selected = parent,
+                folders = folders,
+                onSelect = { parent = it },
+            )
         },
     )
 }

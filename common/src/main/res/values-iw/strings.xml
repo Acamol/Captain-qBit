@@ -464,8 +464,8 @@
     <string name="one_url_per_line">כתובת אחת לכל שורה</string>
     <string name="remove_tracker_confirm_title">להסיר את העוקבן?</string>
     <string name="version_name_code">גרסה %1$s (%2$d)</string>
-    <string name="qbittorrent_version_label">qBittorrent %1$s</string>
-    <string name="web_api_version_label">Web API v%1$s</string>
+    <string name="qbittorrent_version_label" translatable="false">qBittorrent %1$s</string>
+    <string name="web_api_version_label" translatable="false">Web API v%1$s</string>
     <string name="fork_attribution_message">גרסה נגזרת (fork) של qBittorrent Manager מאת Yash Garg.</string>
     <string name="license_message">חינמי ובקוד פתוח · GPL-3.0</string>
     <string name="whats_new_link_label">מה חדש</string>
@@ -475,7 +475,7 @@
     <string name="whats_new_in_version_title">מה חדש בגרסה %1$s</string>
     <string name="got_it_action">הבנתי</string>
     <string name="language_label">שפה</string>
-    <string name="language_english">English</string>
+    <string name="language_english" translatable="false">English</string>
     <string name="status_add_torrent_url_success">הטורנט נוסף בהצלחה</string>
     <string name="status_add_torrent_url_failure">נכשל להוסיף את הטורנט</string>
     <string name="status_add_torrent_file_success">הקובץ נוסף בהצלחה</string>
@@ -650,7 +650,7 @@
     <string name="api_key_hint">בשימוש במקום שם משתמש וסיסמה. דורש qBittorrent 5.2 או עדכני יותר.</string>
     <string name="api_key_blocks_basic_auth">לא זמין כאשר מפתח API מוגדר — שניהם משתמשים באותה כותרת HTTP.</string>
     <string name="api_key_replaces_credentials">לא בשימוש כאשר מפתח API מוגדר.</string>
-    <string name="error_api_key_rejected">השרת דחה את מפתח ה-API. יש לבדוק שהוא הועתק נכון ושהשרת מריץ qBittorrent 5.2 או עדכני יותר — גרסאות ישנות יותר מתעלמות ממפתחות API.</string>
+    <string name="error_api_key_rejected">השרת דחה את הבקשה. יש לבדוק שמפתח ה-API הועתק נכון ושהשרת מריץ qBittorrent 5.2 או עדכני יותר — גרסאות ישנות יותר מתעלמות ממפתחות API. שרת יכול גם לדחות בקשות לאחר ניסיונות אימות כושלים חוזרים.</string>
     <string name="events_quiet_channel_name">אירועי טורנטים (שעות שקטות)</string>
     <string name="alert_sound_label">צליל התראה</string>
     <string name="alert_sound_always">תמיד</string>
@@ -659,4 +659,19 @@
     <string name="alert_sound_explanation">התראה מושתקת עדיין מופיעה — היא רק לא משמיעה צליל, כך שהורדה באמצע הלילה לא תעיר אף אחד ועדיין תחכה בבוקר.</string>
     <string name="quiet_hours_start_label">התחלה</string>
     <string name="quiet_hours_end_label">סיום</string>
+    <string name="invalid_feed_url">נא להזין כתובת הזנה</string>
+    <string name="api_key_needs_empty_credentials">יש למחוק את שם המשתמש והסיסמה כדי להשתמש במפתח API במקומם.</string>
+    <string name="speed_limits_title">מגבלות מהירות</string>
+    <string name="speed_limits_subtitle">מגבלות גלובליות וחלופיות, ומתי לעבור ביניהן</string>
+    <string name="global_speed_limits_section_title">גלובליות</string>
+    <string name="alternate_speed_limits_section_title">חלופיות</string>
+    <string name="alt_speed_schedule_label">תזמון</string>
+    <string name="alt_speed_schedule_subtitle">מעבר אוטומטי למגבלות החלופיות בטווח שעות מוגדר</string>
+    <string name="alt_speed_schedule_from_label">התחלה</string>
+    <string name="alt_speed_schedule_to_label">סיום</string>
+    <string name="alt_speed_schedule_days_label">ימים</string>
+    <string name="schedule_days_every_day">כל יום</string>
+    <string name="schedule_days_weekday">ימי חול</string>
+    <string name="schedule_days_weekend">סופי שבוע</string>
+    <string name="alt_speed_schedule_next_day">%1$s (למחרת)</string>
 </resources>

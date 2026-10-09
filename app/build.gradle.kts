@@ -89,8 +89,8 @@ android {
         applicationId = "dev.acamol.qbit"
         minSdk = 28
         targetSdk = 37
-        versionCode = 14
-        versionName = "1.5.0"
+        versionCode = 15
+        versionName = "1.6.0"
 
         multiDexEnabled = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
