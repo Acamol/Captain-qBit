@@ -464,8 +464,8 @@
     <string name="one_url_per_line">כתובת אחת לכל שורה</string>
     <string name="remove_tracker_confirm_title">להסיר את העוקבן?</string>
     <string name="version_name_code">גרסה %1$s (%2$d)</string>
-    <string name="qbittorrent_version_label">qBittorrent %1$s</string>
-    <string name="web_api_version_label">Web API v%1$s</string>
+    <string name="qbittorrent_version_label" translatable="false">qBittorrent %1$s</string>
+    <string name="web_api_version_label" translatable="false">Web API v%1$s</string>
     <string name="fork_attribution_message">גרסה נגזרת (fork) של qBittorrent Manager מאת Yash Garg.</string>
     <string name="license_message">חינמי ובקוד פתוח · GPL-3.0</string>
     <string name="whats_new_link_label">מה חדש</string>
@@ -475,7 +475,7 @@
     <string name="whats_new_in_version_title">מה חדש בגרסה %1$s</string>
     <string name="got_it_action">הבנתי</string>
     <string name="language_label">שפה</string>
-    <string name="language_english">English</string>
+    <string name="language_english" translatable="false">English</string>
     <string name="status_add_torrent_url_success">הטורנט נוסף בהצלחה</string>
     <string name="status_add_torrent_url_failure">נכשל להוסיף את הטורנט</string>
     <string name="status_add_torrent_file_success">הקובץ נוסף בהצלחה</string>
