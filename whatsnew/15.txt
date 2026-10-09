@@ -1,0 +1,13 @@
+New: schedule the alternate speed limits. Pick a time window and the days it applies to — every day, weekdays, weekends or a single day — and the server switches between your normal and alternate limits on its own. A window whose end is before its start runs past midnight into the next day.
+
+New: the speed limits have their own screen. The global limits, the alternate limits, the switch between them and the schedule now sit together under Settings → Speed limits.
+
+The "Use alternate speed limits" switch now follows the server. When the schedule changes limits on its own, the switch moves to match while the screen is open, instead of showing what it was when you arrived.
+
+Fixed: the username and password fields could show an error that couldn't be cleared. They're optional, so typing a space showed "Please enter a username" even though saving worked.
+
+Fixed: on servers saved before 1.5.0, the API key field was greyed out with no explanation. It's disabled while a username or password is filled in, and the hint now says to clear them first.
+
+Fixed: a refused sign-in no longer claims the API key is wrong. qBittorrent also refuses after repeated failed sign-ins, and a reverse proxy can refuse for its own reasons.
+
+Updated Hebrew translation.

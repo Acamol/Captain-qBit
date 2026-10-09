@@ -1,0 +1,6 @@
+- New: schedule the alternate speed limits — pick the hours and days, and the server switches on its own
+- New: all speed limits now sit together under Settings → Speed limits
+- The alternate-limits switch now follows the server when the schedule flips it
+- Fixed: an optional username or password could show an error that couldn't be cleared
+- Fixed: the API key field was greyed out with no explanation on older servers
+- Updated Hebrew translation
