@@ -87,9 +87,18 @@ jobs:
           version="${GITHUB_REF_NAME#v}"
           cp app/build/outputs/apk/release/*.apk "Captain-qBit-${version}.apk"
 
+      # Crash reports from release builds carry R8-obfuscated stack traces; the mapping for this
+      # exact build is what retraces them, so publish it alongside the APK.
+      - name: Package R8 mapping
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          zip -j "Captain-qBit-${version}-mapping.zip" app/build/outputs/mapping/release/mapping.txt
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          files: Captain-qBit-*.apk
+          files: |
+            Captain-qBit-*.apk
+            Captain-qBit-*-mapping.zip
           body: ${{ steps.notes.outputs.body }}
           fail_on_unmatched_files: true
