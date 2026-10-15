@@ -142,7 +142,7 @@ fun TorrentDetailsScreen(
                                 detectTapGestures(
                                     onLongPress = {
                                         torrent?.let { copy("name", it.name, copiedNameMessage) }
-                                    }
+                                    },
                                 )
                             },
                     )
@@ -550,7 +550,7 @@ private fun SpeedLimitDialog(
                 supportingText = { Text(stringResource(R.string.leave_empty_for_unlimited)) },
                 keyboardOptions =
                     KeyboardOptions(
-                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
                     ),
             )
         },
@@ -561,7 +561,7 @@ private fun SpeedLimitDialog(
                     // (and rounds) a limit the user didn't touch.
                     if (value != initial) onConfirm(value.toLongOrNull()?.times(1024) ?: 0L)
                     onDismiss()
-                }
+                },
             ) {
                 Text(stringResource(R.string.ok))
             }
@@ -683,7 +683,7 @@ private fun ShareLimitDialog(
     var inactiveValue by remember {
         mutableStateOf(
             if (currentInactiveSeedingTimeLimit >= 0) currentInactiveSeedingTimeLimit.toString()
-            else ""
+            else "",
         )
     }
 
@@ -709,7 +709,7 @@ private fun ShareLimitDialog(
                         label = { Text(stringResource(R.string.ratio)) },
                         keyboardOptions =
                             KeyboardOptions(
-                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
                             ),
                     )
                 }
@@ -729,7 +729,7 @@ private fun ShareLimitDialog(
                         label = { Text(stringResource(R.string.minutes_label)) },
                         keyboardOptions =
                             KeyboardOptions(
-                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
                             ),
                     )
                 }
@@ -749,7 +749,7 @@ private fun ShareLimitDialog(
                         label = { Text(stringResource(R.string.minutes_label)) },
                         keyboardOptions =
                             KeyboardOptions(
-                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
                             ),
                     )
                 }
@@ -775,7 +775,7 @@ private fun ShareLimitDialog(
                         timeOf(seedMode, seedValue),
                         timeOf(inactiveMode, inactiveValue),
                     )
-                }
+                },
             ) {
                 Text(stringResource(R.string.ok))
             }
@@ -799,8 +799,8 @@ private fun LimitModeOption(mode: LimitMode, selected: Boolean, onSelect: () -> 
                     LimitMode.GLOBAL -> R.string.use_global_limit
                     LimitMode.UNLIMITED -> R.string.unlimited
                     LimitMode.CUSTOM -> R.string.custom_label
-                }
-            )
+                },
+            ),
         )
     }
 }
@@ -891,7 +891,7 @@ private fun TagsDialog(
                     val toAdd = tags.filter { checked[it] == true && !current.contains(it) }
                     val toRemove = tags.filter { checked[it] != true && current.contains(it) }
                     onApply(toAdd, toRemove)
-                }
+                },
             ) {
                 Text(stringResource(R.string.ok))
             }

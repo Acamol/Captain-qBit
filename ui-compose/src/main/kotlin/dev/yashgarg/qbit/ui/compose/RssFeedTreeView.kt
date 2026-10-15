@@ -279,7 +279,7 @@ private fun rssTreeStyle(controller: RssDragController): BonsaiStyle<RssItem> {
         nodeSpacing = 6.dp,
         nodeCollapsedIcon = { node ->
             rememberVectorPainter(
-                if (node is BranchNode) Icons.Rounded.Folder else Icons.Filled.RssFeed
+                if (node is BranchNode) Icons.Rounded.Folder else Icons.Filled.RssFeed,
             )
         },
         nodeCollapsedIconColorFilter = iconTint,

@@ -40,13 +40,13 @@ val MIGRATION_4_5 =
                     "CREATE TABLE IF NOT EXISTS configsTmp (config_id INTEGER NOT NULL, serverName TEXT NOT NULL, " +
                         "baseUrl TEXT NOT NULL, port INTEGER, path TEXT, username TEXT NOT NULL, password TEXT NOT NULL, " +
                         "connectionType TEXT NOT NULL, basicAuthUsername TEXT DEFAULT NULL, basicAuthPassword TEXT DEFAULT NULL, " +
-                        "PRIMARY KEY(config_id))"
+                        "PRIMARY KEY(config_id))",
                 )
 
                 execSQL(
                     "INSERT INTO configsTmp (config_id, serverName, baseUrl, port, path, username, password, " +
                         "connectionType, basicAuthUsername, basicAuthPassword) SELECT config_id, serverName, baseUrl, " +
-                        "port, path, username, password, connectionType, basicAuthUsername, basicAuthPassword FROM configs"
+                        "port, path, username, password, connectionType, basicAuthUsername, basicAuthPassword FROM configs",
                 )
 
                 execSQL("DROP TABLE configs")
@@ -64,7 +64,7 @@ val MIGRATION_5_6 =
             db.execSQL("ALTER TABLE configs ADD COLUMN position INTEGER NOT NULL DEFAULT 0")
             db.execSQL(
                 "UPDATE configs SET position = " +
-                    "(SELECT COUNT(*) FROM configs AS c2 WHERE c2.config_id < configs.config_id)"
+                    "(SELECT COUNT(*) FROM configs AS c2 WHERE c2.config_id < configs.config_id)",
             )
         }
     }
@@ -92,12 +92,12 @@ val MIGRATION_1_2 =
                 execSQL(
                     "CREATE TABLE IF NOT EXISTS configsTmp (config_id INTEGER NOT NULL, serverName TEXT NOT NULL, " +
                         "baseUrl TEXT NOT NULL, port INTEGER, username TEXT NOT NULL, password TEXT NOT NULL, connectionType TEXT NOT NULL, " +
-                        "trustSelfSigned INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(config_id))"
+                        "trustSelfSigned INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(config_id))",
                 )
 
                 execSQL(
                     "INSERT INTO configsTmp (config_id, serverName, baseUrl, port, username, password, " +
-                        "connectionType) SELECT config_id, serverName, baseUrl, port, username, password, connectionType FROM configs"
+                        "connectionType) SELECT config_id, serverName, baseUrl, port, username, password, connectionType FROM configs",
                 )
 
                 execSQL("UPDATE configsTmp SET port = NULL WHERE port = 443")

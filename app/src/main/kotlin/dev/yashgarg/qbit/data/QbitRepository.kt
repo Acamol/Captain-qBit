@@ -241,7 +241,7 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
                     buildJsonObject {
                         put("alt_dl_limit", bytesToPrefLimit(downloadBytesPerSec))
                         put("alt_up_limit", bytesToPrefLimit(uploadBytesPerSec))
-                    }
+                    },
                 )
         }
     }
@@ -318,7 +318,7 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
                         put("schedule_to_hour", schedule.toMinutesOfDay / 60)
                         put("schedule_to_min", schedule.toMinutesOfDay % 60)
                         put("scheduler_days", schedule.days.value)
-                    }
+                    },
                 )
         }
     }
@@ -483,7 +483,7 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
     }
 
     suspend fun getRssMatchingArticles(
-        ruleName: String
+        ruleName: String,
     ): Result<Map<String, List<String>>, Throwable> {
         return runSuspendCatching { client().getRssMatchingArticles(ruleName) }
     }

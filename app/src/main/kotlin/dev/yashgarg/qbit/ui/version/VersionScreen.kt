@@ -67,7 +67,7 @@ fun VersionScreen(appNavigator: AppNavigator, viewModel: VersionViewModel = hilt
                     }
                 },
             )
-        }
+        },
     ) { padding ->
         AboutView(state, Modifier.padding(padding))
     }

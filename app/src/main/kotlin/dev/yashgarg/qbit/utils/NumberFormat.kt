@@ -73,7 +73,7 @@ private object NumberFormat {
                     CommonR.plurals.unit_days_suffix,
                     days.toInt(),
                     days,
-                )
+                ),
             )
         }
         if (hours != 0L) {

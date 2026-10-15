@@ -131,7 +131,7 @@ object AppNotificationManager {
             contentIntent = contentIntent,
             channelId =
                 context.getString(
-                    if (quiet) R.string.events_quiet_channel_id else R.string.events_channel_id
+                    if (quiet) R.string.events_quiet_channel_id else R.string.events_channel_id,
                 ),
             priority =
                 if (quiet) NotificationCompat.PRIORITY_LOW else NotificationCompat.PRIORITY_DEFAULT,

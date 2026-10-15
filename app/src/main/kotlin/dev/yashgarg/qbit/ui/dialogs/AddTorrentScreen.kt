@@ -234,7 +234,7 @@ fun AddTorrentScreen(
                         }
                     },
                 )
-            }
+            },
         ) { innerPadding ->
             Column(Modifier.fillMaxSize().padding(innerPadding)) {
                 PrimaryTabRow(selectedTabIndex = selectedTab) {

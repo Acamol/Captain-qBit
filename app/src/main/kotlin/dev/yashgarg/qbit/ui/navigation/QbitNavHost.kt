@@ -135,7 +135,7 @@ fun QbitNavHost(
                             type = NavType.StringType
                             nullable = true
                             defaultValue = null
-                        }
+                        },
                     ),
             ) {
                 // ruleName (null = new rule) reaches RssViewModel via the destination's
@@ -150,7 +150,7 @@ fun QbitNavHost(
                         navArgument(Routes.ARG_SERVER_ID) {
                             type = NavType.IntType
                             defaultValue = -1
-                        }
+                        },
                     ),
             ) {
                 // serverId reaches ConfigViewModel via the destination's SavedStateHandle.

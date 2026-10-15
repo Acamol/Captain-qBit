@@ -47,7 +47,7 @@ class QbitApplication : Application(), Configuration.Provider {
             Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU && prefs.languageTag.isNotEmpty()
         ) {
             AppCompatDelegate.setApplicationLocales(
-                LocaleListCompat.forLanguageTags(prefs.languageTag)
+                LocaleListCompat.forLanguageTags(prefs.languageTag),
             )
         }
 

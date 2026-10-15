@@ -128,7 +128,7 @@ constructor(
                                     info.dlInfoSpeed.toHumanReadable(),
                                     info.upInfoSpeed.toHumanReadable(),
                                 ),
-                            )
+                            ),
                         )
                     } catch (e: CancellationException) {
                         throw e
@@ -139,7 +139,7 @@ constructor(
                             createForegroundInfo(
                                 localized.getString(CommonR.string.status_server_offline),
                                 localized.getString(CommonR.string.status_reconnecting),
-                            )
+                            ),
                         )
                     }
                     lastStatusFetch = now
@@ -153,7 +153,7 @@ constructor(
                         localized.getString(CommonR.string.app_name),
                         localized.getString(CommonR.string.status_alerts_are_on),
                         minimal = true,
-                    )
+                    ),
                 )
             }
 
@@ -409,7 +409,8 @@ constructor(
             PendingIntent.getActivity(applicationContext, 0, intent, PendingIntent.FLAG_IMMUTABLE)
         val channelId =
             applicationContext.getString(
-                if (minimal) CommonR.string.monitor_channel_id else CommonR.string.status_channel_id
+                if (minimal) CommonR.string.monitor_channel_id
+                else CommonR.string.status_channel_id,
             )
         val notification =
             AppNotificationManager.createNotification(
@@ -424,7 +425,7 @@ constructor(
                             null,
                             localized.getString(CommonR.string.close_action),
                             closeIntent,
-                        )
+                        ),
                     ),
                 contentIntent = pendingIntent,
                 channelId = channelId,

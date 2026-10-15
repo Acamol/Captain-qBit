@@ -142,7 +142,7 @@ fun ServerListScreen(
                     onClick = {
                         viewModel.deleteServer(server.configId)
                         pendingDelete = null
-                    }
+                    },
                 ) {
                     Text(stringResource(CommonR.string.delete))
                 }

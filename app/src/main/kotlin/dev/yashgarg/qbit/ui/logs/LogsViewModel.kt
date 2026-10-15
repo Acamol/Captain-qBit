@@ -50,7 +50,7 @@ constructor(private val repository: QbitRepository, application: Application) :
                             refreshing = false,
                             error =
                                 error.friendlyMessage(
-                                    getString(CommonR.string.status_load_logs_failure)
+                                    getString(CommonR.string.status_load_logs_failure),
                                 ),
                         )
                     }

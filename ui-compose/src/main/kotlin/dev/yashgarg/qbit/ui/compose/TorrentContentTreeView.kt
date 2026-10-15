@@ -81,7 +81,7 @@ private fun torrentContentStyle(): BonsaiStyle<ContentTreeItem> {
             stringResource(CommonR.string.content_description_expand_folder),
         nodeCollapsedIcon = { node ->
             rememberVectorPainter(
-                if (node is BranchNode) Icons.Rounded.Folder else Icons.Default.FileCopy
+                if (node is BranchNode) Icons.Rounded.Folder else Icons.Default.FileCopy,
             )
         },
         nodeCollapsedIconColorFilter = iconTint,

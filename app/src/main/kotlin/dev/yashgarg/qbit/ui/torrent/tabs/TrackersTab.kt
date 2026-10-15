@@ -174,7 +174,7 @@ fun TrackersTab(
                         onClick = {
                             onRemoveTracker(current.url)
                             dialog = null
-                        }
+                        },
                     ) {
                         Text(stringResource(CommonR.string.remove_action))
                     }
