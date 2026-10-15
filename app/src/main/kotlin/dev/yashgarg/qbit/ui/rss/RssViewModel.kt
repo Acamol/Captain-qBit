@@ -135,8 +135,8 @@ constructor(
                         it.copy(
                             error =
                                 error.friendlyMessage(
-                                    getString(CommonR.string.status_rss_load_failure)
-                                )
+                                    getString(CommonR.string.status_rss_load_failure),
+                                ),
                         )
                     }
                 }
@@ -183,7 +183,7 @@ constructor(
                 .onOk { refresh() }
                 .onErr {
                     emitStatus(
-                        it.friendlyMessage(getString(CommonR.string.status_rss_move_item_failure))
+                        it.friendlyMessage(getString(CommonR.string.status_rss_move_item_failure)),
                     )
                 }
         }
@@ -286,8 +286,8 @@ constructor(
                 .onErr {
                     emitStatus(
                         it.friendlyMessage(
-                            getString(CommonR.string.status_rss_fetch_torrent_failure)
-                        )
+                            getString(CommonR.string.status_rss_fetch_torrent_failure),
+                        ),
                     )
                     onResult(null)
                 }

@@ -80,7 +80,7 @@ fun TextInputDialog(
                 onClick = {
                     val err = validate(value.trim())
                     if (err != null) error = err else onConfirm(value)
-                }
+                },
             ) {
                 Text(confirmLabel)
             }

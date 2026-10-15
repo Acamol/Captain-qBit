@@ -179,12 +179,12 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                                     .onOk { cert -> pendingCertReview = cert }
                                     .onErr {
                                         snackbarHostState.showSnackbar(
-                                            testFailedTemplate.format(connectionFailure(error))
+                                            testFailedTemplate.format(connectionFailure(error)),
                                         )
                                     }
                             } else {
                                 snackbarHostState.showSnackbar(
-                                    testFailedTemplate.format(connectionFailure(error))
+                                    testFailedTemplate.format(connectionFailure(error)),
                                 )
                             }
                         }
@@ -379,7 +379,7 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                 // free the field rather than leaving it greyed out with no explanation.
                 stringResource(
                     if (usingCredentials) CommonR.string.api_key_needs_empty_credentials
-                    else CommonR.string.api_key_hint
+                    else CommonR.string.api_key_hint,
                 ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -527,19 +527,19 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                     Spacer(Modifier.size(8.dp))
                     Text(
                         "${stringResource(CommonR.string.certificate_subject_label)}: " +
-                            cert.subjectX500Principal.name
+                            cert.subjectX500Principal.name,
                     )
                     Text(
                         "${stringResource(CommonR.string.certificate_issuer_label)}: " +
-                            cert.issuerX500Principal.name
+                            cert.issuerX500Principal.name,
                     )
                     Text(
                         "${stringResource(CommonR.string.certificate_fingerprint_label)}: " +
-                            fingerprint
+                            fingerprint,
                     )
                     Text(
                         "${stringResource(CommonR.string.certificate_validity_label)}: " +
-                            cert.validUntilText()
+                            cert.validUntilText(),
                     )
                     if (expired || notYetValid) {
                         Spacer(Modifier.size(8.dp))
@@ -597,12 +597,12 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                                 }
                                 .onErr { error ->
                                     snackbarHostState.showSnackbar(
-                                        testFailedTemplate.format(connectionFailure(error))
+                                        testFailedTemplate.format(connectionFailure(error)),
                                     )
                                 }
                             checking = false
                         }
-                    }
+                    },
                 ) {
                     Text(stringResource(CommonR.string.trust_and_retry_action))
                 }
@@ -626,7 +626,7 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                         showClearPinConfirm = false
                         pinCleared = true
                         approvedPinDer = null
-                    }
+                    },
                 ) {
                     Text(stringResource(CommonR.string.clear_pinned_certificate_action))
                 }
@@ -699,7 +699,7 @@ private fun PasswordField(
                     contentDescription =
                         stringResource(
                             if (visible) CommonR.string.content_description_hide_password
-                            else CommonR.string.content_description_show_password
+                            else CommonR.string.content_description_show_password,
                         ),
                 )
             }

@@ -102,7 +102,7 @@ constructor(
                         getString(
                             CommonR.string.status_export_failed,
                             e.message ?: getString(CommonR.string.unknown_error),
-                        )
+                        ),
                     )
                 }
             _backupEvents.emit(event)
@@ -131,7 +131,7 @@ constructor(
                         getString(
                             CommonR.string.status_import_failed,
                             e.message ?: getString(CommonR.string.unknown_error),
-                        )
+                        ),
                     )
                 }
             _backupEvents.emit(event)
@@ -164,7 +164,7 @@ constructor(
                         getString(
                             CommonR.string.status_import_failed,
                             e.message ?: getString(CommonR.string.unknown_error),
-                        )
+                        ),
                     )
                 }
             _backupEvents.emit(event)

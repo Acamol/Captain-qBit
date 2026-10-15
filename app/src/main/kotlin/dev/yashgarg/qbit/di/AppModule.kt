@@ -61,7 +61,7 @@ class AppModule {
     @Singleton
     @Provides
     fun provideAppPreferencesDataStore(
-        @ApplicationContext appContext: Context
+        @ApplicationContext appContext: Context,
     ): DataStore<AppPreferences> {
         return DataStoreFactory.create(
             serializer = AppPreferencesSerializer,

@@ -80,13 +80,13 @@ fun TorrentRow(
             CardDefaults.cardColors(
                 containerColor =
                     if (selected) MaterialTheme.colorScheme.secondaryContainer
-                    else MaterialTheme.colorScheme.surfaceContainer
+                    else MaterialTheme.colorScheme.surfaceContainer,
             ),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null,
     ) {
         Box(
-            Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(8.dp)
+            Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(8.dp),
         ) {
             Column {
                 Text(
@@ -341,7 +341,7 @@ fun SwipeableTorrentRow(
         Row(
             modifier =
                 Modifier.height(IntrinsicSize.Min)
-                    .horizontalScroll(scrollState, enabled = !selectionActive)
+                    .horizontalScroll(scrollState, enabled = !selectionActive),
         ) {
             Box(Modifier.width(cardWidth)) {
                 TorrentRow(
@@ -357,7 +357,7 @@ fun SwipeableTorrentRow(
                 icon = if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
                 label =
                     stringResource(
-                        if (paused) CommonR.string.resume else CommonR.string.pause_action
+                        if (paused) CommonR.string.resume else CommonR.string.pause_action,
                     ),
                 container = MaterialTheme.colorScheme.secondaryContainer,
                 content = MaterialTheme.colorScheme.onSecondaryContainer,

@@ -29,7 +29,7 @@ class ExceptionsTest {
     @Test
     fun `an SSLHandshakeException unrelated to trust is not an untrusted certificate error`() {
         assertFalse(
-            SSLHandshakeException("no cipher suites in common").isUntrustedCertificateError()
+            SSLHandshakeException("no cipher suites in common").isUntrustedCertificateError(),
         )
     }
 }

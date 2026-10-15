@@ -239,14 +239,16 @@ constructor(
                         .onErr {
                             emitStatus(
                                 it.friendlyMessage(
-                                    getString(CommonR.string.status_category_created_not_assigned)
-                                )
+                                    getString(CommonR.string.status_category_created_not_assigned),
+                                ),
                             )
                         }
                 }
                 .onErr {
                     emitStatus(
-                        it.friendlyMessage(getString(CommonR.string.status_create_category_failure))
+                        it.friendlyMessage(
+                            getString(CommonR.string.status_create_category_failure),
+                        ),
                     )
                 }
         }
@@ -479,7 +481,7 @@ constructor(
                     // asynchronously, so an instant re-fetch can still return the old values.
                     _uiState.update { state ->
                         state.copy(
-                            contentTree = withPriorities(state.contentTree, ids.toSet(), priority)
+                            contentTree = withPriorities(state.contentTree, ids.toSet(), priority),
                         )
                     }
                     // Then reconcile with the server once it has settled.
@@ -488,7 +490,7 @@ constructor(
                 }
                 .onErr {
                     emitStatus(
-                        it.friendlyMessage(getString(CommonR.string.status_set_priority_failure))
+                        it.friendlyMessage(getString(CommonR.string.status_set_priority_failure)),
                     )
                 }
         }

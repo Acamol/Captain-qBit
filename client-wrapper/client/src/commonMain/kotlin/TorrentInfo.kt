@@ -100,7 +100,7 @@ suspend fun QBittorrentClient.getWebseeds(hash: String): List<Webseed> {
 
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.getTorrentDownloadLimit(
-    hashes: List<String> = QBittorrentClient.allList
+    hashes: List<String> = QBittorrentClient.allList,
 ): Map<String, Long> {
     return http
         .submitForm(
@@ -160,7 +160,7 @@ suspend fun QBittorrentClient.setTorrentShareLimits(
 
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.getTorrentUploadLimit(
-    hashes: List<String> = QBittorrentClient.allList
+    hashes: List<String> = QBittorrentClient.allList,
 ): Map<String, Long> {
     return http
         .submitForm(

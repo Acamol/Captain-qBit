@@ -115,7 +115,7 @@ object BackupDialogs {
                 context,
                 context.getString(CommonR.string.app_settings_section_header),
                 first = true,
-            )
+            ),
         )
         val groupBoxes =
             PrefGroup.entries.map { group ->
@@ -135,7 +135,7 @@ object BackupDialogs {
         content.addView(colorsBox)
 
         content.addView(
-            sectionHeader(context, context.getString(CommonR.string.servers_title), first = false)
+            sectionHeader(context, context.getString(CommonR.string.servers_title), first = false),
         )
         val serverBoxes = servers.map { server ->
             val box =
@@ -198,7 +198,7 @@ object BackupDialogs {
                 context,
                 context.getString(CommonR.string.import_mode_section_header),
                 first = true,
-            )
+            ),
         )
         val modeGroup = RadioGroup(context).apply { orientation = RadioGroup.VERTICAL }
         val mergeButton =
@@ -226,7 +226,7 @@ object BackupDialogs {
                     context,
                     context.getString(CommonR.string.app_settings_section_header),
                     first = false,
-                )
+                ),
             )
         }
         val groupBoxes =
@@ -252,7 +252,7 @@ object BackupDialogs {
             } else null
 
         content.addView(
-            sectionHeader(context, context.getString(CommonR.string.servers_title), first = false)
+            sectionHeader(context, context.getString(CommonR.string.servers_title), first = false),
         )
         val serverBoxes =
             backup.servers.map { server ->
@@ -328,7 +328,7 @@ object BackupDialogs {
             this.text = text
             gravity = Gravity.START
             setTextAppearance(
-                com.google.android.material.R.style.TextAppearance_Material3_TitleSmall
+                com.google.android.material.R.style.TextAppearance_Material3_TitleSmall,
             )
             setTextColor(context.themeColor(androidx.appcompat.R.attr.colorPrimary))
             setPadding(0, (if (first) 0 else 16 * density).toInt(), 0, (4 * density).toInt())

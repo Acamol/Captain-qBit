@@ -198,7 +198,7 @@ suspend fun QBittorrentClient.setAutoTorrentManagement(
 
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.toggleSequentialDownload(
-    hashes: List<String> = QBittorrentClient.allList
+    hashes: List<String> = QBittorrentClient.allList,
 ) {
     http
         .submitForm(
@@ -210,7 +210,7 @@ suspend fun QBittorrentClient.toggleSequentialDownload(
 
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.toggleFirstLastPriority(
-    hashes: List<String> = QBittorrentClient.allList
+    hashes: List<String> = QBittorrentClient.allList,
 ) {
     http
         .submitForm(

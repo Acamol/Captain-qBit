@@ -47,7 +47,7 @@ class TorrentFileParserTest {
                 "d5:filesl" +
                     "d6:lengthi7e4:pathl3:sub5:a.txtee" +
                     "d6:lengthi9e4:pathl5:b.binee" +
-                    "e4:name4:roote"
+                    "e4:name4:roote",
             ),
             parsed.hash,
         )

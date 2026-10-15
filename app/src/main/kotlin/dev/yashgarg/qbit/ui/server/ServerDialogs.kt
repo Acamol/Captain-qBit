@@ -186,7 +186,7 @@ fun ServerDialogHost(
                                 if (toRemove.isNotEmpty())
                                     viewModel.bulkRemoveTags(dialog.hashes, toRemove)
                                 dismiss()
-                            }
+                            },
                         ) {
                             Text(stringResource(CommonR.string.apply))
                         }
@@ -194,7 +194,7 @@ fun ServerDialogHost(
                     dismissButton = {
                         Row {
                             TextButton(
-                                onClick = { onDialogChange(ServerDialog.CreateTag(dialog.hashes)) }
+                                onClick = { onDialogChange(ServerDialog.CreateTag(dialog.hashes)) },
                             ) {
                                 Text(stringResource(CommonR.string.new_tag_ellipsis))
                             }
@@ -256,7 +256,7 @@ fun ServerDialogHost(
                                 viewModel.deleteTags(toDelete)
                                 dismiss()
                             }
-                        }
+                        },
                     ) {
                         Text(stringResource(CommonR.string.delete))
                     }
@@ -287,9 +287,9 @@ fun ServerDialogHost(
                                 IconButton(
                                     onClick = {
                                         onDialogChange(
-                                            ServerDialog.EditCategorySavePath(name, true)
+                                            ServerDialog.EditCategorySavePath(name, true),
                                         )
-                                    }
+                                    },
                                 ) {
                                     Icon(
                                         Icons.Outlined.Edit,
@@ -303,9 +303,9 @@ fun ServerDialogHost(
                                 IconButton(
                                     onClick = {
                                         onDialogChange(
-                                            ServerDialog.ConfirmDeleteCategory(name, true)
+                                            ServerDialog.ConfirmDeleteCategory(name, true),
                                         )
-                                    }
+                                    },
                                 ) {
                                     Icon(
                                         Icons.Outlined.Delete,
@@ -554,7 +554,7 @@ fun ServerDialogHost(
                         onClick = {
                             viewModel.toggleSortDirection()
                             dismiss()
-                        }
+                        },
                     ) {
                         Text(dirLabel)
                     }
@@ -747,7 +747,7 @@ internal fun SpeedLimitsDialog(
                     // (and rounds) limits the user didn't touch.
                     if (dl != initialDl || ul != initialUl) onConfirm(toBytes(dl), toBytes(ul))
                     onDismiss()
-                }
+                },
             ) {
                 Text(stringResource(CommonR.string.ok))
             }
@@ -772,7 +772,7 @@ private fun ColorSwatch(color: Int?, onClick: () -> Unit, selected: Boolean = fa
                 color = if (selected) onSurface else outline,
                 shape = CircleShape,
             )
-            .clickable(onClick = onClick)
+            .clickable(onClick = onClick),
     )
 }
 

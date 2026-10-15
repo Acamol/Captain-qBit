@@ -53,7 +53,7 @@ fun CrashReportDialog(
                     onClick = {
                         onReportIssue()
                         onDismiss()
-                    }
+                    },
                 ) {
                     Text(stringResource(CommonR.string.report_on_github_action))
                 }

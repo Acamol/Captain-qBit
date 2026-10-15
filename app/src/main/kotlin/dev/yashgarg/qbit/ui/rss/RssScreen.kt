@@ -142,14 +142,14 @@ fun RssScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewMode
                             label =
                                 stringResource(
                                     if (state.sortDescending) CommonR.string.sort_ascending_action
-                                    else CommonR.string.sort_descending_action
+                                    else CommonR.string.sort_descending_action,
                                 ),
                             icon = Icons.AutoMirrored.Filled.Sort,
                             onClick = { viewModel.toggleSort() },
                             position = TooltipAnchorPosition.Below,
                             modifier =
                                 Modifier.graphicsLayer(
-                                    scaleY = if (state.sortDescending) -1f else 1f
+                                    scaleY = if (state.sortDescending) -1f else 1f,
                                 ),
                         )
                         TooltipIconButton(

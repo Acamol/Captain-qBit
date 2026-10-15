@@ -85,7 +85,7 @@ constructor(
                 prefs.copy(
                     categoryColors =
                         if (color == null) prefs.categoryColors - category
-                        else prefs.categoryColors + (category to color)
+                        else prefs.categoryColors + (category to color),
                 )
             }
         }
@@ -124,7 +124,7 @@ constructor(
         withContext(Dispatchers.IO) {
             val current = configDao.getConfigById(id) ?: return@withContext
             configDao.addConfig(
-                current.copy(pinnedCertificate = Base64.encodeToString(der, Base64.NO_WRAP))
+                current.copy(pinnedCertificate = Base64.encodeToString(der, Base64.NO_WRAP)),
             )
         }
     }
@@ -253,7 +253,7 @@ constructor(
                         filterUntagged = s.filterUntagged,
                     )
                 prefs.copy(
-                    serverViewPrefs = prefs.serverViewPrefs + (prefs.activeServerId to entry)
+                    serverViewPrefs = prefs.serverViewPrefs + (prefs.activeServerId to entry),
                 )
             }
         }
@@ -379,8 +379,8 @@ constructor(
                 .onErr { error ->
                     emitStatus(
                         error.friendlyMessage(
-                            getString(CommonR.string.status_add_torrent_url_failure)
-                        )
+                            getString(CommonR.string.status_add_torrent_url_failure),
+                        ),
                     )
                     clearFileSelection()
                 }
@@ -417,8 +417,8 @@ constructor(
                     add.onErr { error ->
                         emitStatus(
                             error.friendlyMessage(
-                                getString(CommonR.string.status_add_torrent_file_failure)
-                            )
+                                getString(CommonR.string.status_add_torrent_file_failure),
+                            ),
                         )
                         return@launch
                     }
@@ -680,7 +680,7 @@ constructor(
             state.copy(
                 sortDirection =
                     if (state.sortDirection == SortDirection.ASC) SortDirection.DESC
-                    else SortDirection.ASC
+                    else SortDirection.ASC,
             )
         }
         persistViewPrefs()
@@ -817,8 +817,8 @@ constructor(
                         if (error != null && lastError == null && _uiState.value.data != null) {
                             emitStatus(
                                 error.friendlyMessage(
-                                    getString(CommonR.string.status_sync_data_failure)
-                                )
+                                    getString(CommonR.string.status_sync_data_failure),
+                                ),
                             )
                         }
                         lastError = error

@@ -433,13 +433,13 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                                 onClick = {
                                     searchOpen = false
                                     viewModel.setSearchQuery("")
-                                }
+                                },
                             ) {
                                 Icon(
                                     Icons.Filled.Close,
                                     contentDescription =
                                         stringResource(
-                                            CommonR.string.content_description_close_search
+                                            CommonR.string.content_description_close_search,
                                         ),
                                 )
                             }
@@ -483,7 +483,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                                 ) {
                                     androidx.compose.foundation.Image(
                                         androidx.compose.ui.res.painterResource(
-                                            R.drawable.sync_error
+                                            R.drawable.sync_error,
                                         ),
                                         contentDescription = null,
                                         modifier = Modifier.padding(bottom = 8.dp).size(70.dp),
@@ -532,8 +532,8 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                                             } else {
                                                 Text(
                                                     stringResource(
-                                                        CommonR.string.review_certificate_action
-                                                    )
+                                                        CommonR.string.review_certificate_action,
+                                                    ),
                                                 )
                                             }
                                         }
@@ -574,7 +574,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                                 Text(
                                     stringResource(
                                         if (filtering) CommonR.string.no_torrents_match_filter
-                                        else CommonR.string.no_torrents
+                                        else CommonR.string.no_torrents,
                                     ),
                                     style = MaterialTheme.typography.titleLarge,
                                     textAlign = TextAlign.Center,
@@ -617,7 +617,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                 Text(
                     if (targets.size > 1)
                         stringResource(CommonR.string.remove_torrents_count, targets.size)
-                    else stringResource(CommonR.string.remove_torrent_singular)
+                    else stringResource(CommonR.string.remove_torrent_singular),
                 )
             },
             text = {
@@ -632,7 +632,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                         viewModel.removeTorrents(targets, deleteFiles)
                         selected.clear()
                         deleteTargets = null
-                    }
+                    },
                 ) {
                     Text(stringResource(CommonR.string.remove_action))
                 }
@@ -665,19 +665,19 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                     Spacer(Modifier.size(8.dp))
                     Text(
                         "${stringResource(CommonR.string.certificate_subject_label)}: " +
-                            cert.subjectX500Principal.name
+                            cert.subjectX500Principal.name,
                     )
                     Text(
                         "${stringResource(CommonR.string.certificate_issuer_label)}: " +
-                            cert.issuerX500Principal.name
+                            cert.issuerX500Principal.name,
                     )
                     Text(
                         "${stringResource(CommonR.string.certificate_fingerprint_label)}: " +
-                            fingerprint
+                            fingerprint,
                     )
                     Text(
                         "${stringResource(CommonR.string.certificate_validity_label)}: " +
-                            cert.validUntilText()
+                            cert.validUntilText(),
                     )
                     if (expired || notYetValid) {
                         Spacer(Modifier.size(8.dp))
@@ -702,7 +702,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                     onClick = {
                         pendingCertReview = null
                         scope.launch { viewModel.pinCertificate(resolvedServerId, cert.encoded) }
-                    }
+                    },
                 ) {
                     Text(stringResource(CommonR.string.trust_and_retry_action))
                 }
@@ -817,7 +817,7 @@ private fun FilterChips(state: ServerScreenState, viewModel: ServerViewModel) {
                 stringResource(state.selectedFilter.labelRes) to
                     {
                         viewModel.setFilter(StateFilter.ALL)
-                    }
+                    },
             )
         state.selectedCategory?.let { c -> add(c to { viewModel.setCategory(null) }) }
         state.selectedTracker?.let { t -> add(t to { viewModel.setTracker(null) }) }

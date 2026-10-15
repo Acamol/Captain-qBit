@@ -17,7 +17,7 @@ object GitHubIssueLink {
         val body = buildString {
             appendLine("**App version:** ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
             appendLine(
-                "**Android version:** ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})"
+                "**Android version:** ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})",
             )
             appendLine("**Device:** ${Build.MANUFACTURER} ${Build.MODEL}")
             if (crashReport != null) {

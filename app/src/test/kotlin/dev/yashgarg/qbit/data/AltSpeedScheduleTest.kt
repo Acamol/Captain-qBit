@@ -83,7 +83,7 @@ class AltSpeedScheduleTest {
             repository(
                 """{"scheduler_enabled":true,"schedule_from_hour":23,"schedule_from_min":30,
                    "schedule_to_hour":7,"schedule_to_min":5,"scheduler_days":1}"""
-                    .replace("\n", "")
+                    .replace("\n", ""),
             )
         val schedule = repo.getAltSpeedSchedule().get()
         assertEquals(
@@ -112,7 +112,7 @@ class AltSpeedScheduleTest {
                 fromMinutesOfDay = 9 * 60 + 15,
                 toMinutesOfDay = 18 * 60,
                 days = SchedulerDays.WEEKEND,
-            )
+            ),
         )
         val body = lastSetBody.orEmpty()
         // Sending an hour without its minute is silently ignored by the server, so both must be
@@ -139,7 +139,7 @@ class AltSpeedScheduleTest {
                 fromMinutesOfDay = 0,
                 toMinutesOfDay = 0,
                 days = SchedulerDays.EVERY_DAY,
-            )
+            ),
         )
         val body = lastSetBody.orEmpty()
         assertTrue(body, body.contains("\"schedule_from_hour\":0"))

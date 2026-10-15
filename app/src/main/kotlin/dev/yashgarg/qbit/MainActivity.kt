@@ -129,7 +129,7 @@ class MainActivity : AppCompatActivity() {
                         },
                         onReportIssue = {
                             startActivity(
-                                Intent(Intent.ACTION_VIEW, GitHubIssueLink.url(report).toUri())
+                                Intent(Intent.ACTION_VIEW, GitHubIssueLink.url(report).toUri()),
                             )
                         },
                     )
@@ -144,7 +144,7 @@ class MainActivity : AppCompatActivity() {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     val notificationPermissionLauncher =
                         rememberLauncherForActivityResult(
-                            ActivityResultContracts.RequestPermission()
+                            ActivityResultContracts.RequestPermission(),
                         ) { granted ->
                             if (granted) launchWorkManager(true)
                         }
@@ -180,9 +180,9 @@ class MainActivity : AppCompatActivity() {
                                             }
                                         }
                                         notificationPermissionLauncher.launch(
-                                            Manifest.permission.POST_NOTIFICATIONS
+                                            Manifest.permission.POST_NOTIFICATIONS,
                                         )
-                                    }
+                                    },
                                 ) {
                                     Text(stringResource(CommonR.string.enable_action))
                                 }
@@ -196,7 +196,7 @@ class MainActivity : AppCompatActivity() {
                                                 it.copy(notificationPermissionAsked = true)
                                             }
                                         }
-                                    }
+                                    },
                                 ) {
                                     Text(stringResource(CommonR.string.not_now_action))
                                 }
@@ -216,7 +216,7 @@ class MainActivity : AppCompatActivity() {
                     var showLocalNetworkRationale by remember { mutableStateOf(false) }
                     val localNetworkPermissionLauncher =
                         rememberLauncherForActivityResult(
-                            ActivityResultContracts.RequestPermission()
+                            ActivityResultContracts.RequestPermission(),
                         ) {}
                     LaunchedEffect(Unit) {
                         if (openingBackupFile) return@LaunchedEffect
@@ -251,9 +251,9 @@ class MainActivity : AppCompatActivity() {
                                             }
                                         }
                                         localNetworkPermissionLauncher.launch(
-                                            Manifest.permission.ACCESS_LOCAL_NETWORK
+                                            Manifest.permission.ACCESS_LOCAL_NETWORK,
                                         )
-                                    }
+                                    },
                                 ) {
                                     Text(stringResource(CommonR.string.enable_action))
                                 }
@@ -267,7 +267,7 @@ class MainActivity : AppCompatActivity() {
                                                 it.copy(localNetworkPermissionAsked = true)
                                             }
                                         }
-                                    }
+                                    },
                                 ) {
                                     Text(stringResource(CommonR.string.not_now_action))
                                 }
@@ -318,12 +318,12 @@ class MainActivity : AppCompatActivity() {
                         ) {
                             AppCompatDelegate.setApplicationLocales(
                                 if (languageTag.isEmpty()) LocaleListCompat.getEmptyLocaleList()
-                                else LocaleListCompat.forLanguageTags(languageTag)
+                                else LocaleListCompat.forLanguageTags(languageTag),
                             )
                             // Android caches channel names from creation time, so a new locale
                             // alone won't retranslate them. Recreating with the same ids does.
                             AppNotificationManager.createNotificationChannel(
-                                LocalizedContext.of(applicationContext)
+                                LocalizedContext.of(applicationContext),
                             )
                         }
                     }
