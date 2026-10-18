@@ -684,4 +684,13 @@
     <string name="unit_hours_suffix">%1$d ч</string>
     <string name="unit_minutes_suffix">%1$d м</string>
     <string name="unit_seconds_suffix">%1$d с</string>
+    <string name="tab_pieces">Части</string>
+    <string name="pieces_summary">Части: %1$d из %2$d • по %3$s</string>
+    <string name="pieces_done">Загружено</string>
+    <string name="pieces_downloading">Загружается</string>
+    <string name="pieces_missing">Отсутствует</string>
+    <string name="pieces_partial">Частично загружено</string>
+    <string name="pieces_grouped_note">Каждый блок объединяет части: %1$d</string>
+    <string name="pieces_empty">Сведений о частях пока нет</string>
+    <string name="pieces_map_description">Загружено частей: %1$d из %2$d</string>
 </resources>
