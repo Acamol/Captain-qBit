@@ -137,6 +137,12 @@ fun AboutView(state: VersionState, modifier: Modifier = Modifier) {
             style = TextStyle(fontSize = 14.sp, color = secondary),
         )
         Text(
+            text = stringResource(CommonR.string.translators_message),
+            modifier = Modifier.padding(top = 4.dp),
+            textAlign = TextAlign.Center,
+            style = TextStyle(fontSize = 14.sp, color = secondary),
+        )
+        Text(
             text = stringResource(CommonR.string.license_message),
             modifier = Modifier.padding(top = 4.dp),
             textAlign = TextAlign.Center,

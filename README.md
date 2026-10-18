@@ -66,6 +66,10 @@ If you'd like to help translate the app into your language, contributions are we
 
 [![Translation status](https://hosted.weblate.org/widget/captain-qbit/svg-badge.svg)](https://hosted.weblate.org/engage/captain-qbit/)
 
+Thanks to the translators:
+
+- Russian — Andrei Stepanov
+
 ## Credits
 
 Captain qBit began as a fork of [Yash-Garg/qBittorrent-Manager](https://github.com/Yash-Garg/qBittorrent-Manager)
