@@ -87,9 +87,12 @@ import dev.yashgarg.qbit.ui.server.isPaused
 import dev.yashgarg.qbit.ui.torrent.tabs.FilesTab
 import dev.yashgarg.qbit.ui.torrent.tabs.InfoTab
 import dev.yashgarg.qbit.ui.torrent.tabs.PeersListView
+import dev.yashgarg.qbit.ui.torrent.tabs.PiecesTab
 import dev.yashgarg.qbit.ui.torrent.tabs.TrackersTab
 import dev.yashgarg.qbit.utils.rememberCopyToClipboard
 import kotlinx.coroutines.launch
+
+private const val PIECES_TAB_INDEX = 4
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,6 +106,7 @@ fun TorrentDetailsScreen(
             stringResource(R.string.tab_files),
             stringResource(R.string.tab_trackers),
             stringResource(R.string.peers),
+            stringResource(R.string.tab_pieces),
         )
     val copy = rememberCopyToClipboard()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -118,6 +122,9 @@ fun TorrentDetailsScreen(
 
     LaunchedEffect(Unit) { viewModel.status.collect { snackbarHostState.showSnackbar(it) } }
     LaunchedEffect(Unit) { viewModel.removed.collect { appNavigator.navigate(NavCommand.Back) } }
+    LaunchedEffect(pagerState.currentPage) {
+        viewModel.setPiecesVisible(pagerState.currentPage == PIECES_TAB_INDEX)
+    }
 
     Scaffold(
         topBar = {
@@ -360,7 +367,8 @@ fun TorrentDetailsScreen(
                             onRemoveTracker = viewModel::removeTracker,
                             modifier = Modifier.fillMaxSize(),
                         )
-                    else -> PeersListView(state, Modifier.fillMaxSize(), viewModel::banPeer)
+                    3 -> PeersListView(state, Modifier.fillMaxSize(), viewModel::banPeer)
+                    else -> PiecesTab(state, Modifier.fillMaxSize())
                 }
             }
         }

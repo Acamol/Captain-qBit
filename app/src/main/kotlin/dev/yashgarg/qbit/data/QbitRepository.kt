@@ -15,6 +15,7 @@ import qbittorrent.*
 import qbittorrent.models.AltSpeedSchedule
 import qbittorrent.models.LogEntry
 import qbittorrent.models.MainData
+import qbittorrent.models.PieceState
 import qbittorrent.models.RssItem
 import qbittorrent.models.RssRule
 import qbittorrent.models.SchedulerDays
@@ -387,6 +388,10 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
 
     suspend fun getTorrentTrackers(hash: String): Result<List<TorrentTracker>, Throwable> {
         return runSuspendCatching { client().getTrackers(hash) ?: emptyList() }
+    }
+
+    suspend fun getPieceStates(hash: String): Result<List<PieceState>, Throwable> {
+        return runSuspendCatching { client().getPieceStates(hash) }
     }
 
     suspend fun addTorrentTrackers(hash: String, urls: List<String>): Result<Unit, Throwable> {

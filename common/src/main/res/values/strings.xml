@@ -672,6 +672,15 @@
     <string name="file_menu_path">Show full path</string>
     <string name="tab_options">Options</string>
     <string name="tab_files">Files</string>
+    <string name="tab_pieces">Pieces</string>
+    <string name="pieces_summary">%1$d of %2$d pieces • %3$s each</string>
+    <string name="pieces_done">Downloaded</string>
+    <string name="pieces_downloading">Downloading</string>
+    <string name="pieces_missing">Missing</string>
+    <string name="pieces_partial">Partly downloaded</string>
+    <string name="pieces_grouped_note">Each block groups %1$d pieces</string>
+    <string name="pieces_empty">No piece information yet</string>
+    <string name="pieces_map_description">%1$d of %2$d pieces downloaded</string>
     <string name="fetching_metadata">Fetching metadata…</string>
     <string name="metadata_timeout">Couldn\'t fetch metadata — you can still add the torrent and pick files later</string>
     <string name="pick_torrent_file">Choose a .torrent file</string>
