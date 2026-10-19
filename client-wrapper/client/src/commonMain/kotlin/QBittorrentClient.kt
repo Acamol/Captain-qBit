@@ -105,7 +105,7 @@ class QBittorrentClient(
     init {
         require(
             baseUrl.startsWith("http://", ignoreCase = true) ||
-                baseUrl.startsWith("https://", ignoreCase = true)
+                baseUrl.startsWith("https://", ignoreCase = true),
         ) {
             "baseUrl must include an explicit scheme (http:// or https://), got: \"$baseUrl\""
         }

@@ -637,6 +637,7 @@
     <string name="qbittorrent_version_label" translatable="false">qBittorrent %1$s</string>
     <string name="web_api_version_label" translatable="false">Web API v%1$s</string>
     <string name="fork_attribution_message">A fork of qBittorrent Manager by Yash Garg.</string>
+    <string name="translators_message" translatable="false">Russian translation: Andrei Stepanov</string>
     <string name="license_message">Free and open source · GPL-3.0</string>
     <string name="whats_new_link_label">What\'s New</string>
     <string name="source_code_link_label">Source code</string>
@@ -651,6 +652,7 @@
     <string name="language_label">Language</string>
     <string name="language_english" translatable="false">English</string>
     <string name="language_hebrew" translatable="false">עברית</string>
+    <string name="language_russian" translatable="false">Русский</string>
 
     <!-- ViewModel status messages -->
     <string name="status_add_torrent_url_success">Successfully added torrent</string>
@@ -672,6 +674,15 @@
     <string name="file_menu_path">Show full path</string>
     <string name="tab_options">Options</string>
     <string name="tab_files">Files</string>
+    <string name="tab_pieces">Pieces</string>
+    <string name="pieces_summary">%1$d of %2$d pieces • %3$s each</string>
+    <string name="pieces_done">Downloaded</string>
+    <string name="pieces_downloading">Downloading</string>
+    <string name="pieces_missing">Missing</string>
+    <string name="pieces_partial">Partly downloaded</string>
+    <string name="pieces_grouped_note">Each block groups %1$d pieces</string>
+    <string name="pieces_empty">No piece information yet</string>
+    <string name="pieces_map_description">%1$d of %2$d pieces downloaded</string>
     <string name="fetching_metadata">Fetching metadata…</string>
     <string name="metadata_timeout">Couldn\'t fetch metadata — you can still add the torrent and pick files later</string>
     <string name="pick_torrent_file">Choose a .torrent file</string>

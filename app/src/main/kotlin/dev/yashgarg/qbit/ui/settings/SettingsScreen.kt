@@ -87,7 +87,7 @@ private val THEME_OPTIONS =
 private fun themeLabel(mode: Int): String =
     stringResource(
         THEME_OPTIONS.firstOrNull { it.first == mode }?.second
-            ?: CommonR.string.theme_system_default
+            ?: CommonR.string.theme_system_default,
     )
 
 private val INTERVAL_OPTIONS =
@@ -102,7 +102,8 @@ private val INTERVAL_OPTIONS =
 @Composable
 private fun intervalLabel(ms: Long): String =
     stringResource(
-        INTERVAL_OPTIONS.firstOrNull { it.first == ms }?.second ?: CommonR.string.interval_5_seconds
+        INTERVAL_OPTIONS.firstOrNull { it.first == ms }?.second
+            ?: CommonR.string.interval_5_seconds,
     )
 
 // Per-app language: "" is the system-default locale list. Add a language's tag + label here (and
@@ -112,13 +113,14 @@ private val LANGUAGE_OPTIONS =
         "" to CommonR.string.theme_system_default,
         "en" to CommonR.string.language_english,
         "he" to CommonR.string.language_hebrew,
+        "ru" to CommonR.string.language_russian,
     )
 
 @Composable
 private fun languageLabel(tag: String): String =
     stringResource(
         LANGUAGE_OPTIONS.firstOrNull { it.first == tag }?.second
-            ?: CommonR.string.theme_system_default
+            ?: CommonR.string.theme_system_default,
     )
 
 private val ALERT_MODE_OPTIONS =
@@ -132,7 +134,7 @@ private val ALERT_MODE_OPTIONS =
 private fun alertModeLabel(mode: EventAlertMode): String =
     stringResource(
         ALERT_MODE_OPTIONS.firstOrNull { it.first == mode }?.second
-            ?: CommonR.string.alert_sound_always
+            ?: CommonR.string.alert_sound_always,
     )
 
 /** Which end of the quiet-hours window a time picker is editing. */
@@ -274,7 +276,7 @@ fun SettingsScreen(
 
     val exportLauncher =
         rememberLauncherForActivityResult(
-            ActivityResultContracts.CreateDocument("application/octet-stream")
+            ActivityResultContracts.CreateDocument("application/octet-stream"),
         ) { uri ->
             val pending = pendingExport
             pendingExport = null
@@ -348,7 +350,8 @@ fun SettingsScreen(
         contentWindowInsets = NoWindowInsets,
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())
+            modifier =
+                Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()),
         ) {
             SectionHeader(stringResource(CommonR.string.general_section_title))
             ClickableRow(
@@ -363,9 +366,9 @@ fun SettingsScreen(
                 LocalNetworkBlockedBanner(
                     onGrant = {
                         localNetworkPermissionLauncher.launch(
-                            Manifest.permission.ACCESS_LOCAL_NETWORK
+                            Manifest.permission.ACCESS_LOCAL_NETWORK,
                         )
-                    }
+                    },
                 )
             }
 
@@ -447,7 +450,7 @@ fun SettingsScreen(
             SectionHeader(stringResource(CommonR.string.notifications_section_title))
             if (notificationsBlocked) {
                 NotificationsBlockedBanner(
-                    onOpenSettings = { openAppNotificationSettings(context) }
+                    onOpenSettings = { openAppNotificationSettings(context) },
                 )
             }
             SwitchRow(
@@ -587,7 +590,7 @@ fun SettingsScreen(
             // a cold start below API 33, where setApplicationLocales keeps it in memory only.
             AppCompatDelegate.setApplicationLocales(
                 if (tag.isEmpty()) LocaleListCompat.getEmptyLocaleList()
-                else LocaleListCompat.forLanguageTags(tag)
+                else LocaleListCompat.forLanguageTags(tag),
             )
             viewModel.setLanguageTag(tag)
             // Android caches channel names from creation time, so a new locale alone won't
@@ -727,7 +730,7 @@ fun SettingsScreen(
             title =
                 stringResource(
                     if (edge == QuietEdge.START) CommonR.string.quiet_hours_start_label
-                    else CommonR.string.quiet_hours_end_label
+                    else CommonR.string.quiet_hours_end_label,
                 ),
             initialMinutesOfDay = if (edge == QuietEdge.START) quietHoursStart else quietHoursEnd,
             onConfirm = { minutes ->
@@ -803,14 +806,14 @@ private fun openAppDetailsSettings(context: Context) {
         Intent(
             Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
             Uri.fromParts("package", context.packageName, null),
-        )
+        ),
     )
 }
 
 private fun openAppNotificationSettings(context: Context) {
     context.startActivity(
         Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName),
     )
 }
 

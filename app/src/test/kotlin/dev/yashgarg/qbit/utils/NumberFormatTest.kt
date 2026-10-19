@@ -54,7 +54,7 @@ class NumberFormatTest {
                     eq(CommonR.plurals.unit_days_suffix),
                     any(),
                     any<Any>(),
-                )
+                ),
             )
             .thenAnswer { "${it.getArgument<Any>(2)}d" }
         AppContextHolder.context = context
@@ -124,7 +124,7 @@ class NumberFormatTest {
                     eq(CommonR.plurals.unit_days_suffix),
                     any(),
                     any<Any>(),
-                )
+                ),
             )
             .thenAnswer {
                 if (it.getArgument<Int>(1) == 2) "יומיים" else "${it.getArgument<Any>(2)} ימים"

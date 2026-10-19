@@ -115,7 +115,7 @@ class CancellationNotAnErrorTest {
                                 HttpStatusCode.OK,
                                 headersOf(HttpHeaders.ContentType, "application/json"),
                             )
-                        }
+                        },
                     ),
                 syncInterval = 50.milliseconds,
                 dispatcher = Dispatchers.Default,

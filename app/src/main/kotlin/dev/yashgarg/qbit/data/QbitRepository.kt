@@ -15,6 +15,7 @@ import qbittorrent.*
 import qbittorrent.models.AltSpeedSchedule
 import qbittorrent.models.LogEntry
 import qbittorrent.models.MainData
+import qbittorrent.models.PieceState
 import qbittorrent.models.RssItem
 import qbittorrent.models.RssRule
 import qbittorrent.models.SchedulerDays
@@ -241,7 +242,7 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
                     buildJsonObject {
                         put("alt_dl_limit", bytesToPrefLimit(downloadBytesPerSec))
                         put("alt_up_limit", bytesToPrefLimit(uploadBytesPerSec))
-                    }
+                    },
                 )
         }
     }
@@ -318,7 +319,7 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
                         put("schedule_to_hour", schedule.toMinutesOfDay / 60)
                         put("schedule_to_min", schedule.toMinutesOfDay % 60)
                         put("scheduler_days", schedule.days.value)
-                    }
+                    },
                 )
         }
     }
@@ -387,6 +388,10 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
 
     suspend fun getTorrentTrackers(hash: String): Result<List<TorrentTracker>, Throwable> {
         return runSuspendCatching { client().getTrackers(hash) ?: emptyList() }
+    }
+
+    suspend fun getPieceStates(hash: String): Result<List<PieceState>, Throwable> {
+        return runSuspendCatching { client().getPieceStates(hash) }
     }
 
     suspend fun addTorrentTrackers(hash: String, urls: List<String>): Result<Unit, Throwable> {
@@ -483,7 +488,7 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
     }
 
     suspend fun getRssMatchingArticles(
-        ruleName: String
+        ruleName: String,
     ): Result<Map<String, List<String>>, Throwable> {
         return runSuspendCatching { client().getRssMatchingArticles(ruleName) }
     }

@@ -5,7 +5,7 @@ import kotlinx.serialization.json.*
 
 internal object KeyMergingTransformer :
     JsonTransformingSerializer<Map<String, Torrent>>(
-        MapSerializer(String.serializer(), Torrent.serializer())
+        MapSerializer(String.serializer(), Torrent.serializer()),
     ) {
 
     override fun transformSerialize(element: JsonElement): JsonElement {

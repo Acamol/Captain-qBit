@@ -24,7 +24,7 @@ object TransformUtil {
                             item,
                             size = item.size,
                             progress = item.progress.toLong(),
-                        )
+                        ),
                     )
                 }
                 continue
@@ -40,7 +40,7 @@ object TransformUtil {
                         children = subTree,
                         size = subTree.sumOf { it.size },
                         progress = subTree.sumOf { it.progress } / subTree.size,
-                    )
+                    ),
                 )
                 continue
             }
@@ -54,7 +54,7 @@ object TransformUtil {
                         item,
                         size = item.size,
                         progress = item.progress.toLong(),
-                    )
+                    ),
                 )
             }
         }

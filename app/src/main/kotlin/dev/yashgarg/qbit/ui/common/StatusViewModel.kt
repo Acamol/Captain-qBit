@@ -48,7 +48,7 @@ abstract class StatusViewModel(private val application: Application) : ViewModel
      * `throwable.friendlyMessage(fallback)` without threading a resolver through themselves.
      */
     protected fun Throwable.friendlyMessage(
-        fallback: String = getString(CommonR.string.unknown_error)
+        fallback: String = getString(CommonR.string.unknown_error),
     ): String = friendlyMessage({ getString(it) }, fallback)
 
     /** For call sites whose success/failure shape doesn't fit [launchStatus]. */

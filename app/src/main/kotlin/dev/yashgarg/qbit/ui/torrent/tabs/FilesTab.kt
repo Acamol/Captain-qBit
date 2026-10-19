@@ -146,8 +146,8 @@ fun FilesTab(
                 Text(
                     stringResource(
                         if (item.item == null) CommonR.string.folder_path_title
-                        else CommonR.string.file_path_title
-                    )
+                        else CommonR.string.file_path_title,
+                    ),
                 )
             },
             text = { Text(fullPath) },
@@ -156,7 +156,7 @@ fun FilesTab(
                     onClick = {
                         copy("content-path", fullPath, copiedToClipboardMessage)
                         pathItem = null
-                    }
+                    },
                 ) {
                     Text(stringResource(CommonR.string.copy_action))
                 }
@@ -174,7 +174,7 @@ fun FilesTab(
             title =
                 stringResource(
                     if (item.item == null) CommonR.string.rename_folder_title
-                    else CommonR.string.rename_file_title
+                    else CommonR.string.rename_file_title,
                 ),
             confirmLabel = stringResource(CommonR.string.rename),
             validate = { null },

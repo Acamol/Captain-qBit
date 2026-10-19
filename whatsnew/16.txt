@@ -1,0 +1,9 @@
+New: a Pieces tab in the torrent details. It shows every piece of the torrent as a block — green for downloaded, yellow for downloading, grey for missing — with the piece count and size above it. While the tab is open and the torrent is still downloading, the map refreshes every few seconds. Torrents with a very large number of pieces are grouped so the map still fits on screen.
+
+The torrent detail tabs now scroll sideways, so the five of them fit without their names wrapping onto two lines.
+
+New: Russian translation, thanks to Andrei Stepanov.
+
+Updated Uzbek, Malayalam and Hebrew translations.
+
+Crash reports now include the heap, native heap and thread count, which helps track down out-of-memory crashes.

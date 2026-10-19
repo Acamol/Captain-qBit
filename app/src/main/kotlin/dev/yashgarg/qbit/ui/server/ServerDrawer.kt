@@ -131,7 +131,7 @@ fun ServerDrawer(
                             count = torrents.count { it.matchesFilter(filter) },
                             onClick = {
                                 onFilter(
-                                    if (filter == state.selectedFilter) StateFilter.ALL else filter
+                                    if (filter == state.selectedFilter) StateFilter.ALL else filter,
                                 )
                             },
                         )
@@ -290,7 +290,7 @@ private fun SidebarItem(
         Box(
             Modifier.width(3.dp)
                 .fillMaxHeight()
-                .background(if (selected) seed else Color.Transparent)
+                .background(if (selected) seed else Color.Transparent),
         )
         Spacer(Modifier.width(12.dp))
         if (indent > 0) Spacer(Modifier.width((indent * 16).dp))
@@ -303,7 +303,7 @@ private fun SidebarItem(
                     Modifier.width(20.dp)
                         .then(
                             if (onChevron != null) Modifier.combinedClickable { onChevron() }
-                            else Modifier
+                            else Modifier,
                         ),
             )
         }

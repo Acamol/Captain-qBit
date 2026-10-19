@@ -10,6 +10,8 @@ data class TorrentDetailsState(
     val torrent: Torrent? = null,
     val contentTree: List<ContentTreeItem> = emptyList(),
     val contentLoading: Boolean = true,
+    val pieceStates: List<PieceState> = emptyList(),
+    val piecesLoading: Boolean = true,
     val trackers: List<TorrentTracker> = emptyList(),
     val torrentProperties: TorrentProperties? = null,
     val error: Exception? = null,

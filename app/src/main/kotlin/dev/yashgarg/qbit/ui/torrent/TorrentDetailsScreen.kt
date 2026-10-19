@@ -51,7 +51,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -87,9 +87,12 @@ import dev.yashgarg.qbit.ui.server.isPaused
 import dev.yashgarg.qbit.ui.torrent.tabs.FilesTab
 import dev.yashgarg.qbit.ui.torrent.tabs.InfoTab
 import dev.yashgarg.qbit.ui.torrent.tabs.PeersListView
+import dev.yashgarg.qbit.ui.torrent.tabs.PiecesTab
 import dev.yashgarg.qbit.ui.torrent.tabs.TrackersTab
 import dev.yashgarg.qbit.utils.rememberCopyToClipboard
 import kotlinx.coroutines.launch
+
+private const val PIECES_TAB_INDEX = 4
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,6 +106,7 @@ fun TorrentDetailsScreen(
             stringResource(R.string.tab_files),
             stringResource(R.string.tab_trackers),
             stringResource(R.string.peers),
+            stringResource(R.string.tab_pieces),
         )
     val copy = rememberCopyToClipboard()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -118,6 +122,9 @@ fun TorrentDetailsScreen(
 
     LaunchedEffect(Unit) { viewModel.status.collect { snackbarHostState.showSnackbar(it) } }
     LaunchedEffect(Unit) { viewModel.removed.collect { appNavigator.navigate(NavCommand.Back) } }
+    LaunchedEffect(pagerState.currentPage) {
+        viewModel.setPiecesVisible(pagerState.currentPage == PIECES_TAB_INDEX)
+    }
 
     Scaffold(
         topBar = {
@@ -142,7 +149,7 @@ fun TorrentDetailsScreen(
                                 detectTapGestures(
                                     onLongPress = {
                                         torrent?.let { copy("name", it.name, copiedNameMessage) }
-                                    }
+                                    },
                                 )
                             },
                     )
@@ -333,7 +340,7 @@ fun TorrentDetailsScreen(
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                 )
             }
-            PrimaryTabRow(selectedTabIndex = pagerState.currentPage) {
+            PrimaryScrollableTabRow(selectedTabIndex = pagerState.currentPage, edgePadding = 0.dp) {
                 tabTitles.forEachIndexed { index, title ->
                     Tab(
                         selected = pagerState.currentPage == index,
@@ -360,7 +367,8 @@ fun TorrentDetailsScreen(
                             onRemoveTracker = viewModel::removeTracker,
                             modifier = Modifier.fillMaxSize(),
                         )
-                    else -> PeersListView(state, Modifier.fillMaxSize(), viewModel::banPeer)
+                    3 -> PeersListView(state, Modifier.fillMaxSize(), viewModel::banPeer)
+                    else -> PiecesTab(state, Modifier.fillMaxSize())
                 }
             }
         }
@@ -550,7 +558,7 @@ private fun SpeedLimitDialog(
                 supportingText = { Text(stringResource(R.string.leave_empty_for_unlimited)) },
                 keyboardOptions =
                     KeyboardOptions(
-                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
                     ),
             )
         },
@@ -561,7 +569,7 @@ private fun SpeedLimitDialog(
                     // (and rounds) a limit the user didn't touch.
                     if (value != initial) onConfirm(value.toLongOrNull()?.times(1024) ?: 0L)
                     onDismiss()
-                }
+                },
             ) {
                 Text(stringResource(R.string.ok))
             }
@@ -683,7 +691,7 @@ private fun ShareLimitDialog(
     var inactiveValue by remember {
         mutableStateOf(
             if (currentInactiveSeedingTimeLimit >= 0) currentInactiveSeedingTimeLimit.toString()
-            else ""
+            else "",
         )
     }
 
@@ -709,7 +717,7 @@ private fun ShareLimitDialog(
                         label = { Text(stringResource(R.string.ratio)) },
                         keyboardOptions =
                             KeyboardOptions(
-                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
                             ),
                     )
                 }
@@ -729,7 +737,7 @@ private fun ShareLimitDialog(
                         label = { Text(stringResource(R.string.minutes_label)) },
                         keyboardOptions =
                             KeyboardOptions(
-                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
                             ),
                     )
                 }
@@ -749,7 +757,7 @@ private fun ShareLimitDialog(
                         label = { Text(stringResource(R.string.minutes_label)) },
                         keyboardOptions =
                             KeyboardOptions(
-                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
                             ),
                     )
                 }
@@ -775,7 +783,7 @@ private fun ShareLimitDialog(
                         timeOf(seedMode, seedValue),
                         timeOf(inactiveMode, inactiveValue),
                     )
-                }
+                },
             ) {
                 Text(stringResource(R.string.ok))
             }
@@ -799,8 +807,8 @@ private fun LimitModeOption(mode: LimitMode, selected: Boolean, onSelect: () -> 
                     LimitMode.GLOBAL -> R.string.use_global_limit
                     LimitMode.UNLIMITED -> R.string.unlimited
                     LimitMode.CUSTOM -> R.string.custom_label
-                }
-            )
+                },
+            ),
         )
     }
 }
@@ -891,7 +899,7 @@ private fun TagsDialog(
                     val toAdd = tags.filter { checked[it] == true && !current.contains(it) }
                     val toRemove = tags.filter { checked[it] != true && current.contains(it) }
                     onApply(toAdd, toRemove)
-                }
+                },
             ) {
                 Text(stringResource(R.string.ok))
             }

@@ -96,14 +96,14 @@ fun LogsScreen(appNavigator: AppNavigator, viewModel: LogsViewModel = hiltViewMo
                         onClick = {
                             searchOpen = !searchOpen
                             if (!searchOpen) query = ""
-                        }
+                        },
                     ) {
                         Icon(
                             if (searchOpen) Icons.Filled.Close else Icons.Filled.Search,
                             contentDescription =
                                 stringResource(
                                     if (searchOpen) CommonR.string.content_description_close_search
-                                    else CommonR.string.content_description_search
+                                    else CommonR.string.content_description_search,
                                 ),
                         )
                     }
@@ -115,7 +115,7 @@ fun LogsScreen(appNavigator: AppNavigator, viewModel: LogsViewModel = hiltViewMo
                     }
                 },
             )
-        }
+        },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             if (searchOpen) {
@@ -158,7 +158,7 @@ fun LogsScreen(appNavigator: AppNavigator, viewModel: LogsViewModel = hiltViewMo
                         Text(
                             stringResource(
                                 if (state.entries.isEmpty()) CommonR.string.no_log_entries
-                                else CommonR.string.no_matching_entries
+                                else CommonR.string.no_matching_entries,
                             ),
                             Modifier.align(Alignment.Center),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -233,7 +233,7 @@ private fun LogCard(entry: LogEntry) {
                             copiedLogLineMessage,
                         )
                     },
-                )
+                ),
     ) {
         Row(Modifier.height(IntrinsicSize.Min)) {
             // Severity accent stripe (clipped to the card's rounded corners).

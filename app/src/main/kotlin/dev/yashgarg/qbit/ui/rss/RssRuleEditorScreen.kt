@@ -121,8 +121,8 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
                     Text(
                         stringResource(
                             if (editingName != null) CommonR.string.edit_rule_title
-                            else CommonR.string.new_rule_action
-                        )
+                            else CommonR.string.new_rule_action,
+                        ),
                     )
                 },
                 navigationIcon = {
@@ -238,8 +238,8 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
                                 PausedMode.GLOBAL -> CommonR.string.use_global_default_label
                                 PausedMode.PAUSED -> CommonR.string.paused
                                 PausedMode.STARTED -> CommonR.string.started_label
-                            }
-                        )
+                            },
+                        ),
                     )
                 }
             }
@@ -327,7 +327,7 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
                         CommonR.string.affected_feeds_count,
                         rule.affectedFeeds.size,
                         allFeeds.size,
-                    )
+                    ),
                 )
             }
 
@@ -346,8 +346,8 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
                     Text(
                         stringResource(
                             if (loadingMatches) CommonR.string.loading_ellipsis
-                            else CommonR.string.view_matching_articles_action
-                        )
+                            else CommonR.string.view_matching_articles_action,
+                        ),
                     )
                 }
                 Text(
@@ -403,7 +403,7 @@ fun RssRuleEditorScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hi
                         viewModel.removeRule(editingName)
                         showRemoveConfirm = false
                         appNavigator.navigate(NavCommand.Back)
-                    }
+                    },
                 ) {
                     Text(stringResource(CommonR.string.remove_action))
                 }
@@ -461,7 +461,7 @@ fun MatchingArticlesResultDialog(
                         CommonR.plurals.matching_articles_count,
                         totalMatches,
                         totalMatches,
-                    )
+                    ),
             )
         },
         text = {

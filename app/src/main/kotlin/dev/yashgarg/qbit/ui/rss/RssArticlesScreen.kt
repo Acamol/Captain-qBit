@@ -110,7 +110,7 @@ fun RssArticlesScreen(
                         label =
                             stringResource(
                                 if (searchOpen) CommonR.string.content_description_close_search
-                                else CommonR.string.content_description_search
+                                else CommonR.string.content_description_search,
                             ),
                         icon = if (searchOpen) Icons.Filled.Close else Icons.Filled.Search,
                         onClick = {
@@ -215,7 +215,7 @@ fun RssArticlesScreen(
                                         viewModel.markAsRead(itemPath, article.id)
                                         if (article.link.isNotBlank()) {
                                             context.startActivity(
-                                                Intent(Intent.ACTION_VIEW, article.link.toUri())
+                                                Intent(Intent.ACTION_VIEW, article.link.toUri()),
                                             )
                                         }
                                     },

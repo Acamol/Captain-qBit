@@ -100,7 +100,7 @@ constructor(
 
             (context.contentResolver.openOutputStream(uri)
                     ?: throw InvalidBackupException(
-                        localized.getString(CommonR.string.error_could_not_open_file)
+                        localized.getString(CommonR.string.error_could_not_open_file),
                     ))
                 .use { it.write(bytes) }
         }
@@ -115,7 +115,7 @@ constructor(
             val raw =
                 (context.contentResolver.openInputStream(uri)
                         ?: throw InvalidBackupException(
-                            localized.getString(CommonR.string.error_could_not_open_file)
+                            localized.getString(CommonR.string.error_could_not_open_file),
                         ))
                     .use { it.readBytes() }
 
@@ -124,12 +124,12 @@ constructor(
                     json.decodeFromString(BackupEnvelope.serializer(), raw.decodeToString())
                 } catch (e: Exception) {
                     throw InvalidBackupException(
-                        localized.getString(CommonR.string.error_not_a_backup_file)
+                        localized.getString(CommonR.string.error_not_a_backup_file),
                     )
                 }
             if (envelope.format != BackupEnvelope.FORMAT) {
                 throw InvalidBackupException(
-                    localized.getString(CommonR.string.error_not_a_backup_file)
+                    localized.getString(CommonR.string.error_not_a_backup_file),
                 )
             }
 
@@ -153,7 +153,7 @@ constructor(
                 json.decodeFromString(ConfigBackup.serializer(), plaintext.decodeToString())
             if (backup.servers.isEmpty()) {
                 throw InvalidBackupException(
-                    localized.getString(CommonR.string.error_backup_no_servers)
+                    localized.getString(CommonR.string.error_backup_no_servers),
                 )
             }
             backup
@@ -219,7 +219,7 @@ constructor(
                         configDao.addConfig(
                             server
                                 .copy(configId = id, position = nextPosition++)
-                                .withEncryptedSecrets()
+                                .withEncryptedSecrets(),
                         )
                         if (firstNewId == null) firstNewId = id
                         imported++

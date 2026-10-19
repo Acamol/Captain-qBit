@@ -112,7 +112,7 @@ class FakeClientManager : ClientManager {
                 uploaded = 0L,
                 uploadedSession = 0L,
                 uploadSpeed = 0L,
-            )
+            ),
         )
 
     private fun mainDataJson(): String {

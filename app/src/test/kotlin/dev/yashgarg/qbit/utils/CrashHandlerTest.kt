@@ -1,6 +1,7 @@
 package dev.yashgarg.qbit.utils
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CrashHandlerTest {
@@ -28,5 +29,22 @@ class CrashHandlerTest {
         val text = "java.lang.NullPointerException: torrent was null"
 
         assertEquals(text, CrashHandler.redact(text))
+    }
+
+    @Test
+    fun `memory summary reports java heap, native heap and thread count`() {
+        val summary = CrashHandler.memorySummary(nativeHeapBytes = { 12L * 1024 * 1024 })
+
+        assertTrue(
+            summary,
+            Regex("""heap \d+\.\d/\d+\.\d MB, native 12\.0 MB, \d+ threads""").matches(summary),
+        )
+    }
+
+    @Test
+    fun `memory summary falls back when sampling fails`() {
+        val summary = CrashHandler.memorySummary(nativeHeapBytes = { throw OutOfMemoryError() })
+
+        assertEquals("unavailable", summary)
     }
 }

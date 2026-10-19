@@ -50,11 +50,14 @@ constructor(
 
     private val hash by lazy { state.get<String>("torrentHash") }
 
+    private val piecesVisible = MutableStateFlow(false)
+
     init {
         Log.d("TorrentDetailsViewModel", "TorrentHash: $hash")
         viewModelScope.launch {
             launch { syncWhileForeground { syncTorrentFlow() } }
             launch { syncWhileForeground { syncPeers() } }
+            launch { syncWhileForeground { syncPieces() } }
             launch { syncWhileForeground { syncAvailableFilters() } }
             launch { getContent() }
             launch {
@@ -239,14 +242,16 @@ constructor(
                         .onErr {
                             emitStatus(
                                 it.friendlyMessage(
-                                    getString(CommonR.string.status_category_created_not_assigned)
-                                )
+                                    getString(CommonR.string.status_category_created_not_assigned),
+                                ),
                             )
                         }
                 }
                 .onErr {
                     emitStatus(
-                        it.friendlyMessage(getString(CommonR.string.status_create_category_failure))
+                        it.friendlyMessage(
+                            getString(CommonR.string.status_create_category_failure),
+                        ),
                     )
                 }
         }
@@ -479,7 +484,7 @@ constructor(
                     // asynchronously, so an instant re-fetch can still return the old values.
                     _uiState.update { state ->
                         state.copy(
-                            contentTree = withPriorities(state.contentTree, ids.toSet(), priority)
+                            contentTree = withPriorities(state.contentTree, ids.toSet(), priority),
                         )
                     }
                     // Then reconcile with the server once it has settled.
@@ -488,7 +493,7 @@ constructor(
                 }
                 .onErr {
                     emitStatus(
-                        it.friendlyMessage(getString(CommonR.string.status_set_priority_failure))
+                        it.friendlyMessage(getString(CommonR.string.status_set_priority_failure)),
                     )
                 }
         }
@@ -506,6 +511,31 @@ constructor(
                 },
             children = node.children?.let { withPriorities(it, ids, priority) },
         )
+    }
+
+    fun setPiecesVisible(visible: Boolean) {
+        piecesVisible.value = visible
+    }
+
+    /**
+     * Polls the piece map only while the Pieces tab is showing, and stops once the torrent is
+     * complete (after one last fetch, so the finished map is fully shown).
+     */
+    private suspend fun syncPieces() {
+        piecesVisible.collectLatest { visible ->
+            if (!visible) return@collectLatest
+            val torrentHash = hash ?: return@collectLatest
+            while (true) {
+                repository
+                    .getPieceStates(torrentHash)
+                    .onOk { pieces ->
+                        _uiState.update { it.copy(pieceStates = pieces, piecesLoading = false) }
+                    }
+                    .onErr { _uiState.update { it.copy(piecesLoading = false) } }
+                if ((uiState.value.torrent?.progress ?: 0f) >= 1f) break
+                delay(PIECES_POLL_INTERVAL_MS)
+            }
+        }
     }
 
     private suspend fun syncPeers() {
@@ -536,5 +566,6 @@ constructor(
 
     private companion object {
         const val TORRENT_LOOKUP_TIMEOUT_MS = 20_000L
+        const val PIECES_POLL_INTERVAL_MS = 3_000L
     }
 }

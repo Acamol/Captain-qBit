@@ -69,7 +69,7 @@ fun SpeedLimitsScreen(appNavigator: AppNavigator, viewModel: SettingsViewModel =
                     }
                 },
             )
-        }
+        },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
             SectionHeader(stringResource(CommonR.string.global_speed_limits_section_title))
@@ -153,14 +153,14 @@ fun SpeedLimitsScreen(appNavigator: AppNavigator, viewModel: SettingsViewModel =
             title =
                 stringResource(
                     if (isFrom) CommonR.string.alt_speed_schedule_from_label
-                    else CommonR.string.alt_speed_schedule_to_label
+                    else CommonR.string.alt_speed_schedule_to_label,
                 ),
             initialMinutesOfDay =
                 if (isFrom) schedule.fromMinutesOfDay else schedule.toMinutesOfDay,
             onConfirm = { minutes ->
                 viewModel.setAltSpeedSchedule(
                     if (isFrom) schedule.copy(fromMinutesOfDay = minutes)
-                    else schedule.copy(toMinutesOfDay = minutes)
+                    else schedule.copy(toMinutesOfDay = minutes),
                 )
                 editingEdge = null
             },

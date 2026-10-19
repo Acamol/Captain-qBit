@@ -67,7 +67,7 @@ fun VersionScreen(appNavigator: AppNavigator, viewModel: VersionViewModel = hilt
                     }
                 },
             )
-        }
+        },
     ) { padding ->
         AboutView(state, Modifier.padding(padding))
     }
@@ -133,6 +133,12 @@ fun AboutView(state: VersionState, modifier: Modifier = Modifier) {
         Spacer(Modifier.height(28.dp))
         Text(
             text = stringResource(CommonR.string.fork_attribution_message),
+            textAlign = TextAlign.Center,
+            style = TextStyle(fontSize = 14.sp, color = secondary),
+        )
+        Text(
+            text = stringResource(CommonR.string.translators_message),
+            modifier = Modifier.padding(top = 4.dp),
             textAlign = TextAlign.Center,
             style = TextStyle(fontSize = 14.sp, color = secondary),
         )

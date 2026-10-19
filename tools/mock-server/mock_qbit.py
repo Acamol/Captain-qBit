@@ -361,6 +361,20 @@ def properties_for(hash_):
     }
 
 
+def pieces_for(hash_):
+    """torrents/pieceStates: 0 missing, 1 downloading, 2 done, one entry per piece."""
+    props = properties_for(hash_)
+    total, have = props["pieces_num"], props["pieces_have"]
+    states = [2 if i < have else 0 for i in range(total)]
+    if have < total:
+        # A few scattered completed pieces past the frontier, and an active window of downloads.
+        for i in range(have, total, 7):
+            states[i] = 2
+        for i in range(have, min(total, have + 6)):
+            states[i] = 1
+    return states
+
+
 def trackers_for(hash_):
     t = TORRENTS.get(hash_) or {}
     rows = [
@@ -1048,6 +1062,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send(json.dumps(properties_for((qs.get("hash") or [""])[0])))
         elif path == "/api/v2/torrents/files":
             self._send(json.dumps(files_for((qs.get("hash") or [""])[0])))
+        elif path == "/api/v2/torrents/pieceStates":
+            self._send(json.dumps(pieces_for((qs.get("hash") or [""])[0])))
         elif path == "/api/v2/torrents/trackers":
             self._send(json.dumps(trackers_for((qs.get("hash") or [""])[0])))
         elif path == "/api/v2/torrents/info":
