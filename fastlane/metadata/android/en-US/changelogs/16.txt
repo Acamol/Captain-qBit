@@ -1,5 +1,4 @@
 - New: Pieces tab in the torrent details shows which pieces are downloaded, downloading or missing
 - The torrent detail tabs now scroll so their names no longer wrap
 - New: Russian translation, thanks to Andrei Stepanov
-- Updated Uzbek, Malayalam and Hebrew translations
 - Crash reports now include memory and thread info
