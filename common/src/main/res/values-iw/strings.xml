@@ -674,4 +674,13 @@
     <string name="schedule_days_weekday">ימי חול</string>
     <string name="schedule_days_weekend">סופי שבוע</string>
     <string name="alt_speed_schedule_next_day">%1$s (למחרת)</string>
+    <string name="tab_pieces">חתיכות</string>
+    <string name="pieces_summary">‏%1$d מתוך %2$d חתיכות • %3$s כל אחת</string>
+    <string name="pieces_done">ירד</string>
+    <string name="pieces_downloading">בהורדה</string>
+    <string name="pieces_missing">חסר</string>
+    <string name="pieces_partial">ירד חלקית</string>
+    <string name="pieces_grouped_note">כל בלוק מאגד %1$d חתיכות</string>
+    <string name="pieces_empty">אין עדיין מידע על החתיכות</string>
+    <string name="pieces_map_description">ירדו %1$d מתוך %2$d חתיכות</string>
 </resources>
