@@ -683,4 +683,16 @@
     <string name="pieces_grouped_note">כל בלוק מאגד %1$d חתיכות</string>
     <string name="pieces_empty">אין עדיין מידע על החתיכות</string>
     <string name="pieces_map_description">ירדו %1$d מתוך %2$d חתיכות</string>
+    <string name="pieces_tap_hint">הקשה על בלוק תציג את הקבצים שהוא מכיל</string>
+    <string name="piece_details_title">חתיכה %1$s מתוך %2$s</string>
+    <string name="piece_details_group_title">חתיכות %1$s–%2$s מתוך %3$s</string>
+    <string name="piece_details_status">מצב</string>
+    <string name="piece_details_size">גודל</string>
+    <string name="piece_details_bytes">בתים</string>
+    <string name="piece_details_no_files">אין עדיין מידע על קבצים</string>
+    <plurals name="piece_details_more_files">
+        <item quantity="one">ועוד קובץ אחד</item>
+        <item quantity="two">ועוד שני קבצים</item>
+        <item quantity="other">ועוד %d קבצים</item>
+    </plurals>
 </resources>
