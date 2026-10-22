@@ -693,4 +693,17 @@
     <string name="pieces_grouped_note">Каждый блок объединяет части: %1$d</string>
     <string name="pieces_empty">Сведений о частях пока нет</string>
     <string name="pieces_map_description">Загружено частей: %1$d из %2$d</string>
+    <string name="pieces_tap_hint">Коснитесь блока, чтобы увидеть, какие файлы он содержит</string>
+    <string name="piece_details_title">Часть %1$s из %2$s</string>
+    <string name="piece_details_group_title">Части %1$s–%2$s из %3$s</string>
+    <string name="piece_details_status">Состояние</string>
+    <string name="piece_details_size">Размер</string>
+    <string name="piece_details_bytes">Байты</string>
+    <string name="piece_details_no_files">Сведений о файлах пока нет</string>
+    <plurals name="piece_details_more_files">
+        <item quantity="one">и ещё %d файл</item>
+        <item quantity="few">и ещё %d файла</item>
+        <item quantity="many">и ещё %d файлов</item>
+        <item quantity="other">и ещё %d файлов</item>
+    </plurals>
 </resources>
