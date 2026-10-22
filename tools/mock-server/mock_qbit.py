@@ -315,21 +315,27 @@ def files_for(hash_):
             "Blender Open Movies/LICENSE.txt",
         ]
         sizes = [355649536, 4928307200, 738197504, 1181116006, 4096, 2048]
+        # Spread the files over the torrent's pieces by byte share, so the piece map's details
+        # dialog names the right files; the two tiny text files end up sharing the last piece.
+        pieces_num = properties_for(hash_)["pieces_num"]
+        total = sum(sizes)
         out = []
-        start = 0
+        offset = 0
         for i, (n, s) in enumerate(zip(names, sizes)):
-            end = start + max(1, s // (256 * 1024))
+            start = offset * pieces_num // total
+            end = (offset + s - 1) * pieces_num // total
             out.append({"index": i, "name": n, "size": s, "progress": 0.0,
                         "priority": 1, "piece_range": [start, end],
                         "availability": 0.0, "is_seed": False})
-            start = end + 1
+            offset += s
         return out
     ext = ".iso" if (t and "iso" in t["tags"]) else ".mp4"
     name = (t["name"] if t else "file") + ext
     size = t["size"] if t else 1024
     prog = t["progress"] if t else 1.0
+    last_piece = properties_for(hash_)["pieces_num"] - 1
     return [{"index": 0, "name": name, "size": size, "progress": prog,
-             "priority": 1, "piece_range": [0, max(1, size // (256 * 1024))],
+             "priority": 1, "piece_range": [0, last_piece],
              "availability": 1.0, "is_seed": prog >= 1.0}]
 
 

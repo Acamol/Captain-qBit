@@ -9,6 +9,8 @@ data class TorrentDetailsState(
     val peers: TorrentPeers? = null,
     val torrent: Torrent? = null,
     val contentTree: List<ContentTreeItem> = emptyList(),
+    /** The flat file list behind [contentTree]; the piece map uses it to name a piece's files. */
+    val files: List<TorrentFile> = emptyList(),
     val contentLoading: Boolean = true,
     val pieceStates: List<PieceState> = emptyList(),
     val piecesLoading: Boolean = true,

@@ -96,38 +96,38 @@ private fun PeerDetailsDialog(peer: TorrentPeer, onBan: () -> Unit, onDismiss: (
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 if (peer.country.isNotBlank()) {
-                    PeerDetailRow(
+                    DetailRow(
                         stringResource(CommonR.string.peer_country_label),
                         "${peer.country} $flag".trim(),
                     )
                 }
                 if (peer.connection.isNotBlank()) {
-                    PeerDetailRow(
+                    DetailRow(
                         stringResource(CommonR.string.peer_connection_label),
                         peer.connection,
                     )
                 }
                 if (peer.client.isNotBlank()) {
-                    PeerDetailRow(stringResource(CommonR.string.peer_client_label), peer.client)
+                    DetailRow(stringResource(CommonR.string.peer_client_label), peer.client)
                 }
-                PeerDetailRow(stringResource(CommonR.string.sort_progress), percent(peer.progress))
-                PeerDetailRow(
+                DetailRow(stringResource(CommonR.string.sort_progress), percent(peer.progress))
+                DetailRow(
                     stringResource(CommonR.string.peer_down_speed_label),
                     "${peer.dlSpeed.toHumanReadable()}/s",
                 )
-                PeerDetailRow(
+                DetailRow(
                     stringResource(CommonR.string.peer_up_speed_label),
                     "${peer.upSpeed.toHumanReadable()}/s",
                 )
-                PeerDetailRow(
+                DetailRow(
                     stringResource(CommonR.string.downloaded),
                     peer.downloaded.toHumanReadable(),
                 )
-                PeerDetailRow(
+                DetailRow(
                     stringResource(CommonR.string.uploaded),
                     peer.uploaded.toHumanReadable(),
                 )
-                PeerDetailRow(
+                DetailRow(
                     stringResource(CommonR.string.peer_relevance_label),
                     percent(peer.relevance),
                 )
@@ -136,10 +136,10 @@ private fun PeerDetailsDialog(peer: TorrentPeer, onBan: () -> Unit, onDismiss: (
                         .filter { it.isNotBlank() }
                         .joinToString(" — ")
                 if (flags.isNotBlank()) {
-                    PeerDetailRow(stringResource(CommonR.string.peer_flags_label), flags)
+                    DetailRow(stringResource(CommonR.string.peer_flags_label), flags)
                 }
                 if (peer.files.isNotBlank()) {
-                    PeerDetailRow(stringResource(CommonR.string.peer_files_label), peer.files)
+                    DetailRow(stringResource(CommonR.string.peer_files_label), peer.files)
                 }
             }
         },
@@ -157,8 +157,9 @@ private fun PeerDetailsDialog(peer: TorrentPeer, onBan: () -> Unit, onDismiss: (
     )
 }
 
+/** A label/value line in a details dialog (peer details, piece details). */
 @Composable
-private fun PeerDetailRow(label: String, value: String) {
+internal fun DetailRow(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
         horizontalArrangement = Arrangement.SpaceBetween,

@@ -4,6 +4,4 @@ The torrent detail tabs now scroll sideways, so the five of them fit without the
 
 New: Russian translation, thanks to Andrei Stepanov.
 
-Updated Uzbek, Malayalam and Hebrew translations.
-
 Crash reports now include the heap, native heap and thread count, which helps track down out-of-memory crashes.

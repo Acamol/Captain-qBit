@@ -1,0 +1,3 @@
+New: tap a block in the Pieces tab to see its status, byte range, and the files it covers. Blocks grouping multiple pieces show a count for each status.
+
+Updated Russian and Hebrew translations.
