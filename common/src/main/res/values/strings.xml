@@ -683,6 +683,18 @@
     <string name="pieces_grouped_note">Each block groups %1$d pieces</string>
     <string name="pieces_empty">No piece information yet</string>
     <string name="pieces_map_description">%1$d of %2$d pieces downloaded</string>
+    <string name="pieces_tap_hint">Tap a block to see which files it holds</string>
+    <string name="piece_details_title">Piece %1$s of %2$s</string>
+    <string name="piece_details_group_title">Pieces %1$s–%2$s of %3$s</string>
+    <string name="piece_details_status">Status</string>
+    <string name="piece_details_size">Size</string>
+    <string name="piece_details_bytes">Bytes</string>
+    <string name="piece_details_bytes_value" translatable="false">%1$s – %2$s</string>
+    <string name="piece_details_no_files">No file information yet</string>
+    <plurals name="piece_details_more_files">
+        <item quantity="one">and %d more file</item>
+        <item quantity="other">and %d more files</item>
+    </plurals>
     <string name="fetching_metadata">Fetching metadata…</string>
     <string name="metadata_timeout">Couldn\'t fetch metadata — you can still add the torrent and pick files later</string>
     <string name="pick_torrent_file">Choose a .torrent file</string>

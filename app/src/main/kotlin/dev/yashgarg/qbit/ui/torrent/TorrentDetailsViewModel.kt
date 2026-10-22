@@ -464,10 +464,12 @@ constructor(
             ?.let { repository.getTorrentFiles(it) }
             ?.onOk { files ->
                 val tree = TransformUtil.transformFilesToTree(files, 0)
-                _uiState.update { state -> state.copy(contentTree = tree) }
+                _uiState.update { state -> state.copy(contentTree = tree, files = files) }
             }
             ?.onErr {
-                _uiState.update { state -> state.copy(contentTree = emptyList()) }
+                _uiState.update { state ->
+                    state.copy(contentTree = emptyList(), files = emptyList())
+                }
             }
 
         _uiState.update { state -> state.copy(contentLoading = false) }
