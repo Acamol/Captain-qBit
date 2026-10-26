@@ -18,9 +18,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -37,8 +40,15 @@ import dev.yashgarg.qbit.ui.rss.RssRuleEditorScreen
 import dev.yashgarg.qbit.ui.rss.RssScreen
 import dev.yashgarg.qbit.ui.server.ServerScreen
 import dev.yashgarg.qbit.ui.serverlist.ServerListScreen
+import dev.yashgarg.qbit.ui.settings.AppearanceSettingsScreen
+import dev.yashgarg.qbit.ui.settings.BackupSettingsScreen
+import dev.yashgarg.qbit.ui.settings.NotificationSettingsScreen
+import dev.yashgarg.qbit.ui.settings.PrivacySettingsScreen
+import dev.yashgarg.qbit.ui.settings.ServerSettingsScreen
 import dev.yashgarg.qbit.ui.settings.SettingsScreen
+import dev.yashgarg.qbit.ui.settings.SettingsViewModel
 import dev.yashgarg.qbit.ui.settings.SpeedLimitsScreen
+import dev.yashgarg.qbit.ui.settings.SyncSettingsScreen
 import dev.yashgarg.qbit.ui.torrent.TorrentDetailsScreen
 import dev.yashgarg.qbit.ui.version.VersionScreen
 
@@ -115,7 +125,35 @@ fun QbitNavHost(
             composable(Routes.SETTINGS) { SettingsScreen(appNavigator = appNavigator) }
             composable(Routes.VERSION) { VersionScreen(appNavigator = appNavigator) }
             composable(Routes.LOGS) { LogsScreen(appNavigator = appNavigator) }
+            // These two read from the server, each with a view model of its own, so every visit
+            // starts from what the server has now rather than from an earlier visit's copy.
             composable(Routes.SPEED_LIMITS) { SpeedLimitsScreen(appNavigator = appNavigator) }
+            composable(Routes.SERVER_SETTINGS) { ServerSettingsScreen(appNavigator = appNavigator) }
+            composable(Routes.PRIVACY_SETTINGS) { entry ->
+                PrivacySettingsScreen(
+                    appNavigator = appNavigator,
+                    viewModel = settingsViewModel(navController, entry),
+                )
+            }
+            composable(Routes.NOTIFICATION_SETTINGS) { entry ->
+                NotificationSettingsScreen(
+                    appNavigator = appNavigator,
+                    viewModel = settingsViewModel(navController, entry),
+                )
+            }
+            composable(Routes.APPEARANCE_SETTINGS) { entry ->
+                AppearanceSettingsScreen(
+                    appNavigator = appNavigator,
+                    viewModel = settingsViewModel(navController, entry),
+                )
+            }
+            composable(Routes.SYNC_SETTINGS) { entry ->
+                SyncSettingsScreen(
+                    appNavigator = appNavigator,
+                    viewModel = settingsViewModel(navController, entry),
+                )
+            }
+            composable(Routes.BACKUP_SETTINGS) { BackupSettingsScreen(appNavigator = appNavigator) }
             composable(Routes.RSS) { RssScreen(appNavigator = appNavigator) }
 
             composable(
@@ -169,6 +207,18 @@ fun QbitNavHost(
         }
     }
 }
+
+/**
+ * The Settings screen's view model, shared with the pages for this app's own settings opened from
+ * it. Falls back to the page's own if Settings isn't beneath it.
+ */
+@Composable
+private fun settingsViewModel(navController: NavController, entry: NavBackStackEntry) =
+    hiltViewModel<SettingsViewModel>(
+        remember(entry) {
+            runCatching { navController.getBackStackEntry(Routes.SETTINGS) }.getOrDefault(entry)
+        },
+    )
 
 private data class TopLevelDestination(val route: String, val label: Int, val icon: ImageVector)
 
@@ -226,6 +276,12 @@ private fun NavController.execute(command: NavCommand) {
         NavCommand.OpenVersion -> navigate(Routes.VERSION)
         NavCommand.OpenLogs -> navigate(Routes.LOGS)
         NavCommand.OpenSpeedLimits -> navigate(Routes.SPEED_LIMITS)
+        NavCommand.OpenServerSettings -> navigate(Routes.SERVER_SETTINGS)
+        NavCommand.OpenPrivacySettings -> navigate(Routes.PRIVACY_SETTINGS)
+        NavCommand.OpenNotificationSettings -> navigate(Routes.NOTIFICATION_SETTINGS)
+        NavCommand.OpenAppearanceSettings -> navigate(Routes.APPEARANCE_SETTINGS)
+        NavCommand.OpenSyncSettings -> navigate(Routes.SYNC_SETTINGS)
+        NavCommand.OpenBackupSettings -> navigate(Routes.BACKUP_SETTINGS)
         is NavCommand.OpenRssArticles -> navigate(Routes.rssArticles(command.itemPath))
         is NavCommand.OpenRssRuleEditor -> navigate(Routes.rssRuleEditor(command.ruleName))
         NavCommand.Back -> {

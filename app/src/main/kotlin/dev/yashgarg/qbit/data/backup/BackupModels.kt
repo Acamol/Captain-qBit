@@ -10,6 +10,7 @@ enum class PrefGroup {
     APPEARANCE,
     NOTIFICATIONS,
     FILTERS,
+    PRIVACY,
 }
 
 /**
@@ -24,18 +25,49 @@ data class ConfigBackup(
     val preferences: AppPreferences? = null,
     val preferenceGroups: Set<PrefGroup> = emptySet(),
     val categoryColors: Map<String, Int>? = null,
+    val privacyPreferences: AppPreferences? = null,
 )
 
 /**
- * Which preference groups this backup actually carries. Backups written before groups existed only
- * set [ConfigBackup.preferences]; treat those as carrying every group.
+ * Builds the payload for [groups] of [prefs]. The privacy group gets a field of its own instead of
+ * going into the shared preferences and group list: older app versions fail on a group name they
+ * don't know, and would reset every other group to its defaults if a backup carried only this one.
  */
-fun ConfigBackup.availablePrefGroups(): Set<PrefGroup> =
-    when {
-        preferenceGroups.isNotEmpty() -> preferenceGroups
-        preferences != null -> PrefGroup.entries.toSet()
-        else -> emptySet()
-    }
+fun configBackupOf(
+    servers: List<ServerConfig>,
+    prefs: AppPreferences?,
+    groups: Set<PrefGroup>,
+    categoryColors: Map<String, Int>?,
+): ConfigBackup {
+    val legacyGroups = groups - PrefGroup.PRIVACY
+    return ConfigBackup(
+        servers = servers,
+        preferences =
+            if (prefs != null && legacyGroups.isNotEmpty()) prefs.extractGroups(legacyGroups)
+            else null,
+        preferenceGroups = legacyGroups,
+        categoryColors = categoryColors,
+        privacyPreferences =
+            if (prefs != null && PrefGroup.PRIVACY in groups) {
+                prefs.extractGroups(setOf(PrefGroup.PRIVACY))
+            } else null,
+    )
+}
+
+/**
+ * Which preference groups this backup actually carries. Backups written before groups existed only
+ * set [ConfigBackup.preferences]; treat those as carrying every group that existed then. Privacy
+ * came later, so such a backup has none and must not overwrite the current settings.
+ */
+fun ConfigBackup.availablePrefGroups(): Set<PrefGroup> {
+    val groups =
+        when {
+            preferenceGroups.isNotEmpty() -> preferenceGroups
+            preferences != null -> PrefGroup.entries.toSet() - PrefGroup.PRIVACY
+            else -> emptySet()
+        }
+    return if (privacyPreferences != null) groups + PrefGroup.PRIVACY else groups
+}
 
 /** Copies the fields belonging to [group] from [src] onto this preferences object. */
 fun AppPreferences.overlayGroup(group: PrefGroup, src: AppPreferences): AppPreferences =
@@ -67,6 +99,15 @@ fun AppPreferences.overlayGroup(group: PrefGroup, src: AppPreferences): AppPrefe
                 addTorrentAutoTmm = src.addTorrentAutoTmm,
                 addTorrentPaused = src.addTorrentPaused,
                 addTorrentCategory = src.addTorrentCategory,
+            )
+        // A restored lock on a device without a screen lock is turned off again by AppLockManager.
+        PrefGroup.PRIVACY ->
+            copy(
+                appLockEnabled = src.appLockEnabled,
+                appLockTimeoutMs = src.appLockTimeoutMs,
+                appLockOnScreenOff = src.appLockOnScreenOff,
+                hideInRecents = src.hideInRecents,
+                blockScreenshots = src.blockScreenshots,
             )
     }
 

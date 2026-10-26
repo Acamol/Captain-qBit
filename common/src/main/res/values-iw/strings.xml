@@ -314,8 +314,6 @@
     <string name="interval_30_seconds">30 שניות</string>
     <string name="interval_1_minute">דקה אחת</string>
     <string name="interval_5_minutes">5 דקות</string>
-    <string name="general_section_title">כללי</string>
-    <string name="server_section_title">שרת</string>
     <string name="server_section_description">הגדרות על השרת המחובר, לא של אפליקציה זו</string>
     <string name="add_matched_torrents_as_label">הוספת טורנטים תואמים כ־</string>
     <string name="affected_feeds_count">הזנות מושפעות (%1$d מתוך %2$d)</string>

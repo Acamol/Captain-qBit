@@ -467,8 +467,20 @@
     <string name="interval_30_seconds">30 seconds</string>
     <string name="interval_1_minute">1 minute</string>
     <string name="interval_5_minutes">5 minutes</string>
-    <string name="general_section_title">General</string>
-    <string name="server_section_title">Server</string>
+    <string name="servers_settings_subtitle">Connected to %1$s</string>
+    <string name="servers_settings_subtitle_none">Add a qBittorrent server to connect to</string>
+    <string name="appearance_settings_subtitle">Theme, language and colors</string>
+    <string name="sync_settings_subtitle">How often the app checks your server</string>
+    <string name="backup_settings_subtitle">Export or import your servers and settings</string>
+    <string name="server_settings_title">Server options</string>
+    <string name="server_settings_subtitle">
+        RSS, speed limits, queueing and more, stored on %1$s
+    </string>
+    <string name="privacy_settings_subtitle_lock_on">App lock is on</string>
+    <string name="privacy_settings_subtitle_lock_off">
+        App lock, recent apps preview and screenshots
+    </string>
+    <string name="notification_settings_subtitle">Transfer status, alerts and quiet hours</string>
     <string name="server_section_description">
         Settings on the connected qBittorrent server, not this app
     </string>
@@ -518,6 +530,48 @@
     <string name="theme_label">Theme</string>
     <string name="dynamic_colors_label">Dynamic colors</string>
     <string name="dynamic_colors_subtitle">Use the wallpaper-based Material You palette</string>
+    <string name="privacy_section_title">Privacy &amp; security</string>
+    <string name="app_lock_label">App lock</string>
+    <string name="app_lock_subtitle">
+        Require your fingerprint, face or screen lock to open the app
+    </string>
+    <string name="app_lock_subtitle_blocks_screenshots">
+        Require your fingerprint, face or screen lock to open the app. On this Android version, this
+        also blocks screenshots
+    </string>
+    <string name="app_lock_unavailable_subtitle">
+        Set up a screen lock on this device to use the app lock
+    </string>
+    <string name="app_lock_confirm_title">Confirm it\'s you</string>
+    <string name="app_lock_timeout_label">Lock after</string>
+    <string name="app_lock_timeout_description">
+        How long the app can stay in the background before it asks again. Opening it after it was
+        closed always asks.
+    </string>
+    <string name="lock_timeout_immediately">Immediately</string>
+    <string name="lock_timeout_15_minutes">15 minutes</string>
+    <string name="lock_timeout_1_hour">1 hour</string>
+    <string name="lock_timeout_never">Never automatically</string>
+    <string name="lock_on_screen_off_label">Lock when the screen turns off</string>
+    <string name="lock_on_screen_off_subtitle">
+        Lock straight away when the device is locked, whatever the time above
+    </string>
+    <string name="hide_in_recents_label">Hide in recent apps</string>
+    <string name="hide_in_recents_subtitle">Show a blank preview in the recent apps screen</string>
+    <string name="hide_in_recents_subtitle_blocks_screenshots">
+        Show a blank preview in the recent apps screen. On this Android version, this also blocks
+        screenshots
+    </string>
+    <string name="block_screenshots_label">Block screenshots</string>
+    <string name="block_screenshots_subtitle">
+        Prevent screenshots and screen recordings of the app
+    </string>
+    <string name="app_locked_title">Captain qBit is locked</string>
+    <string name="unlock_action">Unlock</string>
+    <string name="unlock_prompt_title">Unlock Captain qBit</string>
+    <string name="app_lock_turned_off_no_screen_lock">
+        App lock was turned off because this device no longer has a screen lock
+    </string>
     <string name="notifications_section_title">Notifications</string>
     <string name="status_notification_label">Status notification</string>
     <string name="status_notification_subtitle">

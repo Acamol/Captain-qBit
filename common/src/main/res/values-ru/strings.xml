@@ -387,8 +387,6 @@
     <string name="interval_30_seconds">30 секунд</string>
     <string name="interval_1_minute">1 минута</string>
     <string name="interval_5_minutes">5 минут</string>
-    <string name="general_section_title">Общие</string>
-    <string name="server_section_title">Сервер</string>
     <string name="server_section_description">Настройки подключённого сервера qBittorrent, а не этого приложения</string>
     <string name="auto_tmm_default_label">Автоматическое управление торрентами по умолчанию</string>
     <string name="auto_tmm_default_subtitle">Применяется к торрентам, добавленным вне этого приложения, например по правилам RSS</string>

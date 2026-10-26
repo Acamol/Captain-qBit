@@ -1,10 +1,14 @@
 package dev.yashgarg.qbit.ui.backup
 
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
+import android.net.Uri
 import android.text.InputType
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
+import android.view.WindowManager
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -20,6 +24,7 @@ import dev.yashgarg.qbit.data.backup.ImportMode
 import dev.yashgarg.qbit.data.backup.PrefGroup
 import dev.yashgarg.qbit.data.backup.availablePrefGroups
 import dev.yashgarg.qbit.data.models.ServerConfig
+import kotlinx.coroutines.flow.filterNotNull
 
 /**
  * Backup-related dialogs shared by Settings and the first-run screen. Built programmatically with
@@ -89,7 +94,7 @@ object BackupDialogs {
                 }
             }
         }
-        dialog.show()
+        dialog.showSecurely(context)
     }
 
     /**
@@ -169,7 +174,40 @@ object BackupDialogs {
                 onConfirm(selected, groups, colorsBox.isChecked)
             }
         }
-        dialog.show()
+        dialog.showSecurely(context)
+    }
+
+    /**
+     * Asks for the passphrase of the backup at [uri] and starts importing it, once the app is
+     * unlocked: the dialog is a window of its own and would otherwise show above the lock.
+     */
+    suspend fun askPassphraseThenImport(context: Context, viewModel: BackupViewModel, uri: Uri) {
+        viewModel.awaitUnlocked()
+        showPassphraseDialog(
+            context,
+            title = context.getString(CommonR.string.backup_passphrase_title),
+            confirm = false,
+        ) { passphrase ->
+            viewModel.beginImport(uri, passphrase)
+        }
+    }
+
+    /**
+     * Shows the import selection for each backup [viewModel] has loaded, once the app is unlocked,
+     * and imports what the user picks. Runs until cancelled.
+     */
+    suspend fun offerImports(context: Context, viewModel: BackupViewModel) {
+        viewModel.importOffer.filterNotNull().collect { offer ->
+            viewModel.awaitUnlocked()
+            viewModel.importOfferShown()
+            showImportSelectionDialog(
+                context,
+                offer.backup,
+                offer.duplicateServerIds,
+            ) { serverIds, prefGroups, includeColors, mode ->
+                viewModel.applyImport(serverIds, prefGroups, includeColors, mode)
+            }
+        }
     }
 
     /**
@@ -309,7 +347,24 @@ object BackupDialogs {
                 onConfirm(selected, groups, colorsBox?.isChecked ?: false, mode)
             }
         }
-        dialog.show()
+        dialog.showSecurely(context)
+    }
+
+    /**
+     * A dialog is a window of its own, so it doesn't share the activity's FLAG_SECURE. These show
+     * passphrases and server details, so they take it over.
+     */
+    private fun AlertDialog.showSecurely(context: Context) {
+        var host = context
+        while (host is ContextWrapper && host !is Activity) host = host.baseContext
+        val secure =
+            (host as? Activity)
+                ?.window
+                ?.attributes
+                ?.flags
+                ?.and(WindowManager.LayoutParams.FLAG_SECURE)
+        if (secure != null && secure != 0) window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        show()
     }
 
     /** User-facing label for a preference group checkbox. */
@@ -319,6 +374,7 @@ object BackupDialogs {
             PrefGroup.NOTIFICATIONS ->
                 context.getString(CommonR.string.notifications_section_header)
             PrefGroup.FILTERS -> context.getString(CommonR.string.filters_and_sorting_label)
+            PrefGroup.PRIVACY -> context.getString(CommonR.string.privacy_section_title)
         }
 
     /** A bold, emphasized section label separating groups of options in a selection dialog. */
