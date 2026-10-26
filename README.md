@@ -36,6 +36,8 @@ over its Web API — control your self-hosted server from your phone. Written in
   you set, so an overnight download doesn't wake you and is still waiting in the morning
 - Schedule the alternate speed limits: pick the time window and the days it applies to, and the
   server switches between your normal and alternate limits on its own
+- Optional app lock with your fingerprint, face or device screen lock, with a choice of when it
+  locks, plus hiding the app's preview in recent apps and blocking screenshots
 
 See the [F-Droid listing](https://f-droid.org/packages/dev.acamol.qbit/) for the full feature list.
 
