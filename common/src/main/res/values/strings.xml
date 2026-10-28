@@ -543,6 +543,16 @@
         Set up a screen lock on this device to use the app lock
     </string>
     <string name="app_lock_confirm_title">Confirm it\'s you</string>
+    <string name="import_turns_off_lock_title">Turn off the app lock?</string>
+    <string name="import_turns_off_lock_message">
+        This backup turns the app lock off. You\'ll be asked to confirm it\'s you before importing.
+    </string>
+    <string name="import_turns_off_lock_continue">Continue</string>
+    <string name="import_loosens_lock_title">Loosen the app lock?</string>
+    <string name="import_loosens_lock_message">
+        This backup makes the app lock engage less often. You\'ll be asked to confirm it\'s you
+        before importing.
+    </string>
     <string name="app_lock_timeout_label">Lock after</string>
     <string name="app_lock_timeout_description">
         How long the app can stay in the background before it asks again. Opening it after it was

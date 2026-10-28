@@ -1,5 +1,7 @@
 package dev.yashgarg.qbit.data.backup
 
+import dev.yashgarg.qbit.data.manager.AppLockSettings
+import dev.yashgarg.qbit.data.manager.LockWeakening
 import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.ConnectionType
 import dev.yashgarg.qbit.data.models.ServerConfig
@@ -144,5 +146,83 @@ class PrefGroupTest {
         // An older version treats a backup with preferences but no groups as carrying all of them.
         assertEquals(null, legacy.preferences)
         assertTrue(legacy.preferenceGroups.isEmpty())
+    }
+
+    private val strictLock = AppLockSettings(enabled = true, timeoutMs = 0L, lockOnScreenOff = true)
+
+    private fun backupWithLock(
+        enabled: Boolean = true,
+        timeoutMs: Long = 0L,
+        lockOnScreenOff: Boolean = true,
+    ) =
+        configBackupOf(
+            listOf(server()),
+            privacy.copy(
+                appLockEnabled = enabled,
+                appLockTimeoutMs = timeoutMs,
+                appLockOnScreenOff = lockOnScreenOff,
+            ),
+            PrefGroup.entries.toSet(),
+            categoryColors = null,
+        )
+
+    private val all = PrefGroup.entries.toSet()
+
+    @Test
+    fun `a backup with the lock off is a lock being turned off`() {
+        assertEquals(
+            LockWeakening.TURNED_OFF,
+            backupWithLock(enabled = false).appLockWeakening(all, strictLock),
+        )
+    }
+
+    @Test
+    fun `a backup that locks later or not on screen off loosens the lock`() {
+        assertEquals(
+            LockWeakening.LOOSENED,
+            backupWithLock(timeoutMs = AppLockSettings.TIMEOUT_NEVER)
+                .appLockWeakening(all, strictLock),
+        )
+        assertEquals(
+            LockWeakening.LOOSENED,
+            backupWithLock(lockOnScreenOff = false).appLockWeakening(all, strictLock),
+        )
+        // Any negative timeout never locks, not just the one the app writes for "never".
+        assertEquals(
+            LockWeakening.LOOSENED,
+            backupWithLock(timeoutMs = -2L).appLockWeakening(all, strictLock),
+        )
+    }
+
+    @Test
+    fun `a backup with the same or a stricter lock needs no confirmation`() {
+        val relaxed = strictLock.copy(timeoutMs = 60_000L, lockOnScreenOff = false)
+
+        assertEquals(null, backupWithLock().appLockWeakening(all, strictLock))
+        assertEquals(null, backupWithLock().appLockWeakening(all, relaxed))
+    }
+
+    @Test
+    fun `nothing needs confirming when the lock is already off`() {
+        val off = strictLock.copy(enabled = false)
+
+        assertEquals(null, backupWithLock(enabled = false).appLockWeakening(all, off))
+    }
+
+    @Test
+    fun `nothing needs confirming when the privacy group isn't imported`() {
+        val withoutPrivacy = all - PrefGroup.PRIVACY
+
+        assertEquals(
+            null,
+            backupWithLock(enabled = false).appLockWeakening(withoutPrivacy, strictLock),
+        )
+    }
+
+    @Test
+    fun `a backup from before the privacy group never weakens the lock`() {
+        val legacy = ConfigBackup(servers = listOf(server()), preferences = AppPreferences())
+
+        assertEquals(null, legacy.appLockWeakening(all, strictLock))
     }
 }

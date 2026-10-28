@@ -12,8 +12,10 @@ import dev.yashgarg.qbit.data.backup.ImportMode
 import dev.yashgarg.qbit.data.backup.ImportResult
 import dev.yashgarg.qbit.data.backup.InvalidBackupException
 import dev.yashgarg.qbit.data.backup.PrefGroup
+import dev.yashgarg.qbit.data.backup.appLockWeakening
 import dev.yashgarg.qbit.data.daos.ConfigDao
 import dev.yashgarg.qbit.data.manager.AppLockManager
+import dev.yashgarg.qbit.data.manager.LockWeakening
 import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.ServerConfig
 import dev.yashgarg.qbit.ui.common.StatusViewModel
@@ -92,6 +94,14 @@ constructor(
     suspend fun awaitUnlocked() {
         appLockManager.locked.first { !it }
     }
+
+    /** How importing [prefGroups] of the loaded backup would weaken the app lock, if it would. */
+    fun importLockWeakening(prefGroups: Set<PrefGroup>): LockWeakening? =
+        pendingImport?.appLockWeakening(prefGroups, appLockManager.settings)
+
+    /** Asks the user to authenticate, then runs [onSuccess]. */
+    fun authenticate(title: String, onSuccess: () -> Unit) =
+        appLockManager.authenticate(title, onSuccess)
 
     // Holds the decrypted backup between beginImport() and applyImport().
     private var pendingImport: ConfigBackup? = null

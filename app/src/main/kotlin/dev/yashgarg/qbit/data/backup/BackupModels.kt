@@ -1,5 +1,7 @@
 package dev.yashgarg.qbit.data.backup
 
+import dev.yashgarg.qbit.data.manager.AppLockSettings
+import dev.yashgarg.qbit.data.manager.LockWeakening
 import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.ServerConfig
 import kotlinx.serialization.Serializable
@@ -67,6 +69,19 @@ fun ConfigBackup.availablePrefGroups(): Set<PrefGroup> {
             else -> emptySet()
         }
     return if (privacyPreferences != null) groups + PrefGroup.PRIVACY else groups
+}
+
+/**
+ * How restoring [groups] of this backup would weaken the [current] lock, or null when it wouldn't.
+ * The user has to confirm that first: a backup file shouldn't be able to weaken the lock unasked.
+ */
+fun ConfigBackup.appLockWeakening(
+    groups: Set<PrefGroup>,
+    current: AppLockSettings,
+): LockWeakening? {
+    if (PrefGroup.PRIVACY !in groups) return null
+    val restored = privacyPreferences ?: return null
+    return current.weakeningTo(AppLockSettings.from(restored))
 }
 
 /** Copies the fields belonging to [group] from [src] onto this preferences object. */

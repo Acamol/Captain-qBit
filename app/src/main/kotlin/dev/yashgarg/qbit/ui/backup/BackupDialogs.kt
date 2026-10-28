@@ -23,6 +23,7 @@ import dev.yashgarg.qbit.data.backup.ConfigBackup
 import dev.yashgarg.qbit.data.backup.ImportMode
 import dev.yashgarg.qbit.data.backup.PrefGroup
 import dev.yashgarg.qbit.data.backup.availablePrefGroups
+import dev.yashgarg.qbit.data.manager.LockWeakening
 import dev.yashgarg.qbit.data.models.ServerConfig
 import kotlinx.coroutines.flow.filterNotNull
 
@@ -204,6 +205,8 @@ object BackupDialogs {
                 context,
                 offer.backup,
                 offer.duplicateServerIds,
+                viewModel::importLockWeakening,
+                viewModel::authenticate,
             ) { serverIds, prefGroups, includeColors, mode ->
                 viewModel.applyImport(serverIds, prefGroups, includeColors, mode)
             }
@@ -221,6 +224,8 @@ object BackupDialogs {
         context: Context,
         backup: ConfigBackup,
         duplicateServerIds: Set<Int>,
+        importLockWeakening: (Set<PrefGroup>) -> LockWeakening?,
+        authenticate: (title: String, onSuccess: () -> Unit) -> Unit,
         onConfirm:
             (
                 selectedServerIds: Set<Int>,
@@ -343,11 +348,54 @@ object BackupDialogs {
                         .toSet()
                 val groups = groupBoxes.filter { it.second.isChecked }.map { it.first }.toSet()
                 val mode = if (merging()) ImportMode.MERGE else ImportMode.REPLACE
-                dialog.dismiss()
-                onConfirm(selected, groups, colorsBox?.isChecked ?: false, mode)
+                val import = {
+                    // The prompt's result can arrive after the activity was recreated (a rotation),
+                    // by which time this dialog's window is gone with the old one.
+                    if (dialog.window?.decorView?.isAttachedToWindow == true) dialog.dismiss()
+                    onConfirm(selected, groups, colorsBox?.isChecked ?: false, mode)
+                }
+                val weakening = importLockWeakening(groups)
+                if (weakening != null) {
+                    // Cancelling either step leaves the selection open to change.
+                    showLockWeakeningWarning(context, weakening) {
+                        authenticate(
+                            context.getString(CommonR.string.app_lock_confirm_title),
+                            import,
+                        )
+                    }
+                } else {
+                    import()
+                }
             }
         }
         dialog.showSecurely(context)
+    }
+
+    private fun showLockWeakeningWarning(
+        context: Context,
+        weakening: LockWeakening,
+        onContinue: () -> Unit,
+    ) {
+        val (title, message) =
+            when (weakening) {
+                LockWeakening.TURNED_OFF ->
+                    CommonR.string.import_turns_off_lock_title to
+                        CommonR.string.import_turns_off_lock_message
+                LockWeakening.LOOSENED ->
+                    CommonR.string.import_loosens_lock_title to
+                        CommonR.string.import_loosens_lock_message
+            }
+        MaterialAlertDialogBuilder(context)
+            .setTitle(context.getString(title))
+            .setMessage(context.getString(message))
+            .setNegativeButton(context.getString(CommonR.string.cancel), null)
+            .setPositiveButton(context.getString(CommonR.string.import_turns_off_lock_continue)) {
+                _,
+                _ ->
+                onContinue()
+            }
+            .create()
+            .showSecurely(context)
     }
 
     /**
