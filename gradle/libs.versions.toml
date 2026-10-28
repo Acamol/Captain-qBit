@@ -2,7 +2,7 @@
 axCore = "1.19.1"
 axAppcompat = "1.8.0"
 axActivity = "1.13.0"
-axDatastore = "1.2.1"
+axDatastore = "1.3.0"
 axNavigation = "2.10.2"
 axWork = "2.12.0"
 binary_compat = "0.18.2"
@@ -17,11 +17,11 @@ lifecycle = "2.11.0"
 kotlin = "2.4.21"
 ksp = "2.3.12"
 mockito = "5.24.0"
-okhttp = "5.5.0"
+okhttp = "5.5.1"
 room = "2.8.5"
 spotless = "8.10.4"
 uiautomator = "2.4.0"
-serialization = "1.11.0"
+serialization = "1.12.0"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "axCore" }
