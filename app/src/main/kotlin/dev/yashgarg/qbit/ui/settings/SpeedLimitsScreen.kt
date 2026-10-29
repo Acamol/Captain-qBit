@@ -15,6 +15,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,6 +43,7 @@ import qbittorrent.models.SchedulerDays
 @Composable
 fun SpeedLimitsScreen(appNavigator: AppNavigator, viewModel: SettingsViewModel = hiltViewModel()) {
     val context = LocalContext.current
+    LaunchedEffect(Unit) { viewModel.loadSpeedLimits() }
     val speedLimitMode by viewModel.speedLimitMode.collectAsStateWithLifecycle()
     val globalDownloadLimit by viewModel.globalDownloadLimit.collectAsStateWithLifecycle()
     val globalUploadLimit by viewModel.globalUploadLimit.collectAsStateWithLifecycle()

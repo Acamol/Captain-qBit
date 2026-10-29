@@ -8,6 +8,9 @@ import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.yashgarg.qbit.data.QbitRepository
+import dev.yashgarg.qbit.data.daos.ConfigDao
+import dev.yashgarg.qbit.data.manager.AppLockManager
+import dev.yashgarg.qbit.data.manager.AppLockSettings
 import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.EventAlertMode
 import javax.inject.Inject
@@ -18,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.flow.stateIn
@@ -32,7 +36,72 @@ class SettingsViewModel
 constructor(
     private val prefsStore: DataStore<AppPreferences>,
     private val repository: QbitRepository,
+    private val appLockManager: AppLockManager,
+    configDao: ConfigDao,
 ) : ViewModel() {
+
+    /**
+     * The server the app is connected to, resolved like ClientManagerImpl: the stored active id,
+     * falling back to the first server. Null until loaded.
+     */
+    val activeServer: StateFlow<ActiveServer?> =
+        combine(configDao.getConfigs(), prefsStore.data.map { it.activeServerId }) { configs, id ->
+                ActiveServer(
+                    (configs.find { it.configId == id } ?: configs.firstOrNull())?.serverName,
+                )
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(SUBSCRIPTION_TIMEOUT_MS), null)
+
+    /** [name] is null when no server is saved. */
+    data class ActiveServer(val name: String?)
+
+    // Server options and Speed limits each have a view model of their own, so these make each read
+    // once per visit to the page, not again on a rotation.
+    private var serverOptionsRequested = false
+    private var speedLimitsRequested = false
+
+    /** Reads the server-side values the Server options page shows. */
+    fun loadServerOptions() {
+        if (serverOptionsRequested) return
+        serverOptionsRequested = true
+        viewModelScope.launch {
+            launch { repository.getAutoTmmEnabled().onOk { _autoTmmEnabled.value = it } }
+            launch {
+                repository.getRssRefreshInterval().onOk { _rssRefreshIntervalMinutes.value = it }
+            }
+            launch {
+                repository.getRssMaxArticlesPerFeed().onOk { _rssMaxArticlesPerFeed.value = it }
+            }
+            launch {
+                repository.getRssProcessingEnabled().onOk { _rssProcessingEnabled.value = it }
+            }
+            launch {
+                repository.getRssAutoDownloadingEnabled().onOk {
+                    _rssAutoDownloadingEnabled.value = it
+                }
+            }
+            launch { repository.isQueueingEnabled().onOk { _queueingEnabled.value = it } }
+        }
+    }
+
+    /**
+     * Reads the limits the Speed limits page shows. Its schedule is read as the page collects it
+     * (see [altSpeedSchedule]).
+     */
+    fun loadSpeedLimits() {
+        if (speedLimitsRequested) return
+        speedLimitsRequested = true
+        viewModelScope.launch {
+            launch { repository.getGlobalDownloadLimit().onOk { _globalDownloadLimit.value = it } }
+            launch { repository.getGlobalUploadLimit().onOk { _globalUploadLimit.value = it } }
+            launch {
+                repository.getAltSpeedLimits().onOk { (dl, ul) ->
+                    _altDownloadLimit.value = dl
+                    _altUploadLimit.value = ul
+                }
+            }
+        }
+    }
 
     private val _autoTmmEnabled = MutableStateFlow(false)
 
@@ -40,12 +109,6 @@ constructor(
      * qBittorrent's own global default Auto Torrent Management setting (server-side, not local).
      */
     val autoTmmEnabled: StateFlow<Boolean> = _autoTmmEnabled.asStateFlow()
-
-    init {
-        viewModelScope.launch {
-            repository.getAutoTmmEnabled().onOk { _autoTmmEnabled.value = it }
-        }
-    }
 
     fun setAutoTmmEnabled(enabled: Boolean) {
         viewModelScope.launch {
@@ -57,12 +120,6 @@ constructor(
 
     /** How often qBittorrent itself re-fetches RSS feeds, in minutes (server-side, not local). */
     val rssRefreshIntervalMinutes: StateFlow<Int> = _rssRefreshIntervalMinutes.asStateFlow()
-
-    init {
-        viewModelScope.launch {
-            repository.getRssRefreshInterval().onOk { _rssRefreshIntervalMinutes.value = it }
-        }
-    }
 
     fun setRssRefreshInterval(minutes: Int) {
         viewModelScope.launch {
@@ -77,12 +134,6 @@ constructor(
     /** Maximum number of articles qBittorrent keeps per RSS feed (server-side, not local). */
     val rssMaxArticlesPerFeed: StateFlow<Int> = _rssMaxArticlesPerFeed.asStateFlow()
 
-    init {
-        viewModelScope.launch {
-            repository.getRssMaxArticlesPerFeed().onOk { _rssMaxArticlesPerFeed.value = it }
-        }
-    }
-
     fun setRssMaxArticlesPerFeed(count: Int) {
         viewModelScope.launch {
             repository.setRssMaxArticlesPerFeed(count).onOk { _rssMaxArticlesPerFeed.value = count }
@@ -93,12 +144,6 @@ constructor(
 
     /** Whether qBittorrent fetches RSS feeds at all (server-side, not local). */
     val rssProcessingEnabled: StateFlow<Boolean> = _rssProcessingEnabled.asStateFlow()
-
-    init {
-        viewModelScope.launch {
-            repository.getRssProcessingEnabled().onOk { _rssProcessingEnabled.value = it }
-        }
-    }
 
     fun setRssProcessingEnabled(enabled: Boolean) {
         viewModelScope.launch {
@@ -113,14 +158,6 @@ constructor(
     /** Whether qBittorrent's RSS rules auto-download matches (server-side, not local). */
     val rssAutoDownloadingEnabled: StateFlow<Boolean> = _rssAutoDownloadingEnabled.asStateFlow()
 
-    init {
-        viewModelScope.launch {
-            repository.getRssAutoDownloadingEnabled().onOk {
-                _rssAutoDownloadingEnabled.value = it
-            }
-        }
-    }
-
     fun setRssAutoDownloadingEnabled(enabled: Boolean) {
         viewModelScope.launch {
             repository.setRssAutoDownloadingEnabled(enabled).onOk {
@@ -133,12 +170,6 @@ constructor(
 
     /** Whether the server caps how many torrents are active at once (server-side, not local). */
     val queueingEnabled: StateFlow<Boolean> = _queueingEnabled.asStateFlow()
-
-    init {
-        viewModelScope.launch {
-            repository.isQueueingEnabled().onOk { _queueingEnabled.value = it }
-        }
-    }
 
     fun setQueueingEnabled(enabled: Boolean) {
         viewModelScope.launch {
@@ -232,17 +263,6 @@ constructor(
     val altDownloadLimit: StateFlow<Int> = _altDownloadLimit.asStateFlow()
 
     val altUploadLimit: StateFlow<Int> = _altUploadLimit.asStateFlow()
-
-    init {
-        viewModelScope.launch {
-            repository.getGlobalDownloadLimit().onOk { _globalDownloadLimit.value = it }
-            repository.getGlobalUploadLimit().onOk { _globalUploadLimit.value = it }
-            repository.getAltSpeedLimits().onOk { (dl, ul) ->
-                _altDownloadLimit.value = dl
-                _altUploadLimit.value = ul
-            }
-        }
-    }
 
     /** Limits are in bytes/s; 0 clears the limit (unlimited). */
     fun setGlobalLimits(downloadBytesPerSec: Int, uploadBytesPerSec: Int) {
@@ -452,6 +472,69 @@ constructor(
 
     fun setSyncIntervalMs(ms: Long) {
         viewModelScope.launch { prefsStore.updateData { it.copy(syncIntervalMs = ms) } }
+    }
+
+    /** The Privacy & security settings. */
+    data class PrivacyPrefs(
+        val appLockEnabled: Boolean,
+        val appLockTimeoutMs: Long,
+        val appLockOnScreenOff: Boolean,
+        val hideInRecents: Boolean,
+        val blockScreenshots: Boolean,
+    ) {
+        constructor(
+            prefs: AppPreferences,
+        ) : this(
+            prefs.appLockEnabled,
+            AppLockSettings.from(prefs).timeoutMs,
+            prefs.appLockOnScreenOff,
+            prefs.hideInRecents,
+            prefs.blockScreenshots,
+        )
+    }
+
+    val privacyPrefs: StateFlow<PrivacyPrefs> =
+        prefsStore.data
+            .map { PrivacyPrefs(it) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, PrivacyPrefs(AppPreferences()))
+
+    fun isAppLockAvailable(): Boolean = appLockManager.isAvailable()
+
+    /** Asks the user to authenticate first, so the lock can't be changed by someone else. */
+    fun setAppLockEnabled(title: String, enabled: Boolean) {
+        appLockManager.authenticate(
+            title,
+            onSuccess = {
+                viewModelScope.launch {
+                    prefsStore.updateData { it.copy(appLockEnabled = enabled) }
+                }
+            },
+        )
+    }
+
+    fun setAppLockTimeoutMs(title: String, ms: Long) =
+        changeLockSettings(title) { it.copy(appLockTimeoutMs = ms) }
+
+    fun setAppLockOnScreenOff(title: String, enabled: Boolean) =
+        changeLockSettings(title) { it.copy(appLockOnScreenOff = enabled) }
+
+    /** Applies [change], asking the user to authenticate first when it weakens the lock. */
+    private fun changeLockSettings(title: String, change: (AppPreferences) -> AppPreferences) {
+        viewModelScope.launch {
+            val current = prefsStore.data.first()
+            val weakening =
+                AppLockSettings.from(current).weakeningTo(AppLockSettings.from(change(current)))
+            val apply = { viewModelScope.launch { prefsStore.updateData(change) } }
+            if (weakening == null) apply() else appLockManager.authenticate(title, { apply() })
+        }
+    }
+
+    fun setHideInRecents(enabled: Boolean) {
+        viewModelScope.launch { prefsStore.updateData { it.copy(hideInRecents = enabled) } }
+    }
+
+    fun setBlockScreenshots(enabled: Boolean) {
+        viewModelScope.launch { prefsStore.updateData { it.copy(blockScreenshots = enabled) } }
     }
 }
 

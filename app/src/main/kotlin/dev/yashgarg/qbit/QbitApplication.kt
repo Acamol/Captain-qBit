@@ -8,6 +8,7 @@ import androidx.datastore.core.DataStore
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
+import dev.yashgarg.qbit.data.manager.AppLockManager
 import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.utils.AppContextHolder
@@ -24,6 +25,8 @@ class QbitApplication : Application(), Configuration.Provider {
 
     @Inject lateinit var appPrefsStore: DataStore<AppPreferences>
 
+    @Inject lateinit var appLockManager: AppLockManager
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
 
@@ -37,6 +40,7 @@ class QbitApplication : Application(), Configuration.Provider {
         // Material You dynamic colors are applied Compose-side by QbitComposeTheme.
         val prefs = runBlocking { appPrefsStore.data.first() }
         AppCompatDelegate.setDefaultNightMode(prefs.themeMode)
+        appLockManager.init(prefs)
 
         // Below API 33 setApplicationLocales holds the choice in memory only, so it has to be
         // restored here or the app comes up in the system language after every cold start. From 33

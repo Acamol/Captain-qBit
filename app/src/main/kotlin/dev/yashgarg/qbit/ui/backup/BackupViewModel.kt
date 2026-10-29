@@ -12,25 +12,29 @@ import dev.yashgarg.qbit.data.backup.ImportMode
 import dev.yashgarg.qbit.data.backup.ImportResult
 import dev.yashgarg.qbit.data.backup.InvalidBackupException
 import dev.yashgarg.qbit.data.backup.PrefGroup
-import dev.yashgarg.qbit.data.backup.extractGroups
+import dev.yashgarg.qbit.data.backup.appLockWeakening
 import dev.yashgarg.qbit.data.daos.ConfigDao
+import dev.yashgarg.qbit.data.manager.AppLockManager
+import dev.yashgarg.qbit.data.manager.LockWeakening
 import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.ServerConfig
 import dev.yashgarg.qbit.ui.common.StatusViewModel
 import javax.crypto.AEADBadTagException
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
  * Drives encrypted backup export/import for both Settings and the first-run screen. Import is a
- * two-step flow: [beginImport] decrypts and emits [BackupEvent.Loaded] so the UI can offer a
- * selection, then [applyImport] commits the user's choices.
+ * two-step flow: [beginImport] decrypts and sets [importOffer] so the UI can offer a selection,
+ * then [applyImport] commits the user's choices.
  */
 @HiltViewModel
 class BackupViewModel
@@ -39,18 +43,13 @@ constructor(
     private val backupManager: BackupManager,
     private val configDao: ConfigDao,
     private val prefsStore: DataStore<AppPreferences>,
+    private val appLockManager: AppLockManager,
     application: Application,
 ) : StatusViewModel(application) {
 
     /** One-shot backup outcomes surfaced to the UI. */
     sealed interface BackupEvent {
         data class Exported(val message: String) : BackupEvent
-
-        /**
-         * A backup was decrypted and is ready to import. [duplicateServerIds] are the ids (within
-         * [backup]) of servers that already exist and would be skipped on a merge.
-         */
-        data class Loaded(val backup: ConfigBackup, val duplicateServerIds: Set<Int>) : BackupEvent
 
         /**
          * Import succeeded. The restored theme/dynamic-colors are applied by observing the
@@ -65,9 +64,44 @@ constructor(
     private val _backupEvents = MutableSharedFlow<BackupEvent>(extraBufferCapacity = 1)
     val backupEvents = _backupEvents.asSharedFlow()
 
+    /**
+     * A decrypted backup ready to import. [duplicateServerIds] are the ids (within [backup]) of
+     * servers that already exist and would be skipped on a merge.
+     */
+    data class ImportOffer(val backup: ConfigBackup, val duplicateServerIds: Set<Int>)
+
+    private val _importOffer = MutableStateFlow<ImportOffer?>(null)
+
+    /**
+     * The backup waiting for the user's selection. State rather than an event, so that it is still
+     * there when the screen comes back if it was left before the selection could be shown.
+     */
+    val importOffer: StateFlow<ImportOffer?> = _importOffer.asStateFlow()
+
+    /** The selection for [importOffer] is on screen, so it isn't shown again. */
+    fun importOfferShown() {
+        _importOffer.value = null
+    }
+
     /** Current servers, for building the export selection dialog. */
     val servers: StateFlow<List<ServerConfig>> =
         configDao.getConfigs().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /**
+     * Returns once the app is unlocked. The backup dialogs are windows of their own and would show
+     * above the lock screen, so they wait for this.
+     */
+    suspend fun awaitUnlocked() {
+        appLockManager.locked.first { !it }
+    }
+
+    /** How importing [prefGroups] of the loaded backup would weaken the app lock, if it would. */
+    fun importLockWeakening(prefGroups: Set<PrefGroup>): LockWeakening? =
+        pendingImport?.appLockWeakening(prefGroups, appLockManager.settings)
+
+    /** Asks the user to authenticate, then runs [onSuccess]. */
+    fun authenticate(title: String, onSuccess: () -> Unit) =
+        appLockManager.authenticate(title, onSuccess)
 
     // Holds the decrypted backup between beginImport() and applyImport().
     private var pendingImport: ConfigBackup? = null
@@ -85,8 +119,7 @@ constructor(
                     val prefs = prefsStore.data.first()
                     val servers =
                         configDao.getConfigs().first().filter { it.configId in selectedServerIds }
-                    val preferences =
-                        if (prefGroups.isNotEmpty()) prefs.extractGroups(prefGroups) else null
+                    val preferences = if (prefGroups.isNotEmpty()) prefs else null
                     val categoryColors = if (includeCategoryColors) prefs.categoryColors else null
                     backupManager.export(
                         uri,
@@ -111,7 +144,7 @@ constructor(
 
     fun beginImport(uri: Uri, passphrase: String) {
         viewModelScope.launch {
-            val event =
+            val failure =
                 try {
                     val backup = backupManager.readBackup(uri, passphrase)
                     pendingImport = backup
@@ -121,7 +154,8 @@ constructor(
                             .filter { backupManager.identityKey(it) in existingKeys }
                             .map { it.configId }
                             .toSet()
-                    BackupEvent.Loaded(backup, duplicateIds)
+                    _importOffer.value = ImportOffer(backup, duplicateIds)
+                    null
                 } catch (e: AEADBadTagException) {
                     BackupEvent.Failed(getString(CommonR.string.status_incorrect_passphrase))
                 } catch (e: InvalidBackupException) {
@@ -134,7 +168,7 @@ constructor(
                         ),
                     )
                 }
-            _backupEvents.emit(event)
+            failure?.let { _backupEvents.emit(it) }
         }
     }
 

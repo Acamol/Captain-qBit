@@ -12,6 +12,12 @@ object Routes {
     const val VERSION = "version"
     const val LOGS = "logs"
     const val SPEED_LIMITS = "speedLimits"
+    const val SERVER_SETTINGS = "serverSettings"
+    const val PRIVACY_SETTINGS = "privacySettings"
+    const val NOTIFICATION_SETTINGS = "notificationSettings"
+    const val APPEARANCE_SETTINGS = "appearanceSettings"
+    const val SYNC_SETTINGS = "syncSettings"
+    const val BACKUP_SETTINGS = "backupSettings"
 
     const val CONFIG = "config"
     const val ARG_SERVER_ID = "serverId"

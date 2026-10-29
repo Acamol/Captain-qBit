@@ -1,10 +1,14 @@
 package dev.yashgarg.qbit.ui.backup
 
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
+import android.net.Uri
 import android.text.InputType
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
+import android.view.WindowManager
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -19,7 +23,9 @@ import dev.yashgarg.qbit.data.backup.ConfigBackup
 import dev.yashgarg.qbit.data.backup.ImportMode
 import dev.yashgarg.qbit.data.backup.PrefGroup
 import dev.yashgarg.qbit.data.backup.availablePrefGroups
+import dev.yashgarg.qbit.data.manager.LockWeakening
 import dev.yashgarg.qbit.data.models.ServerConfig
+import kotlinx.coroutines.flow.filterNotNull
 
 /**
  * Backup-related dialogs shared by Settings and the first-run screen. Built programmatically with
@@ -89,7 +95,7 @@ object BackupDialogs {
                 }
             }
         }
-        dialog.show()
+        dialog.showSecurely(context)
     }
 
     /**
@@ -169,7 +175,42 @@ object BackupDialogs {
                 onConfirm(selected, groups, colorsBox.isChecked)
             }
         }
-        dialog.show()
+        dialog.showSecurely(context)
+    }
+
+    /**
+     * Asks for the passphrase of the backup at [uri] and starts importing it, once the app is
+     * unlocked: the dialog is a window of its own and would otherwise show above the lock.
+     */
+    suspend fun askPassphraseThenImport(context: Context, viewModel: BackupViewModel, uri: Uri) {
+        viewModel.awaitUnlocked()
+        showPassphraseDialog(
+            context,
+            title = context.getString(CommonR.string.backup_passphrase_title),
+            confirm = false,
+        ) { passphrase ->
+            viewModel.beginImport(uri, passphrase)
+        }
+    }
+
+    /**
+     * Shows the import selection for each backup [viewModel] has loaded, once the app is unlocked,
+     * and imports what the user picks. Runs until cancelled.
+     */
+    suspend fun offerImports(context: Context, viewModel: BackupViewModel) {
+        viewModel.importOffer.filterNotNull().collect { offer ->
+            viewModel.awaitUnlocked()
+            viewModel.importOfferShown()
+            showImportSelectionDialog(
+                context,
+                offer.backup,
+                offer.duplicateServerIds,
+                viewModel::importLockWeakening,
+                viewModel::authenticate,
+            ) { serverIds, prefGroups, includeColors, mode ->
+                viewModel.applyImport(serverIds, prefGroups, includeColors, mode)
+            }
+        }
     }
 
     /**
@@ -183,6 +224,8 @@ object BackupDialogs {
         context: Context,
         backup: ConfigBackup,
         duplicateServerIds: Set<Int>,
+        importLockWeakening: (Set<PrefGroup>) -> LockWeakening?,
+        authenticate: (title: String, onSuccess: () -> Unit) -> Unit,
         onConfirm:
             (
                 selectedServerIds: Set<Int>,
@@ -305,11 +348,71 @@ object BackupDialogs {
                         .toSet()
                 val groups = groupBoxes.filter { it.second.isChecked }.map { it.first }.toSet()
                 val mode = if (merging()) ImportMode.MERGE else ImportMode.REPLACE
-                dialog.dismiss()
-                onConfirm(selected, groups, colorsBox?.isChecked ?: false, mode)
+                val import = {
+                    // The prompt's result can arrive after the activity was recreated (a rotation),
+                    // by which time this dialog's window is gone with the old one.
+                    if (dialog.window?.decorView?.isAttachedToWindow == true) dialog.dismiss()
+                    onConfirm(selected, groups, colorsBox?.isChecked ?: false, mode)
+                }
+                val weakening = importLockWeakening(groups)
+                if (weakening != null) {
+                    // Cancelling either step leaves the selection open to change.
+                    showLockWeakeningWarning(context, weakening) {
+                        authenticate(
+                            context.getString(CommonR.string.app_lock_confirm_title),
+                            import,
+                        )
+                    }
+                } else {
+                    import()
+                }
             }
         }
-        dialog.show()
+        dialog.showSecurely(context)
+    }
+
+    private fun showLockWeakeningWarning(
+        context: Context,
+        weakening: LockWeakening,
+        onContinue: () -> Unit,
+    ) {
+        val (title, message) =
+            when (weakening) {
+                LockWeakening.TURNED_OFF ->
+                    CommonR.string.import_turns_off_lock_title to
+                        CommonR.string.import_turns_off_lock_message
+                LockWeakening.LOOSENED ->
+                    CommonR.string.import_loosens_lock_title to
+                        CommonR.string.import_loosens_lock_message
+            }
+        MaterialAlertDialogBuilder(context)
+            .setTitle(context.getString(title))
+            .setMessage(context.getString(message))
+            .setNegativeButton(context.getString(CommonR.string.cancel), null)
+            .setPositiveButton(context.getString(CommonR.string.import_turns_off_lock_continue)) {
+                _,
+                _ ->
+                onContinue()
+            }
+            .create()
+            .showSecurely(context)
+    }
+
+    /**
+     * A dialog is a window of its own, so it doesn't share the activity's FLAG_SECURE. These show
+     * passphrases and server details, so they take it over.
+     */
+    private fun AlertDialog.showSecurely(context: Context) {
+        var host = context
+        while (host is ContextWrapper && host !is Activity) host = host.baseContext
+        val secure =
+            (host as? Activity)
+                ?.window
+                ?.attributes
+                ?.flags
+                ?.and(WindowManager.LayoutParams.FLAG_SECURE)
+        if (secure != null && secure != 0) window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        show()
     }
 
     /** User-facing label for a preference group checkbox. */
@@ -319,6 +422,7 @@ object BackupDialogs {
             PrefGroup.NOTIFICATIONS ->
                 context.getString(CommonR.string.notifications_section_header)
             PrefGroup.FILTERS -> context.getString(CommonR.string.filters_and_sorting_label)
+            PrefGroup.PRIVACY -> context.getString(CommonR.string.privacy_section_title)
         }
 
     /** A bold, emphasized section label separating groups of options in a selection dialog. */

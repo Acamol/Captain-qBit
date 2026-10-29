@@ -192,6 +192,15 @@
                 android:value="androidx.startup"
                 tools:node="remove" />
         </provider>
+        <!-- The lock screen: its own task (MainActivity is singleInstance), kept out of recents so
+             the app's one entry there stays MainActivity's. -->
+        <activity
+            android:name=".LockActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:taskAffinity="${applicationId}.lock"
+            android:theme="@style/Theme.Qbit" />
     </application>
 
 </manifest>

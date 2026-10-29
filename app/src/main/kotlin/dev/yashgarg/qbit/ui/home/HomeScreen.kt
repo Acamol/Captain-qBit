@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -36,6 +37,7 @@ import dev.yashgarg.qbit.ui.backup.BackupDialogs
 import dev.yashgarg.qbit.ui.backup.BackupViewModel
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
+import kotlinx.coroutines.launch
 
 /**
  * First-run / launch screen. Shows a spinner until the config status resolves, then the welcome
@@ -51,35 +53,25 @@ fun HomeScreen(
     val context = LocalContext.current
     val status by homeViewModel.configStatus.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     val noServer = status == ConfigStatus.DOES_NOT_EXIST
-    val backupPassphraseTitle = stringResource(CommonR.string.backup_passphrase_title)
 
     val importLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri != null) {
-                BackupDialogs.showPassphraseDialog(
-                    context,
-                    title = backupPassphraseTitle,
-                    confirm = false,
-                ) { passphrase ->
-                    backupViewModel.beginImport(uri, passphrase)
+                scope.launch {
+                    BackupDialogs.askPassphraseThenImport(context, backupViewModel, uri)
                 }
             }
         }
+
+    LaunchedEffect(Unit) { BackupDialogs.offerImports(context, backupViewModel) }
 
     LaunchedEffect(Unit) {
         backupViewModel.backupEvents.collect { event ->
             when (event) {
                 is BackupViewModel.BackupEvent.Failed ->
                     snackbarHostState.showSnackbar(event.message)
-                is BackupViewModel.BackupEvent.Loaded ->
-                    BackupDialogs.showImportSelectionDialog(
-                        context,
-                        event.backup,
-                        event.duplicateServerIds,
-                    ) { serverIds, prefGroups, includeColors, mode ->
-                        backupViewModel.applyImport(serverIds, prefGroups, includeColors, mode)
-                    }
                 // Theme + leaving the empty state are handled by MainActivity's prefs/config-status
                 // observers once a server exists; just acknowledge.
                 is BackupViewModel.BackupEvent.Imported ->

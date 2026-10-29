@@ -1,0 +1,6 @@
+- New: app lock — ask for your fingerprint, face or screen lock to open the app
+- New: hide the app's preview in recent apps and block screenshots, under Settings → Privacy & Security
+- Settings is now split into pages, and only the server pages read from the server
+- Importing a backup that would turn off or loosen the app lock asks you to confirm first
+- Smoother transitions between screens
+- Updated Russian and Hebrew translations

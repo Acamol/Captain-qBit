@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.util.Log
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -15,6 +16,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -23,9 +25,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import androidx.core.os.BundleCompat
 import androidx.core.os.LocaleListCompat
 import androidx.core.view.WindowCompat
 import androidx.datastore.core.DataStore
@@ -33,8 +39,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.withResumed
 import dagger.hilt.android.AndroidEntryPoint
 import dev.yashgarg.qbit.common.R as CommonR
+import dev.yashgarg.qbit.data.manager.AppLockManager
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.manager.PendingTorrentIntent
 import dev.yashgarg.qbit.data.models.AppPreferences
@@ -42,6 +50,7 @@ import dev.yashgarg.qbit.data.models.ConfigStatus
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.ui.backup.BackupDialogs
 import dev.yashgarg.qbit.ui.backup.BackupViewModel
+import dev.yashgarg.qbit.ui.common.LockScreen
 import dev.yashgarg.qbit.ui.crash.CrashReportDialog
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
@@ -52,6 +61,7 @@ import dev.yashgarg.qbit.ui.whatsnew.WhatsNewViewModel
 import dev.yashgarg.qbit.utils.CrashHandler
 import dev.yashgarg.qbit.utils.GitHubIssueLink
 import dev.yashgarg.qbit.utils.LocalizedContext
+import dev.yashgarg.qbit.utils.WindowPrivacy
 import dev.yashgarg.qbit.utils.rememberCopyToClipboard
 import dev.yashgarg.qbit.worker.StatusWorker
 import javax.inject.Inject
@@ -71,6 +81,7 @@ class MainActivity : AppCompatActivity() {
     @Inject lateinit var appPrefsStore: DataStore<AppPreferences>
     @Inject lateinit var appNavigator: AppNavigator
     @Inject lateinit var pendingTorrentIntent: PendingTorrentIntent
+    @Inject lateinit var appLockManager: AppLockManager
 
     private val backupViewModel by viewModels<BackupViewModel>()
     private val whatsNewViewModel by viewModels<WhatsNewViewModel>()
@@ -85,24 +96,52 @@ class MainActivity : AppCompatActivity() {
     private var pendingNotificationHash: String? = null
     // Same idea, for a "new RSS articles" notification tap.
     private var pendingNotificationRssPath: String? = null
+    private var pendingView: Intent? = null
+    private var pendingViewBroughtForward = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
+        val launchIntent = intent
 
         // A non-null savedInstanceState means the nav host restores its own back stack, so the
         // initial routing below has already happened for this session. Re-running it would re-root
         // navigation and throw away wherever the user actually was - on every rotation.
         navigatedToServer = savedInstanceState != null
+        if (savedInstanceState == null) appLockManager.onAppOpened()
+        appLockManager.attach(this)
+
+        // Applied before the first frame, not only as the collector below sees changes, which
+        // would leave the window capturable until then.
+        applyPrivacyFlags(appLockManager.windowPrivacy.value)
 
         setContent {
             val dynamicColorsFlow = remember { appPrefsStore.data.map { it.dynamicColors } }
             val dynamicColors by dynamicColorsFlow.collectAsStateWithLifecycle(initialValue = false)
+            val locked by appLockManager.locked.collectAsStateWithLifecycle()
             QbitComposeTheme(dynamicColors = dynamicColors) {
-                QbitNavHost(appNavigator = appNavigator, onExitDoubleBack = ::onExitDoubleBack)
+                // Kept composed while locked so the user returns to exactly where they were, but
+                // neither drawn nor exposed to accessibility services.
+                Box(
+                    modifier = if (locked) Modifier.alpha(0f).clearAndSetSemantics {} else Modifier,
+                ) {
+                    QbitNavHost(
+                        appNavigator = appNavigator,
+                        onExitDoubleBack = ::onExitDoubleBack,
+                    )
+                }
+
+                // Covers the app, dialogs included, until LockActivity is on top of it. The
+                // app-level dialogs below wait for the unlock, so they don't open behind the lock.
+                if (locked) {
+                    LockScreen(
+                        onUnlock = { LockActivity.start(this@MainActivity) },
+                        onBack = { moveTaskToBack(true) },
+                    )
+                }
 
                 val whatsNew by whatsNewViewModel.uiState.collectAsStateWithLifecycle()
-                if (whatsNew.visible) {
+                if (whatsNew.visible && !locked) {
                     WhatsNewDialog(
                         versionName = whatsNew.versionName,
                         entries = whatsNew.entries,
@@ -117,29 +156,35 @@ class MainActivity : AppCompatActivity() {
                             CrashHandler.consumePendingReport(applicationContext)
                         }
                 }
-                crashReport?.let { report ->
-                    val copyToClipboard = rememberCopyToClipboard()
-                    val crashReportCopiedMessage =
-                        stringResource(CommonR.string.crash_report_copied)
-                    CrashReportDialog(
-                        report = report,
-                        onDismiss = { crashReport = null },
-                        onCopy = {
-                            copyToClipboard("Crash report", report, crashReportCopiedMessage)
-                        },
-                        onReportIssue = {
-                            startActivity(
-                                Intent(Intent.ACTION_VIEW, GitHubIssueLink.url(report).toUri()),
-                            )
-                        },
-                    )
-                }
+                crashReport
+                    ?.takeIf { !locked }
+                    ?.let { report ->
+                        val copyToClipboard = rememberCopyToClipboard()
+                        val crashReportCopiedMessage =
+                            stringResource(CommonR.string.crash_report_copied)
+                        CrashReportDialog(
+                            report = report,
+                            onDismiss = { crashReport = null },
+                            onCopy = {
+                                copyToClipboard("Crash report", report, crashReportCopiedMessage)
+                            },
+                            onReportIssue = {
+                                startActivity(
+                                    Intent(Intent.ACTION_VIEW, GitHubIssueLink.url(report).toUri()),
+                                )
+                            },
+                        )
+                    }
 
                 // Shared by both permission rationales below: neither is dismissable, so only
                 // one may be on screen at a time, and both defer when this launch is opening a
                 // backup file (that flow shows its own native passphrase dialog from onCreate).
                 var showNotificationRationale by remember { mutableStateOf(false) }
-                val openingBackupFile = intent?.data?.let(::isBackupUri) == true
+                // Queried once: it asks the file's provider, and this is recomposed on every lock
+                // change.
+                val openingBackupFile = remember {
+                    launchIntent.data?.let(::isBackupUri) == true
+                }
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     val notificationPermissionLauncher =
@@ -161,7 +206,7 @@ class MainActivity : AppCompatActivity() {
                             showNotificationRationale = true
                         }
                     }
-                    if (showNotificationRationale) {
+                    if (showNotificationRationale && !locked) {
                         AlertDialog(
                             onDismissRequest = {},
                             title = {
@@ -232,7 +277,7 @@ class MainActivity : AppCompatActivity() {
                             showLocalNetworkRationale = true
                         }
                     }
-                    if (showLocalNetworkRationale) {
+                    if (showLocalNetworkRationale && !locked) {
                         AlertDialog(
                             onDismissRequest = {},
                             title = {
@@ -332,24 +377,12 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch { BackupDialogs.offerImports(this@MainActivity, backupViewModel) }
                 backupViewModel.backupEvents.collect { event ->
                     when (event) {
                         is BackupViewModel.BackupEvent.Failed ->
                             Toast.makeText(this@MainActivity, event.message, Toast.LENGTH_LONG)
                                 .show()
-                        is BackupViewModel.BackupEvent.Loaded ->
-                            BackupDialogs.showImportSelectionDialog(
-                                this@MainActivity,
-                                event.backup,
-                                event.duplicateServerIds,
-                            ) { serverIds, prefGroups, includeColors, mode ->
-                                backupViewModel.applyImport(
-                                    serverIds,
-                                    prefGroups,
-                                    includeColors,
-                                    mode,
-                                )
-                            }
                         is BackupViewModel.BackupEvent.Imported ->
                             Toast.makeText(this@MainActivity, event.message, Toast.LENGTH_SHORT)
                                 .show()
@@ -411,23 +444,120 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        handleBackupIntent(intent)
-        handleTorrentViewIntent(intent)
-        pendingNotificationHash = intent.getStringExtra(EXTRA_TORRENT_HASH)
-        pendingNotificationRssPath = intent.getStringExtra(EXTRA_RSS_ITEM_PATH)
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.CREATED) {
+                appLockManager.windowPrivacy.collect(::applyPrivacyFlags)
+            }
+        }
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                if (appLockManager.disableIfUnavailable()) {
+                    Toast.makeText(
+                            this@MainActivity,
+                            getString(CommonR.string.app_lock_turned_off_no_screen_lock),
+                            Toast.LENGTH_LONG,
+                        )
+                        .show()
+                }
+            }
+        }
+
+        // A lock engaging while the app is on screen. Being shown while locked is covered in
+        // onStart, which comes before this collector sees the current value.
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                appLockManager.locked.drop(1).collect { locked ->
+                    if (locked) LockActivity.start(this@MainActivity)
+                }
+            }
+        }
+
+        // A recreated activity gets the launch intent again, so only a fresh launch opens it - a
+        // file still waiting for the unlock comes back from the saved state instead.
+        if (savedInstanceState == null) {
+            openWhenUnlocked(launchIntent, broughtForward = false)
+        } else {
+            BundleCompat.getParcelable(savedInstanceState, STATE_PENDING_VIEW, Intent::class.java)
+                ?.let {
+                    openWhenUnlocked(
+                        it,
+                        savedInstanceState.getBoolean(STATE_PENDING_VIEW_BROUGHT_FORWARD),
+                    )
+                }
+        }
+        pendingNotificationHash = launchIntent.getStringExtra(EXTRA_TORRENT_HASH)
+        pendingNotificationRssPath = launchIntent.getStringExtra(EXTRA_RSS_ITEM_PATH)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Covered by the lock screen whenever it's shown while locked: on the app's return, a fresh
+        // start, or an opened file or link bringing it forward. Started here, as early as the app
+        // can, to keep the moment before it covers the app short.
+        if (appLockManager.locked.value) LockActivity.start(this)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        appLockManager.detach(this)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putParcelable(STATE_PENDING_VIEW, pendingView)
+        outState.putBoolean(STATE_PENDING_VIEW_BROUGHT_FORWARD, pendingViewBroughtForward)
+    }
+
+    /**
+     * Runs [block] once the app is resumed and unlocked. Waiting for the resume matters: an intent
+     * delivered to a backgrounded app arrives before the timed lock has had its say on the return.
+     */
+    private fun whenUnlocked(block: () -> Unit) {
+        lifecycleScope.launch {
+            lifecycle.withResumed {}
+            appLockManager.locked.first { !it }
+            block()
+        }
+    }
+
+    /**
+     * Opens a file or link once the app is unlocked: both can put a dialog on screen (the add
+     * torrent sheet, the backup passphrase), which would otherwise show above the lock. It is kept
+     * in the saved state meanwhile, so recreating the activity before the unlock doesn't drop it. A
+     * torrent [broughtForward] to an app already running also brings the list forward, so its add
+     * dialog can surface.
+     */
+    private fun openWhenUnlocked(intent: Intent, broughtForward: Boolean) {
+        if (intent.action != Intent.ACTION_VIEW || intent.data == null) return
+        pendingView = intent
+        pendingViewBroughtForward = broughtForward
+        whenUnlocked {
+            if (pendingView === intent) pendingView = null
+            // Anything that isn't a backup is a torrent, handed to ServerScreen via
+            // PendingTorrentIntent.
+            if (!handleBackupIntent(intent) && handleTorrentViewIntent(intent) && broughtForward) {
+                appNavigator.navigate(NavCommand.PopToServer)
+            }
+        }
+    }
+
+    private fun applyPrivacyFlags(privacy: WindowPrivacy) {
+        if (privacy.secure) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            setRecentsScreenshotEnabled(privacy.recentsScreenshotEnabled)
+        }
     }
 
     // singleInstance: an already-running task receives opened files here rather than in onCreate.
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleBackupIntent(intent)
-        // handleBackupIntent clears the data for .cqb files, so remaining VIEW data means a
-        // torrent. Hand its URI to ServerScreen (via PendingTorrentIntent) and bring the list
-        // forward so its add dialog can surface.
-        if (handleTorrentViewIntent(intent)) {
-            appNavigator.navigate(NavCommand.PopToServer)
-        }
+        openWhenUnlocked(intent, broughtForward = true)
         // Notification taps never reach here: notifyEvent()'s PendingIntent sets
         // FLAG_ACTIVITY_CLEAR_TASK, which always destroys and recreates this singleInstance
         // activity — so EXTRA_TORRENT_HASH/EXTRA_RSS_ITEM_PATH are only ever read in onCreate.
@@ -462,12 +592,13 @@ class MainActivity : AppCompatActivity() {
      * so the torrent handling doesn't also try to add it. Import works whether or not any servers
      * exist, which is why it lives here rather than in a fragment.
      */
-    private fun handleBackupIntent(intent: Intent?) {
-        val uri = intent?.data ?: return
-        if (intent.action != Intent.ACTION_VIEW || !isBackupUri(uri)) return
+    private fun handleBackupIntent(intent: Intent?): Boolean {
+        val uri = intent?.data ?: return false
+        if (intent.action != Intent.ACTION_VIEW || !isBackupUri(uri)) return false
 
-        // Prevent the torrent handling from treating this URI as a torrent to add.
-        setIntent(intent.apply { data = null })
+        // Consume the URI so a recreated activity won't show another import dialog. This may be a
+        // saved launch intent while a newer intent is current, so don't overwrite the newer one.
+        if (this.intent === intent) setIntent(Intent(intent).apply { data = null })
 
         BackupDialogs.showPassphraseDialog(
             this,
@@ -476,6 +607,7 @@ class MainActivity : AppCompatActivity() {
         ) { passphrase ->
             backupViewModel.beginImport(uri, passphrase)
         }
+        return true
     }
 
     /** True when the URI points at a Captain qBit backup, matched by its .cqb filename. */
@@ -511,5 +643,7 @@ class MainActivity : AppCompatActivity() {
          */
         const val EXTRA_RSS_ITEM_PATH = "rss_item_path"
         private const val EXIT_CONFIRMATION_WINDOW_MS = 2000L
+        private const val STATE_PENDING_VIEW = "pending_view"
+        private const val STATE_PENDING_VIEW_BROUGHT_FORWARD = "pending_view_brought_forward"
     }
 }

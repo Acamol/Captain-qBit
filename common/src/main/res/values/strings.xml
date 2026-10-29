@@ -148,7 +148,7 @@
         <item quantity="other">New RSS articles</item>
     </plurals>
 
-    <string name="alert_sound_label">Alert sound</string>
+    <string name="alert_sound_label">Alert Sound</string>
     <string name="alert_sound_always">Always</string>
     <string name="alert_sound_never">Never</string>
     <string name="alert_sound_outside_quiet_hours">Except during quiet hours</string>
@@ -156,8 +156,8 @@
         A silenced alert still appears — it just doesn\'t make a sound, so an overnight download
         won\'t wake you and is still waiting in the morning.
     </string>
-    <string name="quiet_hours_start_label">Starts at</string>
-    <string name="quiet_hours_end_label">Ends at</string>
+    <string name="quiet_hours_start_label">Starts At</string>
+    <string name="quiet_hours_end_label">Ends At</string>
 
     <!-- Dialogs -->
     <string name="rename_torrent_title">Rename torrent</string>
@@ -437,7 +437,7 @@
     <string name="untagged_label">Untagged</string>
     <string name="trackers_section_title">Trackers</string>
     <string name="clear_all_action">Clear all</string>
-    <string name="use_alternate_speed_limits_label">Use alternate speed limits</string>
+    <string name="use_alternate_speed_limits_label">Use Alternate Speed Limits</string>
     <string name="settings_label">Settings</string>
     <string name="manage_named_action">Manage %1$s</string>
 
@@ -467,35 +467,47 @@
     <string name="interval_30_seconds">30 seconds</string>
     <string name="interval_1_minute">1 minute</string>
     <string name="interval_5_minutes">5 minutes</string>
-    <string name="general_section_title">General</string>
-    <string name="server_section_title">Server</string>
+    <string name="servers_settings_subtitle">Connected to %1$s</string>
+    <string name="servers_settings_subtitle_none">Add a qBittorrent server to connect to</string>
+    <string name="appearance_settings_subtitle">Theme, language and colors</string>
+    <string name="sync_settings_subtitle">How often the app checks your server</string>
+    <string name="backup_settings_subtitle">Export or import your servers and settings</string>
+    <string name="server_settings_title">Server Options</string>
+    <string name="server_settings_subtitle">
+        RSS, speed limits, queueing and more, stored on %1$s
+    </string>
+    <string name="privacy_settings_subtitle_lock_on">App lock is on</string>
+    <string name="privacy_settings_subtitle_lock_off">
+        App lock, recent apps preview and screenshots
+    </string>
+    <string name="notification_settings_subtitle">Transfer status, alerts and quiet hours</string>
     <string name="server_section_description">
         Settings on the connected qBittorrent server, not this app
     </string>
-    <string name="auto_tmm_default_label">Automatic Torrent Management by default</string>
+    <string name="auto_tmm_default_label">Automatic Torrent Management by Default</string>
     <string name="auto_tmm_default_subtitle">
         Applies to torrents added outside this app, e.g. via RSS rules
     </string>
-    <string name="rss_refresh_interval_label">RSS refresh interval</string>
+    <string name="rss_refresh_interval_label">RSS Refresh Interval</string>
     <string name="minutes_suffix">%1$d min</string>
-    <string name="rss_max_articles_per_feed_label">Max articles per feed</string>
+    <string name="rss_max_articles_per_feed_label">Max Articles per Feed</string>
     <string name="articles_suffix">%1$d articles</string>
-    <string name="fetch_rss_feeds_label">Fetch RSS feeds</string>
+    <string name="fetch_rss_feeds_label">Fetch RSS Feeds</string>
     <string name="fetch_rss_feeds_subtitle">Feeds won\'t update at all while this is off</string>
-    <string name="auto_download_rss_label">Auto-download matching RSS articles</string>
+    <string name="auto_download_rss_label">Auto-Download Matching RSS Articles</string>
     <string name="auto_download_rss_subtitle">Lets RSS rules download torrents automatically</string>
     <string name="use_alternate_speed_limits_subtitle">
         Switch between your normal speed limits and the alternate ones
     </string>
-    <string name="global_speed_limits_label">Global speed limits</string>
+    <string name="global_speed_limits_label">Global Speed Limits</string>
     <string name="global_speed_limits_subtitle">
         Set the server-wide download and upload speed limits
     </string>
-    <string name="alternate_speed_limits_label">Alternate speed limits</string>
+    <string name="alternate_speed_limits_label">Alternate Speed Limits</string>
     <string name="alternate_speed_limits_subtitle">
         Set the limits used while \"use alternate speed limits\" is on
     </string>
-    <string name="speed_limits_title">Speed limits</string>
+    <string name="speed_limits_title">Speed Limits</string>
     <string name="speed_limits_subtitle">Global and alternate limits, and when to switch</string>
     <string name="global_speed_limits_section_title">Global</string>
     <string name="alternate_speed_limits_section_title">Alternate</string>
@@ -510,44 +522,96 @@
     <string name="schedule_days_weekday">Weekdays</string>
     <string name="schedule_days_weekend">Weekends</string>
     <string name="alt_speed_schedule_next_day">%1$s (next day)</string>
-    <string name="torrent_queueing_label">Torrent queueing</string>
+    <string name="torrent_queueing_label">Torrent Queueing</string>
     <string name="torrent_queueing_subtitle">
         Cap how many torrents are active at once; enables queue positions
     </string>
     <string name="appearance_section_title">Appearance</string>
     <string name="theme_label">Theme</string>
-    <string name="dynamic_colors_label">Dynamic colors</string>
+    <string name="dynamic_colors_label">Dynamic Colors</string>
     <string name="dynamic_colors_subtitle">Use the wallpaper-based Material You palette</string>
+    <string name="privacy_section_title">Privacy &amp; Security</string>
+    <string name="app_lock_label">App Lock</string>
+    <string name="app_lock_subtitle">
+        Require your fingerprint, face or screen lock to open the app
+    </string>
+    <string name="app_lock_subtitle_blocks_screenshots">
+        Require your fingerprint, face or screen lock to open the app. On this Android version, this
+        also blocks screenshots
+    </string>
+    <string name="app_lock_unavailable_subtitle">
+        Set up a screen lock on this device to use the app lock
+    </string>
+    <string name="app_lock_confirm_title">Confirm it\'s you</string>
+    <string name="import_turns_off_lock_title">Turn off the app lock?</string>
+    <string name="import_turns_off_lock_message">
+        This backup turns the app lock off. You\'ll be asked to confirm it\'s you before importing.
+    </string>
+    <string name="import_turns_off_lock_continue">Continue</string>
+    <string name="import_loosens_lock_title">Loosen the app lock?</string>
+    <string name="import_loosens_lock_message">
+        This backup makes the app lock engage less often. You\'ll be asked to confirm it\'s you
+        before importing.
+    </string>
+    <string name="app_lock_timeout_label">Lock After</string>
+    <string name="app_lock_timeout_description">
+        How long the app can stay in the background before it asks again. Opening it after it was
+        closed always asks.
+    </string>
+    <string name="lock_timeout_immediately">Immediately</string>
+    <string name="lock_timeout_15_minutes">15 minutes</string>
+    <string name="lock_timeout_1_hour">1 hour</string>
+    <string name="lock_timeout_never">Never automatically</string>
+    <string name="lock_on_screen_off_label">Lock When the Screen Turns Off</string>
+    <string name="lock_on_screen_off_subtitle">
+        Lock straight away when the device is locked, whatever the time above
+    </string>
+    <string name="hide_in_recents_label">Hide in Recent Apps</string>
+    <string name="hide_in_recents_subtitle">Show a blank preview in the recent apps screen</string>
+    <string name="hide_in_recents_subtitle_blocks_screenshots">
+        Show a blank preview in the recent apps screen. On this Android version, this also blocks
+        screenshots
+    </string>
+    <string name="block_screenshots_label">Block Screenshots</string>
+    <string name="block_screenshots_subtitle">
+        Prevent screenshots and screen recordings of the app
+    </string>
+    <string name="app_locked_title">Captain qBit is locked</string>
+    <string name="unlock_action">Unlock</string>
+    <string name="unlock_prompt_title">Unlock Captain qBit</string>
+    <string name="app_lock_turned_off_no_screen_lock">
+        App lock was turned off because this device no longer has a screen lock
+    </string>
     <string name="notifications_section_title">Notifications</string>
-    <string name="status_notification_label">Status notification</string>
+    <string name="status_notification_label">Status Notification</string>
     <string name="status_notification_subtitle">
         Ongoing notification showing current transfer speeds
     </string>
-    <string name="notify_on_complete_label">Notify on complete</string>
+    <string name="notify_on_complete_label">Notify on Complete</string>
     <string name="notify_on_complete_subtitle">Alert when a torrent finishes downloading</string>
-    <string name="notify_on_checked_label">Notify on checked</string>
+    <string name="notify_on_checked_label">Notify on Checked</string>
     <string name="notify_on_checked_subtitle">Alert when a torrent finishes rechecking</string>
-    <string name="notify_on_new_rss_label">Notify on new RSS articles</string>
+    <string name="notify_on_new_rss_label">Notify on New RSS Articles</string>
     <string name="notify_on_new_rss_subtitle">
         Alert when a feed gets new articles - checked as often as the RSS screen\'s own feed
         refresh interval
     </string>
-    <string name="notification_refresh_interval_label">Notification refresh interval</string>
+    <string name="notification_refresh_interval_label">Notification Refresh Interval</string>
     <string name="notification_refresh_interval_description">
         How often the notification updates its transfer speeds. Longer saves battery.
     </string>
-    <string name="torrent_alert_check_interval_label">Torrent alert check interval</string>
+    <string name="torrent_alert_check_interval_label">Torrent Alert Check Interval</string>
     <string name="torrent_alert_check_interval_description">
         How often finished/rechecked torrents are checked. Longer delays alerts but saves battery.
     </string>
     <string name="sync_section_title">Sync</string>
-    <string name="torrent_list_refresh_interval_label">Torrent list refresh interval</string>
+    <string name="torrent_list_refresh_interval_label">Torrent List Refresh Interval</string>
     <string name="torrent_list_refresh_interval_description">
         How often the open torrent list refreshes. Longer saves battery and data.
     </string>
     <string name="backup_section_title">Backup</string>
-    <string name="export_configuration_label">Export configuration</string>
-    <string name="import_configuration_label">Import configuration</string>
+    <string name="export_configuration_label">Export Configuration</string>
+    <string name="import_configuration_label">Import Configuration</string>
     <string name="encrypt_backup_title">Encrypt backup</string>
     <string name="passphrase_label">Passphrase</string>
     <string name="confirm_passphrase_label">Confirm passphrase</string>

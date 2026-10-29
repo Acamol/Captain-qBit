@@ -94,4 +94,16 @@ data class AppPreferences(
     // How often the live torrent-list sync (while a server screen is open) polls the server, in
     // milliseconds.
     val syncIntervalMs: Long = 5_000L,
+    // App lock and privacy: the PRIVACY backup group.
+    // Requires the device's biometrics or screen lock to get into the app.
+    val appLockEnabled: Boolean = false,
+    // How long the app may sit in the background before it locks again. 0 locks as soon as it's
+    // left; AppLockSettings.TIMEOUT_NEVER only locks when the app is started afresh.
+    val appLockTimeoutMs: Long = 30_000L,
+    // Lock as soon as the screen turns off, regardless of appLockTimeoutMs.
+    val appLockOnScreenOff: Boolean = true,
+    // Blank the app's preview in the recent apps screen. Independent of the app lock.
+    val hideInRecents: Boolean = false,
+    // FLAG_SECURE: no screenshots, screen recordings or casting of the app's content.
+    val blockScreenshots: Boolean = false,
 )

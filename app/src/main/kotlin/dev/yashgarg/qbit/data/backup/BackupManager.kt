@@ -53,8 +53,8 @@ constructor(
     }
 
     /**
-     * Encrypts [servers] (and [preferences], when non-null) to the file at [uri]. The caller is
-     * responsible for having filtered these down to what the user chose to export.
+     * Encrypts [servers] to the file at [uri], plus the [preferenceGroups] of [preferences] when
+     * non-null (only those groups' fields are written). The caller picks the servers to export.
      */
     suspend fun export(
         uri: Uri,
@@ -71,7 +71,7 @@ constructor(
             // exporting that ciphertext would be undecryptable on another device or a fresh
             // install.
             val backup =
-                ConfigBackup(
+                configBackupOf(
                     servers.map { it.withDecryptedSecrets() },
                     preferences,
                     preferenceGroups,
@@ -261,14 +261,20 @@ constructor(
     ) {
         val groups = backup.availablePrefGroups() intersect selectedPrefGroups
         val src = backup.preferences
+        val privacySrc = backup.privacyPreferences
         val backupColors = backup.categoryColors ?: backup.preferences?.categoryColors
         val applyColors = includeCategoryColors && backupColors != null
-        if ((groups.isEmpty() || src == null) && !applyColors) return
+        if ((groups.isEmpty() || (src == null && privacySrc == null)) && !applyColors) return
 
         prefsStore.updateData { current ->
             var result = current
-            if (src != null) {
+            if (src != null || privacySrc != null) {
                 groups.forEach { group ->
+                    if (group == PrefGroup.PRIVACY) {
+                        privacySrc?.let { result = result.overlayGroup(group, it) }
+                        return@forEach
+                    }
+                    if (src == null) return@forEach
                     result =
                         if (group == PrefGroup.FILTERS && configIdRemap.isNotEmpty()) {
                             val remapped =
