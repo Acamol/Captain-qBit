@@ -16,6 +16,7 @@ Features:
   with configurable refresh intervals to trade freshness for battery life
 * Browse RSS feeds and articles, with auto-download rules and notifications for new matches
 * Encrypted backup and restore of your servers and settings
+* Optional app lock with your fingerprint, face or device screen lock, with a choice of when it locks, plus hiding the app's preview in recent apps and blocking screenshots
 * Clear failure reasons when a torrent errors, instead of a bare "error"
 * Optional HTTP Basic Auth for servers behind a reverse proxy, plus self-signed certificate support — approve the certificate's fingerprint in-app, per server
 * Sign in with a qBittorrent 5.2 API key instead of a username and password, or leave both empty for a server whose reverse proxy authenticates on its behalf
