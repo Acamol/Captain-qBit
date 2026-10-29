@@ -1,0 +1,11 @@
+New: an app lock. Turn it on under Settings → Privacy & Security and the app asks for your fingerprint, face or device screen lock before it shows anything. It locks whenever the app is opened afresh, after a time in the background you choose (from immediately to an hour, or never), and, if you like, as soon as the screen turns off. Turning the lock off, or making it lock less often, asks for your screen lock first. While the lock is on, the app's preview in recent apps is blank.
+
+New: Privacy & Security also lets you hide the app's preview in recent apps and block screenshots and screen recordings of the app, with or without the lock. On Android 12 and older, a blank recent-apps preview also blocks screenshots.
+
+Settings is now a list of pages: Servers, Server Options, Notifications, Privacy & Security, Appearance, Sync and Backup. Only Server Options and Speed Limits read from the server, so the rest open straight away even when the server is unreachable.
+
+Backups now include the privacy settings. Importing one that would turn off the app lock, or make it lock less often, warns you first and asks for your screen lock.
+
+Moving between screens now fades the old one out before the new one fades in, and the bottom bar slides in and out with it. The back gesture uses the same transition.
+
+Updated Russian and Hebrew translations.
