@@ -48,7 +48,7 @@ import dev.yashgarg.qbit.data.manager.PendingTorrentIntent
 import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.ConfigStatus
 import dev.yashgarg.qbit.notifications.AppNotificationManager
-import dev.yashgarg.qbit.ui.backup.BackupDialogs
+import dev.yashgarg.qbit.ui.backup.BackupDialogHost
 import dev.yashgarg.qbit.ui.backup.BackupViewModel
 import dev.yashgarg.qbit.ui.common.LockScreen
 import dev.yashgarg.qbit.ui.crash.CrashReportDialog
@@ -140,8 +140,18 @@ class MainActivity : AppCompatActivity() {
                     )
                 }
 
+                // A backup file opened from another app: its passphrase and import selection.
+                BackupDialogHost(backupViewModel)
+                val backupDialog by backupViewModel.dialog.collectAsStateWithLifecycle()
+                // An opened backup file shows its dialog once the app is resumed and unlocked.
+                // Until it has come and gone, the dialogs below wait, so they neither stack with it
+                // nor appear and vanish as it opens.
+                val awaitingBackupFile by backupViewModel.awaitingFile.collectAsStateWithLifecycle()
+                // The app-level dialogs below: one at a time, and not above the lock screen.
+                val appDialogsAllowed = !locked && backupDialog == null && !awaitingBackupFile
+
                 val whatsNew by whatsNewViewModel.uiState.collectAsStateWithLifecycle()
-                if (whatsNew.visible && !locked) {
+                if (whatsNew.visible && appDialogsAllowed) {
                     WhatsNewDialog(
                         versionName = whatsNew.versionName,
                         entries = whatsNew.entries,
@@ -157,7 +167,7 @@ class MainActivity : AppCompatActivity() {
                         }
                 }
                 crashReport
-                    ?.takeIf { !locked }
+                    ?.takeIf { appDialogsAllowed }
                     ?.let { report ->
                         val copyToClipboard = rememberCopyToClipboard()
                         val crashReportCopiedMessage =
@@ -177,14 +187,8 @@ class MainActivity : AppCompatActivity() {
                     }
 
                 // Shared by both permission rationales below: neither is dismissable, so only
-                // one may be on screen at a time, and both defer when this launch is opening a
-                // backup file (that flow shows its own native passphrase dialog from onCreate).
+                // one may be on screen at a time.
                 var showNotificationRationale by remember { mutableStateOf(false) }
-                // Queried once: it asks the file's provider, and this is recomposed on every lock
-                // change.
-                val openingBackupFile = remember {
-                    launchIntent.data?.let(::isBackupUri) == true
-                }
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     val notificationPermissionLauncher =
@@ -196,7 +200,6 @@ class MainActivity : AppCompatActivity() {
                     // Only ever asked once per install (tracked in prefs) - a denial doesn't nag
                     // again on every later launch.
                     LaunchedEffect(Unit) {
-                        if (openingBackupFile) return@LaunchedEffect
                         val alreadyAsked =
                             appPrefsStore.data.map { it.notificationPermissionAsked }.first()
                         if (
@@ -206,7 +209,7 @@ class MainActivity : AppCompatActivity() {
                             showNotificationRationale = true
                         }
                     }
-                    if (showNotificationRationale && !locked) {
+                    if (showNotificationRationale && appDialogsAllowed) {
                         AlertDialog(
                             onDismissRequest = {},
                             title = {
@@ -264,7 +267,6 @@ class MainActivity : AppCompatActivity() {
                             ActivityResultContracts.RequestPermission(),
                         ) {}
                     LaunchedEffect(Unit) {
-                        if (openingBackupFile) return@LaunchedEffect
                         val alreadyAsked =
                             appPrefsStore.data.map { it.localNetworkPermissionAsked }.first()
                         if (
@@ -277,7 +279,7 @@ class MainActivity : AppCompatActivity() {
                             showLocalNetworkRationale = true
                         }
                     }
-                    if (showLocalNetworkRationale && !locked) {
+                    if (showLocalNetworkRationale && appDialogsAllowed) {
                         AlertDialog(
                             onDismissRequest = {},
                             title = {
@@ -377,7 +379,6 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                launch { BackupDialogs.offerImports(this@MainActivity, backupViewModel) }
                 backupViewModel.backupEvents.collect { event ->
                     when (event) {
                         is BackupViewModel.BackupEvent.Failed ->
@@ -529,14 +530,20 @@ class MainActivity : AppCompatActivity() {
      * dialog can surface.
      */
     private fun openWhenUnlocked(intent: Intent, broughtForward: Boolean) {
-        if (intent.action != Intent.ACTION_VIEW || intent.data == null) return
+        val uri = intent.data
+        if (intent.action != Intent.ACTION_VIEW || uri == null) return
         pendingView = intent
         pendingViewBroughtForward = broughtForward
+        // Asked once: it queries the file's provider.
+        val isBackup = isBackupUri(uri)
+        if (isBackup) backupViewModel.awaitFile()
         whenUnlocked {
             if (pendingView === intent) pendingView = null
             // Anything that isn't a backup is a torrent, handed to ServerScreen via
             // PendingTorrentIntent.
-            if (!handleBackupIntent(intent) && handleTorrentViewIntent(intent) && broughtForward) {
+            if (isBackup) {
+                openBackup(intent, uri)
+            } else if (handleTorrentViewIntent(intent) && broughtForward) {
                 appNavigator.navigate(NavCommand.PopToServer)
             }
         }
@@ -588,26 +595,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * If this activity was opened on a .cqb backup file, start the import flow and consume the URI
-     * so the torrent handling doesn't also try to add it. Import works whether or not any servers
-     * exist, which is why it lives here rather than in a fragment.
+     * Starts the import of the .cqb backup file [uri] that [intent] opened, and consumes the URI.
+     * Import works whether or not any servers exist, which is why it lives here rather than in a
+     * screen.
      */
-    private fun handleBackupIntent(intent: Intent?): Boolean {
-        val uri = intent?.data ?: return false
-        if (intent.action != Intent.ACTION_VIEW || !isBackupUri(uri)) return false
-
+    private fun openBackup(intent: Intent, uri: Uri) {
         // Consume the URI so a recreated activity won't show another import dialog. This may be a
         // saved launch intent while a newer intent is current, so don't overwrite the newer one.
         if (this.intent === intent) setIntent(Intent(intent).apply { data = null })
 
-        BackupDialogs.showPassphraseDialog(
-            this,
-            title = getString(CommonR.string.backup_passphrase_title),
-            confirm = false,
-        ) { passphrase ->
-            backupViewModel.beginImport(uri, passphrase)
-        }
-        return true
+        backupViewModel.askImportPassphrase(uri)
     }
 
     /** True when the URI points at a Captain qBit backup, matched by its .cqb filename. */

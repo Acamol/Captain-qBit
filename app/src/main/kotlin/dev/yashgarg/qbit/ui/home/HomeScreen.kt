@@ -23,7 +23,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -33,16 +32,16 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.models.ConfigStatus
-import dev.yashgarg.qbit.ui.backup.BackupDialogs
+import dev.yashgarg.qbit.ui.backup.BackupDialogHost
 import dev.yashgarg.qbit.ui.backup.BackupViewModel
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
-import kotlinx.coroutines.launch
 
 /**
  * First-run / launch screen. Shows a spinner until the config status resolves, then the welcome
  * content when there's no server (MainActivity routes to the list when one exists). Also hosts the
- * restore-from-backup flow (SAF pick -> passphrase -> import), reusing the shared [BackupDialogs].
+ * restore-from-backup flow (SAF pick -> passphrase -> import), reusing the shared
+ * [BackupDialogHost].
  */
 @Composable
 fun HomeScreen(
@@ -53,19 +52,14 @@ fun HomeScreen(
     val context = LocalContext.current
     val status by homeViewModel.configStatus.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
     val noServer = status == ConfigStatus.DOES_NOT_EXIST
 
     val importLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-            if (uri != null) {
-                scope.launch {
-                    BackupDialogs.askPassphraseThenImport(context, backupViewModel, uri)
-                }
-            }
+            if (uri != null) backupViewModel.askImportPassphrase(uri)
         }
 
-    LaunchedEffect(Unit) { BackupDialogs.offerImports(context, backupViewModel) }
+    BackupDialogHost(backupViewModel)
 
     LaunchedEffect(Unit) {
         backupViewModel.backupEvents.collect { event ->
