@@ -16,7 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
@@ -57,6 +56,7 @@ import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.manager.CryptoManager
+import dev.yashgarg.qbit.ui.compose.AlertDialog
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.utils.friendlyMessage

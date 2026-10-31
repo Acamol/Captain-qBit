@@ -25,6 +25,18 @@ class SpotlessPlugin : Plugin<Project> {
                 endWithNewline()
             }
 
+            // Dialogs go through ui-compose's wrappers, which count them as open so that the
+            // app's own dialogs (What's New, a crash report) wait for them to close.
+            format("dialogs") {
+                target("**/*.kt")
+                targetExclude("**/build/", "**/dev/yashgarg/qbit/ui/compose/OpenDialogs.kt")
+                forbidRegex(
+                    "Compose dialog",
+                    """androidx\.compose\.(material3\.(Basic)?AlertDialog|ui\.window\.Dialog)\b""",
+                    "use dev.yashgarg.qbit.ui.compose.AlertDialog or Dialog instead",
+                )
+            }
+
             kotlinGradle {
                 ktfmt().kotlinlangStyle()
                 target("**/*.gradle.kts")

@@ -19,9 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import dev.yashgarg.qbit.common.R as CommonR
+import dev.yashgarg.qbit.ui.compose.Dialog
 
 /** The lock screen itself: shown by [dev.yashgarg.qbit.LockActivity], which covers the app. */
 @Composable

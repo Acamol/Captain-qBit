@@ -17,10 +17,11 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.Box
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,6 +52,9 @@ import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.ui.backup.BackupDialogHost
 import dev.yashgarg.qbit.ui.backup.BackupViewModel
 import dev.yashgarg.qbit.ui.common.LockScreen
+import dev.yashgarg.qbit.ui.compose.AlertDialog
+import dev.yashgarg.qbit.ui.compose.LocalOpenDialogs
+import dev.yashgarg.qbit.ui.compose.OpenDialogs
 import dev.yashgarg.qbit.ui.crash.CrashReportDialog
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
@@ -119,16 +123,19 @@ class MainActivity : AppCompatActivity() {
             val dynamicColorsFlow = remember { appPrefsStore.data.map { it.dynamicColors } }
             val dynamicColors by dynamicColorsFlow.collectAsStateWithLifecycle(initialValue = false)
             val locked by appLockManager.locked.collectAsStateWithLifecycle()
+            val openDialogs = remember { OpenDialogs() }
             QbitComposeTheme(dynamicColors = dynamicColors) {
                 // Kept composed while locked so the user returns to exactly where they were, but
                 // neither drawn nor exposed to accessibility services.
                 Box(
                     modifier = if (locked) Modifier.alpha(0f).clearAndSetSemantics {} else Modifier,
                 ) {
-                    QbitNavHost(
-                        appNavigator = appNavigator,
-                        onExitDoubleBack = ::onExitDoubleBack,
-                    )
+                    CompositionLocalProvider(LocalOpenDialogs provides openDialogs) {
+                        QbitNavHost(
+                            appNavigator = appNavigator,
+                            onExitDoubleBack = ::onExitDoubleBack,
+                        )
+                    }
                 }
 
                 // Covers the app, dialogs included, until LockActivity is on top of it. The
@@ -140,15 +147,20 @@ class MainActivity : AppCompatActivity() {
                     )
                 }
 
+                // The dialogs below open by themselves, so they wait for any dialog a screen has
+                // open: they don't stack on top of one the user is working in.
+                val screenDialogOpen by remember { derivedStateOf { openDialogs.count > 0 } }
+
                 // A backup file opened from another app: its passphrase and import selection.
-                BackupDialogHost(backupViewModel)
+                if (!screenDialogOpen) BackupDialogHost(backupViewModel)
                 val backupDialog by backupViewModel.dialog.collectAsStateWithLifecycle()
                 // An opened backup file shows its dialog once the app is resumed and unlocked.
                 // Until it has come and gone, the dialogs below wait, so they neither stack with it
                 // nor appear and vanish as it opens.
                 val awaitingBackupFile by backupViewModel.awaitingFile.collectAsStateWithLifecycle()
                 // The app-level dialogs below: one at a time, and not above the lock screen.
-                val appDialogsAllowed = !locked && backupDialog == null && !awaitingBackupFile
+                val appDialogsAllowed =
+                    !locked && !screenDialogOpen && backupDialog == null && !awaitingBackupFile
 
                 val whatsNew by whatsNewViewModel.uiState.collectAsStateWithLifecycle()
                 if (whatsNew.visible && appDialogsAllowed) {
