@@ -37,6 +37,12 @@ sealed interface NavCommand {
      */
     data object OpenServerAsRoot : NavCommand
 
+    /**
+     * [OpenServerAsRoot], but only while the first-run screen is still in the back stack: once a
+     * server exists, the app leaves it once and never comes back to it.
+     */
+    data object LeaveHome : NavCommand
+
     /** Bring the torrent list forward without clearing it (e.g. an incoming torrent intent). */
     data object PopToServer : NavCommand
 
