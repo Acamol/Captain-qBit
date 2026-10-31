@@ -29,7 +29,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.models.ConfigStatus
 import dev.yashgarg.qbit.ui.backup.BackupDialogHost
@@ -61,16 +64,19 @@ fun HomeScreen(
 
     BackupDialogHost(backupViewModel)
 
-    LaunchedEffect(Unit) {
-        backupViewModel.backupEvents.collect { event ->
-            when (event) {
-                is BackupViewModel.BackupEvent.Failed ->
-                    snackbarHostState.showSnackbar(event.message)
-                // Theme + leaving the empty state are handled by MainActivity's prefs/config-status
-                // observers once a server exists; just acknowledge.
-                is BackupViewModel.BackupEvent.Imported ->
-                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
-                is BackupViewModel.BackupEvent.Exported -> Unit
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            backupViewModel.backupEvents.collect { event ->
+                when (event) {
+                    is BackupViewModel.BackupEvent.Failed ->
+                        snackbarHostState.showSnackbar(event.message)
+                    // Theme + leaving the empty state are handled by MainActivity's
+                    // prefs/config-status observers once a server exists; just acknowledge.
+                    is BackupViewModel.BackupEvent.Imported ->
+                        Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                    is BackupViewModel.BackupEvent.Exported -> Unit
+                }
             }
         }
     }
