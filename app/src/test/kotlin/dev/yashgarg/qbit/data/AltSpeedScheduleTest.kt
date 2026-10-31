@@ -73,6 +73,8 @@ class AltSpeedScheduleTest {
                     )
 
                 override suspend fun setActiveServer(id: Int) = Unit
+
+                override suspend fun deleteServer(id: Int) = true
             }
         return QbitRepository(manager)
     }

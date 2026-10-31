@@ -135,16 +135,9 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val torrents by viewModel.sortedTorrents.collectAsStateWithLifecycle()
     val categoryColors by viewModel.categoryColors.collectAsStateWithLifecycle()
+    // The server actually connected to, so "Review certificate" probes the one showing the error.
     val activeServerId by viewModel.activeServerId.collectAsStateWithLifecycle()
     val servers by viewModel.servers.collectAsStateWithLifecycle()
-    // Mirrors ClientManagerImpl.resolveActiveConfig()'s fallback, so "Review certificate" probes
-    // the server that's actually showing this error even if activeServerId is stale/unset (-1).
-    val resolvedServerId =
-        remember(activeServerId, servers) {
-            servers.find { it.configId == activeServerId }?.configId
-                ?: servers.firstOrNull()?.configId
-                ?: -1
-        }
 
     var pendingCertReview by remember { mutableStateOf<X509Certificate?>(null) }
     var probingCertificate by remember { mutableStateOf(false) }
@@ -500,7 +493,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                                         FilledTonalButton(
                                             onClick = {
                                                 val target =
-                                                    servers.find { it.configId == resolvedServerId }
+                                                    servers.find { it.configId == activeServerId }
                                                         ?: return@FilledTonalButton
                                                 scope.launch {
                                                     probingCertificate = true
@@ -701,7 +694,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                 TextButton(
                     onClick = {
                         pendingCertReview = null
-                        scope.launch { viewModel.pinCertificate(resolvedServerId, cert.encoded) }
+                        scope.launch { viewModel.pinCertificate(activeServerId, cert.encoded) }
                     },
                 ) {
                     Text(stringResource(CommonR.string.trust_and_retry_action))
