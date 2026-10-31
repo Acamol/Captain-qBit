@@ -71,6 +71,10 @@ fun ConfigBackup.availablePrefGroups(): Set<PrefGroup> {
     return if (privacyPreferences != null) groups + PrefGroup.PRIVACY else groups
 }
 
+/** Whether this backup carries category colors: in their own field or, if older, in preferences. */
+fun ConfigBackup.hasCategoryColors(): Boolean =
+    !(categoryColors ?: preferences?.categoryColors).isNullOrEmpty()
+
 /**
  * How restoring [groups] of this backup would weaken the [current] lock, or null when it wouldn't.
  * The user has to confirm that first: a backup file shouldn't be able to weaken the lock unasked.
