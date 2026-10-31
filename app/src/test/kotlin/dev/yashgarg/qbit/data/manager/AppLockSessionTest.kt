@@ -49,6 +49,18 @@ class AppLockSessionTest {
     }
 
     @Test
+    fun `an absence reported late counts from when it began`() {
+        val session = session().apply { unlock() }
+
+        clock = 1_000L
+        session.onBackground(at = 0L)
+        clock = 30_000L
+        session.onForeground()
+
+        assertTrue(session.locked.value)
+    }
+
+    @Test
     fun `the never timeout only locks when the app is opened afresh`() {
         val session = session(timeoutMs = AppLockSettings.TIMEOUT_NEVER).apply { unlock() }
 

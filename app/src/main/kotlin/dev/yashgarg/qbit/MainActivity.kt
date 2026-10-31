@@ -135,7 +135,7 @@ class MainActivity : AppCompatActivity() {
                 // app-level dialogs below wait for the unlock, so they don't open behind the lock.
                 if (locked) {
                     LockScreen(
-                        onUnlock = { LockActivity.start(this@MainActivity) },
+                        onUnlock = ::showLockScreen,
                         onBack = { moveTaskToBack(true) },
                     )
                 }
@@ -468,7 +468,7 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 appLockManager.locked.drop(1).collect { locked ->
-                    if (locked) LockActivity.start(this@MainActivity)
+                    if (locked) showLockScreen()
                 }
             }
         }
@@ -495,7 +495,12 @@ class MainActivity : AppCompatActivity() {
         // Covered by the lock screen whenever it's shown while locked: on the app's return, a fresh
         // start, or an opened file or link bringing it forward. Started here, as early as the app
         // can, to keep the moment before it covers the app short.
-        if (appLockManager.locked.value) LockActivity.start(this)
+        if (appLockManager.locked.value) showLockScreen()
+    }
+
+    private fun showLockScreen() {
+        appLockManager.onLockScreenStarting()
+        LockActivity.start(this)
     }
 
     override fun onDestroy() {

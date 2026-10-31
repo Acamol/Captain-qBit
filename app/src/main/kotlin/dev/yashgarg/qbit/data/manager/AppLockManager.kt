@@ -9,6 +9,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
@@ -69,6 +71,15 @@ constructor(
 
     private var startedActivities = 0
 
+    // Starting the lock screen can stop the activity it covers a moment before it starts itself,
+    // leaving no activity of the app started in between. Within [HANDOFF_GRACE_MS] of starting it,
+    // until an activity starts, the app running out of started activities only counts as leaving
+    // it after [HANDOFF_GRACE_MS], and from when it happened. Bounded in time because a lock screen
+    // already started doesn't start again.
+    private var lockScreenStartingAt: Long? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var pendingBackground: Runnable? = null
+
     private lateinit var _windowPrivacy: MutableStateFlow<WindowPrivacy>
 
     /** How the app's windows keep their content out of screenshots and the recents screen. */
@@ -115,14 +126,29 @@ constructor(
         (context as Application).registerActivityLifecycleCallbacks(
             object : Application.ActivityLifecycleCallbacks {
                 override fun onActivityStarted(activity: Activity) {
+                    lockScreenStartingAt = null
+                    pendingBackground?.let(mainHandler::removeCallbacks)
+                    pendingBackground = null
                     if (startedActivities++ == 0) session.onForeground()
                 }
 
                 override fun onActivityStopped(activity: Activity) {
                     startedActivities--
-                    if (startedActivities == 0 && !activity.isChangingConfigurations) {
+                    if (startedActivities != 0 || activity.isChangingConfigurations) return
+                    val at = SystemClock.elapsedRealtime()
+                    val startingAt = lockScreenStartingAt
+                    if (startingAt == null || at - startingAt >= HANDOFF_GRACE_MS) {
+                        lockScreenStartingAt = null
                         session.onBackground()
+                        return
                     }
+                    pendingBackground =
+                        Runnable {
+                            pendingBackground = null
+                            lockScreenStartingAt = null
+                            session.onBackground(at)
+                        }
+                            .also { mainHandler.postDelayed(it, HANDOFF_GRACE_MS) }
                 }
 
                 override fun onActivityCreated(activity: Activity, state: Bundle?) = Unit
@@ -144,6 +170,11 @@ constructor(
             IntentFilter(Intent.ACTION_SCREEN_OFF),
             ContextCompat.RECEIVER_NOT_EXPORTED,
         )
+    }
+
+    /** The lock screen is being started. Call it right before starting it. */
+    fun onLockScreenStarting() {
+        lockScreenStartingAt = SystemClock.elapsedRealtime()
     }
 
     /** The app's UI was opened afresh (not recreated), e.g. from the launcher after closing it. */
@@ -276,5 +307,9 @@ constructor(
         promptHost = null
         promptHostRecreating = null
         return askers.toList().also { askers.clear() }
+    }
+
+    private companion object {
+        const val HANDOFF_GRACE_MS = 1_000L
     }
 }

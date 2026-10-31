@@ -86,10 +86,11 @@ class AppLockSession(initial: AppLockSettings, private val now: () -> Long) {
             }
         }
 
-    fun onBackground() {
+    /** The app was left at [at], by the same clock as the session's. */
+    fun onBackground(at: Long = now()) {
         if (!settings.enabled) return
         // Kept from the first event: a repeat must not push the start of the absence later.
-        if (backgroundedAt == null) backgroundedAt = now()
+        if (backgroundedAt == null) backgroundedAt = at
         // Engaged right away rather than on return, so the app is already covered when it's next
         // shown.
         if (settings.timeoutMs == 0L) _locked.value = true
