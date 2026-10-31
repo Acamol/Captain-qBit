@@ -54,16 +54,16 @@ constructor(
 
     // One prompt per activity (a second on the same activity would displace the first's callback),
     // and who asked for the prompt in progress. Kept apart so the result reaches the askers even if
-    // the activity, and so its prompt, is recreated meanwhile. Asking while a prompt is up doesn't
-    // show another, so the result of the one on screen goes to everyone who asked.
+    // the activity, and so its prompt, is recreated meanwhile. Only one prompt is up at a time, and
+    // its result goes to everyone who asked.
     private val prompts = mutableListOf<Pair<FragmentActivity, BiometricPrompt>>()
     private val askers = mutableListOf<Handlers>()
 
-    // The activity showing the prompt in progress. If it finishes, the prompt's result will never
-    // come, and the askers are told it failed rather than waiting forever. Destroyed without
-    // finishing - a rotation, or the system reclaiming it while the screen-lock fallback covers it
-    // -
-    // it is only replaced: the result reaches the new instance of the same activity.
+    // The activity showing the prompt in progress. Recreated for a configuration change (e.g. a
+    // rotation), it is only replaced: the result reaches the new instance of the same activity.
+    // Destroyed any other way - finished, or reclaimed while the screen-lock fallback covers it -
+    // its prompt's result never comes, and the askers are told it failed rather than waiting
+    // forever.
     private var promptHost: FragmentActivity? = null
     private var promptHostRecreating: Class<out FragmentActivity>? = null
 
@@ -187,6 +187,7 @@ constructor(
                         override fun onAuthenticationSucceeded(
                             result: BiometricPrompt.AuthenticationResult,
                         ) {
+                            if (activity !== promptHost) return
                             val askers = takeAskers()
                             // Also unlocks the app: the prompt may have engaged the lock
                             // underneath.
@@ -198,6 +199,8 @@ constructor(
                             errorCode: Int,
                             errString: CharSequence,
                         ) {
+                            // A prompt moved to another activity reports being cancelled too.
+                            if (activity !== promptHost) return
                             failPrompt()
                         }
                     },
@@ -209,10 +212,10 @@ constructor(
         prompts.removeAll { it.first === activity }
         if (activity !== promptHost) return
         promptHost = null
-        if (activity.isFinishing) {
-            failPrompt()
-        } else {
+        if (activity.isChangingConfigurations) {
             promptHostRecreating = activity.javaClass
+        } else {
+            failPrompt()
         }
     }
 
@@ -247,6 +250,16 @@ constructor(
             @Suppress("DEPRECATION") builder.setDeviceCredentialAllowed(true)
         }
         askers += Handlers(onSuccess, onFailure)
+        if (promptShowing) {
+            // Already in front of the user on this activity. A recreated one is attached again
+            // before it can ask.
+            val current = promptHost
+            if (current === host) return
+            // On an activity now covered (by the lock screen), or on one destroyed and not yet
+            // back, which may never come back: moved to the one the user sees.
+            prompts.firstOrNull { it.first === current }?.second?.cancelAuthentication()
+            promptHostRecreating = null
+        }
         promptShowing = true
         promptHost = host
         prompt.authenticate(builder.build())
