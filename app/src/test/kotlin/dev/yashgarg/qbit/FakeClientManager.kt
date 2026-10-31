@@ -200,4 +200,6 @@ class FakeClientManager : ClientManager {
         )
 
     override suspend fun setActiveServer(id: Int) = Unit
+
+    override suspend fun deleteServer(id: Int) = true
 }

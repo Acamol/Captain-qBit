@@ -10,6 +10,7 @@ import dev.yashgarg.qbit.data.daos.ConfigDao
 import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.ConfigStatus
 import dev.yashgarg.qbit.data.models.ServerConfig
+import dev.yashgarg.qbit.data.models.activeServer
 import dev.yashgarg.qbit.di.ApplicationScope
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -72,6 +73,24 @@ constructor(
         prefsStore.updateData { it.copy(activeServerId = id) }
     }
 
+    // Held from checking that another server is left to deleting: two deletes at once could
+    // otherwise both pass the check and leave none.
+    private val deleteMutex = Mutex()
+
+    override suspend fun deleteServer(id: Int): Boolean = deleteMutex.withLock {
+        withContext(Dispatchers.IO) {
+            val configs = configDao.getConfigs().first()
+            if (configs.size <= 1) return@withContext false
+            val wasActive =
+                configs.activeServer(prefsStore.data.first().activeServerId)?.configId == id
+            configDao.deleteConfig(id)
+            if (wasActive) {
+                setActiveServer(configDao.getConfigs().first().firstOrNull()?.configId ?: -1)
+            }
+            true
+        }
+    }
+
     private suspend fun dropClient() {
         clientMutex.withLock {
             client?.close()
@@ -85,15 +104,8 @@ constructor(
             .get()
     }
 
-    // The active config is the one whose id matches the stored activeServerId; falls back to the
-    // first config so existing single-server users (activeServerId still -1) and deletion of the
-    // active server both resolve to a real server.
-    private suspend fun resolveActiveConfig(): ServerConfig? {
-        val configs = configDao.getConfigs().first()
-        if (configs.isEmpty()) return null
-        val activeId = prefsStore.data.first().activeServerId
-        return configs.find { it.configId == activeId } ?: configs.first()
-    }
+    private suspend fun resolveActiveConfig(): ServerConfig? =
+        configDao.getConfigs().first().activeServer(prefsStore.data.first().activeServerId)
 
     private suspend fun getClient(): QBittorrentClient = clientMutex.withLock {
         client?.let {

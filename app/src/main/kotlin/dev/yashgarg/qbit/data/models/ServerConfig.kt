@@ -30,3 +30,11 @@ data class ServerConfig(
     // an actual certificate object to add as a trust anchor.
     val pinnedCertificate: String? = null,
 )
+
+/**
+ * The server the app connects to: the one whose id is [activeServerId], or else the first one. The
+ * fallback covers single-server setups from before servers could be switched (no id stored, -1) and
+ * deleting the active server. Null when there are no servers.
+ */
+fun List<ServerConfig>.activeServer(activeServerId: Int): ServerConfig? =
+    find { it.configId == activeServerId } ?: firstOrNull()

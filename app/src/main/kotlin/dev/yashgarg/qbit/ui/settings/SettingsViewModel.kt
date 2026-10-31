@@ -13,6 +13,7 @@ import dev.yashgarg.qbit.data.manager.AppLockManager
 import dev.yashgarg.qbit.data.manager.AppLockSettings
 import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.EventAlertMode
+import dev.yashgarg.qbit.data.models.activeServer
 import javax.inject.Inject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,15 +41,10 @@ constructor(
     configDao: ConfigDao,
 ) : ViewModel() {
 
-    /**
-     * The server the app is connected to, resolved like ClientManagerImpl: the stored active id,
-     * falling back to the first server. Null until loaded.
-     */
+    /** The server the app is connected to. Null until loaded. */
     val activeServer: StateFlow<ActiveServer?> =
         combine(configDao.getConfigs(), prefsStore.data.map { it.activeServerId }) { configs, id ->
-                ActiveServer(
-                    (configs.find { it.configId == id } ?: configs.firstOrNull())?.serverName,
-                )
+                ActiveServer(configs.activeServer(id)?.serverName)
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(SUBSCRIPTION_TIMEOUT_MS), null)
 

@@ -27,6 +27,13 @@ interface ClientManager {
     /** Persist the active server id; the client is rebuilt for it on the next request. */
     suspend fun setActiveServer(id: Int)
 
+    /**
+     * Deletes the server [id], unless it is the only one: the app needs a server to show anything.
+     * Deleting the active server makes the first one left active. Returns false when it was the
+     * only server, so nothing was deleted.
+     */
+    suspend fun deleteServer(id: Int): Boolean
+
     companion object {
         const val tag = "ClientManager"
 
