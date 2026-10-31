@@ -92,7 +92,8 @@ class MainActivity : AppCompatActivity() {
 
     private var lastBackPressTime = 0L
     // Land on the torrent list once when a server exists; don't re-route on later config-status
-    // replays (e.g. resume).
+    // replays (e.g. resume). A recreated activity asks again, and the nav host, which restores its
+    // own back stack, ignores the request unless the first-run screen is still showing.
     private var navigatedToServer = false
     // A "download complete" notification tap arriving before a server exists (or before the
     // RESUMED collector below has run) — applied once OpenServerAsRoot has actually fired, so it
@@ -108,10 +109,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         val launchIntent = intent
 
-        // A non-null savedInstanceState means the nav host restores its own back stack, so the
-        // initial routing below has already happened for this session. Re-running it would re-root
-        // navigation and throw away wherever the user actually was - on every rotation.
-        navigatedToServer = savedInstanceState != null
         if (savedInstanceState == null) appLockManager.onAppOpened()
         appLockManager.attach(this)
 
@@ -436,8 +433,8 @@ class MainActivity : AppCompatActivity() {
                                 )
                                 if (!navigatedToServer) {
                                     navigatedToServer = true
-                                    appNavigator.navigate(NavCommand.OpenServerAsRoot)
-                                    // Must queue behind OpenServerAsRoot, not race it — that
+                                    appNavigator.navigate(NavCommand.LeaveHome)
+                                    // Must queue behind LeaveHome, not race it — that
                                     // command's popUpTo would otherwise wipe out a torrent/RSS
                                     // navigation sent first.
                                     pendingNotificationHash?.let { hash ->
@@ -499,8 +496,14 @@ class MainActivity : AppCompatActivity() {
                     )
                 }
         }
-        pendingNotificationHash = launchIntent.getStringExtra(EXTRA_TORRENT_HASH)
-        pendingNotificationRssPath = launchIntent.getStringExtra(EXTRA_RSS_ITEM_PATH)
+        // Likewise for a notification's target: the launch intent's is opened only once.
+        if (savedInstanceState == null) {
+            pendingNotificationHash = launchIntent.getStringExtra(EXTRA_TORRENT_HASH)
+            pendingNotificationRssPath = launchIntent.getStringExtra(EXTRA_RSS_ITEM_PATH)
+        } else {
+            pendingNotificationHash = savedInstanceState.getString(STATE_PENDING_TORRENT_HASH)
+            pendingNotificationRssPath = savedInstanceState.getString(STATE_PENDING_RSS_PATH)
+        }
     }
 
     override fun onStart() {
@@ -525,6 +528,8 @@ class MainActivity : AppCompatActivity() {
         super.onSaveInstanceState(outState)
         outState.putParcelable(STATE_PENDING_VIEW, pendingView)
         outState.putBoolean(STATE_PENDING_VIEW_BROUGHT_FORWARD, pendingViewBroughtForward)
+        outState.putString(STATE_PENDING_TORRENT_HASH, pendingNotificationHash)
+        outState.putString(STATE_PENDING_RSS_PATH, pendingNotificationRssPath)
     }
 
     /**
@@ -659,5 +664,7 @@ class MainActivity : AppCompatActivity() {
         private const val EXIT_CONFIRMATION_WINDOW_MS = 2000L
         private const val STATE_PENDING_VIEW = "pending_view"
         private const val STATE_PENDING_VIEW_BROUGHT_FORWARD = "pending_view_brought_forward"
+        private const val STATE_PENDING_TORRENT_HASH = "pending_torrent_hash"
+        private const val STATE_PENDING_RSS_PATH = "pending_rss_path"
     }
 }

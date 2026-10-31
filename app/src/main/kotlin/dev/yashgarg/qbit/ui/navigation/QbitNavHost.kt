@@ -293,6 +293,11 @@ private fun NavController.execute(command: NavCommand) {
                 popUpTo(Routes.HOME) { inclusive = true }
                 launchSingleTop = true
             }
+        NavCommand.LeaveHome -> {
+            if (runCatching { getBackStackEntry(Routes.HOME) }.isSuccess) {
+                execute(NavCommand.OpenServerAsRoot)
+            }
+        }
         NavCommand.PopToServer -> {
             // popBackStack(SERVER, inclusive = false) returns false both when SERVER isn't in the
             // back stack AND when we're already sitting on it (nothing above it to pop) — the
