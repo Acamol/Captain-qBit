@@ -11,7 +11,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.ui.backup.BackupDialogHost
 import dev.yashgarg.qbit.ui.backup.BackupViewModel
@@ -47,15 +50,18 @@ fun BackupSettingsScreen(
 
     BackupDialogHost(backupViewModel)
 
-    LaunchedEffect(Unit) {
-        backupViewModel.backupEvents.collect { event ->
-            when (event) {
-                is BackupViewModel.BackupEvent.Exported ->
-                    snackbarHostState.showSnackbar(event.message)
-                is BackupViewModel.BackupEvent.Failed ->
-                    snackbarHostState.showSnackbar(event.message)
-                is BackupViewModel.BackupEvent.Imported ->
-                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            backupViewModel.backupEvents.collect { event ->
+                when (event) {
+                    is BackupViewModel.BackupEvent.Exported ->
+                        snackbarHostState.showSnackbar(event.message)
+                    is BackupViewModel.BackupEvent.Failed ->
+                        snackbarHostState.showSnackbar(event.message)
+                    is BackupViewModel.BackupEvent.Imported ->
+                        Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

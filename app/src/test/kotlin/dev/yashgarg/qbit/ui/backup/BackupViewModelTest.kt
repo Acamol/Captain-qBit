@@ -4,6 +4,10 @@ import android.app.Application
 import android.content.res.Resources
 import android.net.Uri
 import androidx.datastore.core.DataStore
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import dev.yashgarg.qbit.MainDispatcherRule
 import dev.yashgarg.qbit.data.backup.BackupManager
 import dev.yashgarg.qbit.data.backup.ConfigBackup
@@ -18,8 +22,10 @@ import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.ConnectionType
 import dev.yashgarg.qbit.data.models.ServerConfig
 import javax.crypto.AEADBadTagException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -32,6 +38,7 @@ import org.mockito.kotlin.anyVararg
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.doSuspendableAnswer
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -159,6 +166,41 @@ class BackupViewModelTest {
         assertNull(viewModel.dialog.value)
         verify(backupManager)
             .applyImport(backup, listOf(server(2)), emptySet(), false, ImportMode.MERGE)
+    }
+
+    @Test
+    fun `an outcome reached with no one to show it is kept until someone is`() = runTest {
+        val viewModel = viewModel()
+        viewModel.enterImportPassphrase("right")
+
+        viewModel.confirmImportSelection()
+
+        assertTrue(viewModel.backupEvents.first() is BackupViewModel.BackupEvent.Imported)
+    }
+
+    @Test
+    fun `an import goes on to the end when its screen is left`() = runTest {
+        val proceed = CompletableDeferred<Unit>()
+        var finished = false
+        backupManager.stub {
+            onBlocking { applyImport(any(), any(), any(), any(), any()) } doSuspendableAnswer
+                {
+                    proceed.await()
+                    finished = true
+                    ImportResult(imported = 1, skipped = 0, replaced = false)
+                }
+        }
+        val store = ViewModelStore()
+        val viewModel =
+            ViewModelProvider.create(store, viewModelFactory { initializer { viewModel() } })[
+                    BackupViewModel::class]
+        viewModel.enterImportPassphrase("right")
+        viewModel.confirmImportSelection()
+
+        store.clear()
+        proceed.complete(Unit)
+
+        assertTrue(finished)
     }
 
     @Test

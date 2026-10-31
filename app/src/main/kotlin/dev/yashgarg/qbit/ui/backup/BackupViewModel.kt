@@ -25,14 +25,16 @@ import javax.crypto.AEADBadTagException
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -149,8 +151,10 @@ constructor(
         data class Failed(val message: String) : BackupEvent
     }
 
-    private val _backupEvents = MutableSharedFlow<BackupEvent>(extraBufferCapacity = 1)
-    val backupEvents = _backupEvents.asSharedFlow()
+    // Kept until collected, so that an outcome reached while the app was in the background is
+    // shown on its return.
+    private val _backupEvents = Channel<BackupEvent>(Channel.BUFFERED)
+    val backupEvents: Flow<BackupEvent> = _backupEvents.receiveAsFlow()
 
     private val _dialog = MutableStateFlow<BackupDialog?>(null)
 
@@ -303,7 +307,8 @@ constructor(
         val pending = pendingExport.value ?: return
         pendingExport.value = null
         if (uri == null) return
-        viewModelScope.launch {
+        // Not cancelled by leaving the screen: that would leave a partly written file.
+        viewModelScope.launch(NonCancellable) {
             val event =
                 try {
                     val prefs = prefsStore.data.first()
@@ -332,7 +337,7 @@ constructor(
                         ),
                     )
                 }
-            _backupEvents.emit(event)
+            _backupEvents.trySend(event)
         }
     }
 
@@ -389,7 +394,7 @@ constructor(
                 }
             if (failure != null) {
                 _dialog.compareAndSet(checking, null)
-                _backupEvents.emit(failure)
+                _backupEvents.trySend(failure)
             }
         }
     }
@@ -434,7 +439,9 @@ constructor(
     private fun applyImport(choice: BackupDialog.ChooseImport) {
         _dialog.value = null
         val selection = choice.selection
-        viewModelScope.launch {
+        // Not cancelled by leaving the screen: replacing removes the servers before adding the
+        // backup's, so stopping part-way could leave none.
+        viewModelScope.launch(NonCancellable) {
             val event =
                 try {
                     val selected =
@@ -456,7 +463,7 @@ constructor(
                         ),
                     )
                 }
-            _backupEvents.emit(event)
+            _backupEvents.trySend(event)
         }
     }
 
