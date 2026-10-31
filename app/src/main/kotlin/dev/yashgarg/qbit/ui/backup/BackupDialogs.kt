@@ -7,7 +7,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -27,6 +26,7 @@ import dev.yashgarg.qbit.data.backup.PrefGroup
 import dev.yashgarg.qbit.data.backup.availablePrefGroups
 import dev.yashgarg.qbit.data.backup.hasCategoryColors
 import dev.yashgarg.qbit.data.manager.LockWeakening
+import dev.yashgarg.qbit.ui.compose.AlertDialog
 import dev.yashgarg.qbit.ui.compose.CheckboxRow
 import dev.yashgarg.qbit.ui.compose.SelectableRow
 

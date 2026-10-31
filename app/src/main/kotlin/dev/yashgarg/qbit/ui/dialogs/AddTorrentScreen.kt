@@ -52,11 +52,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.models.ContentTreeItem
+import dev.yashgarg.qbit.ui.compose.Dialog
 import dev.yashgarg.qbit.ui.compose.TorrentContentSelectionView
 import dev.yashgarg.qbit.ui.compose.allFileIndices
 import dev.yashgarg.qbit.ui.server.ServerViewModel

@@ -31,7 +31,6 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
@@ -91,6 +90,7 @@ import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.common.R as CommonR
+import dev.yashgarg.qbit.ui.compose.AlertDialog
 import dev.yashgarg.qbit.ui.dialogs.AddTorrentScreen
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
@@ -604,7 +604,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
 
     deleteTargets?.let { targets ->
         var deleteFiles by remember { mutableStateOf(false) }
-        androidx.compose.material3.AlertDialog(
+        AlertDialog(
             onDismissRequest = { deleteTargets = null },
             title = {
                 Text(
