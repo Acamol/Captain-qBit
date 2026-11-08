@@ -28,6 +28,8 @@ over its Web API — control your self-hosted server from your phone. Written in
 - Smart notifications that jump straight to a finished download, with battery-friendly refresh
   rates you control
 - Browse RSS feeds and articles, with auto-download rules and notifications for new matches
+- Search for torrents through your server's qBittorrent search plugins, and enable, install or
+  remove those plugins from the app
 - Works with qBittorrent 4.x and 5.x over HTTP or HTTPS (including self-signed certs), with
   optional HTTP Basic Auth for servers behind a reverse proxy
 - Sign in with a qBittorrent 5.2 API key instead of a username and password, or leave both empty
