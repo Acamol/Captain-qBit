@@ -13,6 +13,7 @@ import qbittorrent.models.TorrentFile
 import qbittorrent.models.TorrentFilter
 import qbittorrent.models.TorrentProperties
 import qbittorrent.models.Webseed
+import qbittorrent.models.withIndexes
 
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.getTorrents(
@@ -72,7 +73,8 @@ suspend fun QBittorrentClient.getTorrentFiles(
                 parameter("indexes", indexes.joinToString("|"))
             }
         }
-        .bodyOrThrow()
+        .bodyOrThrow<List<TorrentFile>>()
+        .withIndexes()
 }
 
 /** Get piece states for the torrent at [hash]. */

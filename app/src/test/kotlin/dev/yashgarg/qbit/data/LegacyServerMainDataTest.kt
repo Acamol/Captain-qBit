@@ -1,10 +1,13 @@
 package dev.yashgarg.qbit.data
 
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import qbittorrent.models.MainData
 import qbittorrent.models.Torrent
+import qbittorrent.models.TorrentFile
+import qbittorrent.models.withIndexes
 
 class LegacyServerMainDataTest {
     private val json = Json {
@@ -54,5 +57,24 @@ class LegacyServerMainDataTest {
         assertEquals(Torrent.State.CHECKING_RESUME_DATA, torrent.state)
         assertEquals("", torrent.contentPath)
         assertEquals(0L, torrent.seedingTime)
+    }
+
+    // Older servers send no index for a file; is_seed is only sent for the first one.
+    private val legacyFiles =
+        """
+        [
+          {"name": "a/one.mkv", "size": 10, "progress": 1, "priority": 1,
+           "is_seed": true, "piece_range": [0, 1], "availability": 1},
+          {"name": "a/two.mkv", "size": 20, "progress": 0.5, "priority": 0,
+           "piece_range": [2, 4], "availability": 0.5}
+        ]
+        """
+            .trimIndent()
+
+    @Test
+    fun `files from a server without file indexes are numbered by position`() {
+        val files = json.decodeFromString<List<TorrentFile>>(legacyFiles).withIndexes()
+
+        assertEquals(listOf(0, 1), files.map { it.index })
     }
 }
