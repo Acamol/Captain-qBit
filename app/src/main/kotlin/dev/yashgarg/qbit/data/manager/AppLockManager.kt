@@ -9,6 +9,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
@@ -54,20 +56,29 @@ constructor(
 
     // One prompt per activity (a second on the same activity would displace the first's callback),
     // and who asked for the prompt in progress. Kept apart so the result reaches the askers even if
-    // the activity, and so its prompt, is recreated meanwhile. Asking while a prompt is up doesn't
-    // show another, so the result of the one on screen goes to everyone who asked.
+    // the activity, and so its prompt, is recreated meanwhile. Only one prompt is up at a time, and
+    // its result goes to everyone who asked.
     private val prompts = mutableListOf<Pair<FragmentActivity, BiometricPrompt>>()
     private val askers = mutableListOf<Handlers>()
 
-    // The activity showing the prompt in progress. If it finishes, the prompt's result will never
-    // come, and the askers are told it failed rather than waiting forever. Destroyed without
-    // finishing - a rotation, or the system reclaiming it while the screen-lock fallback covers it
-    // -
-    // it is only replaced: the result reaches the new instance of the same activity.
+    // The activity showing the prompt in progress. Recreated for a configuration change (e.g. a
+    // rotation), it is only replaced: the result reaches the new instance of the same activity.
+    // Destroyed any other way - finished, or reclaimed while the screen-lock fallback covers it -
+    // its prompt's result never comes, and the askers are told it failed rather than waiting
+    // forever.
     private var promptHost: FragmentActivity? = null
     private var promptHostRecreating: Class<out FragmentActivity>? = null
 
     private var startedActivities = 0
+
+    // Starting the lock screen can stop the activity it covers a moment before it starts itself,
+    // leaving no activity of the app started in between. Within [HANDOFF_GRACE_MS] of starting it,
+    // until an activity starts, the app running out of started activities only counts as leaving
+    // it after [HANDOFF_GRACE_MS], and from when it happened. Bounded in time because a lock screen
+    // already started doesn't start again.
+    private var lockScreenStartingAt: Long? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var pendingBackground: Runnable? = null
 
     private lateinit var _windowPrivacy: MutableStateFlow<WindowPrivacy>
 
@@ -115,14 +126,29 @@ constructor(
         (context as Application).registerActivityLifecycleCallbacks(
             object : Application.ActivityLifecycleCallbacks {
                 override fun onActivityStarted(activity: Activity) {
+                    lockScreenStartingAt = null
+                    pendingBackground?.let(mainHandler::removeCallbacks)
+                    pendingBackground = null
                     if (startedActivities++ == 0) session.onForeground()
                 }
 
                 override fun onActivityStopped(activity: Activity) {
                     startedActivities--
-                    if (startedActivities == 0 && !activity.isChangingConfigurations) {
+                    if (startedActivities != 0 || activity.isChangingConfigurations) return
+                    val at = SystemClock.elapsedRealtime()
+                    val startingAt = lockScreenStartingAt
+                    if (startingAt == null || at - startingAt >= HANDOFF_GRACE_MS) {
+                        lockScreenStartingAt = null
                         session.onBackground()
+                        return
                     }
+                    pendingBackground =
+                        Runnable {
+                            pendingBackground = null
+                            lockScreenStartingAt = null
+                            session.onBackground(at)
+                        }
+                            .also { mainHandler.postDelayed(it, HANDOFF_GRACE_MS) }
                 }
 
                 override fun onActivityCreated(activity: Activity, state: Bundle?) = Unit
@@ -144,6 +170,11 @@ constructor(
             IntentFilter(Intent.ACTION_SCREEN_OFF),
             ContextCompat.RECEIVER_NOT_EXPORTED,
         )
+    }
+
+    /** The lock screen is being started. Call it right before starting it. */
+    fun onLockScreenStarting() {
+        lockScreenStartingAt = SystemClock.elapsedRealtime()
     }
 
     /** The app's UI was opened afresh (not recreated), e.g. from the launcher after closing it. */
@@ -187,6 +218,7 @@ constructor(
                         override fun onAuthenticationSucceeded(
                             result: BiometricPrompt.AuthenticationResult,
                         ) {
+                            if (activity !== promptHost) return
                             val askers = takeAskers()
                             // Also unlocks the app: the prompt may have engaged the lock
                             // underneath.
@@ -198,6 +230,8 @@ constructor(
                             errorCode: Int,
                             errString: CharSequence,
                         ) {
+                            // A prompt moved to another activity reports being cancelled too.
+                            if (activity !== promptHost) return
                             failPrompt()
                         }
                     },
@@ -209,10 +243,10 @@ constructor(
         prompts.removeAll { it.first === activity }
         if (activity !== promptHost) return
         promptHost = null
-        if (activity.isFinishing) {
-            failPrompt()
-        } else {
+        if (activity.isChangingConfigurations) {
             promptHostRecreating = activity.javaClass
+        } else {
+            failPrompt()
         }
     }
 
@@ -247,6 +281,16 @@ constructor(
             @Suppress("DEPRECATION") builder.setDeviceCredentialAllowed(true)
         }
         askers += Handlers(onSuccess, onFailure)
+        if (promptShowing) {
+            // Already in front of the user on this activity. A recreated one is attached again
+            // before it can ask.
+            val current = promptHost
+            if (current === host) return
+            // On an activity now covered (by the lock screen), or on one destroyed and not yet
+            // back, which may never come back: moved to the one the user sees.
+            prompts.firstOrNull { it.first === current }?.second?.cancelAuthentication()
+            promptHostRecreating = null
+        }
         promptShowing = true
         promptHost = host
         prompt.authenticate(builder.build())
@@ -263,5 +307,9 @@ constructor(
         promptHost = null
         promptHostRecreating = null
         return askers.toList().also { askers.clear() }
+    }
+
+    private companion object {
+        const val HANDOFF_GRACE_MS = 1_000L
     }
 }

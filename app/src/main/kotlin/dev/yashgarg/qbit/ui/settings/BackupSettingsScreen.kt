@@ -7,19 +7,18 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import dev.yashgarg.qbit.common.R as CommonR
-import dev.yashgarg.qbit.data.backup.PrefGroup
-import dev.yashgarg.qbit.ui.backup.BackupDialogs
+import dev.yashgarg.qbit.ui.backup.BackupDialogHost
 import dev.yashgarg.qbit.ui.backup.BackupViewModel
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
-import kotlinx.coroutines.launch
 
 private val BACKUP_MIME_TYPES = arrayOf("application/json", "application/octet-stream", "*/*")
 
@@ -30,64 +29,39 @@ fun BackupSettingsScreen(
 ) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    val encryptBackupTitle = stringResource(CommonR.string.encrypt_backup_title)
-
-    var pendingExport by remember { mutableStateOf<PendingExport?>(null) }
 
     val exportLauncher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.CreateDocument("application/octet-stream"),
-        ) { uri ->
-            val pending = pendingExport
-            pendingExport = null
-            if (uri != null && pending != null) {
-                backupViewModel.exportConfig(
-                    uri,
-                    pending.passphrase,
-                    pending.serverIds,
-                    pending.prefGroups,
-                    pending.includeCategoryColors,
-                )
-            }
-        }
-
-    val importLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-            if (uri != null) {
-                scope.launch {
-                    BackupDialogs.askPassphraseThenImport(context, backupViewModel, uri)
-                }
-            }
-        }
-
-    LaunchedEffect(Unit) { BackupDialogs.offerImports(context, backupViewModel) }
-
-    LaunchedEffect(Unit) {
-        backupViewModel.backupEvents.collect { event ->
-            when (event) {
-                is BackupViewModel.BackupEvent.Exported ->
-                    snackbarHostState.showSnackbar(event.message)
-                is BackupViewModel.BackupEvent.Failed ->
-                    snackbarHostState.showSnackbar(event.message)
-                is BackupViewModel.BackupEvent.Imported ->
-                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
-            }
+            backupViewModel::exportTo,
+        )
+    val pickExportDestination by backupViewModel.pickExportDestination.collectAsStateWithLifecycle()
+    LaunchedEffect(pickExportDestination) {
+        if (pickExportDestination) {
+            backupViewModel.exportDestinationAsked()
+            exportLauncher.launch("captain-qbit-backup.cqb")
         }
     }
 
-    fun startExport() {
-        BackupDialogs.showExportSelectionDialog(context, backupViewModel.servers.value) {
-            serverIds,
-            prefGroups,
-            includeColors ->
-            BackupDialogs.showPassphraseDialog(
-                context,
-                title = encryptBackupTitle,
-                confirm = true,
-            ) { passphrase ->
-                pendingExport = PendingExport(passphrase, serverIds, prefGroups, includeColors)
-                exportLauncher.launch("captain-qbit-backup.cqb")
+    val importLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri != null) backupViewModel.askImportPassphrase(uri)
+        }
+
+    BackupDialogHost(backupViewModel)
+
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            backupViewModel.backupEvents.collect { event ->
+                when (event) {
+                    is BackupViewModel.BackupEvent.Exported ->
+                        snackbarHostState.showSnackbar(event.message)
+                    is BackupViewModel.BackupEvent.Failed ->
+                        snackbarHostState.showSnackbar(event.message)
+                    is BackupViewModel.BackupEvent.Imported ->
+                        Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -99,7 +73,7 @@ fun BackupSettingsScreen(
     ) {
         ClickableRow(
             title = stringResource(CommonR.string.export_configuration_label),
-            onClick = { startExport() },
+            onClick = backupViewModel::startExport,
         )
         ClickableRow(
             title = stringResource(CommonR.string.import_configuration_label),
@@ -107,11 +81,3 @@ fun BackupSettingsScreen(
         )
     }
 }
-
-/** The selection + passphrase, held until the user picks an export destination. */
-private data class PendingExport(
-    val passphrase: String,
-    val serverIds: Set<Int>,
-    val prefGroups: Set<PrefGroup>,
-    val includeCategoryColors: Boolean,
-)

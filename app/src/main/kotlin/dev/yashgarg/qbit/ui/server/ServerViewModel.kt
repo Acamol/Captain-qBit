@@ -20,6 +20,7 @@ import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.ContentTreeItem
 import dev.yashgarg.qbit.data.models.ServerConfig
 import dev.yashgarg.qbit.data.models.ServerViewPrefs
+import dev.yashgarg.qbit.data.models.activeServer
 import dev.yashgarg.qbit.ui.common.StatusViewModel
 import dev.yashgarg.qbit.utils.TorrentFileParser
 import dev.yashgarg.qbit.utils.TransformUtil
@@ -67,9 +68,11 @@ constructor(
     val servers: StateFlow<List<ServerConfig>> =
         configDao.getConfigs().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    /** The id of the server the app is connected to, or -1 when there is none. */
     val activeServerId: StateFlow<Int> =
-        prefsStore.data
-            .map { it.activeServerId }
+        combine(configDao.getConfigs(), prefsStore.data.map { it.activeServerId }) { configs, id ->
+                configs.activeServer(id)?.configId ?: -1
+            }
             .stateIn(viewModelScope, SharingStarted.Eagerly, -1)
 
     /** User-picked colors per category (app-local; qBittorrent has no category color). */
@@ -97,15 +100,9 @@ constructor(
     }
 
     fun deleteServer(id: Int) {
-        viewModelScope.launch(Dispatchers.IO) {
-            if (configDao.getConfigs().first().size <= 1) {
+        viewModelScope.launch {
+            if (!clientManager.deleteServer(id)) {
                 emitStatus(getString(CommonR.string.status_cannot_delete_last_server))
-                return@launch
-            }
-            configDao.deleteConfig(id)
-            if (id == prefsStore.data.first().activeServerId) {
-                val remaining = configDao.getConfigs().first().firstOrNull()
-                clientManager.setActiveServer(remaining?.configId ?: -1)
             }
         }
     }
@@ -185,7 +182,7 @@ constructor(
                     configDao.getConfigs(),
                     prefsStore.data.map { it.activeServerId }.distinctUntilChanged(),
                 ) { configs, activeId ->
-                    configs.find { it.configId == activeId } ?: configs.firstOrNull()
+                    configs.activeServer(activeId)
                 }
                 .collect { active -> _uiState.update { it.copy(serverName = active?.serverName) } }
         }

@@ -81,8 +81,9 @@ class LockActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                // A prompt already up (one the app opened before it locked) unlocks it too.
-                if (!autoPrompted && !appLockManager.promptShowing) {
+                // A prompt already up (one the app opened before it locked) unlocks it too. Its
+                // success can come just before this screen is shown, which then only closes.
+                if (!autoPrompted && !appLockManager.promptShowing && appLockManager.locked.value) {
                     autoPrompted = true
                     promptUnlock()
                 }

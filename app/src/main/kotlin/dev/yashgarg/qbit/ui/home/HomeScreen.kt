@@ -23,26 +23,28 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.models.ConfigStatus
-import dev.yashgarg.qbit.ui.backup.BackupDialogs
+import dev.yashgarg.qbit.ui.backup.BackupDialogHost
 import dev.yashgarg.qbit.ui.backup.BackupViewModel
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
-import kotlinx.coroutines.launch
 
 /**
  * First-run / launch screen. Shows a spinner until the config status resolves, then the welcome
  * content when there's no server (MainActivity routes to the list when one exists). Also hosts the
- * restore-from-backup flow (SAF pick -> passphrase -> import), reusing the shared [BackupDialogs].
+ * restore-from-backup flow (SAF pick -> passphrase -> import), reusing the shared
+ * [BackupDialogHost].
  */
 @Composable
 fun HomeScreen(
@@ -53,30 +55,28 @@ fun HomeScreen(
     val context = LocalContext.current
     val status by homeViewModel.configStatus.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
     val noServer = status == ConfigStatus.DOES_NOT_EXIST
 
     val importLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-            if (uri != null) {
-                scope.launch {
-                    BackupDialogs.askPassphraseThenImport(context, backupViewModel, uri)
-                }
-            }
+            if (uri != null) backupViewModel.askImportPassphrase(uri)
         }
 
-    LaunchedEffect(Unit) { BackupDialogs.offerImports(context, backupViewModel) }
+    BackupDialogHost(backupViewModel)
 
-    LaunchedEffect(Unit) {
-        backupViewModel.backupEvents.collect { event ->
-            when (event) {
-                is BackupViewModel.BackupEvent.Failed ->
-                    snackbarHostState.showSnackbar(event.message)
-                // Theme + leaving the empty state are handled by MainActivity's prefs/config-status
-                // observers once a server exists; just acknowledge.
-                is BackupViewModel.BackupEvent.Imported ->
-                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
-                is BackupViewModel.BackupEvent.Exported -> Unit
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            backupViewModel.backupEvents.collect { event ->
+                when (event) {
+                    is BackupViewModel.BackupEvent.Failed ->
+                        snackbarHostState.showSnackbar(event.message)
+                    // Theme + leaving the empty state are handled by MainActivity's
+                    // prefs/config-status observers once a server exists; just acknowledge.
+                    is BackupViewModel.BackupEvent.Imported ->
+                        Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                    is BackupViewModel.BackupEvent.Exported -> Unit
+                }
             }
         }
     }

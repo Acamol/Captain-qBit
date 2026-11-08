@@ -1,464 +1,359 @@
 package dev.yashgarg.qbit.ui.backup
 
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
-import android.net.Uri
-import android.text.InputType
-import android.util.TypedValue
-import android.view.Gravity
-import android.view.View
-import android.view.WindowManager
-import android.widget.CheckBox
-import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.RadioButton
-import android.widget.RadioGroup
-import android.widget.ScrollView
-import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.common.R as CommonR
-import dev.yashgarg.qbit.data.backup.ConfigBackup
 import dev.yashgarg.qbit.data.backup.ImportMode
 import dev.yashgarg.qbit.data.backup.PrefGroup
 import dev.yashgarg.qbit.data.backup.availablePrefGroups
+import dev.yashgarg.qbit.data.backup.hasCategoryColors
 import dev.yashgarg.qbit.data.manager.LockWeakening
-import dev.yashgarg.qbit.data.models.ServerConfig
-import kotlinx.coroutines.flow.filterNotNull
+import dev.yashgarg.qbit.ui.compose.AlertDialog
+import dev.yashgarg.qbit.ui.compose.CheckboxRow
+import dev.yashgarg.qbit.ui.compose.SelectableRow
 
 /**
- * Backup-related dialogs shared by Settings and the first-run screen. Built programmatically with
- * [MaterialAlertDialogBuilder] to match the app's existing dialog style.
+ * Shows the backup dialog [viewModel] has open, shared by Settings, the first-run screen and a
+ * backup file opened from another app. Hidden while the app is locked, and shown again on unlock.
+ * Dialogs inherit the activity's FLAG_SECURE, so passphrases and server details stay out of
+ * screenshots whenever the app does.
  */
-object BackupDialogs {
-
-    /**
-     * Prompts for a passphrase. When [confirm] is set, a second field must match. The OK button
-     * validates inline and only dismisses once the input is valid. The passphrase length is up to
-     * the user, but it must be non-empty: it's the only key protecting the exported credentials, so
-     * an empty one would leave the backup effectively unencrypted.
-     */
-    fun showPassphraseDialog(
-        context: Context,
-        title: String,
-        confirm: Boolean,
-        onOk: (String) -> Unit,
-    ) {
-        val density = context.resources.displayMetrics.density
-        val horizontal = (24 * density).toInt()
-        val vertical = (8 * density).toInt()
-
-        val container =
-            LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(horizontal, vertical, horizontal, 0)
-            }
-        val passField =
-            EditText(context).apply {
-                hint = context.getString(CommonR.string.passphrase_label)
-                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-            }
-        container.addView(passField)
-        val confirmField =
-            if (confirm) {
-                EditText(context)
-                    .apply {
-                        hint = context.getString(CommonR.string.confirm_passphrase_label)
-                        inputType =
-                            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-                    }
-                    .also(container::addView)
-            } else null
-
-        val dialog =
-            MaterialAlertDialogBuilder(context)
-                .setTitle(title)
-                .setView(container)
-                .setNegativeButton(context.getString(CommonR.string.cancel), null)
-                .setPositiveButton(context.getString(CommonR.string.ok), null)
-                .create()
-
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val passphrase = passField.text?.toString().orEmpty()
-                when {
-                    passphrase.isEmpty() ->
-                        passField.error = context.getString(CommonR.string.enter_a_passphrase_error)
-                    confirm && passphrase != confirmField?.text?.toString() ->
-                        confirmField?.error =
-                            context.getString(CommonR.string.passphrases_dont_match_error)
-                    else -> {
-                        dialog.dismiss()
-                        onOk(passphrase)
-                    }
-                }
-            }
-        }
-        dialog.showSecurely(context)
-    }
-
-    /**
-     * Lets the user pick which [servers], app settings, and category colors to export. All boxes
-     * start checked; the OK button stays disabled until at least one server is chosen (an export
-     * with no servers can't be imported). [onConfirm] receives the chosen server ids and whether to
-     * include preferences and category colors.
-     */
-    fun showExportSelectionDialog(
-        context: Context,
-        servers: List<ServerConfig>,
-        onConfirm:
-            (
-                selectedServerIds: Set<Int>,
-                prefGroups: Set<PrefGroup>,
-                includeCategoryColors: Boolean,
-            ) -> Unit,
-    ) {
-        val (container, content) = selectionContainer(context)
-
-        content.addView(
-            sectionHeader(
-                context,
-                context.getString(CommonR.string.app_settings_section_header),
-                first = true,
-            ),
-        )
-        val groupBoxes =
-            PrefGroup.entries.map { group ->
-                val box =
-                    CheckBox(context).apply {
-                        text = prefGroupLabel(context, group)
-                        isChecked = true
-                    }
-                content.addView(box)
-                group to box
-            }
-        val colorsBox =
-            CheckBox(context).apply {
-                text = context.getString(CommonR.string.category_colors_label)
-                isChecked = true
-            }
-        content.addView(colorsBox)
-
-        content.addView(
-            sectionHeader(context, context.getString(CommonR.string.servers_title), first = false),
-        )
-        val serverBoxes = servers.map { server ->
-            val box =
-                CheckBox(context).apply {
-                    text = server.serverName
-                    isChecked = true
-                }
-            content.addView(box)
-            server.configId to box
-        }
-
-        val dialog =
-            MaterialAlertDialogBuilder(context)
-                .setTitle(context.getString(CommonR.string.export_configuration_label))
-                .setView(container)
-                .setNegativeButton(context.getString(CommonR.string.cancel), null)
-                .setPositiveButton(context.getString(CommonR.string.export_action), null)
-                .create()
-
-        dialog.setOnShowListener {
-            val ok = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-            fun refresh() {
-                ok.isEnabled = serverBoxes.any { it.second.isChecked }
-            }
-            serverBoxes.forEach { it.second.setOnCheckedChangeListener { _, _ -> refresh() } }
-            refresh()
-            ok.setOnClickListener {
-                val selected = serverBoxes.filter { it.second.isChecked }.map { it.first }.toSet()
-                val groups = groupBoxes.filter { it.second.isChecked }.map { it.first }.toSet()
-                dialog.dismiss()
-                onConfirm(selected, groups, colorsBox.isChecked)
-            }
-        }
-        dialog.showSecurely(context)
-    }
-
-    /**
-     * Asks for the passphrase of the backup at [uri] and starts importing it, once the app is
-     * unlocked: the dialog is a window of its own and would otherwise show above the lock.
-     */
-    suspend fun askPassphraseThenImport(context: Context, viewModel: BackupViewModel, uri: Uri) {
-        viewModel.awaitUnlocked()
-        showPassphraseDialog(
-            context,
-            title = context.getString(CommonR.string.backup_passphrase_title),
-            confirm = false,
-        ) { passphrase ->
-            viewModel.beginImport(uri, passphrase)
-        }
-    }
-
-    /**
-     * Shows the import selection for each backup [viewModel] has loaded, once the app is unlocked,
-     * and imports what the user picks. Runs until cancelled.
-     */
-    suspend fun offerImports(context: Context, viewModel: BackupViewModel) {
-        viewModel.importOffer.filterNotNull().collect { offer ->
-            viewModel.awaitUnlocked()
-            viewModel.importOfferShown()
-            showImportSelectionDialog(
-                context,
-                offer.backup,
-                offer.duplicateServerIds,
-                viewModel::importLockWeakening,
-                viewModel::authenticate,
-            ) { serverIds, prefGroups, includeColors, mode ->
-                viewModel.applyImport(serverIds, prefGroups, includeColors, mode)
-            }
-        }
-    }
-
-    /**
-     * Lets the user choose a merge/replace [mode] and which servers, app settings, and category
-     * colors from a decrypted [backup] to import. Servers whose id is in [duplicateServerIds]
-     * already exist: they are shown as "(already added)" and disabled/unchecked while merging
-     * (they'd be skipped), and re-enabled when replacing. Import stays disabled until at least one
-     * server is chosen.
-     */
-    fun showImportSelectionDialog(
-        context: Context,
-        backup: ConfigBackup,
-        duplicateServerIds: Set<Int>,
-        importLockWeakening: (Set<PrefGroup>) -> LockWeakening?,
-        authenticate: (title: String, onSuccess: () -> Unit) -> Unit,
-        onConfirm:
-            (
-                selectedServerIds: Set<Int>,
-                prefGroups: Set<PrefGroup>,
-                includeCategoryColors: Boolean,
-                mode: ImportMode,
-            ) -> Unit,
-    ) {
-        val (container, content) = selectionContainer(context)
-
-        content.addView(
-            sectionHeader(
-                context,
-                context.getString(CommonR.string.import_mode_section_header),
-                first = true,
-            ),
-        )
-        val modeGroup = RadioGroup(context).apply { orientation = RadioGroup.VERTICAL }
-        val mergeButton =
-            RadioButton(context).apply {
-                id = View.generateViewId()
-                text = context.getString(CommonR.string.merge_with_current_label)
-            }
-        val replaceButton =
-            RadioButton(context).apply {
-                id = View.generateViewId()
-                text = context.getString(CommonR.string.replace_everything_label)
-            }
-        modeGroup.addView(mergeButton)
-        modeGroup.addView(replaceButton)
-        modeGroup.check(mergeButton.id)
-        content.addView(modeGroup)
-
-        // Colors may live in their own field or, for older backups, inside preferences.
-        val availableGroups = backup.availablePrefGroups()
-        val hasCategoryColors =
-            !(backup.categoryColors ?: backup.preferences?.categoryColors).isNullOrEmpty()
-        if (availableGroups.isNotEmpty() || hasCategoryColors) {
-            content.addView(
-                sectionHeader(
-                    context,
-                    context.getString(CommonR.string.app_settings_section_header),
-                    first = false,
-                ),
-            )
-        }
-        val groupBoxes =
-            PrefGroup.entries
-                .filter { it in availableGroups }
-                .map { group ->
-                    val box =
-                        CheckBox(context).apply {
-                            text = prefGroupLabel(context, group)
-                            isChecked = true
-                        }
-                    content.addView(box)
-                    group to box
-                }
-        val colorsBox =
-            if (hasCategoryColors) {
-                CheckBox(context)
-                    .apply {
-                        text = context.getString(CommonR.string.category_colors_label)
-                        isChecked = true
-                    }
-                    .also(content::addView)
-            } else null
-
-        content.addView(
-            sectionHeader(context, context.getString(CommonR.string.servers_title), first = false),
-        )
-        val serverBoxes =
-            backup.servers.map { server ->
-                val duplicate = server.configId in duplicateServerIds
-                val box =
-                    CheckBox(context).apply {
-                        text =
-                            if (duplicate) {
-                                context.getString(
-                                    CommonR.string.backup_server_already_added,
-                                    server.serverName,
-                                )
-                            } else server.serverName
-                        isChecked = true
-                    }
-                content.addView(box)
-                Triple(server.configId, duplicate, box)
-            }
-
-        val dialog =
-            MaterialAlertDialogBuilder(context)
-                .setTitle(context.getString(CommonR.string.import_configuration_label))
-                .setView(container)
-                .setNegativeButton(context.getString(CommonR.string.cancel), null)
-                .setPositiveButton(context.getString(CommonR.string.import_action), null)
-                .create()
-
-        dialog.setOnShowListener {
-            val ok = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-            fun merging() = modeGroup.checkedRadioButtonId == mergeButton.id
-            fun refresh() {
-                // On merge, duplicates would be skipped, so lock them off; on replace, everything
-                // is fair game.
-                serverBoxes.forEach { (_, duplicate, box) ->
-                    if (duplicate) {
-                        box.isEnabled = !merging()
-                        box.isChecked = !merging()
-                    }
-                }
-                ok.isEnabled = serverBoxes.any { it.third.isEnabled && it.third.isChecked }
-            }
-            modeGroup.setOnCheckedChangeListener { _, _ -> refresh() }
-            serverBoxes.forEach { it.third.setOnCheckedChangeListener { _, _ -> refresh() } }
-            refresh()
-            ok.setOnClickListener {
-                val selected =
-                    serverBoxes
-                        .filter { it.third.isEnabled && it.third.isChecked }
-                        .map { it.first }
-                        .toSet()
-                val groups = groupBoxes.filter { it.second.isChecked }.map { it.first }.toSet()
-                val mode = if (merging()) ImportMode.MERGE else ImportMode.REPLACE
-                val import = {
-                    // The prompt's result can arrive after the activity was recreated (a rotation),
-                    // by which time this dialog's window is gone with the old one.
-                    if (dialog.window?.decorView?.isAttachedToWindow == true) dialog.dismiss()
-                    onConfirm(selected, groups, colorsBox?.isChecked ?: false, mode)
-                }
-                val weakening = importLockWeakening(groups)
-                if (weakening != null) {
-                    // Cancelling either step leaves the selection open to change.
-                    showLockWeakeningWarning(context, weakening) {
-                        authenticate(
-                            context.getString(CommonR.string.app_lock_confirm_title),
-                            import,
-                        )
-                    }
-                } else {
-                    import()
-                }
-            }
-        }
-        dialog.showSecurely(context)
-    }
-
-    private fun showLockWeakeningWarning(
-        context: Context,
-        weakening: LockWeakening,
-        onContinue: () -> Unit,
-    ) {
-        val (title, message) =
-            when (weakening) {
-                LockWeakening.TURNED_OFF ->
-                    CommonR.string.import_turns_off_lock_title to
-                        CommonR.string.import_turns_off_lock_message
-                LockWeakening.LOOSENED ->
-                    CommonR.string.import_loosens_lock_title to
-                        CommonR.string.import_loosens_lock_message
-            }
-        MaterialAlertDialogBuilder(context)
-            .setTitle(context.getString(title))
-            .setMessage(context.getString(message))
-            .setNegativeButton(context.getString(CommonR.string.cancel), null)
-            .setPositiveButton(context.getString(CommonR.string.import_turns_off_lock_continue)) {
-                _,
-                _ ->
-                onContinue()
-            }
-            .create()
-            .showSecurely(context)
-    }
-
-    /**
-     * A dialog is a window of its own, so it doesn't share the activity's FLAG_SECURE. These show
-     * passphrases and server details, so they take it over.
-     */
-    private fun AlertDialog.showSecurely(context: Context) {
-        var host = context
-        while (host is ContextWrapper && host !is Activity) host = host.baseContext
-        val secure =
-            (host as? Activity)
-                ?.window
-                ?.attributes
-                ?.flags
-                ?.and(WindowManager.LayoutParams.FLAG_SECURE)
-        if (secure != null && secure != 0) window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        show()
-    }
-
-    /** User-facing label for a preference group checkbox. */
-    private fun prefGroupLabel(context: Context, group: PrefGroup): String =
-        when (group) {
-            PrefGroup.APPEARANCE -> context.getString(CommonR.string.appearance_section_title)
-            PrefGroup.NOTIFICATIONS ->
-                context.getString(CommonR.string.notifications_section_header)
-            PrefGroup.FILTERS -> context.getString(CommonR.string.filters_and_sorting_label)
-            PrefGroup.PRIVACY -> context.getString(CommonR.string.privacy_section_title)
-        }
-
-    /** A bold, emphasized section label separating groups of options in a selection dialog. */
-    private fun sectionHeader(context: Context, text: String, first: Boolean): TextView {
-        val density = context.resources.displayMetrics.density
-        return TextView(context).apply {
-            this.text = text
-            gravity = Gravity.START
-            setTextAppearance(
-                com.google.android.material.R.style.TextAppearance_Material3_TitleSmall,
-            )
-            setTextColor(context.themeColor(androidx.appcompat.R.attr.colorPrimary))
-            setPadding(0, (if (first) 0 else 16 * density).toInt(), 0, (4 * density).toInt())
-        }
-    }
-
-    /** Resolves a theme color attribute (e.g. colorPrimary) to a color int. */
-    private fun Context.themeColor(attr: Int): Int {
-        val value = TypedValue()
-        theme.resolveAttribute(attr, value, true)
-        return value.data
-    }
-
-    /**
-     * A padded, scrollable vertical container for a selection dialog. Returns (scroll, content).
-     */
-    private fun selectionContainer(context: Context): Pair<ScrollView, LinearLayout> {
-        val density = context.resources.displayMetrics.density
-        val horizontal = (24 * density).toInt()
-        val vertical = (8 * density).toInt()
-        val content =
-            LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(horizontal, vertical, horizontal, 0)
-            }
-        val scroll = ScrollView(context).apply { addView(content) }
-        return scroll to content
+@Composable
+fun BackupDialogHost(viewModel: BackupViewModel) {
+    val dialog by viewModel.dialog.collectAsStateWithLifecycle()
+    val locked by viewModel.locked.collectAsStateWithLifecycle()
+    if (locked) return
+    when (val d = dialog) {
+        null -> Unit
+        is BackupDialog.ImportPassphrase -> ImportPassphraseDialog(d, viewModel)
+        is BackupDialog.ExportPassphrase -> ExportPassphraseDialog(d, viewModel)
+        is BackupDialog.ChooseExport -> ExportSelectionDialog(d, viewModel)
+        is BackupDialog.ChooseImport -> ImportSelectionDialog(d, viewModel)
+        is BackupDialog.ConfirmLockWeakening -> LockWeakeningDialog(d.weakening, viewModel)
     }
 }
+
+@Composable
+private fun ImportPassphraseDialog(
+    dialog: BackupDialog.ImportPassphrase,
+    viewModel: BackupViewModel,
+) {
+    PassphraseDialog(
+        title = stringResource(CommonR.string.backup_passphrase_title),
+        passphrase = dialog.passphrase,
+        error = dialog.error,
+        checking = dialog.checking,
+        viewModel = viewModel,
+    )
+}
+
+@Composable
+private fun ExportPassphraseDialog(
+    dialog: BackupDialog.ExportPassphrase,
+    viewModel: BackupViewModel,
+) {
+    PassphraseDialog(
+        title = stringResource(CommonR.string.encrypt_backup_title),
+        passphrase = dialog.passphrase,
+        error = dialog.error,
+        checking = false,
+        viewModel = viewModel,
+        confirmation = dialog.confirmation,
+    )
+}
+
+/**
+ * A passphrase field, and a second one that must match when [confirmation] is given. While
+ * [checking] the fields are read-only rather than disabled, so they keep the keyboard's focus for a
+ * retry.
+ */
+@Composable
+private fun PassphraseDialog(
+    title: String,
+    passphrase: String,
+    error: PassphraseError?,
+    checking: Boolean,
+    viewModel: BackupViewModel,
+    confirmation: String? = null,
+) {
+    val errorText =
+        when (error) {
+            null -> null
+            PassphraseError.EMPTY -> stringResource(CommonR.string.enter_a_passphrase_error)
+            PassphraseError.MISMATCH -> stringResource(CommonR.string.passphrases_dont_match_error)
+            PassphraseError.INCORRECT -> stringResource(CommonR.string.status_incorrect_passphrase)
+        }
+    AlertDialog(
+        onDismissRequest = viewModel::dismissDialog,
+        title = { Text(title) },
+        text = {
+            Column {
+                PassphraseField(
+                    value = passphrase,
+                    onChange = viewModel::onPassphraseChange,
+                    label = stringResource(CommonR.string.passphrase_label),
+                    // The mismatch is reported on the confirmation instead.
+                    error = errorText.takeIf { error != PassphraseError.MISMATCH },
+                    readOnly = checking,
+                    last = confirmation == null,
+                    onDone = viewModel::submitPassphrase,
+                )
+                if (confirmation != null) {
+                    PassphraseField(
+                        value = confirmation,
+                        onChange = viewModel::onConfirmationChange,
+                        label = stringResource(CommonR.string.confirm_passphrase_label),
+                        error = errorText.takeIf { error == PassphraseError.MISMATCH },
+                        readOnly = checking,
+                        last = true,
+                        onDone = viewModel::submitPassphrase,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = viewModel::submitPassphrase, enabled = !checking) {
+                Text(stringResource(CommonR.string.ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = viewModel::dismissDialog) {
+                Text(stringResource(CommonR.string.cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun PassphraseField(
+    value: String,
+    onChange: (String) -> Unit,
+    label: String,
+    error: String?,
+    readOnly: Boolean,
+    last: Boolean,
+    onDone: () -> Unit,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onChange,
+        label = { Text(label) },
+        isError = error != null,
+        supportingText = error?.let { { Text(it) } },
+        singleLine = true,
+        readOnly = readOnly,
+        visualTransformation = PasswordVisualTransformation(),
+        keyboardOptions =
+            KeyboardOptions(
+                keyboardType = KeyboardType.Password,
+                imeAction = if (last) ImeAction.Done else ImeAction.Next,
+            ),
+        keyboardActions = KeyboardActions(onDone = { onDone() }),
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+/**
+ * Which servers, app settings and category colors to export. The Export button stays disabled until
+ * at least one server is chosen.
+ */
+@Composable
+private fun ExportSelectionDialog(dialog: BackupDialog.ChooseExport, viewModel: BackupViewModel) {
+    val selection = dialog.selection
+    SelectionDialog(
+        title = stringResource(CommonR.string.export_configuration_label),
+        confirmLabel = stringResource(CommonR.string.export_action),
+        confirmEnabled = dialog.canExport,
+        onConfirm = viewModel::confirmExportSelection,
+        onDismiss = viewModel::dismissDialog,
+    ) {
+        SectionHeader(stringResource(CommonR.string.app_settings_section_header), first = true)
+        PrefGroup.entries.forEach { group ->
+            CheckboxRow(prefGroupLabel(group), group in selection.prefGroups) { checked ->
+                viewModel.updateExportSelection {
+                    it.copy(prefGroups = it.prefGroups.toggled(group, checked))
+                }
+            }
+        }
+        CheckboxRow(
+            stringResource(CommonR.string.category_colors_label),
+            selection.categoryColors,
+        ) { checked ->
+            viewModel.updateExportSelection { it.copy(categoryColors = checked) }
+        }
+        SectionHeader(stringResource(CommonR.string.servers_title))
+        dialog.servers.forEach { server ->
+            CheckboxRow(server.serverName, server.configId in selection.serverIds) { checked ->
+                viewModel.updateExportSelection {
+                    it.copy(serverIds = it.serverIds.toggled(server.configId, checked))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The merge/replace mode, and which servers, app settings and category colors to import. Servers
+ * that already exist are marked "(already added)" and can't be chosen while merging, which would
+ * skip them. The Import button stays disabled until at least one server is chosen.
+ */
+@Composable
+private fun ImportSelectionDialog(dialog: BackupDialog.ChooseImport, viewModel: BackupViewModel) {
+    val selection = dialog.selection
+    val merging = selection.mode == ImportMode.MERGE
+    val availableGroups = dialog.backup.availablePrefGroups()
+    val hasCategoryColors = dialog.backup.hasCategoryColors()
+    SelectionDialog(
+        title = stringResource(CommonR.string.import_configuration_label),
+        confirmLabel = stringResource(CommonR.string.import_action),
+        confirmEnabled = dialog.canImport,
+        onConfirm = viewModel::confirmImportSelection,
+        onDismiss = viewModel::dismissDialog,
+    ) {
+        SectionHeader(stringResource(CommonR.string.import_mode_section_header), first = true)
+        listOf(
+                ImportMode.MERGE to CommonR.string.merge_with_current_label,
+                ImportMode.REPLACE to CommonR.string.replace_everything_label,
+            )
+            .forEach { (mode, label) ->
+                SelectableRow(stringResource(label), selected = selection.mode == mode) {
+                    viewModel.updateImportSelection {
+                        it.withMode(mode, dialog.duplicateServerIds)
+                    }
+                }
+            }
+        if (availableGroups.isNotEmpty() || hasCategoryColors) {
+            SectionHeader(stringResource(CommonR.string.app_settings_section_header))
+        }
+        PrefGroup.entries
+            .filter { it in availableGroups }
+            .forEach { group ->
+                CheckboxRow(prefGroupLabel(group), group in selection.prefGroups) { checked ->
+                    viewModel.updateImportSelection {
+                        it.copy(prefGroups = it.prefGroups.toggled(group, checked))
+                    }
+                }
+            }
+        if (hasCategoryColors) {
+            CheckboxRow(
+                stringResource(CommonR.string.category_colors_label),
+                selection.categoryColors,
+            ) { checked ->
+                viewModel.updateImportSelection { it.copy(categoryColors = checked) }
+            }
+        }
+        SectionHeader(stringResource(CommonR.string.servers_title))
+        dialog.backup.servers.forEach { server ->
+            val duplicate = server.configId in dialog.duplicateServerIds
+            CheckboxRow(
+                if (duplicate) {
+                    stringResource(CommonR.string.backup_server_already_added, server.serverName)
+                } else {
+                    server.serverName
+                },
+                checked = server.configId in selection.serverIds,
+                enabled = !(duplicate && merging),
+            ) { checked ->
+                viewModel.updateImportSelection {
+                    it.copy(serverIds = it.serverIds.toggled(server.configId, checked))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SelectionDialog(
+    title: String,
+    confirmLabel: String,
+    confirmEnabled: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = { Column(Modifier.verticalScroll(rememberScrollState())) { content() } },
+        confirmButton = {
+            TextButton(onClick = onConfirm, enabled = confirmEnabled) { Text(confirmLabel) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
+        },
+    )
+}
+
+/** Warns that the import weakens the app lock. Continuing asks the user to authenticate. */
+@Composable
+private fun LockWeakeningDialog(weakening: LockWeakening, viewModel: BackupViewModel) {
+    val (title, message) =
+        when (weakening) {
+            LockWeakening.TURNED_OFF ->
+                CommonR.string.import_turns_off_lock_title to
+                    CommonR.string.import_turns_off_lock_message
+            LockWeakening.LOOSENED ->
+                CommonR.string.import_loosens_lock_title to
+                    CommonR.string.import_loosens_lock_message
+        }
+    val promptTitle = stringResource(CommonR.string.app_lock_confirm_title)
+    AlertDialog(
+        onDismissRequest = viewModel::dismissDialog,
+        title = { Text(stringResource(title)) },
+        text = { Text(stringResource(message)) },
+        confirmButton = {
+            TextButton(onClick = { viewModel.confirmLockWeakening(promptTitle) }) {
+                Text(stringResource(CommonR.string.import_turns_off_lock_continue))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = viewModel::dismissDialog) {
+                Text(stringResource(CommonR.string.cancel))
+            }
+        },
+    )
+}
+
+/** A label separating groups of options in a selection dialog. */
+@Composable
+private fun SectionHeader(text: String, first: Boolean = false) {
+    Text(
+        text,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(top = if (first) 0.dp else 16.dp, bottom = 4.dp),
+    )
+}
+
+/** User-facing label for a preference group checkbox. */
+@Composable
+private fun prefGroupLabel(group: PrefGroup): String =
+    stringResource(
+        when (group) {
+            PrefGroup.APPEARANCE -> CommonR.string.appearance_section_title
+            PrefGroup.NOTIFICATIONS -> CommonR.string.notifications_section_header
+            PrefGroup.FILTERS -> CommonR.string.filters_and_sorting_label
+            PrefGroup.PRIVACY -> CommonR.string.privacy_section_title
+        },
+    )
+
+private fun <T> Set<T>.toggled(item: T, present: Boolean): Set<T> =
+    if (present) this + item else this - item
