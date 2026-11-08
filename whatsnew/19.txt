@@ -1,0 +1,9 @@
+Fixed the torrent list and the Files tab not loading on older qBittorrent servers, which don't send every field the app expected.
+
+Fixed the app lock asking for your screen lock more than once in a row, including twice more right after an unlock on Android 9 and 10.
+
+Fixed the What's New, crash report and permission dialogs opening on top of a dialog already open on the screen.
+
+Fixed leaving the screen cancelling a backup import or export part-way, which could leave a replacing import with no servers. A started import or export now runs to the end, and its result is shown when you return to the app.
+
+Fixed the app staying on the loading screen after the device was rotated while the app was locked at first start.

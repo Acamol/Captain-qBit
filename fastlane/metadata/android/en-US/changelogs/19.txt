@@ -1,0 +1,5 @@
+- Fixed the torrent list and the Files tab not loading on older qBittorrent servers
+- Fixed the app lock asking for your screen lock more than once in a row
+- Fixed dialogs opening on top of each other
+- Fixed leaving the screen cancelling a backup import or export part-way
+- Fixed getting stuck on the loading screen after rotating while locked
