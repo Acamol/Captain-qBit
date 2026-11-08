@@ -901,4 +901,34 @@
     <string name="unit_hours_suffix">%1$dh</string>
     <string name="unit_minutes_suffix">%1$dm</string>
     <string name="unit_seconds_suffix">%1$ds</string>
+
+    <!-- Search -->
+    <string name="search_title">Search</string>
+    <string name="search_online_action">Search online</string>
+    <string name="search_query_placeholder">Search for torrents</string>
+    <string name="search_action">Search</string>
+    <string name="search_stop_action">Stop</string>
+    <string name="search_plugins_action">Search plugins</string>
+    <string name="search_plugin_label">Plugin</string>
+    <string name="search_all_enabled_plugins">All enabled</string>
+    <string name="search_category_label">Category</string>
+    <string name="search_all_categories">All categories</string>
+    <string name="search_sort_seeders">Seeders</string>
+    <string name="search_sort_size">Size</string>
+    <string name="search_sort_name">Name</string>
+    <string name="search_running">Searching…</string>
+    <string name="search_no_results">No results</string>
+    <string name="search_intro">Search the sites your qBittorrent search plugins cover.</string>
+    <string name="search_no_plugins">No search plugins are enabled on this server. Enable or install one to search.</string>
+    <string name="search_unknown_value">–</string>
+    <string name="search_result_seeders_leechers">%1$s seeders • %2$s leechers</string>
+    <plurals name="search_results_count">
+        <item quantity="one">%1$d result</item>
+        <item quantity="other">%1$d results</item>
+    </plurals>
+    <string name="search_add_action">Add torrent</string>
+    <string name="error_search_too_many">The server is already running the maximum number of searches. Try again in a moment.</string>
+    <string name="status_search_start_failure">Failed to start the search</string>
+    <string name="status_search_failure">Search failed</string>
+    <string name="status_search_plugins_load_failure">Failed to load search plugins</string>
 </resources>

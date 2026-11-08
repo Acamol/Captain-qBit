@@ -31,6 +31,7 @@ class FakeClientManager : ClientManager {
     private val torrents = mutableSetOf<String>()
     private var rssItems = "{}"
     private var rssRules = "{}"
+    private var searchPluginEnabled = true
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
@@ -182,6 +183,38 @@ class FakeClientManager : ClientManager {
                         """"hasError":false,"articles":[]}}"""
                 respond("Ok.")
             }
+            path.endsWith("/search/plugins") ->
+                respond(
+                    """[{"name":"demo","fullName":"Demo Site","version":"1.0","url":"https://demo.example",""" +
+                        """"enabled":$searchPluginEnabled,"supportedCategories":""" +
+                        """[{"id":"all","name":"All categories"},{"id":"movies","name":"Movies"}]}]""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, "application/json"),
+                )
+            path.endsWith("/search/enablePlugin") -> {
+                searchPluginEnabled = requestBody(request.body).contains("enable=true")
+                respond("Ok.")
+            }
+            path.endsWith("/search/start") ->
+                respond(
+                    """{"id":7}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, "application/json"),
+                )
+            path.endsWith("/search/status") ->
+                respond(
+                    """[{"id":7,"status":"Stopped","total":1}]""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, "application/json"),
+                )
+            path.endsWith("/search/results") ->
+                respond(
+                    """{"results":[{"fileName":"Demo Torrent","fileUrl":"magnet:?xt=urn:btih:abc",""" +
+                        """"fileSize":1024,"nbSeeders":5,"nbLeechers":2,"siteUrl":"https://demo.example",""" +
+                        """"descrLink":"https://demo.example/t/1"}],"status":"Stopped","total":1}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, "application/json"),
+                )
             else -> respond("Ok.")
         }
     }

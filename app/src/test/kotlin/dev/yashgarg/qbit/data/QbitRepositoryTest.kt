@@ -72,4 +72,29 @@ class QbitRepositoryTest {
         val rules = repository.getRssRules().get().orEmpty()
         assertTrue(rules["test-rule"]?.mustContain == "1080p")
     }
+
+    @Test
+    fun `search plugins load with their supported categories`() = runTest {
+        val plugin = repository.getSearchPlugins().get().orEmpty().single()
+
+        assertTrue(plugin.enabled)
+        assertTrue(plugin.supportedCategories.any { it.id == "movies" })
+    }
+
+    @Test
+    fun `disabling a search plugin is reflected in the next plugins fetch`() = runTest {
+        assertTrue(repository.enableSearchPlugins(listOf("demo"), enabled = false).isOk)
+
+        assertFalse(repository.getSearchPlugins().get().orEmpty().single().enabled)
+    }
+
+    @Test
+    fun `a started search returns its id and its results can be read back`() = runTest {
+        val id = repository.startSearch("ubuntu").get()
+        assertTrue(id == 7)
+
+        val page = repository.getSearchResults(id!!).get()
+        assertTrue(page?.isRunning == false)
+        assertTrue(page?.results?.single()?.fileName == "Demo Torrent")
+    }
 }

@@ -19,6 +19,9 @@ import qbittorrent.models.PieceState
 import qbittorrent.models.RssItem
 import qbittorrent.models.RssRule
 import qbittorrent.models.SchedulerDays
+import qbittorrent.models.SearchPlugin
+import qbittorrent.models.SearchResultsPage
+import qbittorrent.models.SearchStatus
 import qbittorrent.models.Torrent
 import qbittorrent.models.TorrentFile
 import qbittorrent.models.TorrentPeers
@@ -513,5 +516,56 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
         return runSuspendCatching {
             client().setPreferences(buildJsonObject { put("rss_max_articles_per_feed", count) })
         }
+    }
+
+    suspend fun getSearchPlugins(): Result<List<SearchPlugin>, Throwable> {
+        return runSuspendCatching { client().getSearchPlugins() }
+    }
+
+    suspend fun startSearch(
+        pattern: String,
+        plugins: List<String> = listOf(SEARCH_PLUGINS_ENABLED),
+        category: String = SEARCH_CATEGORY_ALL,
+    ): Result<Int, Throwable> {
+        return runSuspendCatching { client().startSearch(pattern, plugins, category) }
+    }
+
+    suspend fun getSearchStatus(id: Int): Result<SearchStatus?, Throwable> {
+        return runSuspendCatching { client().getSearchStatus(id) }
+    }
+
+    suspend fun getSearchResults(
+        id: Int,
+        limit: Int = 0,
+        offset: Int = 0,
+    ): Result<SearchResultsPage, Throwable> {
+        return runSuspendCatching { client().getSearchResults(id, limit, offset) }
+    }
+
+    suspend fun stopSearch(id: Int): Result<Unit, Throwable> {
+        return runSuspendCatching { client().stopSearch(id) }
+    }
+
+    suspend fun deleteSearch(id: Int): Result<Unit, Throwable> {
+        return runSuspendCatching { client().deleteSearch(id) }
+    }
+
+    suspend fun enableSearchPlugins(
+        names: List<String>,
+        enabled: Boolean,
+    ): Result<Unit, Throwable> {
+        return runSuspendCatching { client().enableSearchPlugins(names, enabled) }
+    }
+
+    suspend fun installSearchPlugins(sources: List<String>): Result<Unit, Throwable> {
+        return runSuspendCatching { client().installSearchPlugins(sources) }
+    }
+
+    suspend fun uninstallSearchPlugins(names: List<String>): Result<Unit, Throwable> {
+        return runSuspendCatching { client().uninstallSearchPlugins(names) }
+    }
+
+    suspend fun updateSearchPlugins(): Result<Unit, Throwable> {
+        return runSuspendCatching { client().updateSearchPlugins() }
     }
 }

@@ -46,6 +46,7 @@ import dev.yashgarg.qbit.ui.logs.LogsScreen
 import dev.yashgarg.qbit.ui.rss.RssArticlesScreen
 import dev.yashgarg.qbit.ui.rss.RssRuleEditorScreen
 import dev.yashgarg.qbit.ui.rss.RssScreen
+import dev.yashgarg.qbit.ui.search.SearchScreen
 import dev.yashgarg.qbit.ui.server.ServerScreen
 import dev.yashgarg.qbit.ui.serverlist.ServerListScreen
 import dev.yashgarg.qbit.ui.settings.AppearanceSettingsScreen
@@ -185,6 +186,7 @@ fun QbitNavHost(
             }
             composable(Routes.BACKUP_SETTINGS) { BackupSettingsScreen(appNavigator = appNavigator) }
             composable(Routes.RSS) { RssScreen(appNavigator = appNavigator) }
+            composable(Routes.SEARCH) { SearchScreen(appNavigator = appNavigator) }
 
             composable(
                 route = Routes.RSS_ARTICLES_PATTERN,
@@ -319,6 +321,7 @@ private fun NavController.execute(command: NavCommand) {
         NavCommand.OpenAppearanceSettings -> navigate(Routes.APPEARANCE_SETTINGS)
         NavCommand.OpenSyncSettings -> navigate(Routes.SYNC_SETTINGS)
         NavCommand.OpenBackupSettings -> navigate(Routes.BACKUP_SETTINGS)
+        NavCommand.OpenSearch -> navigate(Routes.SEARCH)
         is NavCommand.OpenRssArticles -> navigate(Routes.rssArticles(command.itemPath))
         is NavCommand.OpenRssRuleEditor -> navigate(Routes.rssRuleEditor(command.ruleName))
         NavCommand.Back -> {

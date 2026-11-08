@@ -27,6 +27,8 @@ object Routes {
     const val ARG_TORRENT_HASH = "torrentHash"
     const val TORRENT_DETAILS_PATTERN = "$TORRENT_DETAILS/{$ARG_TORRENT_HASH}"
 
+    const val SEARCH = "search"
+
     const val RSS = "rss"
 
     const val RSS_ARTICLES = "rssArticles"
