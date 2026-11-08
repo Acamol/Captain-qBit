@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -33,6 +34,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -63,8 +65,6 @@ fun SearchScreen(appNavigator: AppNavigator, viewModel: SearchViewModel = hiltVi
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var sortMenuOpen by remember { mutableStateOf(false) }
-    val running = state.phase == SearchPhase.RUNNING
-
     LaunchedEffect(Unit) { viewModel.status.collect { snackbarHostState.showSnackbar(it) } }
 
     Scaffold(
@@ -81,6 +81,12 @@ fun SearchScreen(appNavigator: AppNavigator, viewModel: SearchViewModel = hiltVi
                     }
                 },
                 actions = {
+                    TooltipIconButton(
+                        label = stringResource(CommonR.string.search_plugins_action),
+                        icon = Icons.Filled.Extension,
+                        onClick = { appNavigator.navigate(NavCommand.OpenSearchPlugins) },
+                        position = TooltipAnchorPosition.Below,
+                    )
                     TooltipIconButton(
                         label = stringResource(CommonR.string.sort),
                         icon = Icons.AutoMirrored.Filled.Sort,
@@ -121,6 +127,7 @@ fun SearchScreen(appNavigator: AppNavigator, viewModel: SearchViewModel = hiltVi
                     viewModel.addResult(result)
                     appNavigator.navigate(NavCommand.PopToServer)
                 },
+                onOpenPlugins = { appNavigator.navigate(NavCommand.OpenSearchPlugins) },
             )
         }
     }
@@ -236,11 +243,20 @@ private fun <T> Dropdown(
 }
 
 @Composable
-private fun SearchBody(state: SearchState, onAdd: (SearchResult) -> Unit) {
+private fun SearchBody(
+    state: SearchState,
+    onAdd: (SearchResult) -> Unit,
+    onOpenPlugins: () -> Unit,
+) {
     val noPlugins = state.pluginsLoaded && state.enabledPlugins.isEmpty() && state.error == null
     when {
         state.error != null -> CenteredText(state.error, MaterialTheme.colorScheme.error)
-        noPlugins -> CenteredText(stringResource(CommonR.string.search_no_plugins))
+        noPlugins ->
+            CenteredText(stringResource(CommonR.string.search_no_plugins)) {
+                TextButton(onClick = onOpenPlugins) {
+                    Text(stringResource(CommonR.string.search_plugins_action))
+                }
+            }
         state.phase == SearchPhase.IDLE -> CenteredText(stringResource(CommonR.string.search_intro))
         state.results.isEmpty() && state.phase == SearchPhase.RUNNING ->
             Column(
@@ -327,6 +343,7 @@ private fun ResultRow(result: SearchResult, onClick: () -> Unit) {
 private fun CenteredText(
     text: String,
     color: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    action: @Composable () -> Unit = {},
 ) {
     Column(
         Modifier.fillMaxSize().padding(32.dp),
@@ -334,6 +351,7 @@ private fun CenteredText(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(text, color = color, style = MaterialTheme.typography.bodyMedium)
+        action()
     }
 }
 

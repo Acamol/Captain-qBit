@@ -931,4 +931,24 @@
     <string name="status_search_start_failure">Failed to start the search</string>
     <string name="status_search_failure">Search failed</string>
     <string name="status_search_plugins_load_failure">Failed to load search plugins</string>
+    <string name="search_plugins_empty">No search plugins installed</string>
+    <string name="search_plugins_update_all_action">Update plugins</string>
+    <string name="search_plugin_install_action">Install plugin</string>
+    <string name="search_plugin_install_next">Next</string>
+    <string name="search_plugin_url_label">Plugin URL</string>
+    <string name="search_plugin_url_invalid">Enter an https:// link to the plugin</string>
+    <string name="search_plugin_install_warning">The server downloads this plugin and runs it as code. Only install plugins from sources you trust.</string>
+    <string name="search_plugin_install_confirm">Install the plugin from %1$s on the server?</string>
+    <string name="search_plugin_install_confirm_action">Install</string>
+    <string name="search_plugin_uninstall_action">Uninstall</string>
+    <string name="search_plugin_uninstall_confirm">Uninstall %1$s from the server?</string>
+    <string name="status_search_plugin_enabled">%1$s enabled</string>
+    <string name="status_search_plugin_disabled">%1$s disabled</string>
+    <string name="status_search_plugin_toggle_failure">Failed to change %1$s</string>
+    <string name="status_search_plugin_install_requested">Plugin install requested</string>
+    <string name="status_search_plugin_install_failure">Failed to install the plugin</string>
+    <string name="status_search_plugin_uninstalled">%1$s uninstalled</string>
+    <string name="status_search_plugin_uninstall_failure">Failed to uninstall %1$s</string>
+    <string name="status_search_plugins_update_requested">Checking for plugin updates</string>
+    <string name="status_search_plugins_update_failure">Failed to update plugins</string>
 </resources>

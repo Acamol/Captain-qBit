@@ -183,7 +183,6 @@ constructor(
             // the server doesn't hold the finished job (it keeps only a handful at once).
             CoroutineScope(SupervisorJob() + Dispatchers.IO).launch { discard(id) }
         }
-        super.onCleared()
     }
 
     private companion object {
