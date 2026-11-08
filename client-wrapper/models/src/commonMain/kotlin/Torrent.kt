@@ -23,7 +23,7 @@ data class Torrent(
      * Absolute path of torrent content (root path for multifile torrents, absolute file path for
      * singlefile torrents)
      */
-    @SerialName("content_path") val contentPath: String,
+    @SerialName("content_path") val contentPath: String = "",
     /** Torrent download speed limit (bytes/s). -1 if unlimited. */
     @SerialName("dl_limit") val dlLimit: Long,
     /** Torrent download speed (bytes/s) */
@@ -90,7 +90,7 @@ data class Torrent(
     /** Total active time (seconds) */
     @SerialName("time_active") val timeActive: Long,
     /** Torrent elapsed time while complete (seconds) */
-    @SerialName("seeding_time") val seedingTime: Long,
+    @SerialName("seeding_time") val seedingTime: Long = 0,
     /** Total size (bytes) of all file in this torrent (including unselected ones) */
     @SerialName("total_size") val totalSize: Long,
     /** The first tracker with working status. Returns empty string if no tracker is working. */
