@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.LowPriority
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.VerticalAlignBottom
@@ -66,6 +67,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,6 +82,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.common.R
 import dev.yashgarg.qbit.ui.compose.AlertDialog
+import dev.yashgarg.qbit.ui.compose.ContentSearchField
 import dev.yashgarg.qbit.ui.compose.TextInputDialog
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
@@ -92,6 +95,7 @@ import dev.yashgarg.qbit.ui.torrent.tabs.TrackersTab
 import dev.yashgarg.qbit.utils.rememberCopyToClipboard
 import kotlinx.coroutines.launch
 
+private const val FILES_TAB_INDEX = 1
 private const val PIECES_TAB_INDEX = 4
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -116,6 +120,8 @@ fun TorrentDetailsScreen(
     val scope = rememberCoroutineScope()
 
     var menuOpen by remember { mutableStateOf(false) }
+    var filesSearchOpen by rememberSaveable { mutableStateOf(false) }
+    var filesQuery by rememberSaveable { mutableStateOf("") }
     var dialog by remember { mutableStateOf<DetailDialog?>(null) }
     val copiedNameMessage = stringResource(R.string.status_copied_name)
     val copiedToClipboardMessage = stringResource(R.string.clipboard_copied)
@@ -163,6 +169,15 @@ fun TorrentDetailsScreen(
                     }
                 },
                 actions = {
+                    if (pagerState.currentPage == FILES_TAB_INDEX && !filesSearchOpen) {
+                        IconButton(onClick = { filesSearchOpen = true }) {
+                            Icon(
+                                Icons.Filled.Search,
+                                contentDescription =
+                                    stringResource(R.string.content_description_search),
+                            )
+                        }
+                    }
                     if (torrent != null) {
                         IconButton(onClick = { menuOpen = true }) {
                             Icon(
@@ -340,6 +355,16 @@ fun TorrentDetailsScreen(
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                 )
             }
+            if (filesSearchOpen && pagerState.currentPage == FILES_TAB_INDEX) {
+                ContentSearchField(
+                    query = filesQuery,
+                    onQueryChange = { filesQuery = it },
+                    onClose = {
+                        filesSearchOpen = false
+                        filesQuery = ""
+                    },
+                )
+            }
             PrimaryScrollableTabRow(selectedTabIndex = pagerState.currentPage, edgePadding = 0.dp) {
                 tabTitles.forEachIndexed { index, title ->
                     Tab(
@@ -358,6 +383,7 @@ fun TorrentDetailsScreen(
                             viewModel::setFilePriority,
                             viewModel::renameContent,
                             Modifier.fillMaxSize(),
+                            query = filesQuery,
                         )
                     2 ->
                         TrackersTab(

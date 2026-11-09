@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -56,10 +57,12 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.models.ContentTreeItem
+import dev.yashgarg.qbit.ui.compose.ContentSearchField
 import dev.yashgarg.qbit.ui.compose.Dialog
 import dev.yashgarg.qbit.ui.compose.TorrentContentSelectionView
 import dev.yashgarg.qbit.ui.compose.allFileIndices
 import dev.yashgarg.qbit.ui.server.ServerViewModel
+import dev.yashgarg.qbit.ui.torrent.filterContentTree
 import dev.yashgarg.qbit.utils.ClipboardUtil
 import dev.yashgarg.qbit.validation.LinkValidator
 
@@ -104,6 +107,8 @@ fun AddTorrentScreen(
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var categoryExpanded by rememberSaveable { mutableStateOf(false) }
     var confirmed by rememberSaveable { mutableStateOf(false) }
+    var filesSearchOpen by rememberSaveable { mutableStateOf(false) }
+    var filesQuery by rememberSaveable { mutableStateOf("") }
 
     var category by rememberSaveable { mutableStateOf(defaultCategory) }
     var saveCategory by rememberSaveable { mutableStateOf(defaultCategory.isNotBlank()) }
@@ -225,6 +230,15 @@ fun AddTorrentScreen(
                         }
                     },
                     actions = {
+                        if (selectedTab == 1 && !filesSearchOpen) {
+                            IconButton(onClick = { filesSearchOpen = true }) {
+                                Icon(
+                                    Icons.Filled.Search,
+                                    contentDescription =
+                                        stringResource(CommonR.string.content_description_search),
+                                )
+                            }
+                        }
                         TextButton(onClick = { onAdd() }) {
                             Icon(Icons.Filled.Check, contentDescription = null)
                             Text(
@@ -250,6 +264,17 @@ fun AddTorrentScreen(
                             maybePrepareMagnet()
                         },
                         text = { Text(stringResource(CommonR.string.tab_files)) },
+                    )
+                }
+
+                if (selectedTab == 1 && filesSearchOpen) {
+                    ContentSearchField(
+                        query = filesQuery,
+                        onQueryChange = { filesQuery = it },
+                        onClose = {
+                            filesSearchOpen = false
+                            filesQuery = ""
+                        },
                     )
                 }
 
@@ -306,6 +331,7 @@ fun AddTorrentScreen(
                             viewModel = viewModel,
                             deselected = deselected,
                             filesUnavailableReason = filesUnavailableReason,
+                            query = filesQuery,
                             onToggle = { item ->
                                 val indices = item.allFileIndices()
                                 deselected =
@@ -469,6 +495,7 @@ private fun FilesTab(
     viewModel: ServerViewModel,
     deselected: Set<Int>,
     filesUnavailableReason: Int?,
+    query: String,
     onToggle: (ContentTreeItem) -> Unit,
 ) {
     val state by viewModel.fileSelection.collectAsState()
@@ -480,13 +507,26 @@ private fun FilesTab(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         when {
-            current?.tree != null ->
-                TorrentContentSelectionView(
-                    nodes = current.tree,
-                    deselected = deselected,
-                    onToggle = onToggle,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
+            current?.tree != null -> {
+                val visible =
+                    remember(current.tree, query) { filterContentTree(current.tree, query) }
+                if (visible.isEmpty()) {
+                    Text(
+                        stringResource(CommonR.string.no_files_match),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 24.dp),
+                    )
+                } else {
+                    TorrentContentSelectionView(
+                        nodes = visible,
+                        deselected = deselected,
+                        onToggle = onToggle,
+                        modifier = Modifier.padding(top = 8.dp),
+                        filterKey = query.trim(),
+                    )
+                }
+            }
             current != null -> {
                 CircularProgressIndicator()
                 Text(

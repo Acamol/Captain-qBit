@@ -7,6 +7,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TriStateCheckbox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -40,24 +42,30 @@ fun TorrentContentSelectionView(
     deselected: Set<Int>,
     onToggle: (ContentTreeItem) -> Unit,
     modifier: Modifier = Modifier,
+    filterKey: String = "",
 ) {
-    val tree = Tree<ContentTreeItem> { SelectionTree(nodes, deselected, onToggle) }
+    // The tree is rebuilt whenever [filterKey] changes; a non-blank key opens every folder so the
+    // filtered matches are visible.
+    key(filterKey) {
+        val tree = Tree<ContentTreeItem> { SelectionTree(nodes, deselected, onToggle) }
+        if (filterKey.isNotBlank()) LaunchedEffect(tree) { tree.expandAll() }
 
-    Bonsai(
-        tree,
-        style = selectionStyle(),
-        modifier = Modifier.fillMaxSize().then(modifier),
-        // Folders expand/collapse on tap; a file tap toggles its checkbox.
-        onClick = { node: Node<ContentTreeItem> ->
-            if (node is BranchNode) {
-                tree.clearSelection()
-                tree.toggleExpansion(node)
-            } else {
-                onToggle(node.content)
-            }
-        },
-        onLongClick = null,
-    )
+        Bonsai(
+            tree,
+            style = selectionStyle(),
+            modifier = Modifier.fillMaxSize().then(modifier),
+            // Folders expand/collapse on tap; a file tap toggles its checkbox.
+            onClick = { node: Node<ContentTreeItem> ->
+                if (node is BranchNode) {
+                    tree.clearSelection()
+                    tree.toggleExpansion(node)
+                } else {
+                    onToggle(node.content)
+                }
+            },
+            onLongClick = null,
+        )
+    }
 }
 
 @Composable

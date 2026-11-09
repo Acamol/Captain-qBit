@@ -670,6 +670,8 @@
     <string name="rename_folder_title">Rename folder</string>
     <string name="rename_file_title">Rename file</string>
     <string name="no_content_found">No content found</string>
+    <string name="no_files_match">No files match</string>
+    <string name="search_files_placeholder">Search files (all words, any order)</string>
 
     <!-- Peers tab -->
     <string name="no_peers_connected">No peers connected</string>

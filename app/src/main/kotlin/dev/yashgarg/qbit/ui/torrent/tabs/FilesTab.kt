@@ -34,6 +34,7 @@ import dev.yashgarg.qbit.ui.compose.TextInputDialog
 import dev.yashgarg.qbit.ui.compose.TorrentContentTreeView
 import dev.yashgarg.qbit.ui.compose.isSkipped
 import dev.yashgarg.qbit.ui.torrent.TorrentDetailsState
+import dev.yashgarg.qbit.ui.torrent.filterContentTree
 import dev.yashgarg.qbit.utils.rememberCopyToClipboard
 
 @Composable
@@ -42,6 +43,7 @@ fun FilesTab(
     onSetPriority: (List<Int>, Int) -> Unit,
     onRename: (ContentTreeItem, String) -> Unit,
     modifier: Modifier = Modifier,
+    query: String = "",
 ) {
     // Long-press target: first a small action menu, then a priority / path / rename dialog.
     var menuItem by remember { mutableStateOf<ContentTreeItem?>(null) }
@@ -51,6 +53,7 @@ fun FilesTab(
 
     FilesListView(
         state = state,
+        query = query,
         modifier = modifier,
         onNodeLongClick = { menuItem = it },
         // Checkbox / file tap = download on/off; finer priorities live in the long-press menu.
@@ -199,16 +202,26 @@ private fun MenuRow(text: String, onClick: () -> Unit) {
 @Composable
 fun FilesListView(
     state: TorrentDetailsState,
+    query: String,
     modifier: Modifier = Modifier,
     onNodeLongClick: (ContentTreeItem) -> Unit = {},
     onToggleDownload: ((ContentTreeItem) -> Unit)? = null,
 ) {
+    val visible = remember(state.contentTree, query) { filterContentTree(state.contentTree, query) }
     if (state.contentLoading) {
         CenterLinearLoading(modifier, R.color.md_theme_dark_seed)
     } else if (state.contentTree.isEmpty()) {
         Center(modifier) { Text(stringResource(CommonR.string.no_content_found)) }
+    } else if (visible.isEmpty()) {
+        Center(modifier) { Text(stringResource(CommonR.string.no_files_match)) }
     } else {
-        TorrentContentTreeView(modifier, state.contentTree, onNodeLongClick, onToggleDownload)
+        TorrentContentTreeView(
+            modifier,
+            visible,
+            onNodeLongClick,
+            onToggleDownload,
+            filterKey = query.trim(),
+        )
     }
 }
 

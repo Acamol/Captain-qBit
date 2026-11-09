@@ -11,6 +11,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TriStateCheckbox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
@@ -44,25 +46,31 @@ fun TorrentContentTreeView(
     nodes: List<ContentTreeItem>,
     onNodeLongClick: (ContentTreeItem) -> Unit = {},
     onToggleDownload: ((ContentTreeItem) -> Unit)? = null,
+    filterKey: String = "",
 ) {
-    val tree = Tree<ContentTreeItem> { ContentTree(nodes, onToggleDownload) }
+    // The tree is rebuilt whenever [filterKey] changes; a non-blank key opens every folder so the
+    // filtered matches are visible.
+    key(filterKey) {
+        val tree = Tree<ContentTreeItem> { ContentTree(nodes, onToggleDownload) }
+        if (filterKey.isNotBlank()) LaunchedEffect(tree) { tree.expandAll() }
 
-    Bonsai(
-        tree,
-        style = torrentContentStyle(),
-        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp).then(modifier),
-        // Folders keep the default expand/collapse tap; tapping a file flips its download
-        // checkbox (when the caller provided a toggle handler).
-        onClick = { node: Node<ContentTreeItem> ->
-            if (node is BranchNode || onToggleDownload == null) {
-                tree.clearSelection()
-                tree.toggleExpansion(node)
-            } else {
-                onToggleDownload(node.content)
-            }
-        },
-        onLongClick = { node -> onNodeLongClick(node.content) },
-    )
+        Bonsai(
+            tree,
+            style = torrentContentStyle(),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp).then(modifier),
+            // Folders keep the default expand/collapse tap; tapping a file flips its download
+            // checkbox (when the caller provided a toggle handler).
+            onClick = { node: Node<ContentTreeItem> ->
+                if (node is BranchNode || onToggleDownload == null) {
+                    tree.clearSelection()
+                    tree.toggleExpansion(node)
+                } else {
+                    onToggleDownload(node.content)
+                }
+            },
+            onLongClick = { node -> onNodeLongClick(node.content) },
+        )
+    }
 }
 
 /** True when this file — or every file under this folder — is set to not download. */
