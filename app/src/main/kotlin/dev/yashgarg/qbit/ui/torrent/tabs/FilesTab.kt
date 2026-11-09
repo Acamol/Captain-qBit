@@ -192,7 +192,7 @@ fun FilesTab(
 }
 
 @Composable
-private fun MenuRow(text: String, onClick: () -> Unit) {
+internal fun MenuRow(text: String, onClick: () -> Unit) {
     Text(
         text,
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 14.dp),

@@ -691,6 +691,19 @@
         Private torrent — trackers are fixed by the torrent and can\'t be changed.
     </string>
     <string name="add_tracker_action">Add tracker</string>
+    <string name="tracker_stat_leeches">Leeches</string>
+    <string name="tracker_tier">Tier %1$d</string>
+    <string name="tracker_status_working">Working</string>
+    <string name="tracker_status_updating">Updating</string>
+    <string name="tracker_status_not_contacted">Not contacted yet</string>
+    <string name="tracker_status_not_working">Not working</string>
+    <string name="tracker_status_disabled">Disabled</string>
+    <plurals name="tracker_summary_total">
+        <item quantity="one">%1$d tracker</item>
+        <item quantity="other">%1$d trackers</item>
+    </plurals>
+    <string name="tracker_summary_working">%1$d working</string>
+    <string name="tracker_summary_not_working">%1$d not working</string>
     <string name="no_trackers">No trackers</string>
     <string name="edit_tracker_label">Edit tracker</string>
     <string name="remove_tracker_label">Remove tracker</string>

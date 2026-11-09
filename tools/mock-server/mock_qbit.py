@@ -397,6 +397,19 @@ def trackers_for(hash_):
                      "num_seeds": t.get("num_seeds", 0),
                      "num_leeches": t.get("num_leechs", 0),
                      "num_downloaded": t.get("num_complete", 0), "msg": "working"})
+    if t.get("tracker") == TR_ARCHIVE:
+        # Extra trackers in other states, so the Trackers tab shows every card variant.
+        rows += [
+            {"url": "udp://tracker.opentrackr.org:1337/announce", "status": 4, "tier": 1,
+             "num_peers": -1, "num_seeds": -1, "num_leeches": -1, "num_downloaded": -1,
+             "msg": "Torrent not registered with this tracker"},
+            {"url": "https://tracker.example.net/announce", "status": 3, "tier": 2,
+             "num_peers": -1, "num_seeds": -1, "num_leeches": -1, "num_downloaded": -1,
+             "msg": ""},
+            {"url": "udp://open.stealth.si:80/announce", "status": 1, "tier": 3,
+             "num_peers": -1, "num_seeds": -1, "num_leeches": -1, "num_downloaded": -1,
+             "msg": ""},
+        ]
     return rows
 
 
