@@ -922,6 +922,7 @@
     <string name="search_no_results">No results</string>
     <string name="search_intro">Search the sites your qBittorrent search plugins cover.</string>
     <string name="search_no_plugins">No search plugins are enabled on this server. Enable or install one to search.</string>
+    <string name="search_open_description_page">Open description page</string>
     <string name="search_unknown_value">–</string>
     <string name="search_result_seeders_leechers">%1$s seeders • %2$s leechers</string>
     <plurals name="search_results_count">

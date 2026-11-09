@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Extension
@@ -45,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -307,37 +309,57 @@ private fun SearchBody(
 @Composable
 private fun ResultRow(result: SearchResult, onClick: () -> Unit) {
     val unknown = stringResource(CommonR.string.search_unknown_value)
-    Column(
+    val uriHandler = LocalUriHandler.current
+    // Plugins also report problems as a result row (e.g. Jackett's missing API key) whose
+    // description page explains the fix, so every row with a web page offers to open it.
+    val descriptionPage = result.descrLink.takeIf { it.isWebLink() }
+    Row(
         Modifier.fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(start = 16.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            result.fileName,
-            style = MaterialTheme.typography.bodyLarge,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            stringResource(
-                CommonR.string.search_result_seeders_leechers,
-                result.nbSeeders.takeIf { it >= 0 }?.toString() ?: unknown,
-                result.nbLeechers.takeIf { it >= 0 }?.toString() ?: unknown,
-            ),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            listOfNotNull(
-                    result.fileSize.takeIf { it >= 0 }?.toHumanReadable(),
-                    (result.engineName ?: result.siteUrl).takeIf { !it.isNullOrBlank() },
+        Column(Modifier.weight(1f)) {
+            Text(
+                result.fileName,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                stringResource(
+                    CommonR.string.search_result_seeders_leechers,
+                    result.nbSeeders.takeIf { it >= 0 }?.toString() ?: unknown,
+                    result.nbLeechers.takeIf { it >= 0 }?.toString() ?: unknown,
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                listOfNotNull(
+                        result.fileSize.takeIf { it >= 0 }?.toHumanReadable(),
+                        (result.engineName ?: result.siteUrl).takeIf { !it.isNullOrBlank() },
+                    )
+                    .joinToString(" • "),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (descriptionPage != null) {
+            IconButton(onClick = { runCatching { uriHandler.openUri(descriptionPage) } }) {
+                Icon(
+                    Icons.AutoMirrored.Filled.OpenInNew,
+                    contentDescription =
+                        stringResource(CommonR.string.search_open_description_page),
                 )
-                .joinToString(" • "),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+            }
+        }
     }
 }
+
+// Descriptions come from plugin code on the server, so only hand web links to the browser.
+private fun String.isWebLink(): Boolean =
+    startsWith("https://", ignoreCase = true) || startsWith("http://", ignoreCase = true)
 
 @Composable
 private fun CenteredText(
