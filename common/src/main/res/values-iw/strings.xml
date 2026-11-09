@@ -756,15 +756,15 @@
         <item quantity="other">%1$d תוצאות</item>
     </plurals>
     <string name="search_add_action">הוספת טורנט</string>
-    <string name="error_search_too_many">\"השרת כבר מריץ את מספר החיפושים המרבי. יש לנסות שוב בעוד רגע.</string>
-    <string name="status_search_start_failure">כשל בהתחלת החיפוש</string>
+    <string name="error_search_too_many">השרת כבר מריץ את מספר החיפושים המרבי. יש לנסות שוב בעוד רגע.</string>
+    <string name="status_search_start_failure">נכשל להתחיל את החיפוש</string>
     <string name="status_search_failure">החיפוש נכשל</string>
-    <string name="status_search_plugins_load_failure">כשל בטעינת תוספי החיפוש</string>
+    <string name="status_search_plugins_load_failure">נכשל לטעון תוספי חיפוש</string>
     <string name="search_plugins_empty">לא מותקנים תוספי חיפוש</string>
     <string name="search_plugins_update_all_action">עדכון תוספים</string>
     <string name="search_plugin_install_action">התקנת תוסף</string>
     <string name="search_plugin_install_next">הבא</string>
-    <string name="search_plugin_url_label">קישור לתוסף</string>
+    <string name="search_plugin_url_label">כתובת התוסף</string>
     <string name="search_plugin_url_invalid">יש להזין קישור https:// לתוסף</string>
     <string name="search_plugin_install_warning">השרת מוריד תוסף זה ומריץ אותו כקוד. יש להתקין תוספים אך ורק ממקורות מהימנים.</string>
     <string name="search_plugin_install_confirm">האם להתקין את התוסף מ־%1$s בשרת?</string>
@@ -773,7 +773,7 @@
     <string name="search_plugin_uninstall_confirm">האם להסיר את %1$s מהשרת?</string>
     <string name="status_search_plugin_enabled">%1$s מופעל</string>
     <string name="status_search_plugin_disabled">%1$s מבוטל</string>
-    <string name="status_search_plugin_toggle_failure">כישלון בשינוי מצב %1$s</string>
+    <string name="status_search_plugin_toggle_failure">נכשל לשנות את מצב %1$s</string>
     <string name="status_search_plugin_install_requested">נשלחה בקשת התקנה לתוסף</string>
     <string name="status_search_plugin_install_failure">התקנת התוסף נכשלה</string>
     <string name="status_search_plugin_uninstalled">%1$s הוסר</string>
