@@ -17,7 +17,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -41,24 +43,33 @@ constructor(
     private var searchJob: Job? = null
     private var jobId: Int? = null
 
-    init {
-        loadPlugins()
-    }
-
+    /** Reloads the server's plugins; the screen calls it on every resume, not just the first. */
     fun loadPlugins() {
         viewModelScope.launch {
             repository
                 .getSearchPlugins()
                 .onOk { plugins ->
-                    _uiState.update {
-                        it.copy(
-                            plugins = plugins,
-                            pluginsLoaded = true,
-                            // A plugin removed or disabled elsewhere can't stay selected.
-                            selectedPlugin =
-                                it.selectedPlugin?.takeIf { name ->
-                                    plugins.any { p -> p.name == name && p.enabled }
-                                },
+                    _uiState.update { current ->
+                        val next =
+                            current.copy(
+                                plugins = plugins,
+                                pluginsLoaded = true,
+                                // A plugin removed or disabled elsewhere can't stay selected.
+                                selectedPlugin =
+                                    current.selectedPlugin?.takeIf { name ->
+                                        plugins.any { p -> p.name == name && p.enabled }
+                                    },
+                                // An earlier failure to load plugins no longer applies.
+                                error =
+                                    current.error.takeUnless { current.phase == SearchPhase.IDLE },
+                            )
+                        // A category the remaining plugins no longer offer can't stay selected.
+                        next.copy(
+                            category =
+                                next.category.takeIf { id ->
+                                    id == SearchState.CATEGORY_ALL ||
+                                        next.categories.any { it.first == id }
+                                } ?: SearchState.CATEGORY_ALL,
                         )
                     }
                 }
@@ -91,21 +102,23 @@ constructor(
         val pattern = state.query.trim()
         if (pattern.isEmpty()) return
         val previousJob = searchJob
-        val previousId = jobId
-        jobId = null
         searchJob = viewModelScope.launch {
             previousJob?.cancelAndJoin()
-            previousId?.let { discard(it) }
+            // Joined above, so the previous job's id is recorded even if it was still starting.
+            jobId?.let { discard(it) }
+            jobId = null
             _uiState.update {
                 it.copy(phase = SearchPhase.RUNNING, results = emptyList(), error = null)
             }
             val plugins = state.selectedPlugin?.let(::listOf) ?: listOf(SEARCH_PLUGINS_ENABLED)
-            repository
-                .startSearch(pattern, plugins, state.category)
-                .onOk { id ->
-                    jobId = id
-                    poll(id)
+            // The server may create the job even if this is cancelled mid-request, so the response
+            // is always taken and its id recorded for whoever cleans up next.
+            val started =
+                withContext(NonCancellable) {
+                    repository.startSearch(pattern, plugins, state.category).onOk { jobId = it }
                 }
+            started
+                .onOk { id -> poll(id) }
                 .onErr { error ->
                     _uiState.update {
                         it.copy(phase = SearchPhase.IDLE, error = error.startFailureMessage())
@@ -115,11 +128,15 @@ constructor(
     }
 
     fun stop() {
-        val id = jobId ?: return
-        viewModelScope.launch {
-            repository.stopSearch(id)
-            searchJob?.cancel()
-            fetchResults(id)
+        // Runs as the current job so a later search() cancels it instead of racing it; the join
+        // also waits out a search that is still starting, whose id is then known.
+        val previousJob = searchJob
+        searchJob = viewModelScope.launch {
+            previousJob?.cancelAndJoin()
+            jobId?.let { id ->
+                repository.stopSearch(id)
+                fetchResults(id)
+            }
             _uiState.update { it.copy(phase = SearchPhase.FINISHED) }
         }
     }
@@ -139,8 +156,10 @@ constructor(
     /** Refreshes the visible results; returns whether the job is still running, null on failure. */
     private suspend fun fetchResults(id: Int): Boolean? {
         var running: Boolean? = null
-        repository
-            .getSearchResults(id, limit = MAX_RESULTS)
+        val result = repository.getSearchResults(id, limit = MAX_RESULTS)
+        // A search started or stopped meanwhile owns the state now; don't overwrite it.
+        currentCoroutineContext().ensureActive()
+        result
             .onOk { page ->
                 var capped = false
                 if (page.isRunning && page.total >= MAX_RESULTS) {
@@ -177,11 +196,13 @@ constructor(
         else friendlyMessage(getString(CommonR.string.status_search_start_failure))
 
     override fun onCleared() {
-        val id = jobId
-        if (id != null) {
-            // viewModelScope is already cancelled here; a detached best-effort cleanup is needed so
-            // the server doesn't hold the finished job (it keeps only a handful at once).
-            CoroutineScope(SupervisorJob() + Dispatchers.IO).launch { discard(id) }
+        val job = searchJob
+        // viewModelScope is already cancelled here; a detached best-effort cleanup is needed so the
+        // server doesn't hold the finished job (it keeps only a handful at once). Joining first
+        // lets a search that was still starting record its id.
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            job?.join()
+            jobId?.let { discard(it) }
         }
     }
 

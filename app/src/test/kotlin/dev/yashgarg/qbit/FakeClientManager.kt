@@ -201,12 +201,6 @@ class FakeClientManager : ClientManager {
                     HttpStatusCode.OK,
                     headersOf(HttpHeaders.ContentType, "application/json"),
                 )
-            path.endsWith("/search/status") ->
-                respond(
-                    """[{"id":7,"status":"Stopped","total":1}]""",
-                    HttpStatusCode.OK,
-                    headersOf(HttpHeaders.ContentType, "application/json"),
-                )
             path.endsWith("/search/results") ->
                 respond(
                     """{"results":[{"fileName":"Demo Torrent","fileUrl":"magnet:?xt=urn:btih:abc",""" +

@@ -734,7 +734,6 @@
     <string name="search_title">חיפוש</string>
     <string name="search_online_action">חיפוש ברשת</string>
     <string name="search_query_placeholder">חיפוש טורנטים</string>
-    <string name="search_action">חיפוש</string>
     <string name="search_stop_action">עצירה</string>
     <string name="search_plugins_action">תוספי חיפוש</string>
     <string name="search_plugin_label">תוסף</string>
@@ -755,7 +754,6 @@
         <item quantity="two">שתי תוצאות</item>
         <item quantity="other">%1$d תוצאות</item>
     </plurals>
-    <string name="search_add_action">הוספת טורנט</string>
     <string name="error_search_too_many">השרת כבר מריץ את מספר החיפושים המרבי. יש לנסות שוב בעוד רגע.</string>
     <string name="status_search_start_failure">נכשל להתחיל את החיפוש</string>
     <string name="status_search_failure">החיפוש נכשל</string>

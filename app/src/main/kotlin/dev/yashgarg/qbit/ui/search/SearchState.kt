@@ -32,15 +32,21 @@ data class SearchState(
             val inScope =
                 if (selectedPlugin != null) plugins.filter { it.name == selectedPlugin }
                 else enabledPlugins
-            return inScope
-                .map { plugin -> plugin.supportedCategories.map { it.id to it.name }.toSet() }
-                .reduceOrNull { acc, set -> acc intersect set }
+            val offered = inScope.map { plugin ->
+                plugin.supportedCategories.filter { it.id != CATEGORY_ALL }
+            }
+            // Plugins may label the same id differently, so match on the id and show the first
+            // name.
+            val shared =
+                offered
+                    .map { list -> list.map { it.id }.toSet() }
+                    .reduceOrNull { a, b -> a intersect b }
+            return offered
+                .firstOrNull()
                 .orEmpty()
-                .filter { it.first != CATEGORY_ALL }
+                .filter { it.id in shared.orEmpty() }
+                .map { it.id to it.name }
         }
-
-    val sortedResults: List<SearchResult>
-        get() = results.sortedBy(sort)
 
     companion object {
         const val CATEGORY_ALL = "all"

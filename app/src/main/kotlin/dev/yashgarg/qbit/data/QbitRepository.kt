@@ -21,7 +21,6 @@ import qbittorrent.models.RssRule
 import qbittorrent.models.SchedulerDays
 import qbittorrent.models.SearchPlugin
 import qbittorrent.models.SearchResultsPage
-import qbittorrent.models.SearchStatus
 import qbittorrent.models.Torrent
 import qbittorrent.models.TorrentFile
 import qbittorrent.models.TorrentPeers
@@ -528,10 +527,6 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
         category: String = SEARCH_CATEGORY_ALL,
     ): Result<Int, Throwable> {
         return runSuspendCatching { client().startSearch(pattern, plugins, category) }
-    }
-
-    suspend fun getSearchStatus(id: Int): Result<SearchStatus?, Throwable> {
-        return runSuspendCatching { client().getSearchStatus(id) }
     }
 
     suspend fun getSearchResults(

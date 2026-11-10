@@ -9,13 +9,11 @@ import qbittorrent.internal.bodyOrThrow
 import qbittorrent.internal.orThrow
 import qbittorrent.models.SearchPlugin
 import qbittorrent.models.SearchResultsPage
-import qbittorrent.models.SearchStatus
 
 @Serializable private data class SearchStartResponse(val id: Int)
 
 /** Plugin selector accepted by [startSearch] in place of explicit names. */
 const val SEARCH_PLUGINS_ENABLED = "enabled"
-const val SEARCH_PLUGINS_ALL = "all"
 
 /** Category selector accepted by [startSearch] to search every category. */
 const val SEARCH_CATEGORY_ALL = "all"
@@ -26,8 +24,8 @@ suspend fun QBittorrentClient.getSearchPlugins(): List<SearchPlugin> {
 }
 
 /**
- * Starts a search and returns its job id. [plugins] is [SEARCH_PLUGINS_ENABLED],
- * [SEARCH_PLUGINS_ALL] or a list of plugin names.
+ * Starts a search and returns its job id. [plugins] is [SEARCH_PLUGINS_ENABLED] or a list of plugin
+ * names.
  */
 @Throws(QBittorrentException::class, CancellationException::class)
 suspend fun QBittorrentClient.startSearch(
@@ -47,14 +45,6 @@ suspend fun QBittorrentClient.startSearch(
         )
         .bodyOrThrow<SearchStartResponse>()
         .id
-}
-
-@Throws(QBittorrentException::class, CancellationException::class)
-suspend fun QBittorrentClient.getSearchStatus(id: Int): SearchStatus? {
-    return http
-        .get("${config.baseUrl}/api/v2/search/status") { parameter("id", id) }
-        .bodyOrThrow<List<SearchStatus>>()
-        .firstOrNull()
 }
 
 @Throws(QBittorrentException::class, CancellationException::class)

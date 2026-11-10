@@ -26,5 +26,3 @@ data class SearchResultsPage(
     val isRunning: Boolean
         get() = status.equals("Running", ignoreCase = true)
 }
-
-@Serializable data class SearchStatus(val id: Int, val status: String = "", val total: Int = 0)

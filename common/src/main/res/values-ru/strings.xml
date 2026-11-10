@@ -745,7 +745,6 @@
     <string name="search_title">Поиск</string>
     <string name="search_online_action">Искать в сети</string>
     <string name="search_query_placeholder">Поиск торрентов</string>
-    <string name="search_action">Поиск</string>
     <string name="search_stop_action">Стоп</string>
     <string name="search_plugins_action">Поисковые плагины</string>
     <string name="search_plugin_label">Плагин</string>
@@ -767,7 +766,6 @@
         <item quantity="many">%1$d результатов</item>
         <item quantity="other">%1$d результатов</item>
     </plurals>
-    <string name="search_add_action">Добавить торрент</string>
     <string name="error_search_too_many">Сервер уже выполняет максимальное число поисковых запросов. Попробуйте ещё раз через мгновение.</string>
     <string name="status_search_start_failure">Не удалось запустить поиск</string>
     <string name="status_search_failure">Поиск не удался</string>

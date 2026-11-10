@@ -53,6 +53,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
@@ -68,6 +69,13 @@ fun SearchScreen(appNavigator: AppNavigator, viewModel: SearchViewModel = hiltVi
     val snackbarHostState = remember { SnackbarHostState() }
     var sortMenuOpen by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { viewModel.status.collect { snackbarHostState.showSnackbar(it) } }
+
+    // The ViewModel outlives a trip to the plugins screen, so the plugin list is re-read on every
+    // resume to pick up plugins enabled, installed or removed there.
+    LifecycleResumeEffect(viewModel) {
+        viewModel.loadPlugins()
+        onPauseOrDispose {}
+    }
 
     Scaffold(
         topBar = {
@@ -186,7 +194,7 @@ private fun SearchControls(
                 modifier = Modifier.weight(1f),
             )
             val allCategories = stringResource(CommonR.string.search_all_categories)
-            val categories = state.categories
+            val categories = remember(state.plugins, state.selectedPlugin) { state.categories }
             Dropdown(
                 label = stringResource(CommonR.string.search_category_label),
                 selected =
@@ -295,8 +303,11 @@ private fun SearchBody(
                         )
                     }
                 }
+                // Not keyed by link: different plugins can return the same one.
+                val sorted =
+                    remember(state.results, state.sort) { state.results.sortedBy(state.sort) }
                 LazyColumn(Modifier.fillMaxSize()) {
-                    items(state.sortedResults, key = { it.fileUrl }) { result ->
+                    items(sorted) { result ->
                         ResultRow(result, onClick = { onAdd(result) })
                         HorizontalDivider()
                     }
