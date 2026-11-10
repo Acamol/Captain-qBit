@@ -101,11 +101,13 @@ fun Torrent.matchesTags(selectedTags: Set<String>, filterUntagged: Boolean): Boo
  * AND-of-words, order-independent, case-insensitive - same semantics as the RSS article search and
  * a single line of an RSS rule's "Must contain" field.
  */
-fun Torrent.matchesSearch(query: String): Boolean = name.matchesWords(query)
+fun Torrent.matchesSearch(query: String): Boolean = name.matchesAll(searchWords(query))
 
-/** True when every whitespace-separated word of [query] occurs in this string; blank matches. */
-fun String.matchesWords(query: String): Boolean {
-    if (query.isBlank()) return true
-    val words = query.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
-    return words.all { contains(it, ignoreCase = true) }
-}
+private val WHITESPACE = Regex("\\s+")
+
+/** The whitespace-separated words of [query]; empty for a blank query. */
+fun searchWords(query: String): List<String> =
+    query.trim().split(WHITESPACE).filter { it.isNotBlank() }
+
+/** True when every one of [words] occurs in this string; no words matches everything. */
+fun String.matchesAll(words: List<String>): Boolean = words.all { contains(it, ignoreCase = true) }

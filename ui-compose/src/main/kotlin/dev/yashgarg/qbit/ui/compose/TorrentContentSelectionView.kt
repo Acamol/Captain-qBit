@@ -28,8 +28,11 @@ import dev.yashgarg.qbit.data.models.ContentTreeItem
 import dev.yashgarg.qbit.ui.compose.theme.SpaceGrotesk
 
 /** All torrent file indices under this node (itself, for a file). */
-fun ContentTreeItem.allFileIndices(): List<Int> =
-    item?.let { listOf(it.index) } ?: children.orEmpty().flatMap { it.allFileIndices() }
+fun ContentTreeItem.allFileIndices(): List<Int> {
+    val node = whole()
+    return node.item?.let { listOf(it.index) }
+        ?: node.children.orEmpty().flatMap { it.allFileIndices() }
+}
 
 /**
  * The content tree with a checkbox per node, for choosing which files to download when adding a
@@ -44,28 +47,25 @@ fun TorrentContentSelectionView(
     modifier: Modifier = Modifier,
     filterKey: String = "",
 ) {
-    // The tree is rebuilt whenever [filterKey] changes; a non-blank key opens every folder so the
-    // filtered matches are visible.
-    key(filterKey) {
-        val tree = Tree<ContentTreeItem> { SelectionTree(nodes, deselected, onToggle) }
-        if (filterKey.isNotBlank()) LaunchedEffect(tree) { tree.expandAll() }
+    val tree = Tree<ContentTreeItem> { SelectionTree(nodes, deselected, onToggle) }
+    // A non-blank [filterKey] opens every folder so the filtered matches are visible.
+    LaunchedEffect(filterKey) { if (filterKey.isNotBlank()) tree.expandAll() }
 
-        Bonsai(
-            tree,
-            style = selectionStyle(),
-            modifier = Modifier.fillMaxSize().then(modifier),
-            // Folders expand/collapse on tap; a file tap toggles its checkbox.
-            onClick = { node: Node<ContentTreeItem> ->
-                if (node is BranchNode) {
-                    tree.clearSelection()
-                    tree.toggleExpansion(node)
-                } else {
-                    onToggle(node.content)
-                }
-            },
-            onLongClick = null,
-        )
-    }
+    Bonsai(
+        tree,
+        style = selectionStyle(),
+        modifier = Modifier.fillMaxSize().then(modifier),
+        // Folders expand/collapse on tap; a file tap toggles its checkbox.
+        onClick = { node: Node<ContentTreeItem> ->
+            if (node is BranchNode) {
+                tree.clearSelection()
+                tree.toggleExpansion(node)
+            } else {
+                onToggle(node.content)
+            }
+        },
+        onLongClick = null,
+    )
 }
 
 @Composable
@@ -84,7 +84,8 @@ private fun TreeScope.SelectionTree(
     deselected: Set<Int>,
     onToggle: (ContentTreeItem) -> Unit,
 ) {
-    nodes.forEach { node -> SelectionNode(node, deselected, onToggle) }
+    // Keyed so each folder keeps its expansion when a filter changes which nodes are listed.
+    nodes.forEach { node -> key(node.id) { SelectionNode(node, deselected, onToggle) } }
 }
 
 @Composable

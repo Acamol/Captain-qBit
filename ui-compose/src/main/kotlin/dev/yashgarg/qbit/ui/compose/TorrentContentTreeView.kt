@@ -48,35 +48,34 @@ fun TorrentContentTreeView(
     onToggleDownload: ((ContentTreeItem) -> Unit)? = null,
     filterKey: String = "",
 ) {
-    // The tree is rebuilt whenever [filterKey] changes; a non-blank key opens every folder so the
-    // filtered matches are visible.
-    key(filterKey) {
-        val tree = Tree<ContentTreeItem> { ContentTree(nodes, onToggleDownload) }
-        if (filterKey.isNotBlank()) LaunchedEffect(tree) { tree.expandAll() }
+    val tree = Tree<ContentTreeItem> { ContentTree(nodes, onToggleDownload) }
+    // A non-blank [filterKey] opens every folder so the filtered matches are visible.
+    LaunchedEffect(filterKey) { if (filterKey.isNotBlank()) tree.expandAll() }
 
-        Bonsai(
-            tree,
-            style = torrentContentStyle(),
-            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp).then(modifier),
-            // Folders keep the default expand/collapse tap; tapping a file flips its download
-            // checkbox (when the caller provided a toggle handler).
-            onClick = { node: Node<ContentTreeItem> ->
-                if (node is BranchNode || onToggleDownload == null) {
-                    tree.clearSelection()
-                    tree.toggleExpansion(node)
-                } else {
-                    onToggleDownload(node.content)
-                }
-            },
-            onLongClick = { node -> onNodeLongClick(node.content) },
-        )
-    }
+    Bonsai(
+        tree,
+        style = torrentContentStyle(),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp).then(modifier),
+        // Folders keep the default expand/collapse tap; tapping a file flips its download
+        // checkbox (when the caller provided a toggle handler).
+        onClick = { node: Node<ContentTreeItem> ->
+            if (node is BranchNode || onToggleDownload == null) {
+                tree.clearSelection()
+                tree.toggleExpansion(node)
+            } else {
+                onToggleDownload(node.content)
+            }
+        },
+        onLongClick = { node -> onNodeLongClick(node.content) },
+    )
 }
 
 /** True when this file — or every file under this folder — is set to not download. */
-fun ContentTreeItem.isSkipped(): Boolean =
-    item?.let { it.priority == FILE_PRIORITY_SKIP }
-        ?: (!children.isNullOrEmpty() && children!!.all { it.isSkipped() })
+fun ContentTreeItem.isSkipped(): Boolean {
+    val node = whole()
+    return node.item?.let { it.priority == FILE_PRIORITY_SKIP }
+        ?: (!node.children.isNullOrEmpty() && node.children!!.all { it.isSkipped() })
+}
 
 @Composable
 private fun torrentContentStyle(): BonsaiStyle<ContentTreeItem> {
@@ -102,7 +101,8 @@ private fun TreeScope.ContentTree(
     nodes: List<ContentTreeItem>,
     onToggleDownload: ((ContentTreeItem) -> Unit)?,
 ) {
-    nodes.forEach { node -> ContentNode(node, onToggleDownload) }
+    // Keyed so each folder keeps its expansion when a filter changes which nodes are listed.
+    nodes.forEach { node -> key(node.id) { ContentNode(node, onToggleDownload) } }
 }
 
 @Composable
@@ -161,9 +161,7 @@ private fun NodeName(item: ContentTreeItem, onToggleDownload: ((ContentTreeItem)
 }
 
 private fun ContentTreeItem.downloadState(): ToggleableState {
-    val priorities =
-        item?.let { listOf(it.priority) }
-            ?: children.orEmpty().flatMap { child -> child.allPriorities() }
+    val priorities = allPriorities()
     val skipped = priorities.count { it == FILE_PRIORITY_SKIP }
     return when {
         skipped == 0 -> ToggleableState.On
@@ -172,5 +170,8 @@ private fun ContentTreeItem.downloadState(): ToggleableState {
     }
 }
 
-private fun ContentTreeItem.allPriorities(): List<Int> =
-    item?.let { listOf(it.priority) } ?: children.orEmpty().flatMap { it.allPriorities() }
+private fun ContentTreeItem.allPriorities(): List<Int> {
+    val node = whole()
+    return node.item?.let { listOf(it.priority) }
+        ?: node.children.orEmpty().flatMap { it.allPriorities() }
+}

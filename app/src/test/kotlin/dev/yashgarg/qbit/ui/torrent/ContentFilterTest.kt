@@ -1,6 +1,7 @@
 package dev.yashgarg.qbit.ui.torrent
 
 import dev.yashgarg.qbit.data.models.ContentTreeItem
+import dev.yashgarg.qbit.ui.compose.allFileIndices
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Test
@@ -80,5 +81,14 @@ class ContentFilterTest {
     @Test
     fun `a query that matches nothing returns an empty tree`() {
         assertEquals(emptyList<ContentTreeItem>(), filterContentTree(tree, "zzz"))
+    }
+
+    @Test
+    fun `a trimmed folder still remembers all of its files`() {
+        val filtered = filterContentTree(tree, "e02")
+
+        val season = filtered.single()
+        assertEquals(1, season.children.orEmpty().size)
+        assertEquals(listOf(0, 1, 2), season.whole().allFileIndices())
     }
 }

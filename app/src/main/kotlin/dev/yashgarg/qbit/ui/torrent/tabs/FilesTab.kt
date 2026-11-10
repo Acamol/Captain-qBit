@@ -32,6 +32,7 @@ import dev.yashgarg.qbit.ui.compose.FILE_PRIORITY_NORMAL
 import dev.yashgarg.qbit.ui.compose.FILE_PRIORITY_SKIP
 import dev.yashgarg.qbit.ui.compose.TextInputDialog
 import dev.yashgarg.qbit.ui.compose.TorrentContentTreeView
+import dev.yashgarg.qbit.ui.compose.allFileIndices
 import dev.yashgarg.qbit.ui.compose.isSkipped
 import dev.yashgarg.qbit.ui.torrent.TorrentDetailsState
 import dev.yashgarg.qbit.ui.torrent.filterContentTree
@@ -226,16 +227,17 @@ fun FilesListView(
 }
 
 /** All torrent file indices under this node (itself, for a file). */
-private fun fileIndices(item: ContentTreeItem): List<Int> =
-    item.item?.let { listOf(it.index) } ?: item.children.orEmpty().flatMap { fileIndices(it) }
+private fun fileIndices(item: ContentTreeItem): List<Int> = item.allFileIndices()
 
 /** The single priority shared by every file under this node, or null when they differ. */
 private fun commonPriority(item: ContentTreeItem): Int? =
     collectPriorities(item).distinct().singleOrNull()
 
-private fun collectPriorities(item: ContentTreeItem): List<Int> =
-    item.item?.let { listOf(it.priority) }
-        ?: item.children.orEmpty().flatMap { collectPriorities(it) }
+private fun collectPriorities(item: ContentTreeItem): List<Int> {
+    val node = item.whole()
+    return node.item?.let { listOf(it.priority) }
+        ?: node.children.orEmpty().flatMap { collectPriorities(it) }
+}
 
 // qBittorrent uses "/" inside torrent paths; match the save path's own separator.
 private fun joinPath(base: String, relative: String): String {

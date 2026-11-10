@@ -13,4 +13,12 @@ data class ContentTreeItem(
     val children: List<ContentTreeItem>? = null,
     val size: Long,
     val progress: Long,
-)
+    /**
+     * On a folder the file search trimmed to its matches: the complete folder, which checkbox state
+     * and bulk actions must use so they also cover the files the filter hides.
+     */
+    val complete: ContentTreeItem? = null,
+) {
+    /** This node as the torrent has it, ignoring any trimming by the file search. */
+    fun whole(): ContentTreeItem = complete ?: this
+}
