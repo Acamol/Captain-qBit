@@ -702,8 +702,14 @@
         <item quantity="one">%1$d tracker</item>
         <item quantity="other">%1$d trackers</item>
     </plurals>
-    <string name="tracker_summary_working">%1$d working</string>
-    <string name="tracker_summary_not_working">%1$d not working</string>
+    <plurals name="tracker_summary_working">
+        <item quantity="one">%1$d working</item>
+        <item quantity="other">%1$d working</item>
+    </plurals>
+    <plurals name="tracker_summary_not_working">
+        <item quantity="one">%1$d not working</item>
+        <item quantity="other">%1$d not working</item>
+    </plurals>
     <string name="no_trackers">No trackers</string>
     <string name="edit_tracker_label">Edit tracker</string>
     <string name="remove_tracker_label">Remove tracker</string>

@@ -224,10 +224,16 @@ private fun TrackerSummaryLine(summary: TrackerSummary) {
                     summary.total,
                     summary.total,
                 ),
-                stringResource(CommonR.string.tracker_summary_working, summary.working),
+                pluralStringResource(
+                    CommonR.plurals.tracker_summary_working,
+                    summary.working,
+                    summary.working,
+                ),
                 summary.notWorking
                     .takeIf { it > 0 }
-                    ?.let { stringResource(CommonR.string.tracker_summary_not_working, it) },
+                    ?.let {
+                        pluralStringResource(CommonR.plurals.tracker_summary_not_working, it, it)
+                    },
             )
             .joinToString(" • "),
         style = MaterialTheme.typography.labelLarge,
