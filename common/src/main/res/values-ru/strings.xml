@@ -790,4 +790,22 @@
     <string name="status_search_plugin_uninstall_failure">Не удалось удалить %1$s</string>
     <string name="status_search_plugins_update_requested">Проверка обновлений плагинов</string>
     <string name="status_search_plugins_update_failure">Не удалось обновить плагины</string>
+    <string name="no_files_match">Нет подходящих файлов</string>
+    <string name="search_files_placeholder">Поиск файлов (все слова, в любом порядке)</string>
+    <string name="tracker_stat_leeches">Личеры</string>
+    <string name="tracker_tier">Уровень %1$d</string>
+    <string name="tracker_status_working">Работает</string>
+    <string name="tracker_status_updating">Обновляется</string>
+    <string name="tracker_status_not_contacted">Ещё не подключён</string>
+    <string name="tracker_status_not_working">Не работает</string>
+    <string name="tracker_status_disabled">Отключён</string>
+    <plurals name="tracker_summary_total">
+        <item quantity="one">%1$d трекер</item>
+        <item quantity="few">%1$d трекера</item>
+        <item quantity="many">%1$d трекеров</item>
+        <item quantity="other">%1$d трекеров</item>
+    </plurals>
+    <string name="tracker_summary_working">%1$d работают</string>
+    <string name="tracker_summary_not_working">%1$d не работают</string>
+    <string name="search_open_description_page">Открыть страницу описания</string>
 </resources>
