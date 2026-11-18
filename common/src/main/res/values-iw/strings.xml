@@ -778,4 +778,18 @@
     <string name="status_search_plugin_uninstall_failure">הסרת %1$s נכשלה</string>
     <string name="status_search_plugins_update_requested">בודק אם קיימים עדכונים לתוספים</string>
     <string name="status_search_plugins_update_failure">נכשל לעדכן תוספים</string>
+    <string name="no_files_match">אין קבצים תואמים</string>
+    <string name="search_files_placeholder">חיפוש קבצים (כל המילים, בכל סדר)</string>
+    <string name="tracker_stat_leeches">עלוקות</string>
+    <string name="tracker_tier">רמה %1$d</string>
+    <string name="tracker_status_working">עובד</string>
+    <string name="tracker_status_updating">מעדכן</string>
+    <string name="tracker_status_not_contacted">קשר לא נוצר עדין</string>
+    <string name="tracker_status_not_working">לא עובד</string>
+    <string name="tracker_status_disabled">מושבת</string>
+    <plurals name="tracker_summary_total">
+        <item quantity="one">עוקבן אחד</item>
+        <item quantity="two">שני עוקבנים</item>
+        <item quantity="other">%1$d עוקבנים</item>
+    </plurals>
 </resources>
