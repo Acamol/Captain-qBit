@@ -784,7 +784,7 @@
     <string name="tracker_tier">רמה %1$d</string>
     <string name="tracker_status_working">עובד</string>
     <string name="tracker_status_updating">מעדכן</string>
-    <string name="tracker_status_not_contacted">קשר לא נוצר עדין</string>
+    <string name="tracker_status_not_contacted">טרם נוצר קשר</string>
     <string name="tracker_status_not_working">לא עובד</string>
     <string name="tracker_status_disabled">מושבת</string>
     <plurals name="tracker_summary_total">
@@ -793,14 +793,14 @@
         <item quantity="other">%1$d עוקבנים</item>
     </plurals>
     <plurals name="tracker_summary_working">
-        <item quantity="one">אחד עובד</item>
-        <item quantity="two">שניים עובדים</item>
+        <item quantity="one">%1$d עובד</item>
+        <item quantity="two">%1$d עובדים</item>
         <item quantity="other">%1$d עובדים</item>
     </plurals>
     <plurals name="tracker_summary_not_working">
-        <item quantity="one">אחד לא עובד</item>
-        <item quantity="two">שניים לא עובדים</item>
+        <item quantity="one">%1$d לא עובד</item>
+        <item quantity="two">%1$d לא עובדים</item>
         <item quantity="other">%1$d לא עובדים</item>
     </plurals>
-    <string name="search_open_description_page">פתיחת עמוד התאור</string>
+    <string name="search_open_description_page">פתיחת עמוד התיאור</string>
 </resources>
