@@ -792,4 +792,15 @@
         <item quantity="two">שני עוקבנים</item>
         <item quantity="other">%1$d עוקבנים</item>
     </plurals>
+    <plurals name="tracker_summary_working">
+        <item quantity="one">אחד עובד</item>
+        <item quantity="two">שניים עובדים</item>
+        <item quantity="other">%1$d עובדים</item>
+    </plurals>
+    <plurals name="tracker_summary_not_working">
+        <item quantity="one">אחד לא עובד</item>
+        <item quantity="two">שניים לא עובדים</item>
+        <item quantity="other">%1$d לא עובדים</item>
+    </plurals>
+    <string name="search_open_description_page">פתיחת עמוד התאור</string>
 </resources>
