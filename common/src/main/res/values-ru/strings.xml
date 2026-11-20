@@ -806,10 +806,16 @@
         <item quantity="other">%1$d трекеров</item>
     </plurals>
     <plurals name="tracker_summary_working">
-        <item quantity="one">%1$d работают</item>
+        <item quantity="one">%1$d работает</item>
+        <item quantity="few">%1$d работают</item>
+        <item quantity="many">%1$d работает</item>
+        <item quantity="other">%1$d работает</item>
     </plurals>
     <plurals name="tracker_summary_not_working">
-        <item quantity="one">%1$d не работают</item>
+        <item quantity="one">%1$d не работает</item>
+        <item quantity="few">%1$d не работают</item>
+        <item quantity="many">%1$d не работает</item>
+        <item quantity="other">%1$d не работает</item>
     </plurals>
     <string name="search_open_description_page">Открыть страницу описания</string>
 </resources>
