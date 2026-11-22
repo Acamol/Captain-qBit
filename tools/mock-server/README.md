@@ -28,6 +28,8 @@ installed from any URL and uninstalled, all in memory.
   complete" notification; do it again on a forced-complete torrent to send it
   back to downloading so you can repeat the test. Toggled via the app's own
   pause/resume actions.
+- **"Torrent added" alerts**: `curl -X POST localhost:8080/api/v2/torrents/add` (or add a
+  torrent from the app) injects a new downloading torrent stamped with the current time.
 - **RSS "new article" alerts**: tap **Refresh** on any feed in the app (Feeds
   tab's per-feed action, or the top bar in a feed's article list) - each
   refresh injects one new synthetic article into that feed, so the next RSS
