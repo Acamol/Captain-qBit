@@ -113,6 +113,7 @@ fun SettingsScreen(
     val statusNotif by viewModel.statusNotification.collectAsStateWithLifecycle()
     val notifyComplete by viewModel.notifyOnComplete.collectAsStateWithLifecycle()
     val notifyChecked by viewModel.notifyOnChecked.collectAsStateWithLifecycle()
+    val notifyAdded by viewModel.notifyOnAdded.collectAsStateWithLifecycle()
     val notifyRssUpdates by viewModel.notifyOnNewRssArticles.collectAsStateWithLifecycle()
     val privacyPrefs by viewModel.privacyPrefs.collectAsStateWithLifecycle()
     val appLockEnabled = privacyPrefs.appLockEnabled
@@ -156,7 +157,7 @@ fun SettingsScreen(
     }
     val notificationsBlocked =
         !notificationsEnabled &&
-            (statusNotif || notifyComplete || notifyChecked || notifyRssUpdates)
+            (statusNotif || notifyComplete || notifyChecked || notifyAdded || notifyRssUpdates)
 
     Scaffold(
         topBar = {

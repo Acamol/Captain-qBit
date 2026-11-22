@@ -35,6 +35,7 @@ data class AppPreferences(
     val statusNotification: Boolean = true,
     val notifyOnComplete: Boolean = false,
     val notifyOnChecked: Boolean = false,
+    val notifyOnAdded: Boolean = false,
     // Set once the notification-permission rationale dialog has been answered (either way), so it
     // only ever shows once per install rather than nagging on every launch.
     val notificationPermissionAsked: Boolean = false,
@@ -56,6 +57,10 @@ data class AppPreferences(
     // completions still alert.
     val notifCompleteRebaseline: Boolean = false,
     val notifCheckedRebaseline: Boolean = false,
+    // Newest torrent added_on (unix seconds) already accounted for by the added-notifier, keyed by
+    // server id. Same watermark scheme as notifCompletionSeen.
+    val notifAddedSeen: Map<Int, Long> = emptyMap(),
+    val notifAddedRebaseline: Boolean = false,
     val notifyOnNewRssArticles: Boolean = false,
     // When a torrent/RSS alert may make a sound. A silenced alert is posted to a silent channel
     // rather than dropped, so an overnight completion is still waiting in the morning.

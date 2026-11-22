@@ -97,7 +97,7 @@ constructor(
         var rssIntervalMs = 300_000L
         while (true) {
             val prefs = prefsStore.data.first()
-            val eventsOn = prefs.notifyOnComplete || prefs.notifyOnChecked
+            val eventsOn = prefs.notifyOnComplete || prefs.notifyOnChecked || prefs.notifyOnAdded
             val rssOn = prefs.notifyOnNewRssArticles
             if (!prefs.statusNotification && !eventsOn && !rssOn) return
             // Re-checked every tick (not just at start) so blocking notifications mid-session -
@@ -162,6 +162,7 @@ constructor(
                     val torrents = client.getTorrents()
                     if (prefs.notifyOnComplete) notifyCompletions(torrents, prefs)
                     if (prefs.notifyOnChecked) notifyRechecks(torrents, prefs)
+                    if (prefs.notifyOnAdded) notifyAdded(torrents, prefs)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -242,6 +243,43 @@ constructor(
     private suspend fun persistCompletionWatermark(serverId: Int, value: Long) {
         prefsStore.updateData {
             it.copy(notifCompletionSeen = it.notifCompletionSeen + (serverId to value))
+        }
+    }
+
+    /**
+     * Fire a "torrent added" alert for any torrent whose `added_on` is newer than the per-server
+     * watermark, then advance it. Mirrors [notifyCompletions]: the first poll after enabling (or on
+     * a server never watched) is adopted silently so existing torrents don't alert.
+     */
+    private suspend fun notifyAdded(torrents: List<Torrent>, prefs: AppPreferences) {
+        val serverId = prefs.activeServerId
+        val newest = torrents.maxOfOrNull { it.addedOn } ?: 0L
+
+        if (prefs.notifAddedRebaseline || prefs.notifAddedSeen[serverId] == null) {
+            prefsStore.updateData {
+                it.copy(
+                    notifAddedSeen = it.notifAddedSeen + (serverId to newest),
+                    notifAddedRebaseline = false,
+                )
+            }
+            return
+        }
+
+        val watermark = prefs.notifAddedSeen[serverId] ?: newest
+        torrents
+            .filter { it.addedOn > watermark }
+            .forEach {
+                notifyEvent(
+                    "added:${it.hash}".hashCode(),
+                    localized.getString(CommonR.string.status_torrent_added),
+                    it.name,
+                    torrentHash = it.hash,
+                )
+            }
+        if (newest > watermark) {
+            prefsStore.updateData {
+                it.copy(notifAddedSeen = it.notifAddedSeen + (serverId to newest))
+            }
         }
     }
 

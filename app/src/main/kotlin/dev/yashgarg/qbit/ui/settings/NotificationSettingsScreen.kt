@@ -70,6 +70,7 @@ fun NotificationSettingsScreen(
     val statusNotif by viewModel.statusNotification.collectAsStateWithLifecycle()
     val notifyComplete by viewModel.notifyOnComplete.collectAsStateWithLifecycle()
     val notifyChecked by viewModel.notifyOnChecked.collectAsStateWithLifecycle()
+    val notifyAdded by viewModel.notifyOnAdded.collectAsStateWithLifecycle()
     val notifyRssUpdates by viewModel.notifyOnNewRssArticles.collectAsStateWithLifecycle()
     val eventAlertMode by viewModel.eventAlertMode.collectAsStateWithLifecycle()
     val quietHoursStart by viewModel.quietHoursStartMinutes.collectAsStateWithLifecycle()
@@ -93,7 +94,7 @@ fun NotificationSettingsScreen(
     // Only worth flagging if the user actually wants one of these to show something.
     val notificationsBlocked =
         !notificationsEnabled &&
-            (statusNotif || notifyComplete || notifyChecked || notifyRssUpdates)
+            (statusNotif || notifyComplete || notifyChecked || notifyAdded || notifyRssUpdates)
 
     val notifPermissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
@@ -101,8 +102,14 @@ fun NotificationSettingsScreen(
             if (notificationsEnabled) StatusWorker.enqueue(context)
         }
 
-    fun applyNotificationPrefs(status: Boolean, complete: Boolean, checked: Boolean, rss: Boolean) {
-        if (!(status || complete || checked || rss)) {
+    fun applyNotificationPrefs(
+        status: Boolean,
+        complete: Boolean,
+        checked: Boolean,
+        added: Boolean,
+        rss: Boolean,
+    ) {
+        if (!(status || complete || checked || added || rss)) {
             StatusWorker.cancel(context)
             return
         }
@@ -129,7 +136,7 @@ fun NotificationSettingsScreen(
             enabled = !notificationsBlocked,
         ) {
             viewModel.setStatusNotification(it)
-            applyNotificationPrefs(it, notifyComplete, notifyChecked, notifyRssUpdates)
+            applyNotificationPrefs(it, notifyComplete, notifyChecked, notifyAdded, notifyRssUpdates)
         }
         if (statusNotif) {
             ClickableRow(
@@ -145,7 +152,7 @@ fun NotificationSettingsScreen(
             enabled = !notificationsBlocked,
         ) {
             viewModel.setNotifyOnComplete(it)
-            applyNotificationPrefs(statusNotif, it, notifyChecked, notifyRssUpdates)
+            applyNotificationPrefs(statusNotif, it, notifyChecked, notifyAdded, notifyRssUpdates)
         }
         SwitchRow(
             stringResource(CommonR.string.notify_on_checked_label),
@@ -154,7 +161,16 @@ fun NotificationSettingsScreen(
             enabled = !notificationsBlocked,
         ) {
             viewModel.setNotifyOnChecked(it)
-            applyNotificationPrefs(statusNotif, notifyComplete, it, notifyRssUpdates)
+            applyNotificationPrefs(statusNotif, notifyComplete, it, notifyAdded, notifyRssUpdates)
+        }
+        SwitchRow(
+            stringResource(CommonR.string.notify_on_added_label),
+            notifyAdded,
+            subtitle = stringResource(CommonR.string.notify_on_added_subtitle),
+            enabled = !notificationsBlocked,
+        ) {
+            viewModel.setNotifyOnAdded(it)
+            applyNotificationPrefs(statusNotif, notifyComplete, notifyChecked, it, notifyRssUpdates)
         }
         SwitchRow(
             stringResource(CommonR.string.notify_on_new_rss_label),
@@ -163,7 +179,7 @@ fun NotificationSettingsScreen(
             enabled = !notificationsBlocked,
         ) {
             viewModel.setNotifyOnNewRssArticles(it)
-            applyNotificationPrefs(statusNotif, notifyComplete, notifyChecked, it)
+            applyNotificationPrefs(statusNotif, notifyComplete, notifyChecked, notifyAdded, it)
         }
         HorizontalDivider()
         ClickableRow(
@@ -194,7 +210,13 @@ fun NotificationSettingsScreen(
                 viewModel.setStatusRefreshIntervalMs(it)
                 // Restarts the already-running worker so it picks up the new interval right
                 // away, instead of only after its current (possibly minutes-long) sleep ends.
-                applyNotificationPrefs(statusNotif, notifyComplete, notifyChecked, notifyRssUpdates)
+                applyNotificationPrefs(
+                    statusNotif,
+                    notifyComplete,
+                    notifyChecked,
+                    notifyAdded,
+                    notifyRssUpdates,
+                )
             },
             onDismiss = { showStatusIntervalDialog = false },
         )
