@@ -18,10 +18,13 @@ import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.manager.PendingTorrentIntent
 import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.ContentTreeItem
+import dev.yashgarg.qbit.data.models.OwnAdds
+import dev.yashgarg.qbit.data.models.OwnAdds.registered
 import dev.yashgarg.qbit.data.models.ServerConfig
 import dev.yashgarg.qbit.data.models.ServerViewPrefs
 import dev.yashgarg.qbit.data.models.activeServer
 import dev.yashgarg.qbit.ui.common.StatusViewModel
+import dev.yashgarg.qbit.utils.TorrentDownloader
 import dev.yashgarg.qbit.utils.TorrentFileParser
 import dev.yashgarg.qbit.utils.TransformUtil
 import dev.yashgarg.qbit.utils.friendlyMessage
@@ -272,8 +275,53 @@ constructor(
             successMessage = getString(CommonR.string.status_add_torrent_url_success),
             failureMessage = getString(CommonR.string.status_add_torrent_url_failure),
         ) {
-            repository.addTorrentUrl(url, category, savePath, paused, autoTmm)
+            val magnetHash = TorrentFileParser.magnetHash(url)
+            if (magnetHash == null && skipOwnAddsActive()) {
+                // A plain .torrent link has no hash to read off the URL, so fetch it here to learn
+                // the hash, then upload those bytes (a single fetch, so single-use links survive).
+                // If the phone can't fetch or parse it, fall through to a normal server-side add;
+                // that add simply isn't suppressed.
+                val bytes = withContext(Dispatchers.IO) { TorrentDownloader.fetch(url) }
+                val parsed = bytes?.let(TorrentFileParser::parse)
+                if (bytes != null && parsed != null) {
+                    val ownKey = rememberOwnAdd(parsed.hash)
+                    return@launchStatus repository
+                        .addTorrentFile(bytes, category, savePath, paused, autoTmm)
+                        .onErr { forgetOwnAdd(ownKey) }
+                }
+            }
+            val ownKey = rememberOwnAdd(magnetHash)
+            repository.addTorrentUrl(url, category, savePath, paused, autoTmm).onErr {
+                forgetOwnAdd(ownKey)
+            }
         }
+    }
+
+    /**
+     * Records a torrent this app is about to add so the "torrent added" alert skips it. Done before
+     * the add request, since the background worker could otherwise poll in between. A no-op unless
+     * that alert is on, so nothing accumulates for users who don't use it.
+     */
+    private suspend fun rememberOwnAdd(hash: String?): String? {
+        if (hash == null) return null
+        var recorded: String? = null
+        val now = System.currentTimeMillis()
+        prefsStore.updateData {
+            if (!it.notifyOnAdded || !it.notifySkipOwnAdds) return@updateData it
+            val key = OwnAdds.key(it.activeServerId, hash)
+            recorded = key
+            it.copy(notifOwnAdds = it.notifOwnAdds.registered(key, now))
+        }
+        return recorded
+    }
+
+    private suspend fun skipOwnAddsActive(): Boolean =
+        prefsStore.data.first().let { it.notifyOnAdded && it.notifySkipOwnAdds }
+
+    /** Undoes [rememberOwnAdd] when the add request failed, so it can't suppress a later alert. */
+    private suspend fun forgetOwnAdd(key: String?) {
+        if (key == null) return
+        prefsStore.updateData { it.copy(notifOwnAdds = it.notifOwnAdds - key) }
     }
 
     fun addTorrentFile(
@@ -287,6 +335,7 @@ constructor(
             successMessage = getString(CommonR.string.status_add_torrent_file_success),
             failureMessage = getString(CommonR.string.status_add_torrent_file_failure),
         ) {
+            TorrentFileParser.parse(bytes)?.let { rememberOwnAdd(it.hash) }
             repository.addTorrentFile(bytes, category, savePath, paused, autoTmm)
         }
     }
@@ -349,6 +398,7 @@ constructor(
 
         metadataJob = viewModelScope.launch {
             // Must be added RUNNING: libtorrent won't fetch metadata for a stopped magnet.
+            rememberOwnAdd(hash)
             repository
                 .addTorrentUrl(url, paused = false)
                 .onOk {
@@ -403,6 +453,7 @@ constructor(
         viewModelScope.launch {
             when (source) {
                 is PendingSource.TorrentBytes -> {
+                    rememberOwnAdd(source.parsed.hash)
                     val add =
                         repository.addTorrentFile(
                             source.bytes,

@@ -200,6 +200,16 @@ def _complete_torrent(t):
     t["eta"] = 0
 
 
+def _add_torrent():
+    """Test aid for "torrent added" alerts: torrents/add injects a new downloading torrent
+    stamped with the real current time (added_on), so the app's added-notifier sees it."""
+    name = f"Added Test Torrent {int(time.time())}"
+    t = torrent(name, "datasets", [], "downloading", 700 * MiB, 0.1, added_days=0)
+    t["hash"] = h(name)
+    t["added_on"] = int(time.time())
+    TORRENTS[t["hash"]] = t
+
+
 def _reset_torrent(t):
     """Send a (forced-complete) torrent back to a mid-download state so it can be re-tested."""
     progress = _orig_progress.pop(t["hash"], 0.42)
@@ -1049,7 +1059,9 @@ class Handler(BaseHTTPRequestHandler):
         form = parse_qs(self.rfile.read(length).decode() if length else "")
         hashes = [h for h in (form.get("hashes", [""])[0]).split("|") if h]
 
-        if path == "/api/v2/torrents/delete":
+        if path == "/api/v2/torrents/add":
+            _add_torrent()
+        elif path == "/api/v2/torrents/delete":
             for h in hashes:
                 TORRENTS.pop(h, None)
                 _resume_counts.pop(h, None)
