@@ -24,6 +24,7 @@ import dev.yashgarg.qbit.data.models.ServerConfig
 import dev.yashgarg.qbit.data.models.ServerViewPrefs
 import dev.yashgarg.qbit.data.models.activeServer
 import dev.yashgarg.qbit.ui.common.StatusViewModel
+import dev.yashgarg.qbit.utils.TorrentDownloader
 import dev.yashgarg.qbit.utils.TorrentFileParser
 import dev.yashgarg.qbit.utils.TransformUtil
 import dev.yashgarg.qbit.utils.friendlyMessage
@@ -274,8 +275,22 @@ constructor(
             successMessage = getString(CommonR.string.status_add_torrent_url_success),
             failureMessage = getString(CommonR.string.status_add_torrent_url_failure),
         ) {
-            // Without a magnet hash (a plain .torrent link) fall back to an anonymous slot.
-            val ownKey = rememberOwnAdd(TorrentFileParser.magnetHash(url))
+            val magnetHash = TorrentFileParser.magnetHash(url)
+            if (magnetHash == null && skipOwnAddsActive()) {
+                // A plain .torrent link has no hash to read off the URL, so fetch it here to learn
+                // the hash, then upload those bytes (a single fetch, so single-use links survive).
+                // If the phone can't fetch or parse it, fall through to a normal server-side add;
+                // that add simply isn't suppressed.
+                val bytes = withContext(Dispatchers.IO) { TorrentDownloader.fetch(url) }
+                val parsed = bytes?.let(TorrentFileParser::parse)
+                if (bytes != null && parsed != null) {
+                    val ownKey = rememberOwnAdd(parsed.hash)
+                    return@launchStatus repository
+                        .addTorrentFile(bytes, category, savePath, paused, autoTmm)
+                        .onErr { forgetOwnAdd(ownKey) }
+                }
+            }
+            val ownKey = rememberOwnAdd(magnetHash)
             repository.addTorrentUrl(url, category, savePath, paused, autoTmm).onErr {
                 forgetOwnAdd(ownKey)
             }
@@ -288,18 +303,20 @@ constructor(
      * that alert is on, so nothing accumulates for users who don't use it.
      */
     private suspend fun rememberOwnAdd(hash: String?): String? {
+        if (hash == null) return null
         var recorded: String? = null
         val now = System.currentTimeMillis()
         prefsStore.updateData {
             if (!it.notifyOnAdded || !it.notifySkipOwnAdds) return@updateData it
-            val key =
-                if (hash != null) OwnAdds.key(it.activeServerId, hash)
-                else OwnAdds.slotKey(it.activeServerId, now)
+            val key = OwnAdds.key(it.activeServerId, hash)
             recorded = key
             it.copy(notifOwnAdds = it.notifOwnAdds.registered(key, now))
         }
         return recorded
     }
+
+    private suspend fun skipOwnAddsActive(): Boolean =
+        prefsStore.data.first().let { it.notifyOnAdded && it.notifySkipOwnAdds }
 
     /** Undoes [rememberOwnAdd] when the add request failed, so it can't suppress a later alert. */
     private suspend fun forgetOwnAdd(key: String?) {

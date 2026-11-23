@@ -25,7 +25,6 @@ import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.OwnAdds
-import dev.yashgarg.qbit.data.models.OwnAdds.oldestSlot
 import dev.yashgarg.qbit.data.models.OwnAdds.pruned
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.ui.rss.flattenFeeds
@@ -275,10 +274,8 @@ constructor(
         torrents
             .filter { it.addedOn > watermark }
             .forEach {
-                val ownKey =
-                    OwnAdds.key(serverId, it.hash).takeIf { k -> k in ownAdds }
-                        ?: ownAdds.filterKeys { k -> k !in consumed }.oldestSlot(serverId)
-                if (ownKey != null) {
+                val ownKey = OwnAdds.key(serverId, it.hash)
+                if (ownKey in ownAdds) {
                     consumed += ownKey
                     return@forEach
                 }
