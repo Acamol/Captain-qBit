@@ -60,6 +60,8 @@ data class AppPreferences(
     // Newest torrent added_on (unix seconds) already accounted for by the added-notifier, keyed by
     // server id. Same watermark scheme as notifCompletionSeen.
     val notifAddedSeen: Map<Int, Long> = emptyMap(),
+    // Hashes already seen at the watermark second (added_on has 1s resolution).
+    val notifAddedAtMark: Map<Int, Set<String>> = emptyMap(),
     val notifAddedRebaseline: Boolean = false,
     // Torrents added from this app (see OwnAdds), so the added-notifier skips them.
     val notifySkipOwnAdds: Boolean = true,

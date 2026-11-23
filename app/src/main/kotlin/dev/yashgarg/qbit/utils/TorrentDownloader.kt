@@ -6,9 +6,11 @@ import java.net.URL
 /** Best-effort fetch of a `.torrent` file from an http(s) link; null on any failure. */
 object TorrentDownloader {
     private const val TIMEOUT_MS = 10_000
+    private const val TOTAL_TIMEOUT_MS = 30_000L
     private const val MAX_BYTES = 5 * 1024 * 1024
 
     fun fetch(url: String): ByteArray? {
+        val deadline = System.currentTimeMillis() + TOTAL_TIMEOUT_MS
         if (!url.startsWith("http://", true) && !url.startsWith("https://", true)) return null
         return try {
             val conn = URL(url).openConnection() as HttpURLConnection
@@ -21,6 +23,7 @@ object TorrentDownloader {
                 val buf = ByteArray(8192)
                 conn.inputStream.use { input ->
                     while (true) {
+                        if (System.currentTimeMillis() > deadline) return null
                         val n = input.read(buf)
                         if (n < 0) break
                         out.write(buf, 0, n)

@@ -266,6 +266,13 @@ constructor(
             prefsStore.updateData {
                 it.copy(
                     notifAddedSeen = it.notifAddedSeen + (serverId to newest),
+                    notifAddedAtMark =
+                        it.notifAddedAtMark +
+                            (serverId to
+                                torrents
+                                    .filter { t -> t.addedOn == newest }
+                                    .map { t -> t.hash }
+                                    .toSet()),
                     notifAddedRebaseline = false,
                 )
             }
@@ -276,7 +283,10 @@ constructor(
         val now = System.currentTimeMillis()
         val ownAdds = prefs.notifOwnAdds.pruned(now)
         val consumed = mutableSetOf<String>()
-        val fresh = torrents.filter { it.addedOn > watermark }
+        val atMark = prefs.notifAddedAtMark[serverId].orEmpty()
+        val fresh = torrents.filter {
+            it.addedOn > watermark || (it.addedOn == watermark && it.hash !in atMark)
+        }
         val rssMatcher =
             if (prefs.notifyIgnoreRssAdds && fresh.isNotEmpty()) rssMatcher(client) else null
         fresh.forEach {
@@ -293,12 +303,23 @@ constructor(
                 torrentHash = it.hash,
             )
         }
+        val mark = maxOf(newest, watermark)
         if (
-            newest > watermark || consumed.isNotEmpty() || ownAdds.size != prefs.notifOwnAdds.size
+            newest > watermark ||
+                fresh.isNotEmpty() ||
+                consumed.isNotEmpty() ||
+                ownAdds.size != prefs.notifOwnAdds.size
         ) {
             prefsStore.updateData {
                 it.copy(
-                    notifAddedSeen = it.notifAddedSeen + (serverId to maxOf(newest, watermark)),
+                    notifAddedSeen = it.notifAddedSeen + (serverId to mark),
+                    notifAddedAtMark =
+                        it.notifAddedAtMark +
+                            (serverId to
+                                torrents
+                                    .filter { t -> t.addedOn == mark }
+                                    .map { t -> t.hash }
+                                    .toSet()),
                     notifOwnAdds = it.notifOwnAdds.pruned(now) - consumed,
                 )
             }
