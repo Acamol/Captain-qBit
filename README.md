@@ -34,6 +34,8 @@ over its Web API — control your self-hosted server from your phone. Written in
   optional HTTP Basic Auth for servers behind a reverse proxy
 - Sign in with a qBittorrent 5.2 API key instead of a username and password, or leave both empty
   for a server whose reverse proxy authenticates on its behalf
+- Get notified when a torrent is added to your server, optionally skipping the ones you add from
+  the app or that RSS rules download
 - Choose when alerts may make a sound — always, never, or everything outside a quiet-hours window
   you set, so an overnight download doesn't wake you and is still waiting in the morning
 - Schedule the alternate speed limits: pick the time window and the days it applies to, and the

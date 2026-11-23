@@ -1,0 +1,5 @@
+- New: get a notification when a torrent is added to your server, with options to skip torrents you add from the app and ones added by RSS rules
+- New: search torrents through your server's search plugins, and manage those plugins
+- New: search the file tree on the torrent details and add-torrent screens
+- New: trackers are shown as cards with seeds, leeches, peers and downloads
+- Improved search results and file-list performance
