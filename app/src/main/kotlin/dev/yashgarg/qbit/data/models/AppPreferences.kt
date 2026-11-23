@@ -61,6 +61,8 @@ data class AppPreferences(
     // server id. Same watermark scheme as notifCompletionSeen.
     val notifAddedSeen: Map<Int, Long> = emptyMap(),
     val notifAddedRebaseline: Boolean = false,
+    // Torrents added from this app (see OwnAdds), so the added-notifier skips them.
+    val notifOwnAdds: Map<String, Long> = emptyMap(),
     val notifyOnNewRssArticles: Boolean = false,
     // When a torrent/RSS alert may make a sound. A silenced alert is posted to a silent channel
     // rather than dropped, so an overnight completion is still waiting in the morning.

@@ -24,6 +24,8 @@ import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.models.AppPreferences
+import dev.yashgarg.qbit.data.models.OwnAdds
+import dev.yashgarg.qbit.data.models.OwnAdds.pruned
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.ui.rss.flattenFeeds
 import dev.yashgarg.qbit.utils.LocalizedContext
@@ -266,9 +268,17 @@ constructor(
         }
 
         val watermark = prefs.notifAddedSeen[serverId] ?: newest
+        val now = System.currentTimeMillis()
+        val ownAdds = prefs.notifOwnAdds.pruned(now)
+        val consumed = mutableSetOf<String>()
         torrents
             .filter { it.addedOn > watermark }
             .forEach {
+                val ownKey = OwnAdds.key(serverId, it.hash)
+                if (ownKey in ownAdds) {
+                    consumed += ownKey
+                    return@forEach
+                }
                 notifyEvent(
                     "added:${it.hash}".hashCode(),
                     localized.getString(CommonR.string.status_torrent_added),
@@ -276,9 +286,14 @@ constructor(
                     torrentHash = it.hash,
                 )
             }
-        if (newest > watermark) {
+        if (
+            newest > watermark || consumed.isNotEmpty() || ownAdds.size != prefs.notifOwnAdds.size
+        ) {
             prefsStore.updateData {
-                it.copy(notifAddedSeen = it.notifAddedSeen + (serverId to newest))
+                it.copy(
+                    notifAddedSeen = it.notifAddedSeen + (serverId to maxOf(newest, watermark)),
+                    notifOwnAdds = it.notifOwnAdds.pruned(now) - consumed,
+                )
             }
         }
     }

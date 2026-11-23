@@ -18,6 +18,8 @@ import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.manager.PendingTorrentIntent
 import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.ContentTreeItem
+import dev.yashgarg.qbit.data.models.OwnAdds
+import dev.yashgarg.qbit.data.models.OwnAdds.registered
 import dev.yashgarg.qbit.data.models.ServerConfig
 import dev.yashgarg.qbit.data.models.ServerViewPrefs
 import dev.yashgarg.qbit.data.models.activeServer
@@ -272,7 +274,25 @@ constructor(
             successMessage = getString(CommonR.string.status_add_torrent_url_success),
             failureMessage = getString(CommonR.string.status_add_torrent_url_failure),
         ) {
+            TorrentFileParser.magnetHash(url)?.let { rememberOwnAdd(it) }
             repository.addTorrentUrl(url, category, savePath, paused, autoTmm)
+        }
+    }
+
+    /**
+     * Records a torrent this app is about to add so the "torrent added" alert skips it. Done before
+     * the add request, since the background worker could otherwise poll in between. A no-op unless
+     * that alert is on, so nothing accumulates for users who don't use it.
+     */
+    private suspend fun rememberOwnAdd(hash: String) {
+        val now = System.currentTimeMillis()
+        prefsStore.updateData {
+            if (!it.notifyOnAdded) it
+            else
+                it.copy(
+                    notifOwnAdds =
+                        it.notifOwnAdds.registered(OwnAdds.key(it.activeServerId, hash), now),
+                )
         }
     }
 
@@ -287,6 +307,7 @@ constructor(
             successMessage = getString(CommonR.string.status_add_torrent_file_success),
             failureMessage = getString(CommonR.string.status_add_torrent_file_failure),
         ) {
+            TorrentFileParser.parse(bytes)?.let { rememberOwnAdd(it.hash) }
             repository.addTorrentFile(bytes, category, savePath, paused, autoTmm)
         }
     }
@@ -349,6 +370,7 @@ constructor(
 
         metadataJob = viewModelScope.launch {
             // Must be added RUNNING: libtorrent won't fetch metadata for a stopped magnet.
+            rememberOwnAdd(hash)
             repository
                 .addTorrentUrl(url, paused = false)
                 .onOk {
@@ -403,6 +425,7 @@ constructor(
         viewModelScope.launch {
             when (source) {
                 is PendingSource.TorrentBytes -> {
+                    rememberOwnAdd(source.parsed.hash)
                     val add =
                         repository.addTorrentFile(
                             source.bytes,
