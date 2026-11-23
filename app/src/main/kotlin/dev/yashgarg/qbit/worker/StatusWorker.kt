@@ -29,6 +29,7 @@ import dev.yashgarg.qbit.data.models.OwnAdds.pruned
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.ui.rss.flattenFeeds
 import dev.yashgarg.qbit.utils.LocalizedContext
+import dev.yashgarg.qbit.utils.TorrentFileParser
 import dev.yashgarg.qbit.utils.nowMinutesOfDay
 import dev.yashgarg.qbit.utils.shouldSilenceEventAlert
 import dev.yashgarg.qbit.utils.toHumanReadable
@@ -164,7 +165,7 @@ constructor(
                     val torrents = client.getTorrents()
                     if (prefs.notifyOnComplete) notifyCompletions(torrents, prefs)
                     if (prefs.notifyOnChecked) notifyRechecks(torrents, prefs)
-                    if (prefs.notifyOnAdded) notifyAdded(torrents, prefs)
+                    if (prefs.notifyOnAdded) notifyAdded(client, torrents, prefs)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -253,7 +254,11 @@ constructor(
      * watermark, then advance it. Mirrors [notifyCompletions]: the first poll after enabling (or on
      * a server never watched) is adopted silently so existing torrents don't alert.
      */
-    private suspend fun notifyAdded(torrents: List<Torrent>, prefs: AppPreferences) {
+    private suspend fun notifyAdded(
+        client: qbittorrent.QBittorrentClient,
+        torrents: List<Torrent>,
+        prefs: AppPreferences,
+    ) {
         val serverId = prefs.activeServerId
         val newest = torrents.maxOfOrNull { it.addedOn } ?: 0L
 
@@ -271,21 +276,23 @@ constructor(
         val now = System.currentTimeMillis()
         val ownAdds = prefs.notifOwnAdds.pruned(now)
         val consumed = mutableSetOf<String>()
-        torrents
-            .filter { it.addedOn > watermark }
-            .forEach {
-                val ownKey = OwnAdds.key(serverId, it.hash)
-                if (ownKey in ownAdds) {
-                    consumed += ownKey
-                    return@forEach
-                }
-                notifyEvent(
-                    "added:${it.hash}".hashCode(),
-                    localized.getString(CommonR.string.status_torrent_added),
-                    it.name,
-                    torrentHash = it.hash,
-                )
+        val fresh = torrents.filter { it.addedOn > watermark }
+        val rssMatcher =
+            if (prefs.notifyIgnoreRssAdds && fresh.isNotEmpty()) rssMatcher(client) else null
+        fresh.forEach {
+            val ownKey = OwnAdds.key(serverId, it.hash)
+            if (ownKey in ownAdds) {
+                consumed += ownKey
+                return@forEach
             }
+            if (rssMatcher != null && rssMatcher(it)) return@forEach
+            notifyEvent(
+                "added:${it.hash}".hashCode(),
+                localized.getString(CommonR.string.status_torrent_added),
+                it.name,
+                torrentHash = it.hash,
+            )
+        }
         if (
             newest > watermark || consumed.isNotEmpty() || ownAdds.size != prefs.notifOwnAdds.size
         ) {
@@ -296,6 +303,31 @@ constructor(
                 )
             }
         }
+    }
+
+    /**
+     * Builds a predicate telling whether a torrent came from an RSS article: its hash matches the
+     * article's magnet, or its name equals the article title. Null when the articles can't be read,
+     * so nothing is suppressed on error.
+     */
+    private suspend fun rssMatcher(
+        client: qbittorrent.QBittorrentClient,
+    ): ((Torrent) -> Boolean)? {
+        val articles =
+            try {
+                client.getRssItems().flattenFeeds().flatMap { it.articles }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                return null
+            }
+        val hashes =
+            articles
+                .flatMap { listOfNotNull(it.torrentURL, it.link) }
+                .mapNotNull { TorrentFileParser.magnetHash(it) }
+                .toSet()
+        val titles = articles.map { it.title.trim().lowercase() }.toSet()
+        return { t -> t.hash.lowercase() in hashes || t.name.trim().lowercase() in titles }
     }
 
     /**

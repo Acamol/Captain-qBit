@@ -369,6 +369,11 @@ constructor(
             .map { it.notifySkipOwnAdds }
             .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
+    val notifyIgnoreRssAdds: StateFlow<Boolean> =
+        prefsStore.data
+            .map { it.notifyIgnoreRssAdds }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     val notifyOnNewRssArticles: StateFlow<Boolean> =
         prefsStore.data
             .map { it.notifyOnNewRssArticles }
@@ -427,6 +432,10 @@ constructor(
                 )
             }
         }
+    }
+
+    fun setNotifyIgnoreRssAdds(enabled: Boolean) {
+        viewModelScope.launch { prefsStore.updateData { it.copy(notifyIgnoreRssAdds = enabled) } }
     }
 
     fun setNotifySkipOwnAdds(enabled: Boolean) {
