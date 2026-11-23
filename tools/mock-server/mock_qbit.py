@@ -200,6 +200,16 @@ def _complete_torrent(t):
     t["eta"] = 0
 
 
+def _add_torrent():
+    """Test aid for "torrent added" alerts: torrents/add injects a new downloading torrent
+    stamped with the real current time (added_on), so the app's added-notifier sees it."""
+    name = f"Added Test Torrent {int(time.time())}"
+    t = torrent(name, "datasets", [], "downloading", 700 * MiB, 0.1, added_days=0)
+    t["hash"] = h(name)
+    t["added_on"] = int(time.time())
+    TORRENTS[t["hash"]] = t
+
+
 def _reset_torrent(t):
     """Send a (forced-complete) torrent back to a mid-download state so it can be re-tested."""
     progress = _orig_progress.pop(t["hash"], 0.42)
@@ -397,6 +407,19 @@ def trackers_for(hash_):
                      "num_seeds": t.get("num_seeds", 0),
                      "num_leeches": t.get("num_leechs", 0),
                      "num_downloaded": t.get("num_complete", 0), "msg": "working"})
+    if t.get("tracker") == TR_ARCHIVE:
+        # Extra trackers in other states, so the Trackers tab shows every card variant.
+        rows += [
+            {"url": "udp://tracker.opentrackr.org:1337/announce", "status": 4, "tier": 1,
+             "num_peers": -1, "num_seeds": -1, "num_leeches": -1, "num_downloaded": -1,
+             "msg": "Torrent not registered with this tracker"},
+            {"url": "https://tracker.example.net/announce", "status": 3, "tier": 2,
+             "num_peers": -1, "num_seeds": -1, "num_leeches": -1, "num_downloaded": -1,
+             "msg": ""},
+            {"url": "udp://open.stealth.si:80/announce", "status": 1, "tier": 3,
+             "num_peers": -1, "num_seeds": -1, "num_leeches": -1, "num_downloaded": -1,
+             "msg": ""},
+        ]
     return rows
 
 
@@ -917,6 +940,63 @@ def rss_matching_articles(rule_name):
     return result
 
 
+# --- Search plugins (/api/v2/search/*) ---------------------------------------------------------
+SEARCH_PLUGINS = {
+    "demo": {
+        "name": "demo", "fullName": "Demo Tracker", "version": "1.2", "url": "https://demo.example",
+        "enabled": True,
+        "supportedCategories": [
+            {"id": "all", "name": "All categories"},
+            {"id": "movies", "name": "Movies"},
+            {"id": "software", "name": "Software"},
+        ],
+    },
+    "linuxiso": {
+        "name": "linuxiso", "fullName": "Linux ISOs", "version": "0.9", "url": "https://isos.example",
+        "enabled": True,
+        "supportedCategories": [
+            {"id": "all", "name": "All categories"},
+            {"id": "software", "name": "Software"},
+        ],
+    },
+}
+# job id -> {"pattern", "plugins", "started", "stopped"}. A job reports "Running" for its first few
+# seconds so the app's polling UI is visible, then "Stopped".
+SEARCH_JOBS = {}
+SEARCH_RUN_SECONDS = 4
+SEARCH_MAX_JOBS = 5
+
+
+def _search_hits(job):
+    pattern = job["pattern"]
+    names = [
+        n for n in SEARCH_PLUGINS
+        if SEARCH_PLUGINS[n]["enabled"] and ("all" in job["plugins"] or "enabled" in job["plugins"] or n in job["plugins"])
+    ]
+    elapsed = time.time() - job["started"]
+    count = 60 if job["stopped"] or elapsed >= SEARCH_RUN_SECONDS else int(60 * elapsed / SEARCH_RUN_SECONDS)
+    hits = []
+    for i in range(count):
+        plugin = SEARCH_PLUGINS[names[i % len(names)]] if names else None
+        if plugin is None:
+            break
+        hits.append({
+            "fileName": f"{pattern} sample release {i + 1}",
+            "fileUrl": f"magnet:?xt=urn:btih:{hashlib.sha1(f'{pattern}{i}'.encode()).hexdigest()}",
+            "fileSize": (i + 1) * 73_400_320,
+            "nbSeeders": (i * 37) % 500 if i % 9 else -1,
+            "nbLeechers": (i * 11) % 90,
+            "siteUrl": plugin["url"],
+            "descrLink": f"{plugin['url']}/t/{i}",
+            "engineName": plugin["fullName"],
+        })
+    return hits
+
+
+def _search_running(job):
+    return not job["stopped"] and time.time() - job["started"] < SEARCH_RUN_SECONDS
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass  # quiet
@@ -979,7 +1059,9 @@ class Handler(BaseHTTPRequestHandler):
         form = parse_qs(self.rfile.read(length).decode() if length else "")
         hashes = [h for h in (form.get("hashes", [""])[0]).split("|") if h]
 
-        if path == "/api/v2/torrents/delete":
+        if path == "/api/v2/torrents/add":
+            _add_torrent()
+        elif path == "/api/v2/torrents/delete":
             for h in hashes:
                 TORRENTS.pop(h, None)
                 _resume_counts.pop(h, None)
@@ -1030,6 +1112,41 @@ class Handler(BaseHTTPRequestHandler):
                 RSS_RULES[new_name] = RSS_RULES.pop(old_name)
         elif path == "/api/v2/rss/removeRule":
             RSS_RULES.pop(form.get("ruleName", [""])[0], None)
+        elif path == "/api/v2/search/start":
+            if len(SEARCH_JOBS) >= SEARCH_MAX_JOBS:
+                self._send("", "text/plain", code=409)
+                return
+            job_id = max(SEARCH_JOBS, default=0) + 1
+            SEARCH_JOBS[job_id] = {
+                "pattern": form.get("pattern", [""])[0],
+                "plugins": form.get("plugins", ["enabled"])[0].split("|"),
+                "started": time.time(),
+                "stopped": False,
+            }
+            self._send(json.dumps({"id": job_id}))
+            return
+        elif path == "/api/v2/search/stop":
+            job = SEARCH_JOBS.get(int(form.get("id", ["0"])[0]))
+            if job:
+                job["stopped"] = True
+        elif path == "/api/v2/search/delete":
+            SEARCH_JOBS.pop(int(form.get("id", ["0"])[0]), None)
+        elif path == "/api/v2/search/enablePlugin":
+            enable = form.get("enable", ["true"])[0] == "true"
+            for n in form.get("names", [""])[0].split("|"):
+                if n in SEARCH_PLUGINS:
+                    SEARCH_PLUGINS[n]["enabled"] = enable
+        elif path == "/api/v2/search/uninstallPlugin":
+            for n in form.get("names", [""])[0].split("|"):
+                SEARCH_PLUGINS.pop(n, None)
+        elif path == "/api/v2/search/installPlugin":
+            for src in form.get("sources", [""])[0].split("|"):
+                name = src.rstrip("/").rsplit("/", 1)[-1].removesuffix(".py") or "plugin"
+                SEARCH_PLUGINS[name] = {
+                    "name": name, "fullName": name.title(), "version": "1.0", "url": src,
+                    "enabled": True,
+                    "supportedCategories": [{"id": "all", "name": "All categories"}],
+                }
         elif path == "/api/v2/app/setPreferences":
             PREFERENCES.update(json.loads(form.get("json", ["{}"])[0]))
         elif path == "/api/v2/transfer/setDownloadLimit":
@@ -1084,6 +1201,34 @@ class Handler(BaseHTTPRequestHandler):
             self._send(json.dumps(RSS_RULES))
         elif path == "/api/v2/rss/matchingArticles":
             self._send(json.dumps(rss_matching_articles((qs.get("ruleName") or [""])[0])))
+        elif path == "/api/v2/search/plugins":
+            self._send(json.dumps(list(SEARCH_PLUGINS.values())))
+        elif path == "/api/v2/search/status":
+            job_id = int((qs.get("id") or ["0"])[0])
+            job = SEARCH_JOBS.get(job_id)
+            if job is None:
+                self._send("", "text/plain", code=404)
+            else:
+                self._send(json.dumps([{
+                    "id": job_id,
+                    "status": "Running" if _search_running(job) else "Stopped",
+                    "total": len(_search_hits(job)),
+                }]))
+        elif path == "/api/v2/search/results":
+            job_id = int((qs.get("id") or ["0"])[0])
+            job = SEARCH_JOBS.get(job_id)
+            if job is None:
+                self._send("", "text/plain", code=404)
+            else:
+                limit = int((qs.get("limit") or ["0"])[0])
+                offset = int((qs.get("offset") or ["0"])[0])
+                hits = _search_hits(job)
+                page = hits[offset:offset + limit] if limit else hits[offset:]
+                self._send(json.dumps({
+                    "results": page,
+                    "status": "Running" if _search_running(job) else "Stopped",
+                    "total": len(hits),
+                }))
         elif path == "/api/v2/auth/logout":
             self._send("Ok.", "text/plain")
         else:

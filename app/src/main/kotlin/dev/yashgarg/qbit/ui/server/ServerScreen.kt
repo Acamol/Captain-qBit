@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.TravelExplore
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
@@ -358,6 +359,11 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                                 label = stringResource(CommonR.string.content_description_search),
                                 icon = Icons.Filled.Search,
                                 onClick = { searchOpen = !searchOpen },
+                            )
+                            TooltipIconButton(
+                                label = stringResource(CommonR.string.search_online_action),
+                                icon = Icons.Filled.TravelExplore,
+                                onClick = { appNavigator.navigate(NavCommand.OpenSearch) },
                             )
                             val sortActive =
                                 state.sortOption != SortOption.NAME ||

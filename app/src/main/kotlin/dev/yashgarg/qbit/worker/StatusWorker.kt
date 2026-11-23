@@ -24,9 +24,12 @@ import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.models.AppPreferences
+import dev.yashgarg.qbit.data.models.OwnAdds
+import dev.yashgarg.qbit.data.models.OwnAdds.pruned
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.ui.rss.flattenFeeds
 import dev.yashgarg.qbit.utils.LocalizedContext
+import dev.yashgarg.qbit.utils.TorrentFileParser
 import dev.yashgarg.qbit.utils.nowMinutesOfDay
 import dev.yashgarg.qbit.utils.shouldSilenceEventAlert
 import dev.yashgarg.qbit.utils.toHumanReadable
@@ -97,7 +100,7 @@ constructor(
         var rssIntervalMs = 300_000L
         while (true) {
             val prefs = prefsStore.data.first()
-            val eventsOn = prefs.notifyOnComplete || prefs.notifyOnChecked
+            val eventsOn = prefs.notifyOnComplete || prefs.notifyOnChecked || prefs.notifyOnAdded
             val rssOn = prefs.notifyOnNewRssArticles
             if (!prefs.statusNotification && !eventsOn && !rssOn) return
             // Re-checked every tick (not just at start) so blocking notifications mid-session -
@@ -162,6 +165,7 @@ constructor(
                     val torrents = client.getTorrents()
                     if (prefs.notifyOnComplete) notifyCompletions(torrents, prefs)
                     if (prefs.notifyOnChecked) notifyRechecks(torrents, prefs)
+                    if (prefs.notifyOnAdded) notifyAdded(client, torrents, prefs)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -243,6 +247,108 @@ constructor(
         prefsStore.updateData {
             it.copy(notifCompletionSeen = it.notifCompletionSeen + (serverId to value))
         }
+    }
+
+    /**
+     * Fire a "torrent added" alert for any torrent whose `added_on` is newer than the per-server
+     * watermark, then advance it. Mirrors [notifyCompletions]: the first poll after enabling (or on
+     * a server never watched) is adopted silently so existing torrents don't alert.
+     */
+    private suspend fun notifyAdded(
+        client: qbittorrent.QBittorrentClient,
+        torrents: List<Torrent>,
+        prefs: AppPreferences,
+    ) {
+        val serverId = prefs.activeServerId
+        val newest = torrents.maxOfOrNull { it.addedOn } ?: 0L
+
+        if (prefs.notifAddedRebaseline || prefs.notifAddedSeen[serverId] == null) {
+            prefsStore.updateData {
+                it.copy(
+                    notifAddedSeen = it.notifAddedSeen + (serverId to newest),
+                    notifAddedAtMark =
+                        it.notifAddedAtMark +
+                            (serverId to
+                                torrents
+                                    .filter { t -> t.addedOn == newest }
+                                    .map { t -> t.hash }
+                                    .toSet()),
+                    notifAddedRebaseline = false,
+                )
+            }
+            return
+        }
+
+        val watermark = prefs.notifAddedSeen[serverId] ?: newest
+        val now = System.currentTimeMillis()
+        val ownAdds = prefs.notifOwnAdds.pruned(now)
+        val consumed = mutableSetOf<String>()
+        val atMark = prefs.notifAddedAtMark[serverId].orEmpty()
+        val fresh = torrents.filter {
+            it.addedOn > watermark || (it.addedOn == watermark && it.hash !in atMark)
+        }
+        val rssMatcher =
+            if (prefs.notifyIgnoreRssAdds && fresh.isNotEmpty()) rssMatcher(client) else null
+        fresh.forEach {
+            val ownKey = OwnAdds.key(serverId, it.hash)
+            if (ownKey in ownAdds) {
+                consumed += ownKey
+                return@forEach
+            }
+            if (rssMatcher != null && rssMatcher(it)) return@forEach
+            notifyEvent(
+                "added:${it.hash}".hashCode(),
+                localized.getString(CommonR.string.status_torrent_added),
+                it.name,
+                torrentHash = it.hash,
+            )
+        }
+        val mark = maxOf(newest, watermark)
+        if (
+            newest > watermark ||
+                fresh.isNotEmpty() ||
+                consumed.isNotEmpty() ||
+                ownAdds.size != prefs.notifOwnAdds.size
+        ) {
+            prefsStore.updateData {
+                it.copy(
+                    notifAddedSeen = it.notifAddedSeen + (serverId to mark),
+                    notifAddedAtMark =
+                        it.notifAddedAtMark +
+                            (serverId to
+                                torrents
+                                    .filter { t -> t.addedOn == mark }
+                                    .map { t -> t.hash }
+                                    .toSet()),
+                    notifOwnAdds = it.notifOwnAdds.pruned(now) - consumed,
+                )
+            }
+        }
+    }
+
+    /**
+     * Builds a predicate telling whether a torrent came from an RSS article: its hash matches the
+     * article's magnet, or its name equals the article title. Null when the articles can't be read,
+     * so nothing is suppressed on error.
+     */
+    private suspend fun rssMatcher(
+        client: qbittorrent.QBittorrentClient,
+    ): ((Torrent) -> Boolean)? {
+        val articles =
+            try {
+                client.getRssItems().flattenFeeds().flatMap { it.articles }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                return null
+            }
+        val hashes =
+            articles
+                .flatMap { listOfNotNull(it.torrentURL, it.link) }
+                .mapNotNull { TorrentFileParser.magnetHash(it) }
+                .toSet()
+        val titles = articles.map { it.title.trim().lowercase() }.toSet()
+        return { t -> t.hash.lowercase() in hashes || t.name.trim().lowercase() in titles }
     }
 
     /**

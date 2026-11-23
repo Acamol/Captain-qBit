@@ -359,6 +359,21 @@ constructor(
             .map { it.notifyOnChecked }
             .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    val notifyOnAdded: StateFlow<Boolean> =
+        prefsStore.data
+            .map { it.notifyOnAdded }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    val notifySkipOwnAdds: StateFlow<Boolean> =
+        prefsStore.data
+            .map { it.notifySkipOwnAdds }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
+    val notifyIgnoreRssAdds: StateFlow<Boolean> =
+        prefsStore.data
+            .map { it.notifyIgnoreRssAdds }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     val notifyOnNewRssArticles: StateFlow<Boolean> =
         prefsStore.data
             .map { it.notifyOnNewRssArticles }
@@ -414,6 +429,25 @@ constructor(
                 it.copy(
                     notifyOnChecked = enabled,
                     notifCheckedRebaseline = enabled || it.notifCheckedRebaseline,
+                )
+            }
+        }
+    }
+
+    fun setNotifyIgnoreRssAdds(enabled: Boolean) {
+        viewModelScope.launch { prefsStore.updateData { it.copy(notifyIgnoreRssAdds = enabled) } }
+    }
+
+    fun setNotifySkipOwnAdds(enabled: Boolean) {
+        viewModelScope.launch { prefsStore.updateData { it.copy(notifySkipOwnAdds = enabled) } }
+    }
+
+    fun setNotifyOnAdded(enabled: Boolean) {
+        viewModelScope.launch {
+            prefsStore.updateData {
+                it.copy(
+                    notifyOnAdded = enabled,
+                    notifAddedRebaseline = enabled || it.notifAddedRebaseline,
                 )
             }
         }

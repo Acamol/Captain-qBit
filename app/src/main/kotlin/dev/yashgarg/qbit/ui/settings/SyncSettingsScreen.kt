@@ -33,6 +33,7 @@ fun SyncSettingsScreen(
     val statusNotif by viewModel.statusNotification.collectAsStateWithLifecycle()
     val notifyComplete by viewModel.notifyOnComplete.collectAsStateWithLifecycle()
     val notifyChecked by viewModel.notifyOnChecked.collectAsStateWithLifecycle()
+    val notifyAdded by viewModel.notifyOnAdded.collectAsStateWithLifecycle()
     val notifyRssUpdates by viewModel.notifyOnNewRssArticles.collectAsStateWithLifecycle()
 
     var editing by rememberSaveable { mutableStateOf<SyncInterval?>(null) }
@@ -40,7 +41,8 @@ fun SyncSettingsScreen(
     // Restarts the already-running worker so it picks up a new interval right away, instead of only
     // after its current (possibly minutes-long) sleep ends.
     fun restartWorker() {
-        val anyEnabled = statusNotif || notifyComplete || notifyChecked || notifyRssUpdates
+        val anyEnabled =
+            statusNotif || notifyComplete || notifyChecked || notifyAdded || notifyRssUpdates
         if (anyEnabled && AppNotificationManager.notificationsEnabled(context)) {
             StatusWorker.enqueue(context)
         }

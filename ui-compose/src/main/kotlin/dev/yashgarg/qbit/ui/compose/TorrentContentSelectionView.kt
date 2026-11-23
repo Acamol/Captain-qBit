@@ -7,6 +7,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TriStateCheckbox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -26,8 +28,11 @@ import dev.yashgarg.qbit.data.models.ContentTreeItem
 import dev.yashgarg.qbit.ui.compose.theme.SpaceGrotesk
 
 /** All torrent file indices under this node (itself, for a file). */
-fun ContentTreeItem.allFileIndices(): List<Int> =
-    item?.let { listOf(it.index) } ?: children.orEmpty().flatMap { it.allFileIndices() }
+fun ContentTreeItem.allFileIndices(): List<Int> {
+    val node = whole()
+    return node.item?.let { listOf(it.index) }
+        ?: node.children.orEmpty().flatMap { it.allFileIndices() }
+}
 
 /**
  * The content tree with a checkbox per node, for choosing which files to download when adding a
@@ -40,8 +45,11 @@ fun TorrentContentSelectionView(
     deselected: Set<Int>,
     onToggle: (ContentTreeItem) -> Unit,
     modifier: Modifier = Modifier,
+    filterKey: String = "",
 ) {
     val tree = Tree<ContentTreeItem> { SelectionTree(nodes, deselected, onToggle) }
+    // A non-blank [filterKey] opens every folder so the filtered matches are visible.
+    LaunchedEffect(filterKey) { if (filterKey.isNotBlank()) tree.expandAll() }
 
     Bonsai(
         tree,
@@ -76,7 +84,8 @@ private fun TreeScope.SelectionTree(
     deselected: Set<Int>,
     onToggle: (ContentTreeItem) -> Unit,
 ) {
-    nodes.forEach { node -> SelectionNode(node, deselected, onToggle) }
+    // Keyed so each folder keeps its expansion when a filter changes which nodes are listed.
+    nodes.forEach { node -> key(node.id) { SelectionNode(node, deselected, onToggle) } }
 }
 
 @Composable

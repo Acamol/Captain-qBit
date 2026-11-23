@@ -414,6 +414,7 @@ class MainActivity : AppCompatActivity() {
                                 it.statusNotification ||
                                     it.notifyOnComplete ||
                                     it.notifyOnChecked ||
+                                    it.notifyOnAdded ||
                                     it.notifyOnNewRssArticles
                             }
                             .distinctUntilChanged(),

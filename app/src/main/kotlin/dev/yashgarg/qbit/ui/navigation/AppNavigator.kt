@@ -71,6 +71,12 @@ sealed interface NavCommand {
 
     data object OpenBackupSettings : NavCommand
 
+    /** Online torrent search, backed by the server's search plugins. */
+    data object OpenSearch : NavCommand
+
+    /** Manage the server's search plugins. */
+    data object OpenSearchPlugins : NavCommand
+
     /** Open the article list for one feed. [itemPath] is the feed's `\`-joined tree path. */
     data class OpenRssArticles(val itemPath: String) : NavCommand
 

@@ -142,6 +142,7 @@
     <string name="status_reconnecting">Reconnecting…</string>
     <string name="status_download_complete">Download complete</string>
     <string name="status_check_complete">Check complete</string>
+    <string name="status_torrent_added">Torrent added</string>
     <string name="status_new_articles_in_feed">%1$d new in %2$s</string>
     <plurals name="status_new_rss_articles">
         <item quantity="one">New RSS article</item>
@@ -591,6 +592,12 @@
     <string name="notify_on_complete_subtitle">Alert when a torrent finishes downloading</string>
     <string name="notify_on_checked_label">Notify on Checked</string>
     <string name="notify_on_checked_subtitle">Alert when a torrent finishes rechecking</string>
+    <string name="notify_on_added_label">Notify on Added</string>
+    <string name="notify_on_added_subtitle">Alert when a new torrent is added to the server</string>
+    <string name="notify_skip_own_adds_label">Skip torrents I add</string>
+    <string name="notify_skip_own_adds_subtitle">Don\'t alert for torrents added from this app</string>
+    <string name="notify_ignore_rss_adds_label">Skip RSS downloads</string>
+    <string name="notify_ignore_rss_adds_subtitle">Don\'t alert for torrents added by RSS rules</string>
     <string name="notify_on_new_rss_label">Notify on New RSS Articles</string>
     <string name="notify_on_new_rss_subtitle">
         Alert when a feed gets new articles - checked as often as the RSS screen\'s own feed
@@ -670,6 +677,8 @@
     <string name="rename_folder_title">Rename folder</string>
     <string name="rename_file_title">Rename file</string>
     <string name="no_content_found">No content found</string>
+    <string name="no_files_match">No files match</string>
+    <string name="search_files_placeholder">Search files (all words, any order)</string>
 
     <!-- Peers tab -->
     <string name="no_peers_connected">No peers connected</string>
@@ -689,6 +698,25 @@
         Private torrent — trackers are fixed by the torrent and can\'t be changed.
     </string>
     <string name="add_tracker_action">Add tracker</string>
+    <string name="tracker_stat_leeches">Leeches</string>
+    <string name="tracker_tier">Tier %1$d</string>
+    <string name="tracker_status_working">Working</string>
+    <string name="tracker_status_updating">Updating</string>
+    <string name="tracker_status_not_contacted">Not contacted yet</string>
+    <string name="tracker_status_not_working">Not working</string>
+    <string name="tracker_status_disabled">Disabled</string>
+    <plurals name="tracker_summary_total">
+        <item quantity="one">%1$d tracker</item>
+        <item quantity="other">%1$d trackers</item>
+    </plurals>
+    <plurals name="tracker_summary_working">
+        <item quantity="one">%1$d working</item>
+        <item quantity="other">%1$d working</item>
+    </plurals>
+    <plurals name="tracker_summary_not_working">
+        <item quantity="one">%1$d not working</item>
+        <item quantity="other">%1$d not working</item>
+    </plurals>
     <string name="no_trackers">No trackers</string>
     <string name="edit_tracker_label">Edit tracker</string>
     <string name="remove_tracker_label">Remove tracker</string>
@@ -901,4 +929,53 @@
     <string name="unit_hours_suffix">%1$dh</string>
     <string name="unit_minutes_suffix">%1$dm</string>
     <string name="unit_seconds_suffix">%1$ds</string>
+
+    <!-- Search -->
+    <string name="search_title">Search</string>
+    <string name="search_online_action">Search online</string>
+    <string name="search_query_placeholder">Search for torrents</string>
+    <string name="search_stop_action">Stop</string>
+    <string name="search_plugins_action">Search plugins</string>
+    <string name="search_plugin_label">Plugin</string>
+    <string name="search_all_enabled_plugins">All enabled</string>
+    <string name="search_category_label">Category</string>
+    <string name="search_all_categories">All categories</string>
+    <string name="search_sort_seeders">Seeders</string>
+    <string name="search_sort_size">Size</string>
+    <string name="search_sort_name">Name</string>
+    <string name="search_running">Searching…</string>
+    <string name="search_no_results">No results</string>
+    <string name="search_intro">Search the sites your qBittorrent search plugins cover.</string>
+    <string name="search_no_plugins">No search plugins are enabled on this server. Enable or install one to search.</string>
+    <string name="search_open_description_page">Open description page</string>
+    <string name="search_unknown_value">–</string>
+    <string name="search_result_seeders_leechers">%1$s seeders • %2$s leechers</string>
+    <plurals name="search_results_count">
+        <item quantity="one">%1$d result</item>
+        <item quantity="other">%1$d results</item>
+    </plurals>
+    <string name="error_search_too_many">The server is already running the maximum number of searches. Try again in a moment.</string>
+    <string name="status_search_start_failure">Failed to start the search</string>
+    <string name="status_search_failure">Search failed</string>
+    <string name="status_search_plugins_load_failure">Failed to load search plugins</string>
+    <string name="search_plugins_empty">No search plugins installed</string>
+    <string name="search_plugins_update_all_action">Update plugins</string>
+    <string name="search_plugin_install_action">Install plugin</string>
+    <string name="search_plugin_install_next">Next</string>
+    <string name="search_plugin_url_label">Plugin URL</string>
+    <string name="search_plugin_url_invalid">Enter an https:// link to the plugin</string>
+    <string name="search_plugin_install_warning">The server downloads this plugin and runs it as code. Only install plugins from sources you trust.</string>
+    <string name="search_plugin_install_confirm">Install the plugin from %1$s on the server?</string>
+    <string name="search_plugin_install_confirm_action">Install</string>
+    <string name="search_plugin_uninstall_action">Uninstall</string>
+    <string name="search_plugin_uninstall_confirm">Uninstall %1$s from the server?</string>
+    <string name="status_search_plugin_enabled">%1$s enabled</string>
+    <string name="status_search_plugin_disabled">%1$s disabled</string>
+    <string name="status_search_plugin_toggle_failure">Failed to change %1$s</string>
+    <string name="status_search_plugin_install_requested">Plugin install requested</string>
+    <string name="status_search_plugin_install_failure">Failed to install the plugin</string>
+    <string name="status_search_plugin_uninstalled">%1$s uninstalled</string>
+    <string name="status_search_plugin_uninstall_failure">Failed to uninstall %1$s</string>
+    <string name="status_search_plugins_update_requested">Checking for plugin updates</string>
+    <string name="status_search_plugins_update_failure">Failed to update plugins</string>
 </resources>

@@ -16,6 +16,11 @@ torrent, and `torrents/{stop,pause}` / `torrents/{start,resume}` flip its state 
 so swipe and bulk pause/resume/delete are reflected on the next `sync/maindata`
 poll. Other POST actions still return a generic `Ok.`.
 
+Online search is mocked too (`search/*`): two demo plugins, searches that report
+`Running` for ~4 s while results trickle in, then `Stopped`, and a 409 on `start`
+once 5 jobs are held (until they're deleted). Plugins can be enabled, disabled,
+installed from any URL and uninstalled, all in memory.
+
 ## Test aids (for notification testing, no code edits needed)
 
 - **Completion / recheck alerts**: resume the same downloading torrent twice
@@ -23,6 +28,8 @@ poll. Other POST actions still return a generic `Ok.`.
   complete" notification; do it again on a forced-complete torrent to send it
   back to downloading so you can repeat the test. Toggled via the app's own
   pause/resume actions.
+- **"Torrent added" alerts**: `curl -X POST localhost:8080/api/v2/torrents/add` (or add a
+  torrent from the app) injects a new downloading torrent stamped with the current time.
 - **RSS "new article" alerts**: tap **Refresh** on any feed in the app (Feeds
   tab's per-feed action, or the top bar in a feed's article list) - each
   refresh injects one new synthetic article into that feed, so the next RSS

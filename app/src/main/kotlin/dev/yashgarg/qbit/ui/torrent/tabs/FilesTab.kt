@@ -32,8 +32,10 @@ import dev.yashgarg.qbit.ui.compose.FILE_PRIORITY_NORMAL
 import dev.yashgarg.qbit.ui.compose.FILE_PRIORITY_SKIP
 import dev.yashgarg.qbit.ui.compose.TextInputDialog
 import dev.yashgarg.qbit.ui.compose.TorrentContentTreeView
+import dev.yashgarg.qbit.ui.compose.allFileIndices
 import dev.yashgarg.qbit.ui.compose.isSkipped
 import dev.yashgarg.qbit.ui.torrent.TorrentDetailsState
+import dev.yashgarg.qbit.ui.torrent.filterContentTree
 import dev.yashgarg.qbit.utils.rememberCopyToClipboard
 
 @Composable
@@ -42,6 +44,7 @@ fun FilesTab(
     onSetPriority: (List<Int>, Int) -> Unit,
     onRename: (ContentTreeItem, String) -> Unit,
     modifier: Modifier = Modifier,
+    query: String = "",
 ) {
     // Long-press target: first a small action menu, then a priority / path / rename dialog.
     var menuItem by remember { mutableStateOf<ContentTreeItem?>(null) }
@@ -51,6 +54,7 @@ fun FilesTab(
 
     FilesListView(
         state = state,
+        query = query,
         modifier = modifier,
         onNodeLongClick = { menuItem = it },
         // Checkbox / file tap = download on/off; finer priorities live in the long-press menu.
@@ -189,7 +193,7 @@ fun FilesTab(
 }
 
 @Composable
-private fun MenuRow(text: String, onClick: () -> Unit) {
+internal fun MenuRow(text: String, onClick: () -> Unit) {
     Text(
         text,
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 14.dp),
@@ -199,30 +203,41 @@ private fun MenuRow(text: String, onClick: () -> Unit) {
 @Composable
 fun FilesListView(
     state: TorrentDetailsState,
+    query: String,
     modifier: Modifier = Modifier,
     onNodeLongClick: (ContentTreeItem) -> Unit = {},
     onToggleDownload: ((ContentTreeItem) -> Unit)? = null,
 ) {
+    val visible = remember(state.contentTree, query) { filterContentTree(state.contentTree, query) }
     if (state.contentLoading) {
         CenterLinearLoading(modifier, R.color.md_theme_dark_seed)
     } else if (state.contentTree.isEmpty()) {
         Center(modifier) { Text(stringResource(CommonR.string.no_content_found)) }
+    } else if (visible.isEmpty()) {
+        Center(modifier) { Text(stringResource(CommonR.string.no_files_match)) }
     } else {
-        TorrentContentTreeView(modifier, state.contentTree, onNodeLongClick, onToggleDownload)
+        TorrentContentTreeView(
+            modifier,
+            visible,
+            onNodeLongClick,
+            onToggleDownload,
+            filterKey = query.trim(),
+        )
     }
 }
 
 /** All torrent file indices under this node (itself, for a file). */
-private fun fileIndices(item: ContentTreeItem): List<Int> =
-    item.item?.let { listOf(it.index) } ?: item.children.orEmpty().flatMap { fileIndices(it) }
+private fun fileIndices(item: ContentTreeItem): List<Int> = item.allFileIndices()
 
 /** The single priority shared by every file under this node, or null when they differ. */
 private fun commonPriority(item: ContentTreeItem): Int? =
     collectPriorities(item).distinct().singleOrNull()
 
-private fun collectPriorities(item: ContentTreeItem): List<Int> =
-    item.item?.let { listOf(it.priority) }
-        ?: item.children.orEmpty().flatMap { collectPriorities(it) }
+private fun collectPriorities(item: ContentTreeItem): List<Int> {
+    val node = item.whole()
+    return node.item?.let { listOf(it.priority) }
+        ?: node.children.orEmpty().flatMap { collectPriorities(it) }
+}
 
 // qBittorrent uses "/" inside torrent paths; match the save path's own separator.
 private fun joinPath(base: String, relative: String): String {
