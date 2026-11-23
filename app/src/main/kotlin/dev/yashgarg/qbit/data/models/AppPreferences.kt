@@ -62,6 +62,7 @@ data class AppPreferences(
     val notifAddedSeen: Map<Int, Long> = emptyMap(),
     val notifAddedRebaseline: Boolean = false,
     // Torrents added from this app (see OwnAdds), so the added-notifier skips them.
+    val notifySkipOwnAdds: Boolean = true,
     val notifOwnAdds: Map<String, Long> = emptyMap(),
     val notifyOnNewRssArticles: Boolean = false,
     // When a torrent/RSS alert may make a sound. A silenced alert is posted to a silent channel

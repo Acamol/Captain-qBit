@@ -11,9 +11,24 @@ object OwnAdds {
     const val TTL_MS = 60 * 60 * 1000L
     const val MAX_ENTRIES = 50
 
+    // A plain http(s) link to a .torrent has no hash the app can know up front, so it is recorded
+    // as an anonymous "slot" that suppresses the next new torrent on that server. Slots expire much
+    // sooner, to bound how long an add that never materialises could swallow an unrelated alert.
+    const val SLOT_TTL_MS = 5 * 60 * 1000L
+
     fun key(serverId: Int, hash: String) = "$serverId|${hash.lowercase()}"
 
-    fun Map<String, Long>.pruned(now: Long): Map<String, Long> = filterValues { now - it < TTL_MS }
+    fun slotKey(serverId: Int, now: Long) = "$serverId|?$now-${System.nanoTime()}"
+
+    private fun String.isSlot() = substringAfter('|').startsWith('?')
+
+    fun Map<String, Long>.pruned(now: Long): Map<String, Long> = filter { (k, v) ->
+        now - v < if (k.isSlot()) SLOT_TTL_MS else TTL_MS
+    }
+
+    /** The oldest unused slot for [serverId], if any. */
+    fun Map<String, Long>.oldestSlot(serverId: Int): String? =
+        entries.filter { it.key.startsWith("$serverId|?") }.minByOrNull { it.value }?.key
 
     fun Map<String, Long>.registered(key: String, now: Long): Map<String, Long> =
         (pruned(now) + (key to now))

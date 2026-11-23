@@ -594,6 +594,8 @@
     <string name="notify_on_checked_subtitle">Alert when a torrent finishes rechecking</string>
     <string name="notify_on_added_label">Notify on Added</string>
     <string name="notify_on_added_subtitle">Alert when a new torrent is added to the server</string>
+    <string name="notify_skip_own_adds_label">Skip torrents I add</string>
+    <string name="notify_skip_own_adds_subtitle">Don\'t alert for torrents added from this app</string>
     <string name="notify_on_new_rss_label">Notify on New RSS Articles</string>
     <string name="notify_on_new_rss_subtitle">
         Alert when a feed gets new articles - checked as often as the RSS screen\'s own feed

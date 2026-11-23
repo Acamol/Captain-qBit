@@ -71,6 +71,7 @@ fun NotificationSettingsScreen(
     val notifyComplete by viewModel.notifyOnComplete.collectAsStateWithLifecycle()
     val notifyChecked by viewModel.notifyOnChecked.collectAsStateWithLifecycle()
     val notifyAdded by viewModel.notifyOnAdded.collectAsStateWithLifecycle()
+    val skipOwnAdds by viewModel.notifySkipOwnAdds.collectAsStateWithLifecycle()
     val notifyRssUpdates by viewModel.notifyOnNewRssArticles.collectAsStateWithLifecycle()
     val eventAlertMode by viewModel.eventAlertMode.collectAsStateWithLifecycle()
     val quietHoursStart by viewModel.quietHoursStartMinutes.collectAsStateWithLifecycle()
@@ -171,6 +172,15 @@ fun NotificationSettingsScreen(
         ) {
             viewModel.setNotifyOnAdded(it)
             applyNotificationPrefs(statusNotif, notifyComplete, notifyChecked, it, notifyRssUpdates)
+        }
+        if (notifyAdded) {
+            SwitchRow(
+                stringResource(CommonR.string.notify_skip_own_adds_label),
+                skipOwnAdds,
+                subtitle = stringResource(CommonR.string.notify_skip_own_adds_subtitle),
+            ) {
+                viewModel.setNotifySkipOwnAdds(it)
+            }
         }
         SwitchRow(
             stringResource(CommonR.string.notify_on_new_rss_label),

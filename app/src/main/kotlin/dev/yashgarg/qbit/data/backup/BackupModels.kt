@@ -103,6 +103,7 @@ fun AppPreferences.overlayGroup(group: PrefGroup, src: AppPreferences): AppPrefe
                 notifyOnComplete = src.notifyOnComplete,
                 notifyOnChecked = src.notifyOnChecked,
                 notifyOnAdded = src.notifyOnAdded,
+                notifySkipOwnAdds = src.notifySkipOwnAdds,
                 notifyOnNewRssArticles = src.notifyOnNewRssArticles,
                 eventAlertMode = src.eventAlertMode,
                 quietHoursStartMinutes = src.quietHoursStartMinutes,

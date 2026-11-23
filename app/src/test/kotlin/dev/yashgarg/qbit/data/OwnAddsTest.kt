@@ -1,6 +1,7 @@
 package dev.yashgarg.qbit.data
 
 import dev.yashgarg.qbit.data.models.OwnAdds
+import dev.yashgarg.qbit.data.models.OwnAdds.oldestSlot
 import dev.yashgarg.qbit.data.models.OwnAdds.pruned
 import dev.yashgarg.qbit.data.models.OwnAdds.registered
 import org.junit.Assert.assertEquals
@@ -32,5 +33,26 @@ class OwnAddsTest {
     @Test
     fun keyIsCaseInsensitiveOnHash() {
         assertEquals(OwnAdds.key(2, "ABC"), OwnAdds.key(2, "abc"))
+    }
+
+    @Test
+    fun slotsExpireSoonerThanHashes() {
+        val map = mapOf(OwnAdds.slotKey(1, 0L) to 0L, OwnAdds.key(1, "a") to 0L)
+        val later = map.pruned(now = OwnAdds.SLOT_TTL_MS)
+        assertEquals(setOf(OwnAdds.key(1, "a")), later.keys)
+    }
+
+    @Test
+    fun oldestSlotIsPerServerAndIgnoresHashes() {
+        val first = OwnAdds.slotKey(1, 10L)
+        val map =
+            mapOf(
+                OwnAdds.slotKey(1, 20L) to 20L,
+                first to 10L,
+                OwnAdds.slotKey(2, 1L) to 1L,
+                OwnAdds.key(1, "a") to 0L,
+            )
+        assertEquals(first, map.oldestSlot(1))
+        assertEquals(null, mapOf(OwnAdds.key(1, "a") to 0L).oldestSlot(1))
     }
 }

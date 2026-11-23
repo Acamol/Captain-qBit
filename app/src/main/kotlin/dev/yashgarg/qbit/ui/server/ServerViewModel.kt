@@ -274,8 +274,11 @@ constructor(
             successMessage = getString(CommonR.string.status_add_torrent_url_success),
             failureMessage = getString(CommonR.string.status_add_torrent_url_failure),
         ) {
-            TorrentFileParser.magnetHash(url)?.let { rememberOwnAdd(it) }
-            repository.addTorrentUrl(url, category, savePath, paused, autoTmm)
+            // Without a magnet hash (a plain .torrent link) fall back to an anonymous slot.
+            val ownKey = rememberOwnAdd(TorrentFileParser.magnetHash(url))
+            repository.addTorrentUrl(url, category, savePath, paused, autoTmm).onErr {
+                forgetOwnAdd(ownKey)
+            }
         }
     }
 
@@ -284,16 +287,24 @@ constructor(
      * the add request, since the background worker could otherwise poll in between. A no-op unless
      * that alert is on, so nothing accumulates for users who don't use it.
      */
-    private suspend fun rememberOwnAdd(hash: String) {
+    private suspend fun rememberOwnAdd(hash: String?): String? {
+        var recorded: String? = null
         val now = System.currentTimeMillis()
         prefsStore.updateData {
-            if (!it.notifyOnAdded) it
-            else
-                it.copy(
-                    notifOwnAdds =
-                        it.notifOwnAdds.registered(OwnAdds.key(it.activeServerId, hash), now),
-                )
+            if (!it.notifyOnAdded || !it.notifySkipOwnAdds) return@updateData it
+            val key =
+                if (hash != null) OwnAdds.key(it.activeServerId, hash)
+                else OwnAdds.slotKey(it.activeServerId, now)
+            recorded = key
+            it.copy(notifOwnAdds = it.notifOwnAdds.registered(key, now))
         }
+        return recorded
+    }
+
+    /** Undoes [rememberOwnAdd] when the add request failed, so it can't suppress a later alert. */
+    private suspend fun forgetOwnAdd(key: String?) {
+        if (key == null) return
+        prefsStore.updateData { it.copy(notifOwnAdds = it.notifOwnAdds - key) }
     }
 
     fun addTorrentFile(
