@@ -803,4 +803,11 @@
         <item quantity="other">%1$d לא עובדים</item>
     </plurals>
     <string name="search_open_description_page">פתיחת עמוד התיאור</string>
+    <string name="status_torrent_added">נוסף טורנט</string>
+    <string name="notify_on_added_label">התראה כאשר נוסף טורנט</string>
+    <string name="notify_on_added_subtitle">התראה כאשר טורנט חדש נוסף לשרת</string>
+    <string name="notify_skip_own_adds_label">דלג על טורנטים שאני מוסיף</string>
+    <string name="notify_skip_own_adds_subtitle">אל תתריע על טורנטים שנוספו מהאפליקציה הזו</string>
+    <string name="notify_ignore_rss_adds_label">דלג על הורדות RSS</string>
+    <string name="notify_ignore_rss_adds_subtitle">אל תתריע על טורנטים הנוספים על ידי חוקי RSS</string>
 </resources>
