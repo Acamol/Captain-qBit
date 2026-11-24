@@ -818,4 +818,11 @@
         <item quantity="other">%1$d не работает</item>
     </plurals>
     <string name="search_open_description_page">Открыть страницу описания</string>
+    <string name="status_torrent_added">Торрент добавлен</string>
+    <string name="notify_on_added_label">Уведомлять о добавлении</string>
+    <string name="notify_on_added_subtitle">Уведомлять, когда на сервер добавлен новый торрент</string>
+    <string name="notify_skip_own_adds_label">Пропускать добавляемые мной торренты</string>
+    <string name="notify_skip_own_adds_subtitle">Не уведомлять о торрентах, добавленных из этого приложения</string>
+    <string name="notify_ignore_rss_adds_label">Пропускать RSS-загрузки</string>
+    <string name="notify_ignore_rss_adds_subtitle">Не уведомлять о торрентах, добавленных правилами RSS</string>
 </resources>
