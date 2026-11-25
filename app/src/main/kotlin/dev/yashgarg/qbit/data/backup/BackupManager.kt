@@ -175,14 +175,14 @@ constructor(
         withContext(Dispatchers.IO) {
             when (mode) {
                 ImportMode.REPLACE -> {
-                    configDao.clearConfigs()
                     // Re-encrypt the plaintext backup credentials with this device's Keystore key.
                     // Position is reassigned from the backup's own server order rather than trusted
                     // as-is, since it may be stale or absent (backups written before this field
                     // existed default it to 0 for every server).
-                    selectedServers.forEachIndexed { index, server ->
-                        configDao.addConfig(server.copy(position = index).withEncryptedSecrets())
+                    val replacements = selectedServers.mapIndexed { index, server ->
+                        server.copy(position = index).withEncryptedSecrets()
                     }
+                    configDao.replaceConfigs(replacements)
                     applyPreferences(backup, selectedPrefGroups, includeCategoryColors)
 
                     // Point the client at a valid server: the backup's active one if it's among the

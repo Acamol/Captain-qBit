@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import dev.yashgarg.qbit.data.models.ServerConfig
 import kotlinx.coroutines.flow.Flow
 
@@ -29,4 +30,11 @@ interface ConfigDao {
     @Query("DELETE FROM configs") fun clearConfigs()
 
     @Insert(onConflict = OnConflictStrategy.REPLACE) fun addConfig(config: ServerConfig)
+
+    @Transaction
+    fun replaceConfigs(configs: List<ServerConfig>) {
+        require(configs.isNotEmpty())
+        clearConfigs()
+        configs.forEach(::addConfig)
+    }
 }

@@ -14,6 +14,22 @@ import org.junit.Test
 
 class PrefGroupTest {
 
+    @Test
+    fun `torrent density belongs to appearance and survives restoring that group`() {
+        val comfortable = AppPreferences(compactTorrentList = false, addTorrentCategory = "linux")
+        val appearance = comfortable.extractGroups(setOf(PrefGroup.APPEARANCE))
+
+        assertFalse(appearance.compactTorrentList)
+        assertEquals("", appearance.addTorrentCategory)
+        assertFalse(
+            AppPreferences().overlayGroup(PrefGroup.APPEARANCE, appearance).compactTorrentList,
+        )
+        assertTrue(comfortable.extractGroups(setOf(PrefGroup.FILTERS)).compactTorrentList)
+        assertFalse(
+            comfortable.overlayGroup(PrefGroup.FILTERS, AppPreferences()).compactTorrentList,
+        )
+    }
+
     private val privacy =
         AppPreferences(
             appLockEnabled = true,
