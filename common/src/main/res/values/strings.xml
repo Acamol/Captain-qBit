@@ -1,5 +1,4 @@
 <resources>
-    <string name="manage_named_action">Manage %1$s</string>
     <string name="app_name" translatable="false">Captain qBit</string>
     <string name="add_server">Add server</string>
     <string name="server_settings">Server settings</string>

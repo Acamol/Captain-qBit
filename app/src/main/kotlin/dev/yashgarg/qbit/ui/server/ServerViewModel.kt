@@ -1,12 +1,11 @@
 package dev.yashgarg.qbit.ui.server
 
 import android.app.Application
-import android.util.Base64
-import androidx.core.net.toUri
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.get
+import com.github.michaelbull.result.map
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,6 +16,7 @@ import dev.yashgarg.qbit.data.manager.CertificateProbe
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.manager.PendingTorrentIntent
 import dev.yashgarg.qbit.data.models.AppPreferences
+import dev.yashgarg.qbit.data.models.ConfigStatus
 import dev.yashgarg.qbit.data.models.ContentTreeItem
 import dev.yashgarg.qbit.data.models.OwnAdds
 import dev.yashgarg.qbit.data.models.OwnAdds.registered
@@ -28,7 +28,6 @@ import dev.yashgarg.qbit.utils.TorrentDownloader
 import dev.yashgarg.qbit.utils.TorrentFileParser
 import dev.yashgarg.qbit.utils.TransformUtil
 import dev.yashgarg.qbit.utils.friendlyMessage
-import java.security.cert.X509Certificate
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -53,12 +52,8 @@ constructor(
     application: Application,
 ) : StatusViewModel(application) {
 
-    // Whether the filter drawer should be closed the next time this screen composes. Set when the
-    // screen is torn down by navigating away, cleared once acted on. Deliberately held here rather
-    // than in saved state: the ViewModel survives a configuration change, which is the one teardown
-    // that must not close the drawer, and a fresh ViewModel (first launch, or after process death)
-    // starts true so the screen always opens on the list.
-    var closeDrawerOnEntry = true
+    // Close filters on tab re-entry, but preserve an open sheet across configuration changes.
+    var closeFiltersOnEntry = true
     private val _uiState = MutableStateFlow(ServerScreenState())
     val uiState = _uiState.asStateFlow()
 
@@ -67,7 +62,7 @@ constructor(
 
     fun consumePendingTorrentUri() = pendingTorrentIntent.consume()
 
-    /** All saved servers, for the drawer switcher. */
+    /** All saved servers, for the server switcher. */
     val servers: StateFlow<List<ServerConfig>> =
         configDao.getConfigs().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
@@ -83,6 +78,15 @@ constructor(
         prefsStore.data
             .map { it.categoryColors }
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
+    val compactTorrentList: StateFlow<Boolean> =
+        prefsStore.data
+            .map { it.compactTorrentList }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, AppPreferences().compactTorrentList)
+
+    fun setCompactTorrentList(enabled: Boolean) {
+        viewModelScope.launch { prefsStore.updateData { it.copy(compactTorrentList = enabled) } }
+    }
 
     /** Sets (or clears, when [color] is null) the app-local color for a category. */
     fun setCategoryColor(category: String, color: Int?) {
@@ -111,21 +115,18 @@ constructor(
     }
 
     /** Fetches the certificate a server presents, for the user to review before trusting it. */
-    suspend fun probeCertificate(host: String, port: Int): Result<X509Certificate, Throwable> =
-        CertificateProbe.fetchPresentedCertificate(host, port)
+    internal suspend fun probeCertificate(
+        target: CertificateTarget,
+    ): Result<CertificateReview, Throwable> =
+        CertificateProbe.fetchPresentedCertificate(target.host, target.port ?: 443).map {
+            CertificateReview(target, it)
+        }
 
-    /**
-     * Approves a certificate for [id]. Persisting it here (rather than only from ConfigScreen) is
-     * what lets a connection that's failing right now on this screen recover without navigating
-     * away: ClientManagerImpl reactively rebuilds its client whenever this config row changes, so
-     * the next sync attempt picks up the pin automatically.
-     */
-    suspend fun pinCertificate(id: Int, der: ByteArray) {
+    internal suspend fun pinCertificate(review: CertificateReview) {
         withContext(Dispatchers.IO) {
-            val current = configDao.getConfigById(id) ?: return@withContext
-            configDao.addConfig(
-                current.copy(pinnedCertificate = Base64.encodeToString(der, Base64.NO_WRAP)),
-            )
+            val active =
+                configDao.getConfigs().first().activeServer(prefsStore.data.first().activeServerId)
+            review.pinIfCurrent(active, configDao)
         }
     }
 
@@ -155,13 +156,7 @@ constructor(
                 if (state.dataLoading || state.hasError || state.data == null) null
                 else
                     state.data.torrents.values
-                        .filter { torrent ->
-                            torrent.matchesSearch(state.searchQuery) &&
-                                torrent.matchesFilter(state.selectedFilter) &&
-                                torrent.matchesCategory(state.selectedCategory) &&
-                                torrent.matchesTracker(state.selectedTracker) &&
-                                torrent.matchesTags(state.selectedTags, state.filterUntagged)
-                        }
+                        .filter(state::includes)
                         .sortedWith(state.sortOption, state.sortDirection)
             }
             .flowOn(Dispatchers.Default)
@@ -170,13 +165,30 @@ constructor(
     private val _intent = MutableSharedFlow<Unit>()
     val intent = _intent.asSharedFlow()
 
-    private var syncJob: Job? = null
+    private val refreshRequests = MutableStateFlow(0L)
+    private var displayedRepository: QbitRepository? = null
 
     init {
-        syncJob = viewModelScope.launch {
-            val prefs = prefsStore.data.first()
-            applyViewPrefs(prefs, prefs.activeServerId)
-            syncWhileForeground { syncData() }
+        viewModelScope.launch {
+            clientManager.configStatus.collectLatest { status ->
+                _uiState.update {
+                    it.copy(
+                        workspaceRevision = it.workspaceRevision + 1,
+                        dataLoading = true,
+                        data = null,
+                        error = null,
+                        hasError = false,
+                        availableTags = emptyList(),
+                        availableCategories = emptyList(),
+                        availableTrackers = emptyList(),
+                        trackerCounts = emptyMap(),
+                        queueingEnabled = false,
+                    )
+                }
+                if (status == ConfigStatus.EXISTS) {
+                    syncWhileForeground { refreshRequests.collectLatest { syncData() } }
+                }
+            }
         }
 
         // Reflect the active server's name in the UI.
@@ -190,18 +202,14 @@ constructor(
                 .collect { active -> _uiState.update { it.copy(serverName = active?.serverName) } }
         }
 
-        // On a real server switch, drop the current sync and restore the target server's own
-        // saved filters + sort (each server remembers its own view).
+        // Restoring the view is separate from following client replacement: an interval or
+        // credential edit needs a new collector, but must not reset the user's search or filters.
         viewModelScope.launch {
             prefsStore.data
-                .map { it.activeServerId }
-                .distinctUntilChanged()
-                .drop(1)
-                .collect { newId ->
-                    syncJob?.cancel()
-                    _uiState.update { it.copy(dataLoading = true, data = null, searchQuery = "") }
-                    applyViewPrefs(prefsStore.data.first(), newId)
-                    syncJob = viewModelScope.launch { syncWhileForeground { syncData() } }
+                .distinctUntilChangedBy { it.activeServerId }
+                .collect { prefs ->
+                    _uiState.update { it.copy(searchQuery = "") }
+                    applyViewPrefs(prefs, prefs.activeServerId)
                 }
         }
     }
@@ -260,8 +268,7 @@ constructor(
     }
 
     fun refresh() {
-        syncJob?.cancel()
-        syncJob = viewModelScope.launch { syncWhileForeground { syncData() } }
+        refreshRequests.update { it + 1 }
     }
 
     fun addTorrentUrl(
@@ -565,7 +572,10 @@ constructor(
         }
     }
 
-    fun bulkSetCategory(hashes: List<String>, category: String) {
+    fun bulkSetCategory(requested: List<String>, category: String) {
+        val repository = displayedRepository ?: return
+        val hashes = uiState.value.visibleTargets(requested)
+        if (hashes.isEmpty()) return
         launchStatus(
             successMessage =
                 getQuantityString(
@@ -579,7 +589,10 @@ constructor(
         }
     }
 
-    fun bulkAddTags(hashes: List<String>, tags: List<String>) {
+    fun bulkAddTags(requested: List<String>, tags: List<String>) {
+        val repository = displayedRepository ?: return
+        val hashes = uiState.value.visibleTargets(requested)
+        if (hashes.isEmpty() || tags.isEmpty()) return
         launchStatus(
             successMessage =
                 getQuantityString(
@@ -593,7 +606,10 @@ constructor(
         }
     }
 
-    fun bulkRemoveTags(hashes: List<String>, tags: List<String>) {
+    fun bulkRemoveTags(requested: List<String>, tags: List<String>) {
+        val repository = displayedRepository ?: return
+        val hashes = uiState.value.visibleTargets(requested)
+        if (hashes.isEmpty() || tags.isEmpty()) return
         launchStatus(
             successMessage =
                 getQuantityString(
@@ -662,7 +678,10 @@ constructor(
         }
     }
 
-    fun removeTorrents(hashes: List<String>, deleteFiles: Boolean = false) {
+    fun removeTorrents(requested: List<String>, deleteFiles: Boolean = false) {
+        val repository = displayedRepository ?: return
+        val hashes = uiState.value.visibleTargets(requested)
+        if (hashes.isEmpty()) return
         launchStatus(
             successMessage =
                 getQuantityString(
@@ -676,7 +695,10 @@ constructor(
         }
     }
 
-    fun toggleTorrentsState(pause: Boolean, hashes: List<String>) {
+    fun toggleTorrentsState(pause: Boolean, requested: List<String>) {
+        val repository = displayedRepository ?: return
+        val hashes = uiState.value.visibleTargets(requested)
+        if (hashes.isEmpty()) return
         launchStatus(
             successMessage =
                 if (pause)
@@ -709,28 +731,8 @@ constructor(
         }
     }
 
-    fun setSort(option: SortOption) {
-        _uiState.update { state ->
-            val newDirection =
-                if (state.sortOption == option) {
-                    if (state.sortDirection == SortDirection.ASC) SortDirection.DESC
-                    else SortDirection.ASC
-                } else {
-                    SortDirection.ASC
-                }
-            state.copy(sortOption = option, sortDirection = newDirection)
-        }
-        persistViewPrefs()
-    }
-
-    fun toggleSortDirection() {
-        _uiState.update { state ->
-            state.copy(
-                sortDirection =
-                    if (state.sortDirection == SortDirection.ASC) SortDirection.DESC
-                    else SortDirection.ASC,
-            )
-        }
+    fun setSort(option: SortOption, direction: SortDirection) {
+        _uiState.update { it.copy(sortOption = option, sortDirection = direction) }
         persistViewPrefs()
     }
 
@@ -780,27 +782,38 @@ constructor(
         persistViewPrefs()
     }
 
-    private fun getQueueingState() {
-        viewModelScope.launch {
-            repository.isQueueingEnabled().onOk { enabled ->
-                // Don't leave the list stuck on the Queued filter if the server has queueing off
-                // (e.g. a filter persisted from a prior session, or queueing toggled off
-                // elsewhere).
-                val clearFilter = !enabled && _uiState.value.selectedFilter == StateFilter.QUEUED
-                _uiState.update {
-                    it.copy(
-                        queueingEnabled = enabled,
-                        selectedFilter = if (clearFilter) StateFilter.ALL else it.selectedFilter,
-                    )
-                }
-                if (clearFilter) persistViewPrefs()
+    private suspend fun getQueueingState(repository: QbitRepository) {
+        repository.isQueueingEnabled().onOk { enabled ->
+            // Don't leave the list stuck on the Queued filter if the server has queueing off
+            // (e.g. a filter persisted from a prior session, or queueing toggled off
+            // elsewhere).
+            val clearFilter = !enabled && _uiState.value.selectedFilter == StateFilter.QUEUED
+            _uiState.update {
+                it.copy(
+                    queueingEnabled = enabled,
+                    selectedFilter = if (clearFilter) StateFilter.ALL else it.selectedFilter,
+                )
             }
+            if (clearFilter) persistViewPrefs()
         }
     }
 
     private suspend fun syncData() {
-        getQueueingState()
+        val session = repository.forCurrentClient()
+        if (session == null) {
+            _uiState.update { it.copy(dataLoading = false, hasError = true) }
+            return
+        }
+        try {
+            syncData(session)
+        } finally {
+            displayedRepository = null
+        }
+    }
+
+    private suspend fun syncData(repository: QbitRepository) {
         coroutineScope {
+            launch { getQueueingState(repository) }
             // Data: keep the last-known list on screen; retry quietly on error. The offline state
             // is
             // driven by the durable error signal below, not by this flow throwing.
@@ -813,19 +826,16 @@ constructor(
                     }
                     .collectLatest { mainData ->
                         val categories = mainData.categories.keys.sorted()
-                        val trackers =
-                            mainData.torrents.values
-                                .mapNotNull { t -> t.tracker.takeIf { it.isNotBlank() } }
-                                .mapNotNull { url ->
-                                    url.toUri().host?.takeIf { it.isNotBlank() }
-                                }
-                                .distinct()
-                                .sorted()
+                        val trackerCounts =
+                            withContext(Dispatchers.Default) {
+                                trackerFilterCounts(mainData.torrents.values.map { it.tracker })
+                            }
                         val tags =
                             (mainData.tags + mainData.torrents.values.flatMap { it.tags })
                                 .filter { it.isNotBlank() }
                                 .distinct()
                                 .sorted()
+                        displayedRepository = repository
                         _uiState.update { state ->
                             state.copy(
                                 dataLoading = false,
@@ -833,7 +843,8 @@ constructor(
                                 hasError = false,
                                 error = null,
                                 availableCategories = categories,
-                                availableTrackers = trackers,
+                                availableTrackers = trackerCounts.keys.toList(),
+                                trackerCounts = trackerCounts,
                                 availableTags = tags,
                             )
                         }
@@ -844,33 +855,24 @@ constructor(
             // toast on the transition; only show the full error screen when nothing has loaded yet.
             launch {
                 var lastError: Throwable? = null
-                repository
-                    .observeMainDataError()
-                    // Survive the transient "no active client" throw during a server switch;
-                    // otherwise this collector dies and a dead server's error never surfaces,
-                    // leaving the list stuck on the loading spinner forever.
-                    .retry {
-                        delay(SYNC_RETRY_MS)
-                        true
-                    }
-                    .collect { error ->
-                        _uiState.update { state ->
-                            when {
-                                error == null -> state.copy(hasError = false, error = null)
-                                state.data == null ->
-                                    state.copy(hasError = true, error = error, dataLoading = false)
-                                else -> state
-                            }
+                repository.observeMainDataError().collect { error ->
+                    _uiState.update { state ->
+                        when {
+                            error == null -> state.copy(hasError = false, error = null)
+                            state.data == null ->
+                                state.copy(hasError = true, error = error, dataLoading = false)
+                            else -> state
                         }
-                        if (error != null && lastError == null && _uiState.value.data != null) {
-                            emitStatus(
-                                error.friendlyMessage(
-                                    getString(CommonR.string.status_sync_data_failure),
-                                ),
-                            )
-                        }
-                        lastError = error
                     }
+                    if (error != null && lastError == null && _uiState.value.data != null) {
+                        emitStatus(
+                            error.friendlyMessage(
+                                getString(CommonR.string.status_sync_data_failure),
+                            ),
+                        )
+                    }
+                    lastError = error
+                }
             }
         }
     }

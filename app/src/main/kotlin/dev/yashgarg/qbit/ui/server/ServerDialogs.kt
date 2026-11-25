@@ -1,66 +1,68 @@
 package dev.yashgarg.qbit.ui.server
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.common.R as CommonR
-import dev.yashgarg.qbit.data.models.ServerConfig
 import dev.yashgarg.qbit.ui.compose.AlertDialog
 import dev.yashgarg.qbit.ui.compose.CheckboxRow
 import dev.yashgarg.qbit.ui.compose.ConfirmDialog
+import dev.yashgarg.qbit.ui.compose.FullScreenEditor
+import dev.yashgarg.qbit.ui.compose.MultipleChoiceSheet
 import dev.yashgarg.qbit.ui.compose.SelectableRow
-import dev.yashgarg.qbit.ui.compose.SingleChoiceDialog
+import dev.yashgarg.qbit.ui.compose.SingleChoiceSheet
 import dev.yashgarg.qbit.ui.compose.TextInputDialog
-import dev.yashgarg.qbit.ui.compose.ThreeActionDialog
-import dev.yashgarg.qbit.ui.navigation.AppNavigator
-import dev.yashgarg.qbit.ui.navigation.NavCommand
-import dev.yashgarg.qbit.utils.toHumanReadable
 
 /**
- * Bulk-action pickers and tag/category/server management dialogs shown from the server screen.
- * Native Compose port of the former imperative `ServerActionDialogs` class: one host composable
- * switches on a [ServerDialog] state (hoisted in [ServerScreen]), so opening a dialog is just
- * setting that state and dismissing is clearing it.
+ * Torrent assignment pickers and server organization editors. Each screen owns its [ServerDialog]
+ * state and shares this host for presentation.
  */
 sealed interface ServerDialog {
     data class BulkCategory(val hashes: List<String>) : ServerDialog
@@ -74,28 +76,30 @@ sealed interface ServerDialog {
 
     data object ManageCategories : ServerDialog
 
-    data class CreateCategory(val returnToManage: Boolean) : ServerDialog
+    data object CreateCategory : ServerDialog
 
-    data class EditCategorySavePath(val name: String, val returnToManage: Boolean) : ServerDialog
+    data class EditCategorySavePath(val name: String) : ServerDialog
 
-    data class ConfirmDeleteCategory(val name: String, val returnToManage: Boolean) : ServerDialog
-
-    data class CategoryLongPress(val name: String) : ServerDialog
-
-    data class TagLongPress(val name: String) : ServerDialog
-
-    data class ConfirmDeleteTag(val name: String) : ServerDialog
-
-    data object Statistics : ServerDialog
+    data class ConfirmDeleteCategory(val name: String) : ServerDialog
 
     data object SortPicker : ServerDialog
-
-    data object ServerPicker : ServerDialog
-
-    data class ServerLongPress(val server: ServerConfig) : ServerDialog
-
-    data class ConfirmDeleteServer(val server: ServerConfig) : ServerDialog
 }
+
+internal fun ServerDialog.reconcileTargets(state: ServerScreenState): ServerDialog? =
+    when (this) {
+        is ServerDialog.BulkCategory ->
+            state.visibleTargets(hashes).takeIf { it.isNotEmpty() }?.let { copy(hashes = it) }
+        is ServerDialog.BulkTags ->
+            state.visibleTargets(hashes).takeIf { it.isNotEmpty() }?.let { copy(hashes = it) }
+        is ServerDialog.CreateTag ->
+            if (forSelection == null) this
+            else
+                state
+                    .visibleTargets(forSelection)
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { copy(forSelection = it) }
+        else -> this
+    }
 
 // App-local preset palette for category colors (qBittorrent has no category color of its own).
 private val presetColors =
@@ -114,24 +118,21 @@ private val presetColors =
         0xFFFF7043.toInt(),
     )
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ServerDialogHost(
     dialog: ServerDialog?,
     onDialogChange: (ServerDialog?) -> Unit,
     viewModel: ServerViewModel,
-    appNavigator: AppNavigator,
 ) {
     if (dialog == null) return
 
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val categoryColors by viewModel.categoryColors.collectAsStateWithLifecycle()
     val dismiss = { onDialogChange(null) }
 
-    // Color picker layered over the manage/edit dialogs (does not dismiss the one beneath it).
-    var colorPickerFor by remember { mutableStateOf<String?>(null) }
-
-    when (dialog) {
+    val current = dialog.reconcileTargets(state)
+    if (dialog != current) LaunchedEffect(dialog, current) { onDialogChange(current) }
+    when (val dialog = current) {
+        null -> return
         is ServerDialog.BulkCategory -> {
             val options = listOf("") + state.availableCategories
             // Preselect the current category. With multiple torrents, only preselect when they all
@@ -140,7 +141,7 @@ fun ServerDialogHost(
                 dialog.hashes.mapNotNull { state.data?.torrents?.get(it)?.category }.toSet()
             val selectedIndex = currentCategories.singleOrNull()?.let { options.indexOf(it) } ?: -1
             val noneLabel = stringResource(CommonR.string.none_option)
-            SingleChoiceDialog(
+            SingleChoiceSheet(
                 title = stringResource(CommonR.string.set_category),
                 labels = options.map { it.ifBlank { noneLabel } },
                 selectedIndex = selectedIndex,
@@ -153,58 +154,29 @@ fun ServerDialogHost(
         }
         is ServerDialog.BulkTags -> {
             val tags = state.availableTags
-            if (tags.isEmpty()) {
-                onDialogChange(ServerDialog.CreateTag(dialog.hashes))
-            } else {
-                val torrentTags =
-                    dialog.hashes
-                        .mapNotNull { state.data?.torrents?.get(it) }
-                        .flatMap { it.tags }
-                        .toSet()
-                val initialChecked = remember(tags) { tags.map { it in torrentTags } }
-                val checked = remember(tags) { initialChecked.toMutableStateList() }
-                AlertDialog(
-                    onDismissRequest = dismiss,
-                    title = { Text(stringResource(CommonR.string.set_tags)) },
-                    text = {
-                        Column(Modifier.verticalScroll(rememberScrollState())) {
-                            tags.forEachIndexed { i, tag ->
-                                CheckboxRow(tag, checked[i]) { checked[i] = it }
-                            }
-                        }
-                    },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                val toAdd = tags.filterIndexed { i, _ ->
-                                    checked[i] && !initialChecked[i]
-                                }
-                                val toRemove = tags.filterIndexed { i, _ ->
-                                    !checked[i] && initialChecked[i]
-                                }
-                                if (toAdd.isNotEmpty()) viewModel.bulkAddTags(dialog.hashes, toAdd)
-                                if (toRemove.isNotEmpty())
-                                    viewModel.bulkRemoveTags(dialog.hashes, toRemove)
-                                dismiss()
-                            },
-                        ) {
-                            Text(stringResource(CommonR.string.apply))
-                        }
-                    },
-                    dismissButton = {
-                        Row {
-                            TextButton(
-                                onClick = { onDialogChange(ServerDialog.CreateTag(dialog.hashes)) },
-                            ) {
-                                Text(stringResource(CommonR.string.new_tag_ellipsis))
-                            }
-                            TextButton(onClick = dismiss) {
-                                Text(stringResource(CommonR.string.cancel))
-                            }
-                        }
-                    },
-                )
-            }
+            var edits by remember { mutableStateOf(BulkTagEdits()) }
+            val torrentTags =
+                dialog.hashes
+                    .mapNotNull { state.data?.torrents?.get(it) }
+                    .flatMap { it.tags }
+                    .toSet()
+            MultipleChoiceSheet(
+                title = stringResource(CommonR.string.set_tags),
+                labels = tags,
+                selected = tags.indices.filter { edits.checked(tags[it], torrentTags) }.toSet(),
+                onToggle = { edits = edits.toggle(tags[it], torrentTags) },
+                onApply = {
+                    val available = viewModel.uiState.value.availableTags
+                    val toAdd = edits.additions(available)
+                    val toRemove = edits.removals(available)
+                    if (toAdd.isNotEmpty()) viewModel.bulkAddTags(dialog.hashes, toAdd)
+                    if (toRemove.isNotEmpty()) viewModel.bulkRemoveTags(dialog.hashes, toRemove)
+                    dismiss()
+                },
+                onDismiss = dismiss,
+                newLabel = stringResource(CommonR.string.new_tag_ellipsis),
+                onNew = { onDialogChange(ServerDialog.CreateTag(dialog.hashes)) },
+            )
         }
         is ServerDialog.CreateTag -> {
             val nameEmptyError = stringResource(CommonR.string.invalid_name)
@@ -230,118 +202,12 @@ fun ServerDialogHost(
             )
         }
         ServerDialog.ManageTags -> {
-            val tags = state.availableTags
-            val marked = remember(tags) { tags.map { false }.toMutableStateList() }
-            AlertDialog(
-                onDismissRequest = dismiss,
-                title = { Text(stringResource(CommonR.string.manage_tags_title)) },
-                text = {
-                    Column(Modifier.verticalScroll(rememberScrollState())) {
-                        if (tags.isEmpty()) {
-                            Text(
-                                stringResource(CommonR.string.no_tags_yet),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        tags.forEachIndexed { i, tag ->
-                            CheckboxRow(tag, marked[i]) { marked[i] = it }
-                        }
-                    }
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            val toDelete = tags.filterIndexed { i, _ -> marked[i] }
-                            if (toDelete.isNotEmpty()) {
-                                viewModel.deleteTags(toDelete)
-                                dismiss()
-                            }
-                        },
-                    ) {
-                        Text(stringResource(CommonR.string.delete))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { onDialogChange(ServerDialog.CreateTag(null)) }) {
-                        Text(stringResource(CommonR.string.new_tag_ellipsis))
-                    }
-                },
-            )
+            ClassificationManager(categories = false, viewModel = viewModel, onDismiss = dismiss)
         }
         ServerDialog.ManageCategories -> {
-            AlertDialog(
-                onDismissRequest = dismiss,
-                title = { Text(stringResource(CommonR.string.manage_categories_title)) },
-                text = {
-                    Column(Modifier.verticalScroll(rememberScrollState())) {
-                        state.availableCategories.forEach { name ->
-                            Row(
-                                Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(name, Modifier.weight(1f))
-                                ColorSwatch(
-                                    color = categoryColors[name],
-                                    onClick = { colorPickerFor = name },
-                                )
-                                IconButton(
-                                    onClick = {
-                                        onDialogChange(
-                                            ServerDialog.EditCategorySavePath(name, true),
-                                        )
-                                    },
-                                ) {
-                                    Icon(
-                                        Icons.Outlined.Edit,
-                                        contentDescription =
-                                            stringResource(
-                                                CommonR.string.content_description_edit_named,
-                                                name,
-                                            ),
-                                    )
-                                }
-                                IconButton(
-                                    onClick = {
-                                        onDialogChange(
-                                            ServerDialog.ConfirmDeleteCategory(name, true),
-                                        )
-                                    },
-                                ) {
-                                    Icon(
-                                        Icons.Outlined.Delete,
-                                        contentDescription =
-                                            stringResource(
-                                                CommonR.string.content_description_delete_named,
-                                                name,
-                                            ),
-                                    )
-                                }
-                            }
-                        }
-                        TextButton(
-                            onClick = { onDialogChange(ServerDialog.CreateCategory(true)) },
-                            modifier = Modifier.padding(top = 8.dp),
-                        ) {
-                            Icon(Icons.Filled.Add, contentDescription = null)
-                            Text(
-                                stringResource(CommonR.string.new_category_title),
-                                Modifier.padding(start = 4.dp),
-                            )
-                        }
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = dismiss) {
-                        Text(stringResource(CommonR.string.close_action))
-                    }
-                },
-            )
+            ClassificationManager(categories = true, viewModel = viewModel, onDismiss = dismiss)
         }
-        is ServerDialog.CreateCategory -> {
-            val back = {
-                if (dialog.returnToManage) onDialogChange(ServerDialog.ManageCategories)
-                else dismiss()
-            }
+        ServerDialog.CreateCategory -> {
             val nameEmptyError = stringResource(CommonR.string.invalid_name)
             val categoryExistsError = stringResource(CommonR.string.category_already_exists)
             TextInputDialog(
@@ -357,16 +223,12 @@ fun ServerDialogHost(
                 },
                 onConfirm = { name ->
                     viewModel.createCategory(name)
-                    back()
+                    dismiss()
                 },
-                onDismiss = back,
+                onDismiss = dismiss,
             )
         }
         is ServerDialog.EditCategorySavePath -> {
-            val back = {
-                if (dialog.returnToManage) onDialogChange(ServerDialog.ManageCategories)
-                else dismiss()
-            }
             val currentSavePath = state.data?.categories?.get(dialog.name)?.savePath.orEmpty()
             TextInputDialog(
                 title = stringResource(CommonR.string.edit_category_title),
@@ -376,315 +238,229 @@ fun ServerDialogHost(
                 validate = { null },
                 onConfirm = { savePath ->
                     viewModel.editCategorySavePath(dialog.name, savePath.trim())
-                    back()
+                    dismiss()
                 },
-                onDismiss = back,
-                extraContent = {
-                    Row(
-                        Modifier.fillMaxWidth().padding(top = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(stringResource(CommonR.string.color_label), Modifier.weight(1f))
-                        ColorSwatch(
-                            color = categoryColors[dialog.name],
-                            onClick = { colorPickerFor = dialog.name },
-                        )
-                    }
-                },
+                onDismiss = dismiss,
             )
         }
         is ServerDialog.ConfirmDeleteCategory -> {
-            val back = {
-                if (dialog.returnToManage) onDialogChange(ServerDialog.ManageCategories)
-                else dismiss()
-            }
             ConfirmDialog(
                 title = stringResource(CommonR.string.confirm_delete_named_title, dialog.name),
                 confirmLabel = stringResource(CommonR.string.delete),
                 onConfirm = {
                     viewModel.deleteCategories(listOf(dialog.name))
-                    back()
-                },
-                onDismiss = back,
-            )
-        }
-        is ServerDialog.CategoryLongPress -> {
-            ThreeActionDialog(
-                title = dialog.name,
-                positiveLabel = stringResource(CommonR.string.edit),
-                onPositive = {
-                    onDialogChange(ServerDialog.EditCategorySavePath(dialog.name, false))
-                },
-                neutralLabel = stringResource(CommonR.string.delete),
-                onNeutral = {
-                    onDialogChange(ServerDialog.ConfirmDeleteCategory(dialog.name, false))
-                },
-                onDismiss = dismiss,
-            )
-        }
-        is ServerDialog.TagLongPress -> {
-            ConfirmDialog(
-                title = dialog.name,
-                confirmLabel = stringResource(CommonR.string.delete),
-                onConfirm = { onDialogChange(ServerDialog.ConfirmDeleteTag(dialog.name)) },
-                onDismiss = dismiss,
-            )
-        }
-        is ServerDialog.ConfirmDeleteTag -> {
-            ConfirmDialog(
-                title = stringResource(CommonR.string.confirm_delete_named_title, dialog.name),
-                confirmLabel = stringResource(CommonR.string.delete),
-                onConfirm = {
-                    viewModel.deleteTags(listOf(dialog.name))
                     dismiss()
                 },
                 onDismiss = dismiss,
             )
-        }
-        ServerDialog.Statistics -> {
-            val serverState = state.data?.serverState
-            if (serverState == null) {
-                dismiss()
-            } else {
-                AlertDialog(
-                    onDismissRequest = dismiss,
-                    title = { Text(stringResource(CommonR.string.statistics_title)) },
-                    text = {
-                        Column(Modifier.verticalScroll(rememberScrollState())) {
-                            StatHeader(stringResource(CommonR.string.stat_header_user))
-                            StatRow(
-                                stringResource(CommonR.string.stat_all_time_upload),
-                                serverState.allTimeUpload.toHumanReadable(),
-                            )
-                            StatRow(
-                                stringResource(CommonR.string.stat_all_time_download),
-                                serverState.allTimeDownload.toHumanReadable(),
-                            )
-                            StatRow(
-                                stringResource(CommonR.string.stat_all_time_share_ratio),
-                                serverState.globalShareRatio,
-                            )
-                            StatRow(
-                                stringResource(CommonR.string.stat_session_waste),
-                                serverState.sessionWaste.toHumanReadable(),
-                            )
-                            StatRow(
-                                stringResource(CommonR.string.connected_peers),
-                                serverState.totalPeerConnections.toString(),
-                            )
-
-                            StatHeader(stringResource(CommonR.string.stat_header_cache))
-                            StatRow(
-                                stringResource(CommonR.string.stat_read_cache_hits),
-                                "${serverState.readCacheHits}%",
-                            )
-                            StatRow(
-                                stringResource(CommonR.string.stat_total_buffer_size),
-                                serverState.totalBuffersSize.toLong().toHumanReadable(),
-                            )
-
-                            StatHeader(stringResource(CommonR.string.stat_header_performance))
-                            StatRow(
-                                stringResource(CommonR.string.stat_write_cache_overload),
-                                "${serverState.writeCacheOverload}%",
-                            )
-                            StatRow(
-                                stringResource(CommonR.string.stat_read_cache_overload),
-                                "${serverState.readCacheOverload}%",
-                            )
-                            StatRow(
-                                stringResource(CommonR.string.stat_queued_io_jobs),
-                                serverState.queuedIoJobs.toString(),
-                            )
-                            StatRow(
-                                stringResource(CommonR.string.stat_average_time_in_queue),
-                                stringResource(
-                                    CommonR.string.value_ms,
-                                    serverState.averageTimeInQueue,
-                                ),
-                            )
-                            StatRow(
-                                stringResource(CommonR.string.stat_total_queued_size),
-                                serverState.totalQueuedSize.toLong().toHumanReadable(),
-                            )
-                        }
-                    },
-                    confirmButton = {
-                        TextButton(onClick = dismiss) {
-                            Text(stringResource(CommonR.string.close_action))
-                        }
-                    },
-                )
-            }
         }
         ServerDialog.SortPicker -> {
             val options = SortOption.entries
             val ascendingLabel = stringResource(CommonR.string.ascending_label)
             val descendingLabel = stringResource(CommonR.string.descending_label)
-            val labels = options.map { option ->
-                val label = stringResource(option.labelRes)
-                when {
-                    option != state.sortOption -> label
-                    state.sortDirection == SortDirection.ASC -> "↑ $label"
-                    else -> "↓ $label"
-                }
-            }
-            val dirLabel =
-                if (state.sortDirection == SortDirection.ASC) "↑ $ascendingLabel"
-                else "↓ $descendingLabel"
-            AlertDialog(
-                onDismissRequest = dismiss,
-                title = { Text(stringResource(CommonR.string.sort_by_title)) },
-                text = {
-                    Column(Modifier.verticalScroll(rememberScrollState())) {
-                        options.forEachIndexed { i, option ->
-                            SelectableRow(
-                                label = labels[i],
-                                selected = option == state.sortOption,
-                                onClick = {
-                                    viewModel.setSort(option)
-                                    dismiss()
-                                },
+            SingleChoiceSheet(
+                onDismiss = dismiss,
+                title = stringResource(CommonR.string.sort_by_title),
+                labels = options.map { stringResource(it.labelRes) },
+                selectedIndex = options.indexOf(state.sortOption),
+                onSelect = { viewModel.setSort(options[it], state.sortDirection) },
+                dismissLabel = stringResource(CommonR.string.filters_done_action),
+                header = {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp).selectableGroup()) {
+                        listOf(
+                                SortDirection.ASC to ascendingLabel,
+                                SortDirection.DESC to descendingLabel,
                             )
-                        }
-                    }
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            viewModel.toggleSortDirection()
-                            dismiss()
-                        },
-                    ) {
-                        Text(dirLabel)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = dismiss) { Text(stringResource(CommonR.string.cancel)) }
-                },
-            )
-        }
-        ServerDialog.ServerPicker -> {
-            val servers by viewModel.servers.collectAsStateWithLifecycle()
-            val activeId by viewModel.activeServerId.collectAsStateWithLifecycle()
-            AlertDialog(
-                onDismissRequest = dismiss,
-                title = { Text(stringResource(CommonR.string.servers_title)) },
-                text = {
-                    Column(Modifier.verticalScroll(rememberScrollState())) {
-                        servers.forEach { server ->
-                            val active = server.configId == activeId
-                            Row(
-                                Modifier.fillMaxWidth()
-                                    .combinedClickable(
-                                        onClick = {
-                                            viewModel.switchServer(server.configId)
-                                            dismiss()
-                                        },
-                                        onLongClick = {
-                                            onDialogChange(ServerDialog.ServerLongPress(server))
-                                        },
-                                    )
-                                    .padding(vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(
-                                    if (active) "●" else "○",
-                                    color =
-                                        if (active) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.padding(end = 12.dp),
-                                )
-                                Text(server.serverName, Modifier.weight(1f))
+                            .forEach { (direction, label) ->
+                                Column(Modifier.weight(1f)) {
+                                    SelectableRow(label, state.sortDirection == direction) {
+                                        viewModel.setSort(state.sortOption, direction)
+                                    }
+                                }
                             }
-                        }
-                        TextButton(
-                            onClick = {
-                                appNavigator.navigate(NavCommand.OpenConfig(-1))
-                                dismiss()
-                            },
-                            modifier = Modifier.padding(top = 4.dp),
-                        ) {
-                            Icon(Icons.Filled.Add, contentDescription = null)
-                            Text(
-                                stringResource(CommonR.string.add_server),
-                                Modifier.padding(start = 4.dp),
-                            )
-                        }
                     }
                 },
-                confirmButton = {
-                    TextButton(onClick = dismiss) {
-                        Text(stringResource(CommonR.string.close_action))
-                    }
-                },
-            )
-        }
-        is ServerDialog.ServerLongPress -> {
-            ThreeActionDialog(
-                title = dialog.server.serverName,
-                positiveLabel = stringResource(CommonR.string.edit),
-                onPositive = {
-                    appNavigator.navigate(NavCommand.OpenConfig(dialog.server.configId))
-                    dismiss()
-                },
-                neutralLabel = stringResource(CommonR.string.delete),
-                onNeutral = { onDialogChange(ServerDialog.ConfirmDeleteServer(dialog.server)) },
-                onDismiss = dismiss,
-            )
-        }
-        is ServerDialog.ConfirmDeleteServer -> {
-            ConfirmDialog(
-                title =
-                    stringResource(
-                        CommonR.string.confirm_delete_named_title,
-                        dialog.server.serverName,
-                    ),
-                confirmLabel = stringResource(CommonR.string.delete),
-                onConfirm = {
-                    viewModel.deleteServer(dialog.server.configId)
-                    dismiss()
-                },
-                onDismiss = dismiss,
             )
         }
     }
+}
 
-    // Layered color picker: sits on top of the manage/edit dialog; picking updates the color and
-    // closes only the picker (the categoryColors flow repaints the swatch underneath).
-    colorPickerFor?.let { name ->
-        val current = categoryColors[name]
-        AlertDialog(
-            onDismissRequest = { colorPickerFor = null },
-            title = { Text(stringResource(CommonR.string.category_color_title)) },
-            text = {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ColorSwatch(
-                        color = null,
-                        selected = current == null,
-                        onClick = {
-                            viewModel.setCategoryColor(name, null)
-                            colorPickerFor = null
-                        },
+@Composable
+private fun ClassificationManager(
+    categories: Boolean,
+    viewModel: ServerViewModel,
+    onDismiss: () -> Unit,
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val colors by viewModel.categoryColors.collectAsStateWithLifecycle()
+    val names = if (categories) state.availableCategories else state.availableTags
+    var childDialog by remember { mutableStateOf<ServerDialog?>(null) }
+    var paletteFor by remember { mutableStateOf<String?>(null) }
+    var selectedTags by remember(names) { mutableStateOf(emptySet<String>()) }
+    FullScreenEditor(
+        title =
+            stringResource(
+                if (categories) CommonR.string.manage_categories_title
+                else CommonR.string.manage_tags_title,
+            ),
+        onDismiss = onDismiss,
+    ) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            Text(
+                stringResource(
+                    if (categories) CommonR.string.manage_categories_description
+                    else CommonR.string.manage_tags_description,
+                ),
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(
+                    onClick = {
+                        childDialog =
+                            if (categories) ServerDialog.CreateCategory
+                            else ServerDialog.CreateTag(null)
+                    },
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Text(
+                        stringResource(
+                            if (categories) CommonR.string.new_category_title
+                            else CommonR.string.new_tag_title,
+                        ),
+                        Modifier.padding(start = 8.dp),
                     )
-                    presetColors.forEach { c ->
-                        ColorSwatch(
-                            color = c,
-                            selected = c == current,
-                            onClick = {
-                                viewModel.setCategoryColor(name, c)
-                                colorPickerFor = null
-                            },
+                }
+                Spacer(Modifier.weight(1f))
+                if (!categories) {
+                    TextButton(
+                        enabled = selectedTags.isNotEmpty(),
+                        onClick = {
+                            viewModel.deleteTags(selectedTags.toList())
+                            selectedTags = emptySet()
+                        },
+                    ) {
+                        Text(stringResource(CommonR.string.delete))
+                    }
+                }
+            }
+            LazyColumn(Modifier.fillMaxSize()) {
+                if (names.isEmpty()) {
+                    item {
+                        Text(
+                            stringResource(
+                                if (categories) CommonR.string.no_content_found
+                                else CommonR.string.no_tags_yet,
+                            ),
+                            Modifier.padding(24.dp),
                         )
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { colorPickerFor = null }) {
-                    Text(stringResource(CommonR.string.cancel))
+                items(names, key = { it }) { name ->
+                    if (categories) {
+                        ListItem(
+                            onClick = { childDialog = ServerDialog.EditCategorySavePath(name) },
+                            supportingContent = {
+                                Column {
+                                    Text(
+                                        state.data?.categories?.get(name)?.savePath?.takeIf {
+                                            it.isNotBlank()
+                                        } ?: stringResource(CommonR.string.unspecified),
+                                        style =
+                                            MaterialTheme.typography.bodyMedium.copy(
+                                                textDirection = TextDirection.Ltr,
+                                            ),
+                                    )
+                                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        TextButton(
+                                            onClick = {
+                                                childDialog =
+                                                    ServerDialog.EditCategorySavePath(name)
+                                            },
+                                        ) {
+                                            Icon(Icons.Outlined.Edit, contentDescription = null)
+                                            Text(
+                                                stringResource(
+                                                    CommonR.string.edit_save_path_action,
+                                                ),
+                                                Modifier.padding(start = 8.dp),
+                                            )
+                                        }
+                                        TextButton(
+                                            onClick = {
+                                                paletteFor = if (paletteFor == name) null else name
+                                            },
+                                        ) {
+                                            Icon(
+                                                Icons.Outlined.Palette,
+                                                contentDescription = null,
+                                                tint =
+                                                    colors[name]?.let { Color(it) }
+                                                        ?: LocalContentColor.current,
+                                            )
+                                            Text(
+                                                stringResource(CommonR.string.color_label),
+                                                Modifier.padding(start = 8.dp),
+                                            )
+                                        }
+                                    }
+                                }
+                            },
+                            trailingContent = {
+                                IconButton(
+                                    onClick = {
+                                        childDialog = ServerDialog.ConfirmDeleteCategory(name)
+                                    },
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.Delete,
+                                        contentDescription =
+                                            stringResource(
+                                                CommonR.string.content_description_delete_named,
+                                                name,
+                                            ),
+                                    )
+                                }
+                            },
+                        ) {
+                            Text(name)
+                        }
+                        if (paletteFor == name) {
+                            Column(Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
+                                Text(
+                                    stringResource(CommonR.string.category_color_title),
+                                    style = MaterialTheme.typography.labelLarge,
+                                )
+                                FlowRow(Modifier.selectableGroup()) {
+                                    (listOf<Int?>(null) + presetColors).forEach { color ->
+                                        ColorSwatch(
+                                            color = color,
+                                            selected = colors[name] == color,
+                                            onClick = {
+                                                viewModel.setCategoryColor(name, color)
+                                                paletteFor = null
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        Column(Modifier.padding(horizontal = 24.dp)) {
+                            CheckboxRow(name, name in selectedTags) { checked ->
+                                selectedTags =
+                                    if (checked) selectedTags + name else selectedTags - name
+                            }
+                        }
+                    }
                 }
-            },
-        )
+            }
+        }
+        ServerDialogHost(childDialog, { childDialog = it }, viewModel)
     }
 }
 
@@ -697,21 +473,12 @@ fun ServerDialogHost(
 @Composable
 internal fun SpeedLimitsDialog(
     title: String,
-    initialDownloadBytes: Int,
-    initialUploadBytes: Int,
-    onConfirm: (downloadBytes: Int, uploadBytes: Int) -> Unit,
+    baseline: SpeedLimits,
+    onConfirm: (SpeedLimitChanges) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    // Display in KiB/s: round to nearest, and never render a real >0 limit as blank (blank means
-    // 0 = unlimited).
-    fun toKib(bytes: Int) =
-        if (bytes > 0) ((bytes + 512) / 1024).coerceAtLeast(1).toString() else ""
-    fun toBytes(kib: String): Int =
-        ((kib.toLongOrNull() ?: 0L) * 1024).coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
-    val initialDl = toKib(initialDownloadBytes)
-    val initialUl = toKib(initialUploadBytes)
-    var dl by remember { mutableStateOf(initialDl) }
-    var ul by remember { mutableStateOf(initialUl) }
+    var dl by remember { mutableStateOf(baseline.downloadText) }
+    var ul by remember { mutableStateOf(baseline.uploadText) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -742,10 +509,8 @@ internal fun SpeedLimitsDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    // No-op if neither field was edited, so re-opening and confirming never
-                    // rewrites
-                    // (and rounds) limits the user didn't touch.
-                    if (dl != initialDl || ul != initialUl) onConfirm(toBytes(dl), toBytes(ul))
+                    val changes = baseline.changes(dl, ul)
+                    if (changes.download != null || changes.upload != null) onConfirm(changes)
                     onDismiss()
                 },
             ) {
@@ -759,43 +524,45 @@ internal fun SpeedLimitsDialog(
 }
 
 @Composable
-private fun ColorSwatch(color: Int?, onClick: () -> Unit, selected: Boolean = false) {
+private fun ColorSwatch(
+    color: Int?,
+    onClick: () -> Unit,
+    selected: Boolean = false,
+) {
     val outline = MaterialTheme.colorScheme.outline
     val onSurface = MaterialTheme.colorScheme.onSurface
+    val label =
+        if (color == null) stringResource(CommonR.string.none_option)
+        else
+            "${stringResource(CommonR.string.category_color_title)} #${(color and 0xFFFFFF).toString(16).padStart(6, '0')}"
     Box(
-        Modifier.padding(4.dp)
-            .size(32.dp)
+        Modifier.size(48.dp)
+            .clickable(
+                onClick = onClick,
+                role = Role.RadioButton,
+            )
+            .semantics {
+                contentDescription = label
+                this.selected = selected
+            }
+            .padding(8.dp)
             .clip(CircleShape)
             .let { if (color != null) it.background(Color(color)) else it }
             .border(
-                width = if (selected) 3.dp else if (color == null) 2.dp else 0.dp,
+                width = if (selected) 3.dp else 0.dp,
                 color = if (selected) onSurface else outline,
                 shape = CircleShape,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (color == null) {
+            Icon(
+                Icons.Outlined.Palette,
+                contentDescription = null,
+                tint = outline,
+                modifier = Modifier.size(24.dp),
             )
-            .clickable(onClick = onClick),
-    )
-}
-
-@Composable
-private fun StatHeader(title: String) {
-    Text(
-        title.uppercase(),
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(top = 12.dp, bottom = 6.dp),
-    )
-}
-
-@Composable
-private fun StatRow(label: String, value: String) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-        Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-        Text(
-            value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-        )
+        }
     }
 }
 

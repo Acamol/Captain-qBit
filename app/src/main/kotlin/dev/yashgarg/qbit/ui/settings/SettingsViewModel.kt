@@ -3,7 +3,11 @@ package dev.yashgarg.qbit.ui.settings
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.michaelbull.result.Result
+import com.github.michaelbull.result.andThen
 import com.github.michaelbull.result.get
+import com.github.michaelbull.result.getError
+import com.github.michaelbull.result.map
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,7 +18,11 @@ import dev.yashgarg.qbit.data.manager.AppLockSettings
 import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.EventAlertMode
 import dev.yashgarg.qbit.data.models.activeServer
+import dev.yashgarg.qbit.ui.server.SpeedLimitChanges
+import dev.yashgarg.qbit.ui.server.SpeedLimits
 import javax.inject.Inject
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -51,16 +59,16 @@ constructor(
     /** [name] is null when no server is saved. */
     data class ActiveServer(val name: String?)
 
-    // Server options and Speed limits each have a view model of their own, so these make each read
-    // once per visit to the page, not again on a rotation.
+    // Options uses a separate instance per server; Speed limits has one per navigation entry.
     private var serverOptionsRequested = false
-    private var speedLimitsRequested = false
+    private var serverOptionsJob: Job? = null
 
     /** Reads the server-side values the Server options page shows. */
-    fun loadServerOptions() {
-        if (serverOptionsRequested) return
+    fun loadServerOptions(refresh: Boolean = false) {
+        if (serverOptionsRequested && !refresh) return
         serverOptionsRequested = true
-        viewModelScope.launch {
+        serverOptionsJob?.cancel()
+        serverOptionsJob = viewModelScope.launch {
             launch { repository.getAutoTmmEnabled().onOk { _autoTmmEnabled.value = it } }
             launch {
                 repository.getRssRefreshInterval().onOk { _rssRefreshIntervalMinutes.value = it }
@@ -84,16 +92,35 @@ constructor(
      * Reads the limits the Speed limits page shows. Its schedule is read as the page collects it
      * (see [altSpeedSchedule]).
      */
-    fun loadSpeedLimits() {
-        if (speedLimitsRequested) return
-        speedLimitsRequested = true
+    suspend fun loadSpeedLimits(): Unit = speedLimitsLoadMutex.withLock {
+        coroutineScope {
+            if (_globalLimits.value == null) launch { loadGlobalLimits() }
+            if (_altLimits.value == null) launch { loadAltLimits() }
+        }
+    }
+
+    private suspend fun loadGlobalLimits() {
+        _globalLimits.value =
+            repository.getGlobalDownloadLimit().andThen { dl ->
+                repository.getGlobalUploadLimit().map { ul -> SpeedLimits(dl, ul) }
+            }
+    }
+
+    private suspend fun loadAltLimits() {
+        _altLimits.value = repository.getAltSpeedLimits().map { (dl, ul) -> SpeedLimits(dl, ul) }
+    }
+
+    internal fun retrySpeedLimits(alternate: Boolean) {
         viewModelScope.launch {
-            launch { repository.getGlobalDownloadLimit().onOk { _globalDownloadLimit.value = it } }
-            launch { repository.getGlobalUploadLimit().onOk { _globalUploadLimit.value = it } }
-            launch {
-                repository.getAltSpeedLimits().onOk { (dl, ul) ->
-                    _altDownloadLimit.value = dl
-                    _altUploadLimit.value = ul
+            speedLimitsLoadMutex.withLock {
+                if (alternate) {
+                    if (_altLimits.value?.getError() == null) return@withLock
+                    _altLimits.value = null
+                    loadAltLimits()
+                } else {
+                    if (_globalLimits.value?.getError() == null) return@withLock
+                    _globalLimits.value = null
+                    loadGlobalLimits()
                 }
             }
         }
@@ -245,39 +272,36 @@ constructor(
         }
     }
 
-    private val _globalDownloadLimit = MutableStateFlow(0)
-    private val _globalUploadLimit = MutableStateFlow(0)
-    private val _altDownloadLimit = MutableStateFlow(0)
-    private val _altUploadLimit = MutableStateFlow(0)
+    private val speedLimitsLoadMutex = Mutex()
+    private val _globalLimits = MutableStateFlow<Result<SpeedLimits, Throwable>?>(null)
+    internal val globalLimits = _globalLimits.asStateFlow()
+    private val _altLimits = MutableStateFlow<Result<SpeedLimits, Throwable>?>(null)
+    internal val altLimits = _altLimits.asStateFlow()
 
-    /** Server-wide speed limits, in bytes/s (0 = unlimited). */
-    val globalDownloadLimit: StateFlow<Int> = _globalDownloadLimit.asStateFlow()
-
-    val globalUploadLimit: StateFlow<Int> = _globalUploadLimit.asStateFlow()
-
-    /** The limits used while "use alternate speed limits" is on, in bytes/s (0 = unlimited). */
-    val altDownloadLimit: StateFlow<Int> = _altDownloadLimit.asStateFlow()
-
-    val altUploadLimit: StateFlow<Int> = _altUploadLimit.asStateFlow()
-
-    /** Limits are in bytes/s; 0 clears the limit (unlimited). */
-    fun setGlobalLimits(downloadBytesPerSec: Int, uploadBytesPerSec: Int) {
+    internal fun setGlobalLimits(changes: SpeedLimitChanges) {
+        if (_globalLimits.value?.get() == null) return
         viewModelScope.launch {
-            val dlOk = repository.setGlobalDownloadLimit(downloadBytesPerSec).get() != null
-            val ulOk = repository.setGlobalUploadLimit(uploadBytesPerSec).get() != null
-            if (dlOk && ulOk) {
-                _globalDownloadLimit.value = downloadBytesPerSec
-                _globalUploadLimit.value = uploadBytesPerSec
+            changes.download?.let { dl ->
+                repository.setGlobalDownloadLimit(dl).onOk {
+                    _globalLimits.value = _globalLimits.value?.map { it.copy(download = dl) }
+                }
+            }
+            changes.upload?.let { ul ->
+                repository.setGlobalUploadLimit(ul).onOk {
+                    _globalLimits.value = _globalLimits.value?.map { it.copy(upload = ul) }
+                }
             }
         }
     }
 
-    /** Alternate limits are in bytes/s; 0 clears the limit (unlimited). */
-    fun setAltLimits(downloadBytesPerSec: Int, uploadBytesPerSec: Int) {
+    internal fun setAltLimits(changes: SpeedLimitChanges) {
+        if (_altLimits.value?.get() == null) return
         viewModelScope.launch {
-            repository.setAltSpeedLimits(downloadBytesPerSec, uploadBytesPerSec).onOk {
-                _altDownloadLimit.value = downloadBytesPerSec
-                _altUploadLimit.value = uploadBytesPerSec
+            repository.setAltSpeedLimits(changes.download, changes.upload).onOk {
+                _altLimits.value =
+                    _altLimits.value?.map {
+                        SpeedLimits(changes.download ?: it.download, changes.upload ?: it.upload)
+                    }
             }
         }
     }
@@ -341,6 +365,11 @@ constructor(
             .map { it.dynamicColors }
             .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    val compactTorrentList: StateFlow<Boolean> =
+        prefsStore.data
+            .map { it.compactTorrentList }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, AppPreferences().compactTorrentList)
+
     val themeMode: StateFlow<Int> =
         prefsStore.data.map { it.themeMode }.stateIn(viewModelScope, SharingStarted.Eagerly, 2)
 
@@ -396,6 +425,10 @@ constructor(
 
     fun setDynamicColors(enabled: Boolean) {
         viewModelScope.launch { prefsStore.updateData { it.copy(dynamicColors = enabled) } }
+    }
+
+    fun setCompactTorrentList(enabled: Boolean) {
+        viewModelScope.launch { prefsStore.updateData { it.copy(compactTorrentList = enabled) } }
     }
 
     fun setThemeMode(mode: Int) {

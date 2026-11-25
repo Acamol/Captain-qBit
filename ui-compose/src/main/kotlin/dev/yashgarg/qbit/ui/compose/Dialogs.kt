@@ -110,29 +110,6 @@ fun ConfirmDialog(
     )
 }
 
-/** [ConfirmDialog] with a second, non-destructive action beside Cancel. */
-@Composable
-fun ThreeActionDialog(
-    title: String,
-    positiveLabel: String,
-    onPositive: () -> Unit,
-    neutralLabel: String,
-    onNeutral: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        confirmButton = { TextButton(onClick = onPositive) { Text(positiveLabel) } },
-        dismissButton = {
-            Row {
-                TextButton(onClick = onNeutral) { Text(neutralLabel) }
-                TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
-            }
-        },
-    )
-}
-
 /** A radio list. Selecting a row reports it immediately; the only button dismisses. */
 @Composable
 fun SingleChoiceDialog(
@@ -167,7 +144,7 @@ fun SingleChoiceDialog(
 fun SelectableRow(label: String, selected: Boolean, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth()
-            .selectable(selected = selected, onClick = onClick)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
             .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

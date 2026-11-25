@@ -20,6 +20,9 @@ import okhttp3.tls.HandshakeCertificates
 import qbittorrent.QBittorrentClient
 
 interface ClientManager {
+    /**
+     * Replays current status and signals each installed client replacement, even EXISTS → EXISTS.
+     */
     val configStatus: SharedFlow<ConfigStatus>
 
     suspend fun checkAndGetClient(): QBittorrentClient?

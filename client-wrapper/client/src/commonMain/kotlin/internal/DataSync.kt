@@ -132,7 +132,13 @@ internal abstract class DataSync<T>(
             clear()
             putAll(newObject)
         } else {
+            // Unlike ordinary array fields, the top-level tags array contains additions only.
+            val tags =
+                newObject["tags"]?.let { added ->
+                    JsonArray((get("tags")?.jsonArray.orEmpty() + added.jsonArray).distinct())
+                }
             merge(newObject, nestedObjectKeys)
+            if (tags != null) put("tags", tags)
         }
         nestedObjectKeys.forEach { key -> dropRemoved(key) }
         dropRemovedStrings("tags")

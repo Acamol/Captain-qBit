@@ -9,11 +9,13 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -30,7 +32,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.NavType
@@ -42,19 +46,19 @@ import androidx.navigation.navArgument
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.ui.config.ConfigScreen
 import dev.yashgarg.qbit.ui.home.HomeScreen
-import dev.yashgarg.qbit.ui.logs.LogsScreen
 import dev.yashgarg.qbit.ui.rss.RssArticlesScreen
 import dev.yashgarg.qbit.ui.rss.RssRuleEditorScreen
 import dev.yashgarg.qbit.ui.rss.RssScreen
 import dev.yashgarg.qbit.ui.search.SearchScreen
 import dev.yashgarg.qbit.ui.search.plugins.SearchPluginsScreen
+import dev.yashgarg.qbit.ui.server.ServerOverviewScreen
 import dev.yashgarg.qbit.ui.server.ServerScreen
+import dev.yashgarg.qbit.ui.server.ServerViewModel
 import dev.yashgarg.qbit.ui.serverlist.ServerListScreen
 import dev.yashgarg.qbit.ui.settings.AppearanceSettingsScreen
 import dev.yashgarg.qbit.ui.settings.BackupSettingsScreen
 import dev.yashgarg.qbit.ui.settings.NotificationSettingsScreen
 import dev.yashgarg.qbit.ui.settings.PrivacySettingsScreen
-import dev.yashgarg.qbit.ui.settings.ServerSettingsScreen
 import dev.yashgarg.qbit.ui.settings.SettingsScreen
 import dev.yashgarg.qbit.ui.settings.SettingsViewModel
 import dev.yashgarg.qbit.ui.settings.SpeedLimitsScreen
@@ -105,7 +109,7 @@ fun QbitNavHost(
     // exiting from them would strand the user, and only Server is a genuine exit point.
     val backStackEntry by navController.currentBackStackEntryAsState()
     val route = backStackEntry?.destination?.route
-    val topLevelRoutes = setOf(Routes.SERVER, Routes.RSS, Routes.SETTINGS)
+    val topLevelRoutes = TOP_LEVEL_DESTINATIONS.map { it.route }.toSet()
     val atRoot = route == Routes.HOME || route == Routes.SERVER
     BackHandler(enabled = atRoot) { onExitDoubleBack() }
 
@@ -141,7 +145,7 @@ fun QbitNavHost(
         NavHost(
             navController = navController,
             startDestination = Routes.HOME,
-            modifier = Modifier.padding(innerPadding),
+            modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding),
             enterTransition = { fadeIn(fadeInSpec) },
             exitTransition = { fadeOut(fadeOutSpec) },
             popEnterTransition = { fadeIn(fadeInSpec) },
@@ -156,11 +160,21 @@ fun QbitNavHost(
             composable(Routes.SERVER) { ServerScreen(appNavigator = appNavigator) }
             composable(Routes.SETTINGS) { SettingsScreen(appNavigator = appNavigator) }
             composable(Routes.VERSION) { VersionScreen(appNavigator = appNavigator) }
-            composable(Routes.LOGS) { LogsScreen(appNavigator = appNavigator) }
-            // These two read from the server, each with a view model of its own, so every visit
-            // starts from what the server has now rather than from an earlier visit's copy.
+            composable(Routes.SERVER_OVERVIEW) { entry ->
+                val selectedTab by
+                    entry.savedStateHandle.getStateFlow(SERVER_TAB, 0).collectAsStateWithLifecycle()
+                ServerOverviewScreen(
+                    appNavigator = appNavigator,
+                    selectedTab = selectedTab,
+                    onTabSelected = { entry.savedStateHandle[SERVER_TAB] = it },
+                    viewModel =
+                        hiltViewModel<ServerViewModel>(
+                            remember(entry) { navController.getBackStackEntry(Routes.SERVER) },
+                        ),
+                )
+            }
+            // Read the limits afresh for each visit rather than reusing an earlier page's values.
             composable(Routes.SPEED_LIMITS) { SpeedLimitsScreen(appNavigator = appNavigator) }
-            composable(Routes.SERVER_SETTINGS) { ServerSettingsScreen(appNavigator = appNavigator) }
             composable(Routes.PRIVACY_SETTINGS) { entry ->
                 PrivacySettingsScreen(
                     appNavigator = appNavigator,
@@ -255,6 +269,7 @@ private fun settingsViewModel(navController: NavController, entry: NavBackStackE
     )
 
 private const val FADE_THROUGH_MS = 90
+private const val SERVER_TAB = "serverTab"
 
 private data class TopLevelDestination(val route: String, val label: Int, val icon: ImageVector)
 
@@ -266,6 +281,11 @@ private val TOP_LEVEL_DESTINATIONS =
             Icons.AutoMirrored.Filled.List,
         ),
         TopLevelDestination(Routes.RSS, CommonR.string.rss_title, Icons.Filled.RssFeed),
+        TopLevelDestination(
+            Routes.SERVER_OVERVIEW,
+            CommonR.string.server_destination_label,
+            Icons.Filled.Storage,
+        ),
         TopLevelDestination(Routes.SETTINGS, CommonR.string.settings_label, Icons.Filled.Settings),
     )
 
@@ -276,16 +296,27 @@ private fun QbitBottomNavigationBar(navController: NavController, currentRoute: 
             NavigationBarItem(
                 selected = currentRoute == destination.route,
                 onClick = {
-                    navController.navigate(destination.route) {
-                        popUpTo(Routes.SERVER) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
+                    navController.openTopLevel(destination.route)
                 },
                 icon = { Icon(destination.icon, contentDescription = null) },
-                label = { Text(stringResource(destination.label)) },
+                label = {
+                    Text(
+                        stringResource(destination.label),
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
             )
         }
+    }
+}
+
+private fun NavController.openTopLevel(route: String) {
+    navigate(route) {
+        popUpTo(Routes.SERVER) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
     }
 }
 
@@ -315,9 +346,11 @@ private fun NavController.execute(command: NavCommand) {
         is NavCommand.OpenTorrent -> navigate(Routes.torrentDetails(command.hash))
         NavCommand.OpenServerList -> navigate(Routes.SERVERS)
         NavCommand.OpenVersion -> navigate(Routes.VERSION)
-        NavCommand.OpenLogs -> navigate(Routes.LOGS)
+        NavCommand.OpenServerOverview -> {
+            openTopLevel(Routes.SERVER_OVERVIEW)
+            getBackStackEntry(Routes.SERVER_OVERVIEW).savedStateHandle[SERVER_TAB] = 0
+        }
         NavCommand.OpenSpeedLimits -> navigate(Routes.SPEED_LIMITS)
-        NavCommand.OpenServerSettings -> navigate(Routes.SERVER_SETTINGS)
         NavCommand.OpenPrivacySettings -> navigate(Routes.PRIVACY_SETTINGS)
         NavCommand.OpenNotificationSettings -> navigate(Routes.NOTIFICATION_SETTINGS)
         NavCommand.OpenAppearanceSettings -> navigate(Routes.APPEARANCE_SETTINGS)

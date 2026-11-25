@@ -1,6 +1,10 @@
 package dev.yashgarg.qbit.ui.settings
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -12,7 +16,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
@@ -22,11 +25,11 @@ import dev.yashgarg.qbit.ui.rss.RefreshIntervalDialog
 
 /** Preferences stored on the connected qBittorrent server rather than in this app. */
 @Composable
-fun ServerSettingsScreen(
+fun ServerOptionsContent(
     appNavigator: AppNavigator,
-    viewModel: SettingsViewModel = hiltViewModel(),
+    viewModel: SettingsViewModel,
 ) {
-    LaunchedEffect(Unit) { viewModel.loadServerOptions() }
+    LaunchedEffect(Unit) { viewModel.loadServerOptions(refresh = true) }
 
     val autoTmmEnabled by viewModel.autoTmmEnabled.collectAsStateWithLifecycle()
     val rssRefreshIntervalMinutes by
@@ -40,7 +43,7 @@ fun ServerSettingsScreen(
     var showRssIntervalDialog by remember { mutableStateOf(false) }
     var showRssMaxArticlesDialog by remember { mutableStateOf(false) }
 
-    SettingsSubScreen(stringResource(CommonR.string.server_settings_title), appNavigator) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Text(
             stringResource(CommonR.string.server_section_description),
             style = MaterialTheme.typography.bodySmall,

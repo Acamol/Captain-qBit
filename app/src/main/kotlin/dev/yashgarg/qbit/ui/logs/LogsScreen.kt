@@ -1,45 +1,45 @@
 package dev.yashgarg.qbit.ui.logs
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
+import androidx.compose.material3.SegmentedListItem
+import androidx.compose.material3.SmallExtendedFloatingActionButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,16 +48,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.common.R as CommonR
-import dev.yashgarg.qbit.ui.navigation.AppNavigator
-import dev.yashgarg.qbit.ui.navigation.NavCommand
+import dev.yashgarg.qbit.ui.navigation.NoWindowInsets
 import dev.yashgarg.qbit.utils.rememberCopyToClipboard
 import dev.yashgarg.qbit.utils.toDate
 import kotlinx.coroutines.launch
@@ -65,82 +62,96 @@ import qbittorrent.models.LogEntry
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LogsScreen(appNavigator: AppNavigator, viewModel: LogsViewModel = hiltViewModel()) {
+fun ServerLogsContent(serverId: Int, viewModel: LogsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var searchOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(serverId) { viewModel.loadServer(serverId) }
     var query by remember { mutableStateOf("") }
+    var severity by remember { mutableStateOf<LogSeverity?>(null) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     // Show the "jump to top" button once the newest entries have scrolled out of view.
     val showScrollTop by remember { derivedStateOf { listState.firstVisibleItemIndex > 3 } }
 
     val filtered =
-        if (query.isBlank()) state.entries
-        else state.entries.filter { it.message.contains(query.trim(), ignoreCase = true) }
+        remember(state.entries, query, severity) {
+            filterLogEntries(state.entries, query, severity).asReversed()
+        }
+    LaunchedEffect(query, severity) { listState.scrollToItem(0) }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(CommonR.string.server_logs_title)) },
-                navigationIcon = {
-                    IconButton(onClick = { appNavigator.navigate(NavCommand.Back) }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription =
-                                stringResource(CommonR.string.content_description_back),
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = {
-                            searchOpen = !searchOpen
-                            if (!searchOpen) query = ""
+            Column {
+                Row(
+                    modifier =
+                        Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        modifier = Modifier.weight(1f),
+                        placeholder = {
+                            Text(stringResource(CommonR.string.search_log_messages_placeholder))
                         },
-                    ) {
-                        Icon(
-                            if (searchOpen) Icons.Filled.Close else Icons.Filled.Search,
-                            contentDescription =
-                                stringResource(
-                                    if (searchOpen) CommonR.string.content_description_close_search
-                                    else CommonR.string.content_description_search,
-                                ),
-                        )
-                    }
+                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                        trailingIcon = {
+                            if (query.isNotEmpty()) {
+                                IconButton(onClick = { query = "" }) {
+                                    Icon(
+                                        Icons.Filled.Close,
+                                        contentDescription =
+                                            stringResource(
+                                                CommonR.string.content_description_clear,
+                                            ),
+                                    )
+                                }
+                            }
+                        },
+                        shape = MaterialTheme.shapes.extraLarge,
+                        singleLine = true,
+                    )
                     IconButton(onClick = { viewModel.refresh() }, enabled = !state.refreshing) {
                         Icon(
                             Icons.Filled.Refresh,
                             contentDescription = stringResource(CommonR.string.refresh_action),
                         )
                     }
-                },
-            )
+                }
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(listOf(null) + LogSeverity.entries) { level ->
+                        FilterChip(
+                            selected = severity == level,
+                            onClick = { severity = if (severity == level) null else level },
+                            label = {
+                                Text(
+                                    stringResource(
+                                        level?.labelResource() ?: CommonR.string.all_label,
+                                    ),
+                                )
+                            },
+                            leadingIcon =
+                                if (severity == level) {
+                                    {
+                                        Icon(
+                                            Icons.Filled.Check,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(FilterChipDefaults.IconSize),
+                                        )
+                                    }
+                                } else null,
+                        )
+                    }
+                }
+            }
         },
+        contentWindowInsets = NoWindowInsets,
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            if (searchOpen) {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                    placeholder = {
-                        Text(stringResource(CommonR.string.search_log_messages_placeholder))
-                    },
-                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                    trailingIcon = {
-                        if (query.isNotEmpty()) {
-                            IconButton(onClick = { query = "" }) {
-                                Icon(
-                                    Icons.Filled.Close,
-                                    contentDescription =
-                                        stringResource(CommonR.string.content_description_clear),
-                                )
-                            }
-                        }
-                    },
-                    singleLine = true,
-                )
-            }
             PullToRefreshBox(
                 isRefreshing = state.refreshing,
                 onRefresh = { viewModel.refresh() },
@@ -167,12 +178,18 @@ fun LogsScreen(appNavigator: AppNavigator, viewModel: LogsViewModel = hiltViewMo
                         LazyColumn(
                             state = listState,
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding =
+                                PaddingValues(
+                                    start = 16.dp,
+                                    end = 16.dp,
+                                    top = 4.dp,
+                                    bottom = 88.dp,
+                                ),
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
                         ) {
                             // qBittorrent returns entries oldest-first; show the newest at the top.
-                            items(filtered.asReversed(), key = { it.id }) { entry ->
-                                LogCard(entry)
+                            itemsIndexed(filtered, key = { _, entry -> entry.id }) { index, entry ->
+                                LogRow(entry, index, filtered.size)
                             }
                         }
                 }
@@ -193,86 +210,72 @@ fun LogsScreen(appNavigator: AppNavigator, viewModel: LogsViewModel = hiltViewMo
 @Composable
 private fun JumpToNewestPill(visible: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     AnimatedVisibility(visible = visible, modifier = modifier) {
-        Surface(
+        SmallExtendedFloatingActionButton(
             onClick = onClick,
-            shape = RoundedCornerShape(50),
-            color = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-            shadowElevation = 3.dp,
-        ) {
-            Row(
-                Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null)
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    stringResource(CommonR.string.jump_to_newest),
-                    style = MaterialTheme.typography.labelLarge,
+            icon = {
+                Icon(
+                    Icons.Filled.KeyboardArrowUp,
+                    contentDescription = stringResource(CommonR.string.jump_to_newest),
                 )
-            }
-        }
+            },
+            text = { Text(stringResource(CommonR.string.jump_to_newest)) },
+        )
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun LogCard(entry: LogEntry) {
-    val (label, accent) = logLevel(entry.type)
+private fun LogRow(entry: LogEntry, index: Int, count: Int) {
+    val severity = LogSeverity.fromType(entry.type)
+    val accent =
+        when (severity) {
+            LogSeverity.NORMAL -> MaterialTheme.colorScheme.onSurfaceVariant
+            LogSeverity.INFO -> MaterialTheme.colorScheme.primary
+            LogSeverity.WARNING -> MaterialTheme.colorScheme.tertiary
+            LogSeverity.CRITICAL -> MaterialTheme.colorScheme.error
+        }
+    val icon =
+        when (severity) {
+            LogSeverity.NORMAL -> Icons.Filled.Notes
+            LogSeverity.INFO -> Icons.Filled.Info
+            LogSeverity.WARNING -> Icons.Filled.Warning
+            LogSeverity.CRITICAL -> Icons.Filled.Report
+        }
     val copy = rememberCopyToClipboard()
     val copiedLogLineMessage = stringResource(CommonR.string.copied_log_line)
-    ElevatedCard(
-        modifier =
-            Modifier.fillMaxWidth()
-                .combinedClickable(
-                    onClick = {},
-                    onLongClick = {
-                        copy(
-                            "log",
-                            "${logTime(entry.timestamp)}  ${entry.message}",
-                            copiedLogLineMessage,
-                        )
-                    },
-                ),
-    ) {
-        Row(Modifier.height(IntrinsicSize.Min)) {
-            // Severity accent stripe (clipped to the card's rounded corners).
-            Box(Modifier.width(4.dp).fillMaxHeight().background(accent))
-            Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        label,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = accent,
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        logTime(entry.timestamp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.weight(1f),
-                        textAlign = TextAlign.End,
-                    )
-                }
-                Spacer(Modifier.height(6.dp))
-                Text(entry.message, style = MaterialTheme.typography.bodyMedium)
+    val copyLine = {
+        copy("log", "${logTime(entry.timestamp)}  ${entry.message}", copiedLogLineMessage)
+    }
+    SegmentedListItem(
+        onClick = copyLine,
+        onLongClick = copyLine,
+        onLongClickLabel = stringResource(CommonR.string.copy_log_entry_action),
+        shapes = ListItemDefaults.segmentedShapes(index, count),
+        leadingContent = { Icon(icon, contentDescription = null, tint = accent) },
+        overlineContent = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(stringResource(severity.labelResource()), color = accent)
+                Text(
+                    logTime(entry.timestamp),
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.End,
+                )
             }
-        }
+        },
+    ) {
+        Text(entry.message, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
-/** Maps a qBittorrent log [LogEntry.type] bitmask to a display label and accent colour. */
-@Composable
-private fun logLevel(type: Int): Pair<String, Color> =
-    when (type) {
-        LogEntry.TYPE_CRITICAL -> "CRITICAL" to MaterialTheme.colorScheme.error
-        LogEntry.TYPE_WARNING -> "WARNING" to Color(0xFFFFA726)
-        LogEntry.TYPE_INFO -> "INFO" to MaterialTheme.colorScheme.primary
-        else -> "NORMAL" to MaterialTheme.colorScheme.onSurfaceVariant
+private fun LogSeverity.labelResource(): Int =
+    when (this) {
+        LogSeverity.NORMAL -> CommonR.string.log_level_normal
+        LogSeverity.INFO -> CommonR.string.log_level_info
+        LogSeverity.WARNING -> CommonR.string.log_level_warning
+        LogSeverity.CRITICAL -> CommonR.string.log_level_critical
     }
 
 // qBittorrent's log timestamp is unix seconds; guard in case a build reports milliseconds.

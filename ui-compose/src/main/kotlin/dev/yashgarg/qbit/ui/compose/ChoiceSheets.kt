@@ -60,11 +60,10 @@ fun MultipleChoiceSheet(
     onNew: (() -> Unit)? = null,
 ) {
     var selected by remember(labels, initialSelected) { mutableStateOf(initialSelected) }
-    ChoiceSheet(
+    MultipleChoiceSheet(
         title = title,
         labels = labels,
         selected = selected,
-        multiple = true,
         onToggle = { index ->
             selected = if (index in selected) selected - index else selected + index
         },
@@ -73,6 +72,20 @@ fun MultipleChoiceSheet(
         newLabel = newLabel,
         onNew = onNew,
     )
+}
+
+@Composable
+fun MultipleChoiceSheet(
+    title: String,
+    labels: List<String>,
+    selected: Set<Int>,
+    onToggle: (Int) -> Unit,
+    onApply: () -> Unit,
+    onDismiss: () -> Unit,
+    newLabel: String? = null,
+    onNew: (() -> Unit)? = null,
+) {
+    ChoiceSheet(title, labels, selected, true, onToggle, onDismiss, onApply, newLabel, onNew)
 }
 
 @Composable
