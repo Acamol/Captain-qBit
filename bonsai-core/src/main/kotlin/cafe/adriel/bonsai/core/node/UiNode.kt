@@ -126,7 +126,7 @@ internal fun <T> BonsaiScope<T>.DefaultNodeIcon(node: Node<T>) {
         Image(
             painter = icon,
             colorFilter = colorFilter,
-            contentDescription = node.name,
+            contentDescription = null,
         )
     }
 }

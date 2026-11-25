@@ -4,13 +4,12 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.RssFeed
@@ -18,7 +17,6 @@ import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -38,6 +36,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cafe.adriel.bonsai.core.Bonsai
 import cafe.adriel.bonsai.core.BonsaiStyle
@@ -95,8 +94,9 @@ fun RssFeedTreeView(
         tree,
         style = rssTreeStyle(controller),
         lazyListState = listState,
+        contentPadding = PaddingValues(bottom = 96.dp),
         modifier =
-            Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp).then(modifier),
+            Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 4.dp).then(modifier),
         onClick = { node: Node<RssItem> ->
             if (node is BranchNode) {
                 tree.clearSelection()
@@ -275,8 +275,9 @@ private fun rssTreeStyle(controller: RssDragController): BonsaiStyle<RssItem> {
         toggleIconCollapsedContentDescription =
             stringResource(CommonR.string.content_description_expand_folder),
         nodeIconSize = 24.dp,
-        nodePadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
-        nodeSpacing = 6.dp,
+        nodePadding = PaddingValues(horizontal = 8.dp),
+        nodeSpacing = 0.dp,
+        nodeShape = MaterialTheme.shapes.small,
         nodeCollapsedIcon = { node ->
             rememberVectorPainter(
                 if (node is BranchNode) Icons.Rounded.Folder else Icons.Filled.RssFeed,
@@ -294,7 +295,7 @@ private fun rssTreeStyle(controller: RssDragController): BonsaiStyle<RssItem> {
                 controller.draggedItem == node.content -> draggedRowColor
                 controller.draggedItem != null && controller.targetPath == node.content.path ->
                     if (controller.isNestTarget) nestTargetColor else siblingTargetColor
-                else -> Color.Unspecified
+                else -> Color.Transparent
             }
         },
         nodeOffsetY = { node ->
@@ -332,46 +333,47 @@ private fun TreeScope.RssNode(node: RssItem, controller: RssDragController) {
 @Composable
 private fun RssNodeName(node: RssItem, controller: RssDragController) {
     val unreadCount = (node as? RssFeed)?.articles?.count { !it.isRead } ?: 0
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(start = 10.dp),
+    ) {
         Text(
             text = node.name,
+            modifier = Modifier.weight(1f),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
             style =
-                if (node is RssFeed) MaterialTheme.typography.bodyLarge
+                if (node is RssFeed) MaterialTheme.typography.bodyMedium
                 else MaterialTheme.typography.titleSmall,
             fontWeight = if (node is RssFeed) FontWeight.Medium else FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
         )
         if (unreadCount > 0) {
-            Surface(
-                shape = RoundedCornerShape(50),
-                color = MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier.padding(start = 8.dp),
-            ) {
-                Text(
-                    text = unreadCount.toString(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                )
-            }
+            Text(
+                text = unreadCount.toString(),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 8.dp),
+            )
         }
-        Spacer(Modifier.weight(1f))
         Icon(
             Icons.Filled.DragHandle,
             contentDescription = stringResource(CommonR.string.content_description_drag_to_move),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
             modifier =
-                Modifier.pointerInput(node) {
-                    detectDragGestures(
-                        onDragStart = { controller.start(node) },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            controller.drag(dragAmount.y)
-                        },
-                        onDragEnd = { controller.end() },
-                        onDragCancel = { controller.cancel() },
-                    )
-                },
+                Modifier.size(48.dp)
+                    .pointerInput(node) {
+                        detectDragGestures(
+                            onDragStart = { controller.start(node) },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                controller.drag(dragAmount.y)
+                            },
+                            onDragEnd = { controller.end() },
+                            onDragCancel = { controller.cancel() },
+                        )
+                    }
+                    .padding(12.dp),
         )
     }
 }

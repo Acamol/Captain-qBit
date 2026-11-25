@@ -88,6 +88,7 @@ fun <T> Bonsai(
     onLongClick: OnNodeClick<T> = tree::toggleSelection,
     style: BonsaiStyle<T> = BonsaiStyle(),
     lazyListState: LazyListState = rememberLazyListState(),
+    contentPadding: PaddingValues = PaddingValues(0.dp),
 ) {
     val scope =
         remember(tree) {
@@ -102,7 +103,11 @@ fun <T> Bonsai(
         }
 
     with(scope) {
-        LazyColumn(state = lazyListState, modifier = modifier.fillMaxSize()) {
+        LazyColumn(
+            state = lazyListState,
+            modifier = modifier.fillMaxSize(),
+            contentPadding = contentPadding,
+        ) {
             items(tree.nodes, { it.key }) { node -> Node(node) }
         }
     }

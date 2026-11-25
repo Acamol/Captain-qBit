@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="connection_section_title">חיבור</string>
+    <string name="authentication_section_title">אימות</string>
+    <string name="torrent_source_section_title">מקור הטורנט</string>
+    <string name="download_options_section_title">אפשרויות הורדה</string>
+    <string name="active_server_label">שרת פעיל</string>
+    <string name="matching_section_title">התאמה</string>
+    <string name="compact_torrent_list_label">רשימת טורנטים צפופה</string>
+    <string name="compact_torrent_list_subtitle">שורות קטנות יותר עם אותם פרטי העברה עיקריים</string>
     <string name="add_server">הוספת שרת</string>
     <string name="server_settings">הגדרות שרת</string>
     <string name="status_cannot_delete_last_server">לא ניתן למחוק שרת יחיד</string>
@@ -15,6 +23,16 @@
     <string name="seed_status">בהורדה • %1$d/%2$d זורעים</string>
     <string name="speed_status">▼ %1$s/s • ▲ %2$s/s</string>
     <string name="percent_done">%1$s / %2$s • %3$d%%</string>
+    <string name="torrent_progress_percent">%1$d%%</string>
+    <string name="torrent_completed_size">%1$s / %2$s</string>
+    <string name="torrent_remaining_size">%1$s נותרו</string>
+    <string name="transfer_rate">%1$s/s</string>
+    <string name="free_space_label">שטח פנוי</string>
+    <plurals name="visible_torrents_count">
+        <item quantity="one">טורנט אחד</item>
+        <item quantity="two">%1$d טורנטים</item>
+        <item quantity="other">%1$d טורנטים</item>
+    </plurals>
     <string name="seeding">זורע</string>
     <string name="enter_url">כתובת Magnet</string>
     <string name="use_basic_auth">השתמש באימות HTTP בסיסי</string>
@@ -119,6 +137,9 @@
     <string name="manage_tags_title">ניהול תגים</string>
     <string name="no_tags_yet">אין תגים עדיין</string>
     <string name="manage_categories_title">ניהול קטגוריות</string>
+    <string name="edit_save_path_action">עריכת נתיב שמירה</string>
+    <string name="manage_categories_description">עריכת נתיבי שמירה ובחירת צבעים לקטגוריות. הצבעים נשמרים באפליקציה זו.</string>
+    <string name="manage_tags_description">יצירת תגיות או בחירת תגיות למחיקה. שיוך תגיות מתבצע דרך פעולות הטורנט.</string>
     <string name="state_allocating">מקצה</string>
     <string name="state_errored">שגיאה</string>
     <string name="transfer">העברה</string>
@@ -361,7 +382,6 @@
     <string name="filter_stalled_uploading">העלאה ממתינה</string>
     <string name="filter_stalled_downloading">הורדה ממתינה</string>
     <string name="server_logs_action">יומן שרת</string>
-    <string name="manage_named_action">ניהול %1$s</string>
     <string name="status_speed_free_space">↓ %1$s/s ↑ %2$s/s %3$s פנוי</string>
     <string name="auto_tmm_default_label">ניהול טורנטים אוטומטי כברירת מחדל</string>
     <string name="global_speed_limits_subtitle">קביעת מגבלות מהירות ההורדה וההעלאה לכל השרת</string>
@@ -590,6 +610,7 @@
     <string name="status_category_edited">הקטגוריה ״%1$s״ עודכנה</string>
     <string name="status_edit_category_failure">נכשל לערוך את הקטגוריה</string>
     <string name="status_rss_load_failure">נכשל לטעון הזנות RSS</string>
+    <string name="status_rss_rules_load_failure">טעינת כללי RSS נכשלה</string>
     <string name="status_rss_folder_added">התיקייה נוספה</string>
     <string name="status_rss_add_folder_failure">נכשל להוסיף תיקייה</string>
     <string name="status_rss_feed_added">ההזנה נוספה</string>
@@ -643,6 +664,9 @@
     <string name="certificate_expired_warning">תוקף התעודה הזו פג ב-%1$s. אישור התעודה לא ישחזר את החיבור — השרת זקוק לתעודה מחודשת.</string>
     <string name="certificate_not_yet_valid_warning">התעודה הזו אינה תקפה עד %1$s. אישור התעודה לא ישחזר את החיבור — יש לבדוק את השעון בשרת שהנפיק אותה.</string>
     <string name="no_torrents">אין טורנטים</string>
+    <string name="open_torrent_details_action">פתיחת פרטי טורנט</string>
+    <string name="select_torrent_action">בחירת טורנט</string>
+    <string name="deselect_torrent_action">ביטול בחירת טורנט</string>
     <string name="no_torrents_match_filter">אף טורנט אינו תואם למסננים הנוכחיים</string>
     <string name="api_key">מפתח API</string>
     <string name="api_key_hint">בשימוש במקום שם משתמש וסיסמה. דורש qBittorrent 5.2 או עדכני יותר.</string>
@@ -780,6 +804,7 @@
     <string name="status_search_plugins_update_failure">נכשל לעדכן תוספים</string>
     <string name="no_files_match">אין קבצים תואמים</string>
     <string name="search_files_placeholder">חיפוש קבצים (כל המילים, בכל סדר)</string>
+    <string name="search_files_label">חיפוש קבצים</string>
     <string name="tracker_stat_leeches">עלוקות</string>
     <string name="tracker_tier">רמה %1$d</string>
     <string name="tracker_status_working">עובד</string>
@@ -803,4 +828,40 @@
         <item quantity="other">%1$d לא עובדים</item>
     </plurals>
     <string name="search_open_description_page">פתיחת עמוד התיאור</string>
+    <string name="server_destination_label">שרת</string>
+    <string name="server_overview_tab">סקירה</string>
+    <string name="server_logs_tab">יומנים</string>
+    <string name="server_organization_tab">ארגון</string>
+    <string name="server_options_tab">אפשרויות</string>
+    <string name="organization_categories_summary">נתיבי שמירה וצבעי קטגוריות</string>
+    <string name="organization_tags_summary">יצירה ומחיקה של תגיות</string>
+    <string name="server_overview_action">סקירת שרת</string>
+    <string name="switch_server_action">החלפת שרת</string>
+    <string name="filters_done_action">סיום</string>
+    <string name="manage_servers_action">ניהול שרתים</string>
+    <string name="live_transfers_label">העברות בזמן אמת</string>
+    <string name="log_level_normal">רגיל</string>
+    <string name="log_level_info">מידע</string>
+    <string name="log_level_warning">אזהרה</string>
+    <string name="log_level_critical">קריטי</string>
+    <string name="copy_log_entry_action">העתקת רשומת יומן</string>
+    <string name="details_activity_title">פעילות</string>
+    <string name="details_data_title">נתונים שהועברו</string>
+    <string name="details_bandwidth_title">רוחב פס וחיבורים</string>
+    <string name="details_storage_title">אחסון וקטגוריה</string>
+    <string name="details_session_value">בהפעלה זו: %1$s</string>
+    <string name="details_average_download">הורדה ממוצעת</string>
+    <string name="details_average_upload">העלאה ממוצעת</string>
+    <string name="tracker_address_label">כתובת עוקב</string>
+    <string name="status_load_torrent_details_failure">לא ניתן לטעון את פרטי הטורנט</string>
+    <string name="clear_selection_action">ניקוי הבחירה</string>
+    <plurals name="selected_torrents_count">
+        <item quantity="one">נבחר %1$d</item>
+        <item quantity="two">נבחרו %1$d</item>
+        <item quantity="other">נבחרו %1$d</item>
+    </plurals>
+    <string name="invalid_non_negative_number">יש להזין מספר תקין (0 ומעלה)</string>
+    <string name="content_layout_original">מקורי</string>
+    <string name="content_layout_subfolder">תיקיית משנה</string>
+    <string name="content_layout_no_subfolder">ללא תיקיית משנה</string>
 </resources>

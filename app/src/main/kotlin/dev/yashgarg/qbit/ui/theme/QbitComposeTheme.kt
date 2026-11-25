@@ -4,7 +4,7 @@ import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -39,7 +39,7 @@ fun QbitComposeTheme(dynamicColors: Boolean = false, content: @Composable () -> 
             appColorScheme(darkTheme)
         }
     val typography = remember { spaceGroteskTypography() }
-    MaterialTheme(colorScheme = colorScheme, typography = typography) {
+    MaterialExpressiveTheme(colorScheme = colorScheme, typography = typography) {
         // The theme alone doesn't set a default content color (that comes from Surface), so Text
         // without an explicit color would fall back to black. Provide onSurface as the default.
         CompositionLocalProvider(

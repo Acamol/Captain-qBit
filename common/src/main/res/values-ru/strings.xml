@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="connection_section_title">Подключение</string>
+    <string name="authentication_section_title">Аутентификация</string>
+    <string name="torrent_source_section_title">Источник торрента</string>
+    <string name="download_options_section_title">Параметры загрузки</string>
+    <string name="active_server_label">Активный сервер</string>
+    <string name="matching_section_title">Условия совпадения</string>
+    <string name="compact_torrent_list_label">Компактный список торрентов</string>
+    <string name="compact_torrent_list_subtitle">Меньше высота строк, те же основные данные о передаче</string>
     <string name="add_server">Добавить сервер</string>
     <string name="server_settings">Настройки сервера</string>
     <string name="status_cannot_delete_last_server">Нельзя удалить единственный сервер</string>
@@ -15,8 +23,22 @@
     <string name="seed_status">Загрузка • сидов %1$d/%2$d</string>
     <string name="speed_status">▼ %1$s/с • ▲ %2$s/с</string>
     <string name="percent_done">%1$s / %2$s • %3$d%%</string>
+    <string name="torrent_progress_percent">%1$d%%</string>
+    <string name="torrent_completed_size">%1$s / %2$s</string>
+    <string name="torrent_remaining_size">Осталось %1$s</string>
+    <string name="transfer_rate">%1$s/с</string>
+    <string name="free_space_label">Свободно</string>
+    <plurals name="visible_torrents_count">
+        <item quantity="one">%1$d торрент</item>
+        <item quantity="few">%1$d торрента</item>
+        <item quantity="many">%1$d торрентов</item>
+        <item quantity="other">%1$d торрента</item>
+    </plurals>
     <string name="seeding">Раздача</string>
     <string name="no_torrents">Нет торрентов</string>
+    <string name="open_torrent_details_action">Открыть сведения о торренте</string>
+    <string name="select_torrent_action">Выбрать торрент</string>
+    <string name="deselect_torrent_action">Снять выбор торрента</string>
     <string name="no_torrents_match_filter">Нет торрентов, соответствующих текущим фильтрам</string>
     <string name="error">Что-то пошло не так</string>
     <string name="enter_url">Магнит-ссылка</string>
@@ -197,6 +219,9 @@
     <string name="manage_tags_title">Управление метками</string>
     <string name="no_tags_yet">Меток пока нет</string>
     <string name="manage_categories_title">Управление категориями</string>
+    <string name="edit_save_path_action">Изменить путь</string>
+    <string name="manage_categories_description">Изменяйте пути сохранения и выбирайте цвета категорий. Цвета хранятся в этом приложении.</string>
+    <string name="manage_tags_description">Создавайте метки или выбирайте их для удаления. Назначайте метки через действия с торрентами.</string>
     <string name="content_description_edit_named">Править %1$s</string>
     <string name="content_description_delete_named">Удалить %1$s</string>
     <string name="category_name_label">Имя категории</string>
@@ -365,7 +390,6 @@
     <string name="clear_all_action">Очистить все</string>
     <string name="use_alternate_speed_limits_label">Использовать особые ограничения скорости</string>
     <string name="settings_label">Настройки</string>
-    <string name="manage_named_action">Управление: %1$s</string>
     <string name="torrent_already_exists">Торрент уже существует</string>
     <string name="filters_label">Фильтры</string>
     <string name="torrents_title">Торренты</string>
@@ -649,6 +673,7 @@
     <string name="status_category_edited">Категория «%1$s» обновлена</string>
     <string name="status_edit_category_failure">Не удалось изменить категорию</string>
     <string name="status_rss_load_failure">Не удалось загрузить RSS-ленты</string>
+    <string name="status_rss_rules_load_failure">Не удалось загрузить правила RSS</string>
     <string name="status_rss_folder_added">Папка добавлена</string>
     <string name="status_rss_add_folder_failure">Не удалось добавить папку</string>
     <string name="status_rss_feed_added">Лента добавлена</string>
@@ -792,6 +817,7 @@
     <string name="status_search_plugins_update_failure">Не удалось обновить плагины</string>
     <string name="no_files_match">Нет подходящих файлов</string>
     <string name="search_files_placeholder">Поиск файлов (все слова, в любом порядке)</string>
+    <string name="search_files_label">Поиск файлов</string>
     <string name="tracker_stat_leeches">Личеры</string>
     <string name="tracker_tier">Уровень %1$d</string>
     <string name="tracker_status_working">Работает</string>
@@ -818,4 +844,41 @@
         <item quantity="other">%1$d не работает</item>
     </plurals>
     <string name="search_open_description_page">Открыть страницу описания</string>
+    <string name="server_destination_label">Сервер</string>
+    <string name="server_overview_tab">Обзор</string>
+    <string name="server_logs_tab">Журнал</string>
+    <string name="server_organization_tab">Организация</string>
+    <string name="server_options_tab">Параметры</string>
+    <string name="organization_categories_summary">Пути сохранения и цвета категорий</string>
+    <string name="organization_tags_summary">Создание и удаление меток</string>
+    <string name="server_overview_action">Обзор сервера</string>
+    <string name="switch_server_action">Сменить сервер</string>
+    <string name="filters_done_action">Готово</string>
+    <string name="manage_servers_action">Управление серверами</string>
+    <string name="live_transfers_label">Текущие передачи</string>
+    <string name="log_level_normal">Обычный</string>
+    <string name="log_level_info">Информация</string>
+    <string name="log_level_warning">Предупреждение</string>
+    <string name="log_level_critical">Критический</string>
+    <string name="copy_log_entry_action">Копировать запись журнала</string>
+    <string name="details_activity_title">Активность</string>
+    <string name="details_data_title">Переданные данные</string>
+    <string name="details_bandwidth_title">Скорость и соединения</string>
+    <string name="details_storage_title">Хранилище и категория</string>
+    <string name="details_session_value">За сеанс: %1$s</string>
+    <string name="details_average_download">Средняя загрузка</string>
+    <string name="details_average_upload">Средняя отдача</string>
+    <string name="tracker_address_label">Адрес трекера</string>
+    <string name="status_load_torrent_details_failure">Не удалось загрузить сведения о торренте</string>
+    <string name="clear_selection_action">Снять выделение</string>
+    <plurals name="selected_torrents_count">
+        <item quantity="one">Выбрано: %1$d</item>
+        <item quantity="few">Выбрано: %1$d</item>
+        <item quantity="many">Выбрано: %1$d</item>
+        <item quantity="other">Выбрано: %1$d</item>
+    </plurals>
+    <string name="invalid_non_negative_number">Введите допустимое число (0 или больше)</string>
+    <string name="content_layout_original">Исходная структура</string>
+    <string name="content_layout_subfolder">Подпапка</string>
+    <string name="content_layout_no_subfolder">Без подпапки</string>
 </resources>
