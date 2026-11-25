@@ -7,7 +7,6 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,9 +14,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,6 +37,7 @@ import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.models.EventAlertMode
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.ui.compose.AlertDialog
+import dev.yashgarg.qbit.ui.compose.SelectableRow
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.worker.StatusWorker
 
@@ -245,7 +245,7 @@ fun NotificationSettingsScreen(
             onDismissRequest = { showAlertModeDialog = false },
             title = { Text(stringResource(CommonR.string.alert_sound_label)) },
             text = {
-                Column {
+                Column(Modifier.selectableGroup()) {
                     Text(
                         stringResource(CommonR.string.alert_sound_explanation),
                         style = MaterialTheme.typography.bodyMedium,
@@ -257,17 +257,11 @@ fun NotificationSettingsScreen(
                             viewModel.setEventAlertMode(mode)
                             showAlertModeDialog = false
                         }
-                        Row(
-                            modifier =
-                                Modifier.fillMaxWidth()
-                                    .clickable(onClick = choose)
-                                    .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(selected = eventAlertMode == mode, onClick = choose)
-                            Spacer(Modifier.size(12.dp))
-                            Text(stringResource(labelRes))
-                        }
+                        SelectableRow(
+                            label = stringResource(labelRes),
+                            selected = eventAlertMode == mode,
+                            onClick = choose,
+                        )
                     }
                 }
             },

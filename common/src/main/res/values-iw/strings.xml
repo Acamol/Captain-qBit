@@ -153,7 +153,8 @@
     <string name="content_description_show_password">חשיפת סיסמה</string>
     <string name="status_connecting">מתחבר…</string>
     <string name="status_alerts_are_on">התראות דלוקות</string>
-    <string name="status_server_connected">מצב שרת • מחובר</string>
+    <string name="stop_monitoring_action">הפסקת ניטור</string>
+    <string name="status_server_connected">מחובר</string>
     <string name="selected_file">קובץ נבחר</string>
     <string name="unspecified">לא מוגדר</string>
     <string name="torrent_hash">גיבוב</string>
@@ -175,7 +176,7 @@
         <item quantity="two">שני מאמרי RSS חדשים</item>
         <item quantity="other">מאמרים חדשים ב-RSS</item>
     </plurals>
-    <string name="status_server_offline">מצב שרת - מנותק</string>
+    <string name="status_server_offline">מנותק</string>
     <string name="status_new_articles_in_feed">%1$d חדשים ב-%2$s</string>
     <string name="save_path_hint">נתיב שמירה</string>
     <string name="none_option">ללא</string>

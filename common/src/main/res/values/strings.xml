@@ -148,9 +148,10 @@
     <string name="events_quiet_channel_name">Torrent events (quiet hours)</string>
     <string name="status_connecting">Connecting…</string>
     <string name="status_alerts_are_on">Alerts are on</string>
-    <string name="status_server_connected">Server state • Connected</string>
+    <string name="stop_monitoring_action">Stop monitoring</string>
+    <string name="status_server_connected">Connected</string>
     <string name="status_dl_ul_speed">DL: %1$s/s | UL: %2$s/s</string>
-    <string name="status_server_offline">Server state • Offline</string>
+    <string name="status_server_offline">Offline</string>
     <string name="status_reconnecting">Reconnecting…</string>
     <string name="status_download_complete">Download complete</string>
     <string name="status_check_complete">Check complete</string>

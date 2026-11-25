@@ -131,10 +131,11 @@
     <string name="events_quiet_channel_name">События торрентов (тихие часы)</string>
     <string name="status_connecting">Подключение…</string>
     <string name="status_alerts_are_on">Оповещения включены</string>
-    <string name="status_server_connected">Состояние сервера • Подключено</string>
+    <string name="status_server_connected">Подключено</string>
     <string name="status_dl_ul_speed">Загр.: %1$s/с | Отд.: %2$s/с</string>
-    <string name="status_server_offline">Состояние сервера • Не в сети</string>
+    <string name="status_server_offline">Не в сети</string>
     <string name="status_reconnecting">Переподключение…</string>
+    <string name="stop_monitoring_action">Остановить мониторинг</string>
     <string name="status_download_complete">Загрузка завершена</string>
     <string name="status_check_complete">Проверка завершена</string>
     <string name="status_new_articles_in_feed">Новых в %2$s: %1$d</string>

@@ -22,11 +22,15 @@ import dagger.assisted.AssistedInject
 import dev.yashgarg.qbit.MainActivity
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.common.R as CommonR
+import dev.yashgarg.qbit.data.daos.ConfigDao
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.OwnAdds
 import dev.yashgarg.qbit.data.models.OwnAdds.pruned
+import dev.yashgarg.qbit.data.models.activeServer
 import dev.yashgarg.qbit.notifications.AppNotificationManager
+import dev.yashgarg.qbit.notifications.EventNotificationOpenActivity
+import dev.yashgarg.qbit.notifications.EventNotifications
 import dev.yashgarg.qbit.ui.rss.flattenFeeds
 import dev.yashgarg.qbit.utils.LocalizedContext
 import dev.yashgarg.qbit.utils.TorrentFileParser
@@ -51,6 +55,7 @@ constructor(
     @Assisted workerParams: WorkerParameters,
     private val clientManager: ClientManager,
     private val prefsStore: DataStore<AppPreferences>,
+    private val configDao: ConfigDao,
 ) : CoroutineWorker(appContext, workerParams) {
 
     // Notification text has to honour the language chosen in the app, which the worker's
@@ -62,16 +67,27 @@ constructor(
     // Lets WorkManager start this as an expedited foreground service right away. Pick the channel
     // up front from the user's prefs so an events-only user never even briefly sees the louder
     // status notification.
-    override suspend fun getForegroundInfo(): ForegroundInfo =
-        if (prefsStore.data.first().statusNotification) {
-            createForegroundInfo(localized.getString(CommonR.string.status_connecting), "")
+    override suspend fun getForegroundInfo(): ForegroundInfo {
+        val prefs = prefsStore.data.first()
+        val serverName = serverName(prefs)
+        return if (prefs.statusNotification) {
+            createForegroundInfo(
+                localized.getString(CommonR.string.status_connecting),
+                "",
+                serverName = serverName,
+            )
         } else {
             createForegroundInfo(
-                localized.getString(CommonR.string.app_name),
+                null,
                 localized.getString(CommonR.string.status_alerts_are_on),
                 minimal = true,
+                serverName = serverName,
             )
         }
+    }
+
+    private suspend fun serverName(prefs: AppPreferences): String? =
+        configDao.getConfigs().first().activeServer(prefs.activeServerId)?.serverName
 
     override suspend fun doWork(): Result {
         // Promote to a foreground service immediately, while the app is still likely in the
@@ -131,6 +147,7 @@ constructor(
                                     info.dlInfoSpeed.toHumanReadable(),
                                     info.upInfoSpeed.toHumanReadable(),
                                 ),
+                                serverName = serverName(prefs),
                             ),
                         )
                     } catch (e: CancellationException) {
@@ -142,6 +159,7 @@ constructor(
                             createForegroundInfo(
                                 localized.getString(CommonR.string.status_server_offline),
                                 localized.getString(CommonR.string.status_reconnecting),
+                                serverName = serverName(prefs),
                             ),
                         )
                     }
@@ -153,9 +171,10 @@ constructor(
                 // instead of the speed readout.
                 setForeground(
                     createForegroundInfo(
-                        localized.getString(CommonR.string.app_name),
+                        null,
                         localized.getString(CommonR.string.status_alerts_are_on),
                         minimal = true,
+                        serverName = serverName(prefs),
                     ),
                 )
             }
@@ -477,23 +496,26 @@ constructor(
         rssItemPath: String? = null,
     ) {
         val intent =
-            Intent(applicationContext, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            Intent(applicationContext, EventNotificationOpenActivity::class.java).apply {
                 if (torrentHash != null) putExtra(MainActivity.EXTRA_TORRENT_HASH, torrentHash)
                 if (rssItemPath != null) putExtra(MainActivity.EXTRA_RSS_ITEM_PATH, rssItemPath)
+                putExtra(EventNotifications.EXTRA_NOTIFICATION_ID, id)
             }
         val pendingIntent =
-            PendingIntent.getActivity(applicationContext, id, intent, PendingIntent.FLAG_IMMUTABLE)
-        val notification =
-            AppNotificationManager.createEventNotification(
+            PendingIntent.getActivity(
                 applicationContext,
-                title,
-                content,
-                R.drawable.ic_stat_qbit,
-                pendingIntent,
-                quiet = inQuietHours(),
+                id,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
-        AppNotificationManager.sendNotification(applicationContext, id, notification)
+        EventNotifications.post(
+            localized,
+            id,
+            title,
+            content,
+            pendingIntent,
+            quiet = inQuietHours(),
+        )
     }
 
     private fun Torrent.State.isChecking(): Boolean =
@@ -502,9 +524,10 @@ constructor(
             this == Torrent.State.CHECKING_RESUME_DATA
 
     private fun createForegroundInfo(
-        title: String,
+        status: String?,
         text: String,
         minimal: Boolean = false,
+        serverName: String? = null,
     ): ForegroundInfo {
         val closeIntent = WorkManager.getInstance(applicationContext).createCancelPendingIntent(id)
         val intent =
@@ -521,7 +544,7 @@ constructor(
         val notification =
             AppNotificationManager.createNotification(
                 applicationContext,
-                title,
+                serverName ?: localized.getString(CommonR.string.app_name),
                 text,
                 R.drawable.ic_stat_qbit,
                 persistent = true,
@@ -529,7 +552,7 @@ constructor(
                     listOf(
                         Action(
                             null,
-                            localized.getString(CommonR.string.close_action),
+                            localized.getString(CommonR.string.stop_monitoring_action),
                             closeIntent,
                         ),
                     ),
@@ -538,6 +561,7 @@ constructor(
                 priority =
                     if (minimal) NotificationCompat.PRIORITY_MIN
                     else NotificationCompat.PRIORITY_LOW,
+                subText = status,
             )
         // Android 10+ requires declaring a foreground service type for setForeground(). From
         // Android 14 we use specialUse: this monitor runs as long as the user keeps it enabled,
