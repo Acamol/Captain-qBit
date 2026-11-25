@@ -8,7 +8,9 @@ plugins {
 
 android {
     namespace = "cafe.adriel.bonsai.core"
-    compileSdk = 37
+    compileSdk {
+        version = release(37) { minorApiLevel = 1 }
+    }
 
     defaultConfig { minSdk = 28 }
 
