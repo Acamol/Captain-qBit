@@ -799,6 +799,7 @@
     <string name="search_plugin_install_confirm">האם להתקין את התוסף מ־%1$s בשרת?</string>
     <string name="search_plugin_install_confirm_action">התקנה</string>
     <string name="search_plugin_uninstall_action">הסרה</string>
+    <string name="search_plugin_uninstall_named_action">הסרת %1$s</string>
     <string name="search_plugin_uninstall_confirm">האם להסיר את %1$s מהשרת?</string>
     <string name="status_search_plugin_enabled">%1$s מופעל</string>
     <string name="status_search_plugin_disabled">%1$s מבוטל</string>

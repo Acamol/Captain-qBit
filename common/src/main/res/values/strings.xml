@@ -1002,6 +1002,7 @@
     <string name="search_plugin_install_confirm">Install the plugin from %1$s on the server?</string>
     <string name="search_plugin_install_confirm_action">Install</string>
     <string name="search_plugin_uninstall_action">Uninstall</string>
+    <string name="search_plugin_uninstall_named_action">Uninstall %1$s</string>
     <string name="search_plugin_uninstall_confirm">Uninstall %1$s from the server?</string>
     <string name="status_search_plugin_enabled">%1$s enabled</string>
     <string name="status_search_plugin_disabled">%1$s disabled</string>

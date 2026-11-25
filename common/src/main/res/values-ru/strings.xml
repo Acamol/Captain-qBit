@@ -812,6 +812,7 @@
     <string name="search_plugin_install_confirm">Установить плагин из %1$s на сервере?</string>
     <string name="search_plugin_install_confirm_action">Установить</string>
     <string name="search_plugin_uninstall_action">Удалить</string>
+    <string name="search_plugin_uninstall_named_action">Удалить %1$s</string>
     <string name="search_plugin_uninstall_confirm">Удалить %1$s с сервера?</string>
     <string name="status_search_plugin_enabled">%1$s включён</string>
     <string name="status_search_plugin_disabled">%1$s отключён</string>
