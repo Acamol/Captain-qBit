@@ -13,8 +13,7 @@ import javax.crypto.spec.GCMParameterSpec
 /**
  * Encrypts sensitive config fields (server passwords) at rest using an AES-256/GCM key held in the
  * Android Keystore. Stored values are prefixed so plaintext written by older versions is still
- * readable and gets re-encrypted on the next save. All operations fail soft — if the Keystore is
- * unavailable, the original value is returned rather than losing the credential.
+ * readable and gets re-encrypted on the next save. Encryption errors abort the write.
  */
 object CryptoManager {
     private const val TAG = "CryptoManager"
@@ -25,6 +24,7 @@ object CryptoManager {
     private const val IV_LEN = 12
     private const val TAG_BITS = 128
 
+    @Synchronized
     private fun secretKey(): SecretKey {
         val ks = KeyStore.getInstance(KEYSTORE).apply { load(null) }
         (ks.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry)?.let {
@@ -44,17 +44,12 @@ object CryptoManager {
         return generator.generateKey()
     }
 
-    fun encrypt(value: String?): String? {
-        if (value.isNullOrEmpty()) return value
-        return try {
-            val cipher = Cipher.getInstance(TRANSFORMATION)
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey())
-            val encrypted = cipher.doFinal(value.toByteArray(Charsets.UTF_8))
-            PREFIX + Base64.encodeToString(cipher.iv + encrypted, Base64.NO_WRAP)
-        } catch (e: Exception) {
-            Log.e(TAG, "Encryption failed, storing value unencrypted", e)
-            value
-        }
+    fun encrypt(value: String): String {
+        if (value.isEmpty()) return value
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey())
+        val encrypted = cipher.doFinal(value.toByteArray(Charsets.UTF_8))
+        return PREFIX + Base64.encodeToString(cipher.iv + encrypted, Base64.NO_WRAP)
     }
 
     fun decrypt(value: String?): String? {

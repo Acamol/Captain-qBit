@@ -675,6 +675,7 @@
     <string name="status_checking_connection">Checking connection, please wait…</string>
     <string name="status_client_version">Success! Client version is %1$s</string>
     <string name="status_test_failed">Failed! %1$s</string>
+    <string name="status_config_save_failure">Could not save the server configuration. Check device storage and try again.</string>
     <string name="status_config_exported">Configuration exported</string>
     <string name="status_export_failed">Export failed: %1$s</string>
     <string name="status_import_failed">Import failed: %1$s</string>

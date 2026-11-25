@@ -31,10 +31,12 @@ interface ConfigDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE) fun addConfig(config: ServerConfig)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE) fun addConfigs(configs: List<ServerConfig>)
+
     @Transaction
     fun replaceConfigs(configs: List<ServerConfig>) {
         require(configs.isNotEmpty())
         clearConfigs()
-        configs.forEach(::addConfig)
+        addConfigs(configs)
     }
 }

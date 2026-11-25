@@ -438,6 +438,7 @@
     <string name="status_checking_connection">בודק חיבור, נא להמתין…</string>
     <string name="status_client_version">הצלחה! גרסת הלקוח היא %1$s</string>
     <string name="status_test_failed">נכשל! %1$s</string>
+    <string name="status_config_save_failure">לא ניתן לשמור את הגדרות השרת. יש לבדוק את האחסון במכשיר ולנסות שוב.</string>
     <string name="status_config_exported">התצורה יוצאה</string>
     <string name="status_export_failed">הייצוא נכשל: %1$s</string>
     <string name="status_import_failed">הייבוא נכשל: %1$s</string>

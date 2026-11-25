@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.coroutines.runSuspendCatching
+import com.github.michaelbull.result.map
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.yashgarg.qbit.data.daos.ConfigDao
 import dev.yashgarg.qbit.data.manager.CertificateProbe
@@ -16,7 +17,6 @@ import dev.yashgarg.qbit.data.models.ServerConfig
 import dev.yashgarg.qbit.validation.HostValidator
 import dev.yashgarg.qbit.validation.PortValidator
 import dev.yashgarg.qbit.validation.StringValidator
-import java.security.cert.X509Certificate
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import qbittorrent.*
 
 @HiltViewModel
@@ -222,7 +223,7 @@ constructor(
         }
     }
 
-    fun insert(
+    internal suspend fun insert(
         serverName: String,
         serverHost: String,
         port: String,
@@ -233,10 +234,10 @@ constructor(
         apiKey: String?,
         basicAuthUsername: String?,
         basicAuthPassword: String?,
-        pinnedCertificateDer: ByteArray? = null,
+        approvedCertificate: ConfigCertificateReview? = null,
         clearPinnedCertificate: Boolean = false,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
+    ): Result<Unit, Throwable> = runSuspendCatching {
+        withContext(Dispatchers.IO) {
             val editing = serverId >= 0
             val wasEmpty = configDao.maxConfigId() == -1
             val newId = if (editing) serverId else configDao.maxConfigId() + 1
@@ -257,6 +258,10 @@ constructor(
                         (if (connectionType.trim() == "http") ConnectionType.HTTP
                         else ConnectionType.HTTPS)
             val existingPin = if (addressUnchanged) previous.pinnedCertificate else null
+            val pinnedCertificateDer =
+                approvedCertificate?.approvedDerFor(
+                    ConfigCertificateEndpoint.from(trimmedHost, port, connectionType.trim()),
+                )
             val config =
                 ServerConfig(
                     configId = newId,
@@ -266,14 +271,15 @@ constructor(
                     port = resolvedPort,
                     path = if (path.isEmpty()) null else "/$path",
                     username = username.trim(),
-                    password = CryptoManager.encrypt(password.trim()) ?: password.trim(),
+                    password = CryptoManager.encrypt(password),
                     connectionType =
                         if (connectionType.trim() == "http") ConnectionType.HTTP
                         else ConnectionType.HTTPS,
                     basicAuthUsername = basicAuthUsername?.trim()?.ifEmpty { null },
                     basicAuthPassword =
-                        CryptoManager.encrypt(basicAuthPassword?.trim()?.ifEmpty { null }),
-                    apiKey = CryptoManager.encrypt(apiKey?.trim()?.ifEmpty { null }),
+                        basicAuthPassword?.takeIf { it.isNotEmpty() }?.let(CryptoManager::encrypt),
+                    apiKey =
+                        apiKey?.trim()?.takeIf { it.isNotEmpty() }?.let(CryptoManager::encrypt),
                     pinnedCertificate =
                         when {
                             pinnedCertificateDer != null ->
@@ -288,14 +294,13 @@ constructor(
         }
     }
 
-    /**
-     * Persists an approved certificate pin immediately for the server being edited, independent of
-     * the rest of the form (a no-op when adding a brand-new server - there's no row yet, so the pin
-     * travels via [insert]'s `pinnedCertificateDer` param instead).
-     */
     /** Fetches the certificate a server presents, for the user to review before trusting it. */
-    suspend fun probeCertificate(host: String, port: Int): Result<X509Certificate, Throwable> =
-        CertificateProbe.fetchPresentedCertificate(host, port)
+    internal suspend fun probeCertificate(
+        endpoint: ConfigCertificateEndpoint,
+    ): Result<ConfigCertificateReview, Throwable> =
+        CertificateProbe.fetchPresentedCertificate(endpoint.host, endpoint.port).map {
+            ConfigCertificateReview(endpoint, it)
+        }
 
     suspend fun testConfig(
         baseUrl: String,

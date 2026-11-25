@@ -492,6 +492,7 @@
     <string name="status_checking_connection">Проверка соединения, подождите…</string>
     <string name="status_client_version">Успешно! Версия клиента — %1$s</string>
     <string name="status_test_failed">Не удалось! %1$s</string>
+    <string name="status_config_save_failure">Не удалось сохранить настройки сервера. Проверьте хранилище устройства и повторите попытку.</string>
     <string name="status_config_exported">Конфигурация экспортирована</string>
     <string name="status_export_failed">Ошибка экспорта: %1$s</string>
     <string name="status_import_failed">Ошибка импорта: %1$s</string>

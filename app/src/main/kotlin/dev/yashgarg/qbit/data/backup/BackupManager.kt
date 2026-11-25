@@ -201,7 +201,7 @@ constructor(
                     var nextId = configDao.maxConfigId() + 1
                     // Merged-in servers land after the ones already saved, in selection order.
                     var nextPosition = configDao.maxPosition() + 1
-                    var imported = 0
+                    val additions = mutableListOf<ServerConfig>()
                     var skipped = 0
                     var firstNewId: Int? = null
                     // Backup-side configId -> newly assigned id, so the FILTERS group's
@@ -216,15 +216,15 @@ constructor(
                         val id = nextId++
                         configIdRemap[server.configId] = id
                         // Re-encrypt the plaintext backup credentials with this device's key.
-                        configDao.addConfig(
+                        additions.add(
                             server
                                 .copy(configId = id, position = nextPosition++)
                                 .withEncryptedSecrets(),
                         )
                         if (firstNewId == null) firstNewId = id
-                        imported++
                     }
 
+                    configDao.addConfigs(additions)
                     applyPreferences(
                         backup,
                         selectedPrefGroups,
@@ -235,7 +235,7 @@ constructor(
                     if (hadNoServers && firstNewId != null) {
                         clientManager.setActiveServer(firstNewId)
                     }
-                    ImportResult(imported, skipped, replaced = false)
+                    ImportResult(additions.size, skipped, replaced = false)
                 }
             }
         }
@@ -311,9 +311,10 @@ constructor(
      */
     private fun ServerConfig.withEncryptedSecrets(): ServerConfig =
         copy(
-            password = CryptoManager.encrypt(CryptoManager.decrypt(password)) ?: password,
-            basicAuthPassword = CryptoManager.encrypt(CryptoManager.decrypt(basicAuthPassword)),
-            apiKey = CryptoManager.encrypt(CryptoManager.decrypt(apiKey)),
+            password = CryptoManager.encrypt(requireNotNull(CryptoManager.decrypt(password))),
+            basicAuthPassword =
+                CryptoManager.decrypt(basicAuthPassword)?.let(CryptoManager::encrypt),
+            apiKey = CryptoManager.decrypt(apiKey)?.let(CryptoManager::encrypt),
         )
 
     /** Identity keys ([identityKey]) of the servers currently saved, for duplicate detection. */
