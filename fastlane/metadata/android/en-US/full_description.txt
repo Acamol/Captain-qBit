@@ -15,6 +15,7 @@ Features:
 * Optional status notification, plus opt-in alerts when a download or force-recheck finishes or a torrent is added,
   with configurable refresh intervals to trade freshness for battery life
 * Browse RSS feeds and articles, with auto-download rules and notifications for new matches
+* Search torrents through your server's qBittorrent search plugins, and install, enable, or remove plugins
 * Encrypted backup and restore of your servers and settings
 * Optional app lock with your fingerprint, face or device screen lock, with a choice of when it locks, plus hiding the app's preview in recent apps and blocking screenshots
 * Clear failure reasons when a torrent errors, instead of a bare "error"
