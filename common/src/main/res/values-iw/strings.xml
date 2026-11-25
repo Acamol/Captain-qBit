@@ -627,6 +627,8 @@
     <string name="status_rss_rule_renamed">שם הכלל שונה</string>
     <string name="status_rss_rename_rule_failure">נכשל לשנות שם לכלל</string>
     <string name="status_rss_rule_removed">הכלל הוסר</string>
+    <string name="rss_rule_missing">הכלל הזה כבר לא קיים בשרת.</string>
+    <string name="rss_rule_name_in_use">כבר קיים כלל בשם הזה.</string>
     <string name="status_rss_remove_rule_failure">נכשל להסיר כלל</string>
     <string name="status_rss_fetch_torrent_failure">נכשל למשוך את קובץ הטורנט</string>
     <string name="status_rss_interval_updated">מרווח הרענון עודכן</string>

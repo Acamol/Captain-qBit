@@ -5,7 +5,6 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -27,18 +26,18 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -52,12 +51,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.common.R as CommonR
-import dev.yashgarg.qbit.ui.compose.AlertDialog
 import dev.yashgarg.qbit.ui.dialogs.AddTorrentScreen
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
@@ -94,8 +93,14 @@ fun RssArticlesScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(feed?.name ?: stringResource(CommonR.string.articles_title)) },
+            MediumTopAppBar(
+                title = {
+                    Text(
+                        feed?.name ?: stringResource(CommonR.string.articles_title),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { appNavigator.navigate(NavCommand.Back) }) {
                         Icon(
@@ -137,6 +142,16 @@ fun RssArticlesScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
+            if (fetchingArticle != null) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(Modifier.size(20.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Text(stringResource(CommonR.string.fetching_torrent_file))
+                }
+            }
             if (searchOpen) {
                 OutlinedTextField(
                     value = query,
@@ -169,12 +184,20 @@ fun RssArticlesScreen(
                             .sortedByDescending { parseArticleDate(it.date) ?: Instant.MIN }
                 }
             PullToRefreshBox(
-                isRefreshing = uiState.refreshing,
+                isRefreshing = uiState.itemsLoad == RssLoad.Refreshing,
                 onRefresh = { viewModel.refreshItem(itemPath) },
                 modifier = Modifier.fillMaxSize(),
             ) {
                 when {
-                    feed == null -> CircularProgressIndicator(Modifier.fillMaxSize().padding(48.dp))
+                    feed == null && uiState.itemsLoad == RssLoad.Loading ->
+                        CircularProgressIndicator(Modifier.align(Alignment.Center))
+                    feed == null ->
+                        RssLoadError(
+                            (uiState.itemsLoad as? RssLoad.Failed)?.message
+                                ?: stringResource(CommonR.string.status_rss_load_failure),
+                            viewModel::refreshItems,
+                            Modifier.align(Alignment.Center),
+                        )
                     feed.articles.isEmpty() ->
                         Box(Modifier.fillMaxSize()) {
                             Text(
@@ -200,17 +223,17 @@ fun RssArticlesScreen(
                     else ->
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(vertical = 4.dp),
                         ) {
                             items(filtered, key = { it.id }) { article ->
                                 val alreadyAdded =
                                     article.magnetHash()?.let {
                                         it in uiState.existingTorrentHashes
                                     } == true
-                                ArticleCard(
+                                ArticleRow(
                                     article = article,
                                     alreadyAdded = alreadyAdded,
+                                    addEnabled = fetchingArticle == null,
                                     onOpen = {
                                         viewModel.markAsRead(itemPath, article.id)
                                         if (article.link.isNotBlank()) {
@@ -260,20 +283,6 @@ fun RssArticlesScreen(
         }
     }
 
-    if (fetchingArticle != null) {
-        AlertDialog(
-            onDismissRequest = {},
-            confirmButton = {},
-            text = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(Modifier.size(20.dp))
-                    Spacer(Modifier.width(12.dp))
-                    Text(stringResource(CommonR.string.fetching_torrent_file))
-                }
-            },
-        )
-    }
-
     pendingAdd?.let { pending ->
         AddTorrentScreen(
             viewModel = serverViewModel,
@@ -292,50 +301,59 @@ private data class PendingAdd(val prefillUrl: String?, val prefillFileUri: Strin
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ArticleCard(
+private fun ArticleRow(
     article: RssArticle,
     alreadyAdded: Boolean,
+    addEnabled: Boolean,
     onOpen: () -> Unit,
     onAddTorrent: (() -> Unit)?,
 ) {
-    ElevatedCard(modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onOpen)) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    article.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = if (article.isRead) FontWeight.Normal else FontWeight.Bold,
-                    color =
-                        if (article.isRead) MaterialTheme.colorScheme.onSurfaceVariant
-                        else MaterialTheme.colorScheme.onSurface,
-                )
-                Spacer(Modifier.size(4.dp))
-                Text(
-                    article.date,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            when {
-                onAddTorrent != null ->
-                    IconButton(onClick = onAddTorrent) {
-                        Icon(
-                            Icons.Filled.Download,
-                            contentDescription =
-                                stringResource(CommonR.string.content_description_add_torrent),
-                        )
-                    }
-                alreadyAdded ->
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .combinedClickable(onClick = onOpen)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                article.title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = if (article.isRead) FontWeight.Normal else FontWeight.Medium,
+                color =
+                    if (article.isRead) MaterialTheme.colorScheme.onSurfaceVariant
+                    else MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.size(2.dp))
+            Text(
+                article.date,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        when {
+            onAddTorrent != null ->
+                IconButton(onClick = onAddTorrent, enabled = addEnabled) {
                     Icon(
-                        Icons.Filled.CheckCircle,
+                        Icons.Filled.Download,
                         contentDescription =
-                            stringResource(CommonR.string.content_description_already_added),
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(12.dp).size(24.dp),
+                            stringResource(CommonR.string.content_description_add_torrent),
                     )
-            }
+                }
+            alreadyAdded ->
+                Icon(
+                    Icons.Filled.CheckCircle,
+                    contentDescription =
+                        stringResource(CommonR.string.content_description_already_added),
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(12.dp).size(24.dp),
+                )
         }
     }
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+    )
 }
 
 /**

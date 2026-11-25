@@ -1,6 +1,7 @@
 package dev.yashgarg.qbit.ui.rss
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -8,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -16,9 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material.icons.automirrored.filled.Sort
@@ -26,6 +24,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Schedule
@@ -39,6 +38,7 @@ import androidx.compose.material3.ExposedDropdownMenu
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -65,12 +65,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -78,8 +80,11 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.common.R as CommonR
+import dev.yashgarg.qbit.ui.compose.ActionSheet
+import dev.yashgarg.qbit.ui.compose.ActionSheetItem
 import dev.yashgarg.qbit.ui.compose.AlertDialog
 import dev.yashgarg.qbit.ui.compose.RssFeedTreeView
+import dev.yashgarg.qbit.ui.compose.SingleChoiceSheet
 import dev.yashgarg.qbit.ui.compose.TextInputDialog
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
@@ -89,7 +94,6 @@ import kotlinx.coroutines.launch
 import qbittorrent.models.RssFeed
 import qbittorrent.models.RssFolder
 import qbittorrent.models.RssItem
-import qbittorrent.models.RssRule
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,10 +106,15 @@ fun RssScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewMode
     val scope = rememberCoroutineScope()
 
     var addMenuOpen by remember { mutableStateOf(false) }
+    var moreMenuOpen by remember { mutableStateOf(false) }
     var dialog by remember { mutableStateOf<RssDialog?>(null) }
     var matchingArticles by remember { mutableStateOf<Map<String, List<String>>?>(null) }
 
     LaunchedEffect(Unit) { viewModel.status.collect { snackbarHostState.showSnackbar(it) } }
+    LaunchedEffect(pagerState.currentPage) {
+        addMenuOpen = false
+        moreMenuOpen = false
+    }
 
     // This screen's ViewModel is scoped to its own nav back-stack entry and stays alive (with
     // whatever it last loaded) while the rule editor or a feed's articles screen is on top - so
@@ -129,82 +138,108 @@ fun RssScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewMode
                         label = stringResource(CommonR.string.refresh_action),
                         icon = Icons.Filled.Refresh,
                         onClick = { viewModel.refresh() },
-                        enabled = !state.refreshing,
+                        enabled =
+                            state.itemsLoad != RssLoad.Refreshing &&
+                                state.rulesLoad != RssLoad.Refreshing,
                         position = TooltipAnchorPosition.Below,
                     )
-                    TooltipIconButton(
-                        label = stringResource(CommonR.string.refresh_interval_action),
-                        icon = Icons.Filled.Schedule,
-                        onClick = { dialog = RssDialog.RefreshInterval },
-                        position = TooltipAnchorPosition.Below,
-                    )
-                    if (pagerState.currentPage == 0) {
+                    Box {
                         TooltipIconButton(
-                            label =
-                                stringResource(
-                                    if (state.sortDescending) CommonR.string.sort_ascending_action
-                                    else CommonR.string.sort_descending_action,
-                                ),
-                            icon = Icons.AutoMirrored.Filled.Sort,
-                            onClick = { viewModel.toggleSort() },
-                            position = TooltipAnchorPosition.Below,
-                            modifier =
-                                Modifier.graphicsLayer(
-                                    scaleY = if (state.sortDescending) -1f else 1f,
-                                ),
-                        )
-                        TooltipIconButton(
-                            label = stringResource(CommonR.string.mark_all_as_read),
-                            icon = Icons.Filled.DoneAll,
-                            onClick = { viewModel.markAllAsRead() },
-                            position = TooltipAnchorPosition.Below,
-                        )
-                        TooltipIconButton(
-                            label = stringResource(CommonR.string.add),
-                            icon = Icons.Filled.Add,
-                            onClick = { addMenuOpen = true },
+                            label = stringResource(CommonR.string.content_description_more),
+                            icon = Icons.Filled.MoreVert,
+                            onClick = { moreMenuOpen = true },
                             position = TooltipAnchorPosition.Below,
                         )
                         DropdownMenu(
-                            expanded = addMenuOpen,
-                            onDismissRequest = { addMenuOpen = false },
+                            expanded = moreMenuOpen,
+                            onDismissRequest = { moreMenuOpen = false },
                         ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(CommonR.string.add_feed_title)) },
-                                leadingIcon = { Icon(Icons.Filled.RssFeed, null) },
-                                onClick = {
-                                    addMenuOpen = false
-                                    dialog = RssDialog.AddFeed
-                                },
-                            )
+                            if (pagerState.currentPage == 0) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            stringResource(
+                                                if (state.sortDescending)
+                                                    CommonR.string.sort_ascending_action
+                                                else CommonR.string.sort_descending_action,
+                                            ),
+                                        )
+                                    },
+                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, null) },
+                                    onClick = {
+                                        moreMenuOpen = false
+                                        viewModel.toggleSort()
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(stringResource(CommonR.string.mark_all_as_read))
+                                    },
+                                    leadingIcon = { Icon(Icons.Filled.DoneAll, null) },
+                                    onClick = {
+                                        moreMenuOpen = false
+                                        viewModel.markAllAsRead()
+                                    },
+                                )
+                            }
                             DropdownMenuItem(
                                 text = {
-                                    Text(stringResource(CommonR.string.add_folder_menu_item))
+                                    Text(stringResource(CommonR.string.refresh_interval_action))
                                 },
-                                leadingIcon = { Icon(Icons.Filled.CreateNewFolder, null) },
+                                leadingIcon = { Icon(Icons.Filled.Schedule, null) },
                                 onClick = {
-                                    addMenuOpen = false
-                                    dialog = RssDialog.AddFolder
+                                    moreMenuOpen = false
+                                    dialog = RssDialog.RefreshInterval
                                 },
                             )
                         }
-                    } else {
-                        TooltipIconButton(
-                            label = stringResource(CommonR.string.new_rule_action),
-                            icon = Icons.Filled.Add,
-                            onClick = { appNavigator.navigate(NavCommand.OpenRssRuleEditor()) },
-                            position = TooltipAnchorPosition.Below,
-                        )
                     }
                 },
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            Box {
+                val addLabel =
+                    stringResource(
+                        if (pagerState.currentPage == 0) CommonR.string.add_feed_title
+                        else CommonR.string.new_rule_action,
+                    )
+                ExtendedFloatingActionButton(
+                    text = { Text(addLabel) },
+                    icon = { Icon(Icons.Filled.Add, contentDescription = addLabel) },
+                    onClick = {
+                        if (pagerState.currentPage == 0) addMenuOpen = true
+                        else appNavigator.navigate(NavCommand.OpenRssRuleEditor())
+                    },
+                )
+                DropdownMenu(expanded = addMenuOpen, onDismissRequest = { addMenuOpen = false }) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(CommonR.string.add_feed_title)) },
+                        leadingIcon = { Icon(Icons.Filled.RssFeed, null) },
+                        onClick = {
+                            addMenuOpen = false
+                            dialog = RssDialog.AddFeed
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(CommonR.string.add_folder_menu_item)) },
+                        leadingIcon = { Icon(Icons.Filled.CreateNewFolder, null) },
+                        onClick = {
+                            addMenuOpen = false
+                            dialog = RssDialog.AddFolder
+                        },
+                    )
+                }
+            }
+        },
         // No bottomBar here - see NoWindowInsets kdoc.
         contentWindowInsets = NoWindowInsets,
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            PrimaryTabRow(selectedTabIndex = pagerState.currentPage) {
+            PrimaryTabRow(
+                selectedTabIndex = pagerState.currentPage,
+            ) {
                 tabTitles.forEachIndexed { index, title ->
                     Tab(
                         selected = pagerState.currentPage == index,
@@ -226,13 +261,12 @@ fun RssScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewMode
                         onEnable = { viewModel.setRssAutoDownloadingEnabled(true) },
                     )
             }
-            Spacer(Modifier.height(12.dp))
             HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                 when (page) {
                     0 ->
                         FeedsTab(
                             state = state,
-                            onRefresh = viewModel::refresh,
+                            onRefresh = viewModel::refreshItems,
                             onFeedClick = { feed ->
                                 appNavigator.navigate(NavCommand.OpenRssArticles(feed.path))
                             },
@@ -243,13 +277,11 @@ fun RssScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewMode
                     else ->
                         RulesTab(
                             state = state,
-                            onRefresh = viewModel::refresh,
+                            onRefresh = viewModel::refreshRules,
                             onRuleClick = {
                                 appNavigator.navigate(NavCommand.OpenRssRuleEditor(it))
                             },
-                            onToggleEnabled = { name, rule ->
-                                viewModel.setRule(name, rule.copy(enabled = !rule.enabled))
-                            },
+                            onToggleEnabled = viewModel::toggleRule,
                             onViewMatches = { name ->
                                 viewModel.loadMatchingArticles(name) { matchingArticles = it }
                             },
@@ -260,7 +292,7 @@ fun RssScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewMode
     }
 
     matchingArticles?.let { matches ->
-        MatchingArticlesResultDialog(
+        MatchingArticlesResultsScreen(
             matches = matches,
             feeds = state.items.flattenFeeds(),
             onDismiss = { matchingArticles = null },
@@ -289,7 +321,7 @@ fun RssScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewMode
                 onDismiss = { dialog = null },
             )
         is RssDialog.FeedActions ->
-            FeedActionsDialog(
+            FeedActionsSheet(
                 feed = d.feed,
                 onRefresh = {
                     viewModel.refreshItem(d.feed.path)
@@ -307,7 +339,7 @@ fun RssScreen(appNavigator: AppNavigator, viewModel: RssViewModel = hiltViewMode
                 onDismiss = { dialog = null },
             )
         is RssDialog.FolderActions ->
-            FolderActionsDialog(
+            FolderActionsSheet(
                 folder = d.folder,
                 onMoveToFolder = { dialog = RssDialog.MoveItem(d.folder) },
                 onRemove = {
@@ -365,22 +397,26 @@ private sealed interface RssDialog {
 @Composable
 private fun RssWarningBanner(message: String, onEnable: () -> Unit) {
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        color = MaterialTheme.colorScheme.errorContainer,
-        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.small,
     ) {
-        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Icon(
                 Icons.Filled.Warning,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onErrorContainer,
+                tint = MaterialTheme.colorScheme.tertiary,
+                modifier = Modifier.size(20.dp),
             )
             Spacer(Modifier.width(8.dp))
             Text(
                 message,
                 modifier = Modifier.weight(1f),
-                color = MaterialTheme.colorScheme.onErrorContainer,
-                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
             )
             TextButton(onClick = onEnable) { Text(stringResource(CommonR.string.enable_action)) }
         }
@@ -397,18 +433,15 @@ private fun FeedsTab(
     onMove: (item: RssItem, destPath: String) -> Unit,
 ) {
     PullToRefreshBox(
-        isRefreshing = state.refreshing,
+        isRefreshing = state.itemsLoad == RssLoad.Refreshing,
         onRefresh = onRefresh,
         modifier = Modifier.fillMaxSize(),
     ) {
         when {
-            state.loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-            state.error != null ->
-                Text(
-                    state.error,
-                    Modifier.align(Alignment.Center).padding(24.dp),
-                    color = MaterialTheme.colorScheme.error,
-                )
+            state.itemsLoad == RssLoad.Loading ->
+                CircularProgressIndicator(Modifier.align(Alignment.Center))
+            state.itemsLoad is RssLoad.Failed ->
+                RssLoadError(state.itemsLoad.message, onRefresh, Modifier.align(Alignment.Center))
             state.items.isEmpty() ->
                 Text(
                     stringResource(CommonR.string.no_rss_feeds_placeholder),
@@ -439,14 +472,22 @@ private fun RulesTab(
     state: RssState,
     onRefresh: () -> Unit,
     onRuleClick: (String) -> Unit,
-    onToggleEnabled: (String, RssRule) -> Unit,
+    onToggleEnabled: (String, Boolean) -> Unit,
     onViewMatches: (String) -> Unit,
 ) {
     PullToRefreshBox(
-        isRefreshing = state.refreshing,
+        isRefreshing = state.rulesLoad == RssLoad.Refreshing,
         onRefresh = onRefresh,
         modifier = Modifier.fillMaxSize(),
     ) {
+        if (state.rulesLoad == RssLoad.Loading) {
+            CircularProgressIndicator(Modifier.align(Alignment.Center))
+            return@PullToRefreshBox
+        }
+        if (state.rulesLoad is RssLoad.Failed) {
+            RssLoadError(state.rulesLoad.message, onRefresh, Modifier.align(Alignment.Center))
+            return@PullToRefreshBox
+        }
         if (state.rules.isEmpty()) {
             Box(Modifier.fillMaxSize()) {
                 Text(
@@ -460,37 +501,64 @@ private fun RulesTab(
         }
         val sortedRules =
             remember(state.rules) { state.rules.entries.sortedBy { it.key.lowercase() } }
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 4.dp)) {
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(top = 4.dp, bottom = 100.dp),
+        ) {
             items(sortedRules, key = { it.key }) { (name, rule) ->
-                Column {
-                    Row(
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .clickable { onRuleClick(name) }
-                                .padding(horizontal = 20.dp, vertical = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                Row(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .clickable { onRuleClick(name) }
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         Text(
                             name,
-                            modifier = Modifier.weight(1f),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Medium,
                         )
-                        TooltipIconButton(
-                            label = stringResource(CommonR.string.view_matching_articles_action),
-                            icon = Icons.Filled.Visibility,
-                            onClick = { onViewMatches(name) },
-                            position = TooltipAnchorPosition.Below,
-                        )
-                        Switch(
-                            checked = rule.enabled,
-                            onCheckedChange = { onToggleEnabled(name, rule) },
-                        )
+                        if (rule.mustContain.isNotBlank()) {
+                            Text(
+                                rule.mustContain,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     }
-                    HorizontalDivider()
+                    TooltipIconButton(
+                        label = stringResource(CommonR.string.view_matching_articles_action),
+                        icon = Icons.Filled.Visibility,
+                        onClick = { onViewMatches(name) },
+                        position = TooltipAnchorPosition.Below,
+                    )
+                    Switch(
+                        checked = rule.enabled,
+                        onCheckedChange = { onToggleEnabled(name, it) },
+                        enabled = state.rulesLoad == RssLoad.Ready,
+                        modifier = Modifier.semantics { contentDescription = name },
+                    )
                 }
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                )
             }
         }
+    }
+}
+
+@Composable
+internal fun RssLoadError(message: String, onRetry: () -> Unit, modifier: Modifier = Modifier) {
+    Column(modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(message, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+        TextButton(onClick = onRetry) { Text(stringResource(CommonR.string.retry_action)) }
     }
 }
 
@@ -562,18 +630,11 @@ private fun FolderPickerField(
 
 @Composable
 private fun ActionOption(icon: ImageVector, label: String, action: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = action).padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(icon, contentDescription = null)
-        Spacer(Modifier.size(16.dp))
-        Text(label)
-    }
+    ActionSheetItem(label, icon, action)
 }
 
 @Composable
-private fun FeedActionsDialog(
+private fun FeedActionsSheet(
     feed: RssFeed,
     onRefresh: () -> Unit,
     onMarkAllRead: () -> Unit,
@@ -581,69 +642,55 @@ private fun FeedActionsDialog(
     onRemove: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
+    ActionSheet(
         onDismissRequest = onDismiss,
-        title = { Text(feed.name) },
-        text = {
-            Column {
-                ActionOption(
-                    Icons.Filled.Refresh,
-                    stringResource(CommonR.string.refresh_action),
-                    onRefresh,
-                )
-                ActionOption(
-                    Icons.Filled.DoneAll,
-                    stringResource(CommonR.string.mark_all_as_read),
-                    onMarkAllRead,
-                )
-                ActionOption(
-                    Icons.AutoMirrored.Filled.DriveFileMove,
-                    stringResource(CommonR.string.move_to_folder_action),
-                    onMoveToFolder,
-                )
-                ActionOption(
-                    Icons.Filled.Delete,
-                    stringResource(CommonR.string.remove_feed_action),
-                    onRemove,
-                )
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
-        },
-    )
+        title = feed.name,
+    ) {
+        ActionOption(
+            Icons.Filled.Refresh,
+            stringResource(CommonR.string.refresh_action),
+            onRefresh,
+        )
+        ActionOption(
+            Icons.Filled.DoneAll,
+            stringResource(CommonR.string.mark_all_as_read),
+            onMarkAllRead,
+        )
+        ActionOption(
+            Icons.AutoMirrored.Filled.DriveFileMove,
+            stringResource(CommonR.string.move_to_folder_action),
+            onMoveToFolder,
+        )
+        ActionOption(
+            Icons.Filled.Delete,
+            stringResource(CommonR.string.remove_feed_action),
+            onRemove,
+        )
+    }
 }
 
 @Composable
-private fun FolderActionsDialog(
+private fun FolderActionsSheet(
     folder: RssFolder,
     onMoveToFolder: () -> Unit,
     onRemove: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
+    ActionSheet(
         onDismissRequest = onDismiss,
-        title = { Text(folder.name) },
-        text = {
-            Column {
-                ActionOption(
-                    Icons.AutoMirrored.Filled.DriveFileMove,
-                    stringResource(CommonR.string.move_to_folder_action),
-                    onMoveToFolder,
-                )
-                ActionOption(
-                    Icons.Filled.Delete,
-                    stringResource(CommonR.string.remove_folder_action),
-                    onRemove,
-                )
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
-        },
-    )
+        title = folder.name,
+    ) {
+        ActionOption(
+            Icons.AutoMirrored.Filled.DriveFileMove,
+            stringResource(CommonR.string.move_to_folder_action),
+            onMoveToFolder,
+        )
+        ActionOption(
+            Icons.Filled.Delete,
+            stringResource(CommonR.string.remove_folder_action),
+            onRemove,
+        )
+    }
 }
 
 /** A single global setting (not per-feed - qBittorrent has no per-feed refresh interval). */
@@ -728,60 +775,32 @@ private fun MoveItemDialog(
     onDismiss: () -> Unit,
 ) {
     var creatingFolder by remember { mutableStateOf(false) }
-    var newFolderName by remember { mutableStateOf("") }
 
     fun destPathFor(folder: String) = if (folder.isBlank()) itemName else "$folder\\$itemName"
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(CommonR.string.move_item_to_title, itemName)) },
-        text = {
-            if (creatingFolder) {
-                OutlinedTextField(
-                    value = newFolderName,
-                    onValueChange = { newFolderName = it },
-                    label = { Text(stringResource(CommonR.string.new_folder_name_label)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            } else {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    Text(
-                        stringResource(CommonR.string.root_label),
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .clickable { onMove(destPathFor("")) }
-                                .padding(vertical = 10.dp),
-                    )
-                    folders.forEach { folder ->
-                        Text(
-                            folder,
-                            modifier =
-                                Modifier.fillMaxWidth()
-                                    .clickable { onMove(destPathFor(folder)) }
-                                    .padding(vertical = 10.dp),
-                        )
-                    }
-                    TextButton(onClick = { creatingFolder = true }) {
-                        Text(stringResource(CommonR.string.new_folder_ellipsis))
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            if (creatingFolder) {
-                TextButton(
-                    onClick = { onMove(destPathFor(newFolderName.trim())) },
-                    enabled = newFolderName.isNotBlank(),
-                ) {
-                    Text(stringResource(CommonR.string.move_action))
-                }
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
-        },
-    )
+    val title = stringResource(CommonR.string.move_item_to_title, itemName)
+    if (creatingFolder) {
+        val emptyError = stringResource(CommonR.string.invalid_name)
+        TextInputDialog(
+            title = title,
+            label = stringResource(CommonR.string.new_folder_name_label),
+            confirmLabel = stringResource(CommonR.string.move_action),
+            validate = { if (it.isBlank()) emptyError else null },
+            onConfirm = { onMove(destPathFor(it.trim())) },
+            onDismiss = onDismiss,
+        )
+    } else {
+        val destinations = listOf("") + folders
+        SingleChoiceSheet(
+            title = title,
+            labels = listOf(stringResource(CommonR.string.root_label)) + folders,
+            selectedIndex = -1,
+            onSelect = { onMove(destPathFor(destinations[it])) },
+            onDismiss = onDismiss,
+            newLabel = stringResource(CommonR.string.new_folder_ellipsis),
+            onNew = { creatingFolder = true },
+        )
+    }
 }
 
 @Composable

@@ -931,6 +931,8 @@
     <string name="status_rss_rule_renamed">Rule renamed</string>
     <string name="status_rss_rename_rule_failure">Failed to rename rule</string>
     <string name="status_rss_rule_removed">Rule removed</string>
+    <string name="rss_rule_missing">This rule no longer exists on the server.</string>
+    <string name="rss_rule_name_in_use">A rule with this name already exists.</string>
     <string name="status_rss_remove_rule_failure">Failed to remove rule</string>
     <string name="status_rss_fetch_torrent_failure">Failed to fetch the torrent file</string>
     <string name="status_rss_interval_updated">Refresh interval updated</string>
