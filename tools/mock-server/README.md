@@ -7,7 +7,7 @@ needing a real qBittorrent instance or having to stage real torrent states.
 It serves only the endpoints the app hits while browsing + the torrent-details
 screen (`auth/login`, `sync/maindata`, `transfer/info`, `transfer/speedLimitsMode`,
 `app/version`, `torrents/{info,properties,files,trackers,pieceStates}`, `sync/torrentPeers`) and returns a fixed set of
-14 torrents across varied states, a category tree (`distros/*`, `public-domain/*`,
+20 torrents across varied states, a category tree (`distros/*`, `public-domain/*`,
 `creative-commons`, `datasets`), tags and trackers. All demo content is legal
 (Linux ISOs, Creative-Commons films, public-domain books) — no piracy-looking data.
 
@@ -20,6 +20,24 @@ Online search is mocked too (`search/*`): two demo plugins, searches that report
 `Running` for ~4 s while results trickle in, then `Stopped`, and a 409 on `start`
 once 5 jobs are held (until they're deleted). Plugins can be enabled, disabled,
 installed from any URL and uninstalled, all in memory.
+
+## Wave-speed demo
+
+Filter by the **wave-demo** category or tag to compare six downloads at the same
+42% progress. Their speeds stay fixed so the animation is easy to compare:
+
+| Torrent | Selected size | Download speed |
+|---|---|---|
+| No throughput | 1 GiB | 0 B/s (stationary wave) |
+| Slow | 1 GiB | 64 KiB/s |
+| Steady | 1 GiB | 1 MiB/s |
+| Fast | 1 GiB | 10 MiB/s |
+| Very fast | 1 GiB | 100 MiB/s |
+| Fast link, large torrent | 20 GiB | 10 MiB/s |
+
+The last download has the same throughput as **Fast**, but advances through its
+selected size more slowly, so its wave should move more slowly too. These are
+static fixtures, not real transfers; progress stays at 42% until an action changes it.
 
 ## Test aids (for notification testing, no code edits needed)
 
