@@ -1,26 +1,30 @@
 package dev.yashgarg.qbit.ui.torrent.tabs
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.ElevatedCard
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -30,22 +34,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.models.TrackerStatus
+import dev.yashgarg.qbit.ui.compose.ActionSheet
+import dev.yashgarg.qbit.ui.compose.ActionSheetItem
 import dev.yashgarg.qbit.ui.compose.AlertDialog
 import dev.yashgarg.qbit.ui.compose.TextInputDialog
 import dev.yashgarg.qbit.ui.torrent.TorrentDetailsState
 import dev.yashgarg.qbit.ui.torrent.TrackerSummary
+import dev.yashgarg.qbit.ui.torrent.additionalMessage
 import dev.yashgarg.qbit.ui.torrent.displayName
 import dev.yashgarg.qbit.ui.torrent.isPseudoSource
 import dev.yashgarg.qbit.ui.torrent.reportedOrNull
@@ -66,13 +67,30 @@ fun TrackersTab(
     // versions) — leave editing enabled in that case rather than guessing.
     val isPrivate = state.torrentProperties?.isPrivate == true
 
-    val green = colorResource(R.color.green)
-    val yellow = colorResource(R.color.yellow)
-    val red = colorResource(R.color.red)
-
     var dialog by remember { mutableStateOf<TrackerDialog?>(null) }
 
-    LazyColumn(modifier.fillMaxSize()) {
+    LazyColumn(
+        modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                TrackerSummaryLine(trackers.summary(), Modifier.weight(1f))
+                if (!isPrivate) {
+                    FilledTonalIconButton(onClick = { dialog = TrackerDialog.Add }) {
+                        Icon(
+                            Icons.Filled.Add,
+                            contentDescription = stringResource(CommonR.string.add_tracker_action),
+                        )
+                    }
+                }
+            }
+        }
         if (isPrivate) {
             item {
                 Text(
@@ -80,19 +98,6 @@ fun TrackersTab(
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                 )
-            }
-        } else {
-            item {
-                TextButton(
-                    onClick = { dialog = TrackerDialog.Add },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-                ) {
-                    Icon(Icons.Filled.Add, contentDescription = null)
-                    Text(
-                        stringResource(CommonR.string.add_tracker_action),
-                        modifier = Modifier.padding(start = 8.dp),
-                    )
-                }
             }
         }
 
@@ -105,49 +110,79 @@ fun TrackersTab(
             }
         }
 
-        if (trackers.isNotEmpty()) {
-            item { TrackerSummaryLine(trackers.summary()) }
-        }
-
         // No stable key: a torrent can report the same tracker URL more than once (duplicated
         // across tiers), and a duplicate key crashes LazyColumn. Positional is fine for this list.
-        itemsIndexed(trackers) { _, tracker ->
+        itemsIndexed(trackers) { index, tracker ->
             TrackerCard(
                 tracker = tracker,
-                statusColor =
-                    when (TrackerStatus.statusOf(tracker.status)) {
-                        TrackerStatus.CONTACTED_WORKING -> green
-                        TrackerStatus.UPDATING -> yellow
-                        TrackerStatus.NOT_CONTACTED,
-                        TrackerStatus.DISABLED -> MaterialTheme.colorScheme.outline
-                        TrackerStatus.CONTACTED_NOT_WORKING -> red
-                    },
-                editable = !isPrivate && !tracker.isPseudoSource(),
-                onEdit = { dialog = TrackerDialog.Edit(tracker.url) },
-                onRemove = { dialog = TrackerDialog.Remove(tracker.url) },
+                index = index,
+                count = trackers.size,
                 onLongPress = { dialog = TrackerDialog.Menu(tracker) },
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
             )
         }
     }
 
     when (val current = dialog) {
         is TrackerDialog.Menu ->
-            AlertDialog(
+            ActionSheet(
                 onDismissRequest = { dialog = null },
-                title = { Text(current.tracker.displayName()) },
-                text = {
-                    Column {
-                        MenuRow(stringResource(CommonR.string.edit_tracker_label)) {
-                            dialog = TrackerDialog.Edit(current.tracker.url)
+                title = current.tracker.displayName(),
+            ) {
+                val tracker = current.tracker
+                val statusLabel = stringResource(TrackerStatus.statusOf(tracker.status).labelRes())
+                val message = tracker.additionalMessage(statusLabel)
+                val unknown = stringResource(CommonR.string.search_unknown_value)
+                Column(Modifier.padding(horizontal = 24.dp)) {
+                    if (!tracker.isPseudoSource())
+                        DetailRow(stringResource(CommonR.string.tracker_address_label), tracker.url)
+                    DetailRow(
+                        stringResource(CommonR.string.status_section_title),
+                        statusLabel,
+                    )
+                    if (tracker.tier >= 0)
+                        Text(
+                            stringResource(CommonR.string.tracker_tier, tracker.tier),
+                            modifier = Modifier.padding(vertical = 8.dp),
+                        )
+                    listOf(
+                            CommonR.string.seeds to tracker.numSeeds,
+                            CommonR.string.tracker_stat_leeches to tracker.numLeeches,
+                            CommonR.string.peers to tracker.numPeers,
+                            CommonR.string.downloaded to tracker.numDownloaded,
+                        )
+                        .forEach { (label, value) ->
+                            DetailRow(
+                                stringResource(label),
+                                value.reportedOrNull()?.toString() ?: unknown,
+                            )
                         }
-                        MenuRow(stringResource(CommonR.string.remove_tracker_label)) {
-                            dialog = TrackerDialog.Remove(current.tracker.url)
-                        }
+                    if (message != null)
+                        Text(
+                            message,
+                            color =
+                                if (
+                                    TrackerStatus.statusOf(tracker.status) ==
+                                        TrackerStatus.CONTACTED_NOT_WORKING
+                                ) {
+                                    MaterialTheme.colorScheme.error
+                                } else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                }
+                if (!isPrivate && !tracker.isPseudoSource()) {
+                    ActionSheetItem(
+                        stringResource(CommonR.string.edit_tracker_label),
+                        Icons.Filled.Edit,
+                    ) {
+                        dialog = TrackerDialog.Edit(current.tracker.url)
                     }
-                },
-                confirmButton = {},
-            )
+                    ActionSheetItem(
+                        stringResource(CommonR.string.remove_tracker_label),
+                        Icons.Filled.Delete,
+                    ) {
+                        dialog = TrackerDialog.Remove(current.tracker.url)
+                    }
+                }
+            }
         TrackerDialog.Add ->
             TextInputDialog(
                 title = stringResource(CommonR.string.add_trackers_title),
@@ -216,7 +251,7 @@ private sealed interface TrackerDialog {
 }
 
 @Composable
-private fun TrackerSummaryLine(summary: TrackerSummary) {
+private fun TrackerSummaryLine(summary: TrackerSummary, modifier: Modifier = Modifier) {
     Text(
         listOfNotNull(
                 pluralStringResource(
@@ -237,129 +272,95 @@ private fun TrackerSummaryLine(summary: TrackerSummary) {
             )
             .joinToString(" • "),
         style = MaterialTheme.typography.labelLarge,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        modifier = modifier.padding(vertical = 4.dp),
     )
 }
 
 @Composable
 private fun TrackerCard(
     tracker: TorrentTracker,
-    statusColor: Color,
-    editable: Boolean,
-    onEdit: () -> Unit,
-    onRemove: () -> Unit,
+    index: Int,
+    count: Int,
     onLongPress: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
-    val haptics = LocalHapticFeedback.current
     val status = TrackerStatus.statusOf(tracker.status)
+    val statusLabel = stringResource(status.labelRes())
+    val message = tracker.additionalMessage(statusLabel)
+    val statusColor =
+        when (status) {
+            TrackerStatus.CONTACTED_WORKING -> MaterialTheme.colorScheme.primary
+            TrackerStatus.UPDATING -> MaterialTheme.colorScheme.tertiary
+            TrackerStatus.CONTACTED_NOT_WORKING -> MaterialTheme.colorScheme.error
+            TrackerStatus.NOT_CONTACTED,
+            TrackerStatus.DISABLED -> MaterialTheme.colorScheme.onSurfaceVariant
+        }
+    val statusIcon =
+        when (status) {
+            TrackerStatus.CONTACTED_WORKING -> Icons.Filled.CheckCircle
+            TrackerStatus.UPDATING -> Icons.Filled.Sync
+            TrackerStatus.CONTACTED_NOT_WORKING -> Icons.Filled.ErrorOutline
+            TrackerStatus.NOT_CONTACTED,
+            TrackerStatus.DISABLED -> Icons.Filled.RadioButtonUnchecked
+        }
     val unknown = stringResource(CommonR.string.search_unknown_value)
     fun Int.shown() = reportedOrNull()?.toString() ?: unknown
 
-    ElevatedCard(
-        modifier.fillMaxWidth().pointerInput(editable) {
-            if (editable) {
-                detectTapGestures(
-                    onLongPress = {
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onLongPress()
-                    },
-                )
+    SegmentedListItem(
+        onClick = onLongPress,
+        onLongClick = onLongPress,
+        shapes = ListItemDefaults.segmentedShapes(index, count),
+        leadingContent = { Icon(statusIcon, contentDescription = null, tint = statusColor) },
+        trailingContent = { Icon(Icons.Filled.MoreVert, contentDescription = null) },
+        supportingContent = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (!tracker.isPseudoSource())
+                    Text(
+                        tracker.url,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        listOfNotNull(
+                                statusLabel,
+                                if (tracker.tier >= 0)
+                                    stringResource(CommonR.string.tracker_tier, tracker.tier)
+                                else null,
+                            )
+                            .joinToString(" · "),
+                        color = statusColor,
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                    Text(
+                        "${stringResource(CommonR.string.seeds)} ${tracker.numSeeds.shown()}",
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                    Text(
+                        "${stringResource(CommonR.string.peers)} ${tracker.numPeers.shown()}",
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+                if (message != null) {
+                    Text(
+                        message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color =
+                            if (status == TrackerStatus.CONTACTED_NOT_WORKING) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                    )
+                }
             }
         },
     ) {
-        Column(Modifier.padding(start = 16.dp, top = 12.dp, end = 4.dp, bottom = 12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        tracker.displayName(),
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    if (!tracker.isPseudoSource()) {
-                        Text(
-                            tracker.url,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-                if (editable) {
-                    IconButton(onClick = onEdit) {
-                        Icon(
-                            Icons.Filled.Edit,
-                            contentDescription = stringResource(CommonR.string.edit_tracker_label),
-                        )
-                    }
-                    IconButton(onClick = onRemove) {
-                        Icon(
-                            Icons.Filled.Delete,
-                            contentDescription =
-                                stringResource(CommonR.string.remove_tracker_label),
-                        )
-                    }
-                }
-            }
-            Row(
-                modifier = Modifier.padding(top = 6.dp, end = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(Modifier.size(10.dp).background(statusColor, CircleShape))
-                Text(
-                    stringResource(status.labelRes()),
-                    style = MaterialTheme.typography.labelMedium,
-                    modifier = Modifier.padding(start = 8.dp),
-                )
-                if (tracker.tier >= 0) {
-                    Text(
-                        " • " + stringResource(CommonR.string.tracker_tier, tracker.tier),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            Row(Modifier.fillMaxWidth().padding(top = 12.dp, end = 12.dp)) {
-                TrackerStat(tracker.numSeeds.shown(), stringResource(CommonR.string.seeds))
-                TrackerStat(
-                    tracker.numLeeches.shown(),
-                    stringResource(CommonR.string.tracker_stat_leeches),
-                )
-                TrackerStat(tracker.numPeers.shown(), stringResource(CommonR.string.peers))
-                TrackerStat(
-                    tracker.numDownloaded.shown(),
-                    stringResource(CommonR.string.downloaded),
-                )
-            }
-            if (tracker.msg.isNotBlank()) {
-                Text(
-                    tracker.msg,
-                    style = MaterialTheme.typography.bodySmall,
-                    color =
-                        if (status == TrackerStatus.CONTACTED_NOT_WORKING) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    modifier = Modifier.padding(top = 10.dp, end = 12.dp),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun RowScope.TrackerStat(value: String, label: String) {
-    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, style = MaterialTheme.typography.titleMedium)
         Text(
-            label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
+            tracker.displayName(),
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.titleSmall,
         )
     }
 }

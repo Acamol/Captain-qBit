@@ -56,4 +56,35 @@ class TrackerDisplayTest {
 
         assertEquals(TrackerSummary(total = 3, working = 1, notWorking = 1), summary)
     }
+
+    @Test
+    fun `status-only messages are hidden regardless of case or app language`() {
+        val localizedStatus = "\u0420\u0430\u0431\u043e\u0442\u0430\u0435\u0442"
+        assertNull(tracker("https://a").copy(msg = "  WORKING\n").additionalMessage("Working"))
+        assertNull(tracker("https://a").copy(msg = "working").additionalMessage(localizedStatus))
+        assertNull(
+            tracker("https://a").copy(msg = localizedStatus).additionalMessage(localizedStatus),
+        )
+        assertNull(tracker("https://a").copy(msg = " \n").additionalMessage("Working"))
+    }
+
+    @Test
+    fun `informative and contradictory messages are retained`() {
+        assertEquals(
+            "Working; IPv6 unavailable",
+            tracker("https://a")
+                .copy(msg = "Working; IPv6 unavailable")
+                .additionalMessage("Working"),
+        )
+        assertEquals(
+            "Connection timed out",
+            tracker("https://a", status = 4)
+                .copy(msg = "Connection timed out")
+                .additionalMessage("Not working"),
+        )
+        assertEquals(
+            "working",
+            tracker("https://a", status = 4).copy(msg = "working").additionalMessage("Not working"),
+        )
+    }
 }

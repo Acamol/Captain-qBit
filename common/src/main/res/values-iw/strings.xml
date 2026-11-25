@@ -707,6 +707,10 @@
     <string name="pieces_empty">אין עדיין מידע על החתיכות</string>
     <string name="pieces_map_description">ירדו %1$d מתוך %2$d חתיכות</string>
     <string name="pieces_tap_hint">הקשה על בלוק תציג את הקבצים שהוא מכיל</string>
+    <string name="pieces_find_action">חיפוש חתיכה</string>
+    <string name="pieces_number_label">מספר חתיכה</string>
+    <string name="pieces_number_hint">יש להזין מספר בין 1 ל־%1$s. יוצג הבלוק שמכיל את החתיכה.</string>
+    <string name="pieces_show_block_action">הצגת בלוק</string>
     <string name="piece_details_title">חתיכה %1$s מתוך %2$s</string>
     <string name="piece_details_group_title">חתיכות %1$s–%2$s מתוך %3$s</string>
     <string name="piece_details_status">מצב</string>

@@ -718,6 +718,10 @@
     <string name="pieces_empty">Сведений о частях пока нет</string>
     <string name="pieces_map_description">Загружено частей: %1$d из %2$d</string>
     <string name="pieces_tap_hint">Коснитесь блока, чтобы увидеть, какие файлы он содержит</string>
+    <string name="pieces_find_action">Найти часть</string>
+    <string name="pieces_number_label">Номер части</string>
+    <string name="pieces_number_hint">Введите число от 1 до %1$s. Будет показан блок, содержащий эту часть.</string>
+    <string name="pieces_show_block_action">Показать блок</string>
     <string name="piece_details_title">Часть %1$s из %2$s</string>
     <string name="piece_details_group_title">Части %1$s–%2$s из %3$s</string>
     <string name="piece_details_status">Состояние</string>

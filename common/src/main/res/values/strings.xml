@@ -803,6 +803,10 @@
     <string name="pieces_empty">No piece information yet</string>
     <string name="pieces_map_description">%1$d of %2$d pieces downloaded</string>
     <string name="pieces_tap_hint">Tap a block to see which files it holds</string>
+    <string name="pieces_find_action">Find a piece</string>
+    <string name="pieces_number_label">Piece number</string>
+    <string name="pieces_number_hint">Enter a number from 1 to %1$s. The block containing that piece will be shown.</string>
+    <string name="pieces_show_block_action">Show block</string>
     <string name="piece_details_title">Piece %1$s of %2$s</string>
     <string name="piece_details_group_title">Pieces %1$s–%2$s of %3$s</string>
     <string name="piece_details_status">Status</string>
