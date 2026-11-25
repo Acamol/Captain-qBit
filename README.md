@@ -75,6 +75,10 @@ Preview builds use debug signing and include debug tools. To update an existing
 Preview installation without losing its data, use the same debug keystore that
 signed it previously. Preview runs the code on the branch you build.
 
+## Roadmap
+
+See the [roadmap](docs/ROADMAP.md) for planned work and technical reviews.
+
 ## Support
 
 Captain qBit is free and open source. If you find it useful and want to support its
