@@ -117,6 +117,12 @@ android {
     }
 
     buildTypes {
+        create("preview") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".preview"
+            matchingFallbacks += listOf("debug")
+        }
+
         getByName("release") {
             isShrinkResources = true
             isMinifyEnabled = true
@@ -175,6 +181,11 @@ android {
             excludes += "**/*.properties"
         }
     }
+}
+
+// initWith copies build settings, but not debug-only dependency configurations.
+configurations.named("previewImplementation") {
+    extendsFrom(configurations.getByName("debugImplementation"))
 }
 
 // Register the changelog sync as a generated assets dir on every variant.

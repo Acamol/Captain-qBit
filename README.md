@@ -58,6 +58,23 @@ See the [F-Droid listing](https://f-droid.org/packages/dev.acamol.qbit/) for the
 > device-installed certificates for HTTPS, only certificates you've explicitly approved per
 > server.
 
+## Preview builds
+
+With JDK 21 and the Android SDK configured, build a side-by-side testing app with:
+
+```bash
+./gradlew :app:assemblePreview
+```
+
+The APK is written to `app/build/outputs/apk/preview/`. It installs as
+**Captain qBit Preview** (`dev.acamol.qbit.preview`), with separate app data, so it
+does not replace or modify the original app. Existing debug and release builds
+are unchanged.
+
+Preview builds use debug signing and include debug tools. To update an existing
+Preview installation without losing its data, use the same debug keystore that
+signed it previously. Preview runs the code on the branch you build.
+
 ## Support
 
 Captain qBit is free and open source. If you find it useful and want to support its
