@@ -32,7 +32,7 @@ jobs:
         run: ./gradlew spotlessCheck
 
       - name: Build and test
-        run: ./gradlew assembleDebug test
+        run: ./gradlew assembleDebug :app:assemblePreview test
 
       - name: Lint
-        run: ./gradlew :app:lintDebug
+        run: ./gradlew :app:lintDebug :app:lintPreview
