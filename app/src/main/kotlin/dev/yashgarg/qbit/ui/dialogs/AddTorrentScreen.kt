@@ -8,6 +8,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -40,6 +41,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -64,6 +66,7 @@ import dev.yashgarg.qbit.ui.compose.FormSection
 import dev.yashgarg.qbit.ui.compose.FormSwitch
 import dev.yashgarg.qbit.ui.compose.TorrentContentSelectionView
 import dev.yashgarg.qbit.ui.compose.allFileIndices
+import dev.yashgarg.qbit.ui.server.FileSelectionUiState
 import dev.yashgarg.qbit.ui.server.ServerViewModel
 import dev.yashgarg.qbit.ui.torrent.filterContentTree
 import dev.yashgarg.qbit.utils.ClipboardUtil
@@ -100,6 +103,17 @@ fun AddTorrentScreen(
     val linkValidator = remember { LinkValidator() }
     val noFileSelectedMessage = stringResource(CommonR.string.no_file_selected)
     val clipboardEmptyMessage = stringResource(CommonR.string.clipboard_empty)
+    val confirming by viewModel.confirmingAdd.collectAsState()
+    val addConfirmed by viewModel.addConfirmed.collectAsState()
+    val fileSelection by viewModel.fileSelection.collectAsState()
+    val confirmationError = fileSelection?.confirmationError
+
+    LaunchedEffect(addConfirmed) {
+        if (addConfirmed) {
+            viewModel.consumeAddConfirmation()
+            onDismiss()
+        }
+    }
 
     var magnetText by rememberSaveable { mutableStateOf(prefillUrl.orEmpty()) }
     var pickedUri by rememberSaveable { mutableStateOf(prefillFileUri) }
@@ -109,7 +123,6 @@ fun AddTorrentScreen(
     var magnetError by rememberSaveable { mutableStateOf(false) }
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var categoryExpanded by rememberSaveable { mutableStateOf(false) }
-    var confirmed by rememberSaveable { mutableStateOf(false) }
     var filesSearchOpen by rememberSaveable { mutableStateOf(false) }
     var filesQuery by rememberSaveable { mutableStateOf("") }
 
@@ -131,6 +144,7 @@ fun AddTorrentScreen(
 
     // A file was chosen (either picked or prefilled): prepare its tree when possible.
     fun setPickedFile(uri: Uri) {
+        if (viewModel.confirmingAdd.value) return
         pickedUri = uri.toString()
         deselected = emptySet()
         preparedMagnet = null
@@ -170,8 +184,8 @@ fun AddTorrentScreen(
     }
 
     fun dismiss() {
-        // Dismissed without adding: abort a prepared source (removes a metadata-fetch magnet).
-        if (!confirmed) viewModel.cancelFileSelection()
+        if (viewModel.confirmingAdd.value) return
+        viewModel.cancelFileSelection()
         onDismiss()
     }
 
@@ -187,14 +201,17 @@ fun AddTorrentScreen(
     }
 
     fun onAdd() {
+        if (viewModel.confirmingAdd.value) return
         val cat = category.takeIf { it.isNotBlank() }
         val sp = savePath.takeIf { it.isNotBlank() }
         viewModel.saveAddTorrentPrefs(autoTmm, paused)
         if (saveCategory) viewModel.saveDefaultCategory(cat)
 
         when {
-            viewModel.hasPendingSelection ->
+            viewModel.hasPendingSelection -> {
                 viewModel.confirmAdd(deselected, cat, sp, paused, autoTmm)
+                return
+            }
             pickedUri != null -> {
                 val bytes = readUriBytes(context, pickedUri!!.toUri())
                 if (bytes != null) {
@@ -224,8 +241,7 @@ fun AddTorrentScreen(
                 )
             }
         }
-        confirmed = true
-        dismiss()
+        onDismiss()
     }
 
     BackHandler { dismiss() }
@@ -239,7 +255,7 @@ fun AddTorrentScreen(
                 MediumTopAppBar(
                     title = { Text(stringResource(CommonR.string.add_torrent_title)) },
                     navigationIcon = {
-                        IconButton(onClick = { dismiss() }) {
+                        IconButton(onClick = { dismiss() }, enabled = !confirming) {
                             Icon(
                                 Icons.Filled.Close,
                                 contentDescription = stringResource(CommonR.string.cancel),
@@ -247,7 +263,7 @@ fun AddTorrentScreen(
                         }
                     },
                     actions = {
-                        if (selectedTab == 1 && !filesSearchOpen) {
+                        if (!confirming && selectedTab == 1 && !filesSearchOpen) {
                             IconButton(onClick = { filesSearchOpen = true }) {
                                 Icon(
                                     Icons.Filled.Search,
@@ -258,11 +274,15 @@ fun AddTorrentScreen(
                         }
                         FilledTonalButton(
                             onClick = { onAdd() },
+                            enabled = !confirming,
                             modifier = Modifier.padding(end = 16.dp),
                         ) {
                             Icon(Icons.Filled.Check, contentDescription = null)
                             Text(
-                                stringResource(CommonR.string.add),
+                                stringResource(
+                                    if (confirmationError == null) CommonR.string.add
+                                    else CommonR.string.retry_action,
+                                ),
                                 modifier = Modifier.padding(start = 4.dp),
                             )
                         }
@@ -270,7 +290,23 @@ fun AddTorrentScreen(
                 )
             },
         ) { innerPadding ->
+            if (confirming) {
+                Box(
+                    Modifier.fillMaxSize().padding(innerPadding),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator()
+                }
+                return@Scaffold
+            }
             Column(Modifier.fillMaxSize().padding(innerPadding)) {
+                if (confirmationError != null) {
+                    Text(
+                        confirmationError,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
                 PrimaryTabRow(selectedTabIndex = selectedTab) {
                     Tab(
                         selected = selectedTab == 0,
@@ -338,7 +374,7 @@ fun AddTorrentScreen(
                         )
                     1 ->
                         FilesTab(
-                            viewModel = viewModel,
+                            current = fileSelection,
                             deselected = deselected,
                             filesUnavailableReason = filesUnavailableReason,
                             query = filesQuery,
@@ -502,15 +538,12 @@ private fun OptionsTab(
 
 @Composable
 private fun FilesTab(
-    viewModel: ServerViewModel,
+    current: FileSelectionUiState?,
     deselected: Set<Int>,
     filesUnavailableReason: Int?,
     query: String,
     onToggle: (ContentTreeItem) -> Unit,
 ) {
-    val state by viewModel.fileSelection.collectAsState()
-    val current = state
-
     Column(
         Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = if (current?.tree != null) Arrangement.Top else Arrangement.Center,
@@ -537,7 +570,7 @@ private fun FilesTab(
                     )
                 }
             }
-            current != null -> {
+            current != null && current.error == null -> {
                 CircularProgressIndicator()
                 Text(
                     stringResource(CommonR.string.fetching_metadata),
@@ -547,7 +580,10 @@ private fun FilesTab(
             }
             else ->
                 Text(
-                    stringResource(filesUnavailableReason ?: CommonR.string.files_placeholder),
+                    current?.error
+                        ?: stringResource(
+                            filesUnavailableReason ?: CommonR.string.files_placeholder,
+                        ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -499,6 +499,7 @@
     <string name="status_add_torrent_url_success">הטורנט נוסף בהצלחה</string>
     <string name="status_add_torrent_url_failure">נכשל להוסיף את הטורנט</string>
     <string name="status_add_torrent_file_success">הקובץ נוסף בהצלחה</string>
+    <string name="status_torrent_added_tag_cleanup_failed">הטורנט נוסף. יש להסיר ידנית את התגית הזמנית %1$s.</string>
     <string name="status_add_torrent_file_failure">נכשל להוסיף את הקובץ</string>
     <plurals name="status_bulk_category_set">
         <item quantity="one">הקטגוריה הוגדרה על טורנט אחד</item>

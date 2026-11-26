@@ -63,16 +63,28 @@ private constructor(private val resolveClient: suspend () -> QBittorrentClient?)
         return runSuspendCatching { client().getVersion() }
     }
 
+    internal suspend fun getTorrentTags(hash: String): Result<List<String>?, Throwable> =
+        runSuspendCatching {
+            client()
+                .getTorrents(hashes = listOf(hash))
+                .firstOrNull {
+                    it.hash.equals(hash, ignoreCase = true)
+                }
+                ?.tags
+        }
+
     suspend fun addTorrentUrl(
         url: String,
         category: String? = null,
         savePath: String? = null,
         paused: Boolean? = null,
         autoTmm: Boolean? = null,
+        tag: String? = null,
     ): Result<Unit, Throwable> {
         return runSuspendCatching {
             client().addTorrent {
                 urls.add(url)
+                tag?.let(tags::add)
                 this.category = category
                 this.savepath = savePath
                 this.paused = paused
@@ -87,10 +99,12 @@ private constructor(private val resolveClient: suspend () -> QBittorrentClient?)
         savePath: String? = null,
         paused: Boolean? = null,
         autoTmm: Boolean? = null,
+        tag: String? = null,
     ): Result<Unit, Throwable> {
         return runSuspendCatching {
             client().addTorrent {
                 rawTorrents["torrent_file"] = bytes
+                tag?.let(tags::add)
                 this.category = category
                 this.savepath = savePath
                 this.paused = paused

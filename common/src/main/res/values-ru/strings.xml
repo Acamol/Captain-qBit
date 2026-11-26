@@ -551,6 +551,7 @@
     <string name="status_add_torrent_url_success">Торрент успешно добавлен</string>
     <string name="status_add_torrent_url_failure">Не удалось добавить торрент</string>
     <string name="status_add_torrent_file_success">Файл успешно добавлен</string>
+    <string name="status_torrent_added_tag_cleanup_failed">Торрент добавлен. Удалите временную метку %1$s вручную.</string>
     <string name="status_add_torrent_file_failure">Не удалось добавить файл</string>
     <plurals name="status_bulk_category_set">
         <item quantity="one">Категория задана для %1$d торрента</item>
