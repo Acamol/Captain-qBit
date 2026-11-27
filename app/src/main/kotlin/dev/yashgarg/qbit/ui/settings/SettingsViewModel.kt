@@ -370,6 +370,11 @@ constructor(
             .map { it.compactTorrentList }
             .stateIn(viewModelScope, SharingStarted.Eagerly, AppPreferences().compactTorrentList)
 
+    val showServerOverview: StateFlow<Boolean> =
+        prefsStore.data
+            .map { it.showServerOverview }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, AppPreferences().showServerOverview)
+
     val themeMode: StateFlow<Int> =
         prefsStore.data.map { it.themeMode }.stateIn(viewModelScope, SharingStarted.Eagerly, 2)
 
@@ -429,6 +434,10 @@ constructor(
 
     fun setCompactTorrentList(enabled: Boolean) {
         viewModelScope.launch { prefsStore.updateData { it.copy(compactTorrentList = enabled) } }
+    }
+
+    fun setShowServerOverview(enabled: Boolean) {
+        viewModelScope.launch { prefsStore.updateData { it.copy(showServerOverview = enabled) } }
     }
 
     fun setThemeMode(mode: Int) {

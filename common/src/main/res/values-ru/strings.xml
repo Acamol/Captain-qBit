@@ -8,6 +8,8 @@
     <string name="matching_section_title">Условия совпадения</string>
     <string name="compact_torrent_list_label">Компактный список торрентов</string>
     <string name="compact_torrent_list_subtitle">Меньше высота строк, те же основные данные о передаче</string>
+    <string name="show_server_overview_label">Показывать обзор сервера</string>
+    <string name="show_server_overview_subtitle">Показывать скорость передачи и свободное место над списком торрентов</string>
     <string name="add_server">Добавить сервер</string>
     <string name="server_settings">Настройки сервера</string>
     <string name="status_cannot_delete_last_server">Нельзя удалить единственный сервер</string>

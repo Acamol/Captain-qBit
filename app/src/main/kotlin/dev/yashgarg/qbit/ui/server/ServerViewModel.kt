@@ -89,6 +89,11 @@ constructor(
             .map { it.compactTorrentList }
             .stateIn(viewModelScope, SharingStarted.Eagerly, AppPreferences().compactTorrentList)
 
+    val showServerOverview: StateFlow<Boolean> =
+        prefsStore.data
+            .map { it.showServerOverview }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, AppPreferences().showServerOverview)
+
     fun setCompactTorrentList(enabled: Boolean) {
         viewModelScope.launch { prefsStore.updateData { it.copy(compactTorrentList = enabled) } }
     }

@@ -122,6 +122,7 @@ android {
         create("preview") {
             initWith(getByName("debug"))
             applicationIdSuffix = ".preview"
+            versionNameSuffix = "-preview-$commitHash"
             matchingFallbacks += listOf("debug")
         }
 

@@ -64,6 +64,7 @@ fun AppearanceSettingsScreen(
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val dynamicColors by viewModel.dynamicColors.collectAsStateWithLifecycle()
     val compactTorrentList by viewModel.compactTorrentList.collectAsStateWithLifecycle()
+    val showServerOverview by viewModel.showServerOverview.collectAsStateWithLifecycle()
 
     var showThemeDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
@@ -79,6 +80,12 @@ fun AppearanceSettingsScreen(
             checked = compactTorrentList,
             subtitle = stringResource(CommonR.string.compact_torrent_list_subtitle),
             onChange = viewModel::setCompactTorrentList,
+        )
+        SwitchRow(
+            title = stringResource(CommonR.string.show_server_overview_label),
+            checked = showServerOverview,
+            subtitle = stringResource(CommonR.string.show_server_overview_subtitle),
+            onChange = viewModel::setShowServerOverview,
         )
         ClickableRow(
             title = stringResource(CommonR.string.theme_label),

@@ -548,6 +548,8 @@
     <string name="appearance_section_title">Appearance</string>
     <string name="compact_torrent_list_label">Compact torrent list</string>
     <string name="compact_torrent_list_subtitle">Smaller rows with the same key transfer details</string>
+    <string name="show_server_overview_label">Show server overview</string>
+    <string name="show_server_overview_subtitle">Show transfer speeds and free space above the torrent list</string>
     <string name="connection_section_title">Connection</string>
     <string name="authentication_section_title">Authentication</string>
     <string name="torrent_source_section_title">Torrent source</string>

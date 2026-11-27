@@ -31,6 +31,7 @@ data class AppPreferences(
     val serverViewPrefs: Map<Int, ServerViewPrefs> = emptyMap(),
     val dynamicColors: Boolean = false,
     val compactTorrentList: Boolean = true,
+    val showServerOverview: Boolean = true,
     val activeServerId: Int = -1,
     val categoryColors: Map<String, Int> = emptyMap(),
     val statusNotification: Boolean = true,

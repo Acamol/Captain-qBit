@@ -90,7 +90,7 @@ class SettingsViewModelTest {
     private fun viewModel() = SettingsViewModel(prefsStore, repository, appLockManager, configDao)
 
     @Test
-    fun `density controls follow the saved preference and preserve other settings`() = runTest {
+    fun `appearance controls follow saved preferences and preserve other settings`() = runTest {
         prefs.value =
             prefs.value.copy(
                 dynamicColors = true,
@@ -99,6 +99,14 @@ class SettingsViewModelTest {
             )
         val appearance = viewModel()
         val otherConsumer = viewModel()
+
+        assertEquals(true, appearance.showServerOverview.value)
+        appearance.setShowServerOverview(false)
+
+        assertEquals(false, prefs.value.showServerOverview)
+        assertEquals(false, otherConsumer.showServerOverview.value)
+        assertEquals(true, prefs.value.dynamicColors)
+        assertEquals("linux", prefs.value.addTorrentCategory)
 
         appearance.setCompactTorrentList(true)
 
@@ -111,6 +119,9 @@ class SettingsViewModelTest {
 
         assertEquals(false, appearance.compactTorrentList.value)
         assertEquals(false, otherConsumer.compactTorrentList.value)
+        prefsStore.updateData { it.copy(showServerOverview = true) }
+        assertEquals(true, appearance.showServerOverview.value)
+        assertEquals(true, otherConsumer.showServerOverview.value)
     }
 
     @Test

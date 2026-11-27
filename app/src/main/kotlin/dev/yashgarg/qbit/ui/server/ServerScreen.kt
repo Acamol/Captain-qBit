@@ -156,6 +156,7 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
     val torrents by viewModel.sortedTorrents.collectAsStateWithLifecycle()
     val categoryColors by viewModel.categoryColors.collectAsStateWithLifecycle()
     val compactTorrentList by viewModel.compactTorrentList.collectAsStateWithLifecycle()
+    val showServerOverview by viewModel.showServerOverview.collectAsStateWithLifecycle()
     // The server actually connected to, so "Review certificate" probes the one showing the error.
     val activeServerId by viewModel.activeServerId.collectAsStateWithLifecycle()
     val servers by viewModel.servers.collectAsStateWithLifecycle()
@@ -537,7 +538,12 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                     item(key = "list-controls") {
                         Column {
                             val serverState = state.data?.serverState
-                            if (!state.hasError && !state.dataLoading && serverState != null) {
+                            if (
+                                showServerOverview &&
+                                    !state.hasError &&
+                                    !state.dataLoading &&
+                                    serverState != null
+                            ) {
                                 ServerTransferSummary(
                                     downloadSpeed = serverState.dlInfoSpeed,
                                     uploadSpeed = serverState.upInfoSpeed,
