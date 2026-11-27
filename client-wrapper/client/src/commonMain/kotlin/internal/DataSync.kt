@@ -74,16 +74,11 @@ internal abstract class DataSync<T>(
 
     private suspend fun syncData() {
         try {
-            // Get the current MainData value, fetching the initial data if required
+            // Keep the data we already have (also after a failed poll: the next patch is requested
+            // against the last rid we actually received, and the server sends a full update if it
+            // can no longer serve a delta for it). Only fetch a fresh snapshot when there is none.
             val (initialMainData, _) =
-                state.updateAndGet { (mainData, error) ->
-                    if (error == null) {
-                        (mainData ?: fetchData(0).bodyOrThrow(typeInfo)) to null
-                    } else {
-                        // Last request produced an error, try it again
-                        fetchData(syncRid).bodyOrThrow<T>(typeInfo) to null
-                    }
-                }
+                state.updateAndGet { (mainData, _) -> (mainData ?: fetchInitial()) to null }
             syncError.value = null
 
             delay(config.syncInterval)
@@ -91,10 +86,14 @@ internal abstract class DataSync<T>(
             val mainDataJson = json.encodeToJsonElement(serializer, initialMainData).mutateJson()
             // Patch MainData while there is at least one subscriber
             while (isSyncingState.value) {
-                if (syncRid == Long.MAX_VALUE) syncRid = 0
-
-                // Fetch the next MainData patch and merge into existing model, remove any error
-                state.value = mainDataJson.applyPatch(fetchData(++syncRid).bodyOrThrow()) to null
+                // Fetch the next MainData patch and merge into existing model, remove any error.
+                // The server only sends a delta against the rid it last sent, so echo that back
+                // rather than counting locally: with an API key every client shares one server
+                // session, and a guessed rid could match a response sent to another client,
+                // yielding a delta that silently skips changes (e.g. a newly created category).
+                val patch = fetchData(syncRid).bodyOrThrow<JsonObject>()
+                state.value = mainDataJson.applyPatch(patch) to null
+                patch.responseId()?.let { syncRid = it }
                 syncError.value = null
 
                 delay(config.syncInterval)
@@ -115,6 +114,15 @@ internal abstract class DataSync<T>(
             state.update { (mainData, _) -> mainData to null }
         }
     }
+
+    private suspend fun fetchInitial(): T {
+        val body = fetchData(0).bodyOrThrow<JsonObject>()
+        syncRid = body.responseId() ?: 0
+        @Suppress("UNCHECKED_CAST")
+        return json.decodeFromJsonElement(serializer, body) as T
+    }
+
+    private fun JsonObject.responseId(): Long? = get("rid")?.jsonPrimitive?.longOrNull
 
     private suspend fun fetchData(rid: Long): HttpResponse {
         return http.get("${config.baseUrl}/${endpointUrl.trimStart('/')}") {

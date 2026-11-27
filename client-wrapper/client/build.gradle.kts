@@ -28,5 +28,9 @@ kotlin {
         }
 
         jvmMain.dependencies { implementation(kotlin("stdlib-jdk8")) }
+        jvmTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(libs.ktor.client.mock)
+        }
     }
 }

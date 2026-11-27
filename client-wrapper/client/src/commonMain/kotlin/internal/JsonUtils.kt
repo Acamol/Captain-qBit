@@ -15,7 +15,7 @@ internal fun MutableMap<String, JsonElement>.resetRemoved(key: String) {
 internal fun MutableMap<String, JsonElement>.dropRemoved(key: String) {
     val removeKeys = get("${key}_removed").toStringList()
     if (removeKeys.isNotEmpty()) {
-        val items = checkNotNull(get(key)).jsonObject.toMutableMap()
+        val items = get(key)?.jsonObject?.toMutableMap() ?: return
         removeKeys.forEach(items::remove)
         put(key, JsonObject(items))
     }
@@ -25,8 +25,7 @@ internal fun MutableMap<String, JsonElement>.dropRemovedStrings(key: String) {
     val removeKeys = get("${key}_removed").toStringList()
     if (removeKeys.isNotEmpty()) {
         val tags =
-            checkNotNull(get(key))
-                .jsonArray
+            (get(key)?.jsonArray ?: return)
                 .map { it.jsonPrimitive.content }
                 .filterNot(removeKeys::contains)
                 .toMutableList()
@@ -57,6 +56,9 @@ internal fun MutableMap<String, JsonElement>.merge(
 
         put(key, update)
     }
+    // Keys the current object lacks (e.g. "categories" when a full update had none) are taken as
+    // is; otherwise the first category or tag added after such an update would never show.
+    (newJson.keys - keys).forEach { key -> put(key, checkNotNull(newJson[key])) }
     return this
 }
 
