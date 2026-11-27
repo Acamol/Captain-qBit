@@ -251,4 +251,17 @@ class PrefGroupTest {
 
         assertEquals(null, legacy.appLockWeakening(all, strictLock))
     }
+
+    @Test
+    fun `backup keeps auto markers only for categories that have a color`() {
+        val backup =
+            configBackupOf(
+                emptyList(),
+                null,
+                emptySet(),
+                categoryColors = mapOf("movies" to 1),
+                autoCategoryColors = setOf("movies", "stale"),
+            )
+        assertEquals(setOf("movies"), backup.autoCategoryColors)
+    }
 }

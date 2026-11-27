@@ -327,6 +327,7 @@ constructor(
                         preferences,
                         selection.prefGroups,
                         categoryColors,
+                        if (selection.categoryColors) prefs.autoCategoryColors else null,
                     )
                     BackupEvent.Exported(getString(CommonR.string.status_config_exported))
                 } catch (e: Exception) {

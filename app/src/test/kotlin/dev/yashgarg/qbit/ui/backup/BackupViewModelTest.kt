@@ -34,6 +34,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.anyVararg
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doAnswer
@@ -279,7 +280,8 @@ class BackupViewModelTest {
 
             viewModel.exportTo(null)
 
-            verify(backupManager, never()).export(any(), any(), any(), any(), any(), any())
+            verify(backupManager, never())
+                .export(any(), any(), any(), any(), any(), any(), anyOrNull())
         }
 
     @Test

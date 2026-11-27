@@ -1,10 +1,6 @@
 package dev.yashgarg.qbit.ui.server
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -16,7 +12,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -39,13 +34,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
@@ -100,23 +92,6 @@ internal fun ServerDialog.reconcileTargets(state: ServerScreenState): ServerDial
                     ?.let { copy(forSelection = it) }
         else -> this
     }
-
-// App-local preset palette for category colors (qBittorrent has no category color of its own).
-private val presetColors =
-    listOf(
-        0xFFEF5350.toInt(),
-        0xFFEC407A.toInt(),
-        0xFFAB47BC.toInt(),
-        0xFF7E57C2.toInt(),
-        0xFF5C6BC0.toInt(),
-        0xFF42A5F5.toInt(),
-        0xFF26A69A.toInt(),
-        0xFF66BB6A.toInt(),
-        0xFF9CCC65.toInt(),
-        0xFFFFCA28.toInt(),
-        0xFFFFA726.toInt(),
-        0xFFFF7043.toInt(),
-    )
 
 @Composable
 fun ServerDialogHost(
@@ -293,6 +268,7 @@ private fun ClassificationManager(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val colors by viewModel.categoryColors.collectAsStateWithLifecycle()
+    val autoColors by viewModel.autoCategoryColors.collectAsStateWithLifecycle()
     val names = if (categories) state.availableCategories else state.availableTags
     var childDialog by remember { mutableStateOf<ServerDialog?>(null) }
     var paletteFor by remember { mutableStateOf<String?>(null) }
@@ -399,8 +375,9 @@ private fun ClassificationManager(
                                                 Icons.Outlined.Palette,
                                                 contentDescription = null,
                                                 tint =
-                                                    colors[name]?.let { Color(it) }
-                                                        ?: LocalContentColor.current,
+                                                    colors[name]?.let {
+                                                        Color(CategoryColors.swatch(it))
+                                                    } ?: LocalContentColor.current,
                                             )
                                             Text(
                                                 stringResource(CommonR.string.color_label),
@@ -430,24 +407,16 @@ private fun ClassificationManager(
                             Text(name)
                         }
                         if (paletteFor == name) {
-                            Column(Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
-                                Text(
-                                    stringResource(CommonR.string.category_color_title),
-                                    style = MaterialTheme.typography.labelLarge,
-                                )
-                                FlowRow(Modifier.selectableGroup()) {
-                                    (listOf<Int?>(null) + presetColors).forEach { color ->
-                                        ColorSwatch(
-                                            color = color,
-                                            selected = colors[name] == color,
-                                            onClick = {
-                                                viewModel.setCategoryColor(name, color)
-                                                paletteFor = null
-                                            },
-                                        )
-                                    }
-                                }
-                            }
+                            CategoryColorPicker(
+                                name = name,
+                                color = colors[name],
+                                auto = name in autoColors,
+                                onNone = { viewModel.setCategoryColor(name, null) },
+                                onAuto = { another ->
+                                    viewModel.setCategoryAutoColor(name, another)
+                                },
+                                onColor = { viewModel.setCategoryColor(name, it) },
+                            )
                         }
                     } else {
                         Column(Modifier.padding(horizontal = 24.dp)) {
@@ -521,49 +490,6 @@ internal fun SpeedLimitsDialog(
             TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
         },
     )
-}
-
-@Composable
-private fun ColorSwatch(
-    color: Int?,
-    onClick: () -> Unit,
-    selected: Boolean = false,
-) {
-    val outline = MaterialTheme.colorScheme.outline
-    val onSurface = MaterialTheme.colorScheme.onSurface
-    val label =
-        if (color == null) stringResource(CommonR.string.none_option)
-        else
-            "${stringResource(CommonR.string.category_color_title)} #${(color and 0xFFFFFF).toString(16).padStart(6, '0')}"
-    Box(
-        Modifier.size(48.dp)
-            .clickable(
-                onClick = onClick,
-                role = Role.RadioButton,
-            )
-            .semantics {
-                contentDescription = label
-                this.selected = selected
-            }
-            .padding(8.dp)
-            .clip(CircleShape)
-            .let { if (color != null) it.background(Color(color)) else it }
-            .border(
-                width = if (selected) 3.dp else 0.dp,
-                color = if (selected) onSurface else outline,
-                shape = CircleShape,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (color == null) {
-            Icon(
-                Icons.Outlined.Palette,
-                contentDescription = null,
-                tint = outline,
-                modifier = Modifier.size(24.dp),
-            )
-        }
-    }
 }
 
 @Composable

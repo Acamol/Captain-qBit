@@ -254,6 +254,12 @@
     <string name="color_label">Color</string>
     <string name="confirm_delete_named_title">Delete %1$s?</string>
     <string name="category_color_title">Category color</string>
+    <string name="category_color_auto">Auto</string>
+    <string name="category_color_pick_another">Pick another</string>
+    <string name="category_color_custom">Custom</string>
+    <string name="category_color_hue">Hue</string>
+    <string name="category_color_intensity">Intensity</string>
+    <string name="category_color_hex">Hex color</string>
     <string name="servers_title">Servers</string>
     <string name="sort_by_title">Sort by</string>
     <string name="ascending_label">Ascending</string>

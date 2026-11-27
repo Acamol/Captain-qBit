@@ -63,6 +63,7 @@ constructor(
         preferences: AppPreferences?,
         preferenceGroups: Set<PrefGroup>,
         categoryColors: Map<String, Int>?,
+        autoCategoryColors: Set<String>?,
     ) =
         withContext(Dispatchers.IO) {
             // Store credentials as plaintext inside the (passphrase-encrypted) payload. The DB
@@ -76,6 +77,7 @@ constructor(
                     preferences,
                     preferenceGroups,
                     categoryColors,
+                    autoCategoryColors,
                 )
             val plaintext =
                 json.encodeToString(ConfigBackup.serializer(), backup).encodeToByteArray()
@@ -291,7 +293,14 @@ constructor(
                         }
                 }
             }
-            if (applyColors) result = result.copy(categoryColors = backupColors)
+            if (applyColors) {
+                val auto = backup.autoCategoryColors ?: backup.preferences?.autoCategoryColors
+                result =
+                    result.copy(
+                        categoryColors = backupColors,
+                        autoCategoryColors = auto.orEmpty() intersect backupColors.keys,
+                    )
+            }
             result
         }
     }

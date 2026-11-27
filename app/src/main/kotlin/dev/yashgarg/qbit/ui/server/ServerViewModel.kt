@@ -98,7 +98,13 @@ constructor(
         viewModelScope.launch { prefsStore.updateData { it.copy(compactTorrentList = enabled) } }
     }
 
-    /** Sets (or clears, when [color] is null) the app-local color for a category. */
+    /** Categories whose color was picked automatically ("Auto") rather than by the user. */
+    val autoCategoryColors: StateFlow<Set<String>> =
+        prefsStore.data
+            .map { it.autoCategoryColors }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+
+    /** Sets (or clears, when [color] is null) a user-picked app-local color for a category. */
     fun setCategoryColor(category: String, color: Int?) {
         viewModelScope.launch {
             prefsStore.updateData { prefs ->
@@ -106,6 +112,27 @@ constructor(
                     categoryColors =
                         if (color == null) prefs.categoryColors - category
                         else prefs.categoryColors + (category to color),
+                    autoCategoryColors = prefs.autoCategoryColors - category,
+                )
+            }
+        }
+    }
+
+    /**
+     * Gives [category] an app-picked color, as distinct as possible from the other categories'
+     * colors. With [another], the current color is avoided as well ("Pick another"). The pick is
+     * stored, so it stays put when other categories change.
+     */
+    fun setCategoryAutoColor(category: String, another: Boolean = false) {
+        viewModelScope.launch {
+            prefsStore.updateData { prefs ->
+                val others = (prefs.categoryColors - category).values
+                val avoid = if (another) prefs.categoryColors[category] else null
+                prefs.copy(
+                    categoryColors =
+                        prefs.categoryColors +
+                            (category to CategoryColors.autoPick(category, others, avoid)),
+                    autoCategoryColors = prefs.autoCategoryColors + category,
                 )
             }
         }

@@ -34,7 +34,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
@@ -147,17 +146,7 @@ fun TorrentRow(
                             )
                         }
                         if (hasCategory) {
-                            val userColor = categoryColors[torrent.category]?.let { Color(it) }
-                            if (userColor != null) {
-                                MiniChip(torrent.category, userColor, contrastOn(userColor), false)
-                            } else {
-                                MiniChip(
-                                    torrent.category,
-                                    MaterialTheme.colorScheme.secondaryContainer,
-                                    MaterialTheme.colorScheme.onSecondaryContainer,
-                                    false,
-                                )
-                            }
+                            CategoryChip(torrent.category, categoryColors[torrent.category])
                         }
                         torrent.tags.forEach { tag ->
                             MiniChip("#$tag".isolateLtr(), null, muted, false)
@@ -260,9 +249,6 @@ private fun rowVisuals(torrent: Torrent): RowVisuals {
         Torrent.State.UNKNOWN -> RowVisuals(label, yellow, false, yellow)
     }
 }
-
-private fun contrastOn(background: Color): Color =
-    if (background.luminance() > 0.5f) Color.Black else Color.White
 
 /**
  * [TorrentRow] with a swipe-left-to-reveal action drawer (Pause/Resume + Delete) that stays open

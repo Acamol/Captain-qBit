@@ -28,6 +28,7 @@ data class ConfigBackup(
     val preferenceGroups: Set<PrefGroup> = emptySet(),
     val categoryColors: Map<String, Int>? = null,
     val privacyPreferences: AppPreferences? = null,
+    val autoCategoryColors: Set<String>? = null,
 )
 
 /**
@@ -40,6 +41,7 @@ fun configBackupOf(
     prefs: AppPreferences?,
     groups: Set<PrefGroup>,
     categoryColors: Map<String, Int>?,
+    autoCategoryColors: Set<String>? = null,
 ): ConfigBackup {
     val legacyGroups = groups - PrefGroup.PRIVACY
     return ConfigBackup(
@@ -49,6 +51,8 @@ fun configBackupOf(
             else null,
         preferenceGroups = legacyGroups,
         categoryColors = categoryColors,
+        autoCategoryColors =
+            autoCategoryColors?.filterTo(mutableSetOf()) { it in categoryColors.orEmpty() },
         privacyPreferences =
             if (prefs != null && PrefGroup.PRIVACY in groups) {
                 prefs.extractGroups(setOf(PrefGroup.PRIVACY))

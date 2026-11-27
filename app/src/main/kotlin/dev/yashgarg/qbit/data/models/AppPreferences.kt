@@ -34,6 +34,8 @@ data class AppPreferences(
     val showServerOverview: Boolean = true,
     val activeServerId: Int = -1,
     val categoryColors: Map<String, Int> = emptyMap(),
+    /** Categories whose [categoryColors] entry was picked by the app ("Auto"), not the user. */
+    val autoCategoryColors: Set<String> = emptySet(),
     val statusNotification: Boolean = true,
     val notifyOnComplete: Boolean = false,
     val notifyOnChecked: Boolean = false,
