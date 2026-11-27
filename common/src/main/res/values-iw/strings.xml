@@ -8,8 +8,6 @@
     <string name="matching_section_title">התאמה</string>
     <string name="compact_torrent_list_label">רשימת טורנטים צפופה</string>
     <string name="compact_torrent_list_subtitle">שורות קטנות יותר עם אותם פרטי העברה עיקריים</string>
-    <string name="show_server_overview_label">הצגת סקירת השרת</string>
-    <string name="show_server_overview_subtitle">הצגת מהירויות העברה ושטח פנוי מעל רשימת הטורנטים</string>
     <string name="add_server">הוספת שרת</string>
     <string name="server_settings">הגדרות שרת</string>
     <string name="status_cannot_delete_last_server">לא ניתן למחוק שרת יחיד</string>
@@ -876,4 +874,11 @@
     <string name="content_layout_original">מקורי</string>
     <string name="content_layout_subfolder">תיקיית משנה</string>
     <string name="content_layout_no_subfolder">ללא תיקיית משנה</string>
+    <string name="status_torrent_added">נוסף טורנט</string>
+    <string name="notify_on_added_label">התראה כאשר נוסף טורנט</string>
+    <string name="notify_on_added_subtitle">התראה כאשר טורנט חדש נוסף לשרת</string>
+    <string name="notify_skip_own_adds_label">דלג על טורנטים שאני מוסיף</string>
+    <string name="notify_skip_own_adds_subtitle">אל תתריע על טורנטים שנוספו מהאפליקציה הזו</string>
+    <string name="notify_ignore_rss_adds_label">דלג על הורדות RSS</string>
+    <string name="notify_ignore_rss_adds_subtitle">אל תתריע על טורנטים הנוספים על ידי חוקי RSS</string>
 </resources>
