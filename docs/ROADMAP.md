@@ -1,5 +1,22 @@
 # Roadmap
 
+## Features
+
+### Quick Settings tile
+
+- [ ] Add a Quick Settings tile that toggles alternative speed limits on the selected server, with
+  the tile state reflecting the current mode.
+
+### Share to Captain qBit
+
+- [ ] Accept `ACTION_SEND` text so magnet links and torrent URLs shared from any app open the
+  add-torrent flow.
+
+### All-servers dashboard
+
+- [ ] Show combined transfer speeds and torrent counts across every saved server, with a way to jump
+  into each server.
+
 ## Maintainability
 
 ### Review replacing Bonsai
