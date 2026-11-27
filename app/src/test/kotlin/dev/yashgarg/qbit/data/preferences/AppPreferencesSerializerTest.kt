@@ -45,6 +45,8 @@ class AppPreferencesSerializerTest {
         assertEquals(5_000L, prefs.statusRefreshIntervalMs)
         assertEquals(5_000L, prefs.eventPollIntervalMs)
         assertEquals(5_000L, prefs.syncIntervalMs)
+        assertEquals(true, prefs.compactTorrentList)
+        assertEquals(true, prefs.showServerOverview)
     }
 
     /** The configurable poll intervals round-trip like any other preference. */
@@ -72,6 +74,8 @@ class AppPreferencesSerializerTest {
                 activeServerId = 5,
                 serverViewPrefs = mapOf(5 to ServerViewPrefs(sortOptionName = "RATIO")),
                 themeMode = 2,
+                compactTorrentList = false,
+                showServerOverview = false,
             )
 
         val out = ByteArrayOutputStream()

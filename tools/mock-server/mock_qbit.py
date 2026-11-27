@@ -49,8 +49,9 @@ CATEGORIES = {
     "public-domain/books": "/downloads/public-domain/books",
     "public-domain/audiobooks": "/downloads/public-domain/audiobooks",
     "datasets": "/downloads/datasets",
+    "wave-demo": "/downloads/wave-demo",
 }
-TAGS = ["iso", "hd", "favorite", "new", "verified"]
+TAGS = ["iso", "hd", "favorite", "new", "verified", "wave-demo"]
 
 GiB = 1024 ** 3
 MiB = 1024 ** 2
@@ -175,6 +176,21 @@ _TORRENTS = [
     torrent("Wikipedia English Dump (2024)", "datasets", ["new"],
             "queuedDL", 24696061952, 0.0, tracker=TR_ARCHIVE, added_days=0),
 ]
+
+# Equal progress makes wave velocity easy to compare without bar length affecting perception.
+for _name, _size, _speed in [
+    ("Wave demo 1 - No throughput", GiB, 0),
+    ("Wave demo 2 - Slow", GiB, 64 * 1024),
+    ("Wave demo 3 - Steady", GiB, MiB),
+    ("Wave demo 4 - Fast", GiB, 10 * MiB),
+    ("Wave demo 5 - Very fast", GiB, 100 * MiB),
+    ("Wave demo 6 - Fast link, large torrent", 20 * GiB, 10 * MiB),
+]:
+    _TORRENTS.append(
+        torrent(_name, "wave-demo", ["wave-demo"], "downloading", _size, 0.42,
+                dlspeed=_speed, num_seeds=24, tracker=TR_ARCHIVE, added_days=0,
+                eta=int((_size - int(_size * 0.42)) / _speed) if _speed else INF_ETA)
+    )
 
 for _t in _TORRENTS:
     missing = REQUIRED_TORRENT_KEYS - set(_t.keys())

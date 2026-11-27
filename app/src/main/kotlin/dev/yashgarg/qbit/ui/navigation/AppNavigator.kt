@@ -52,15 +52,12 @@ sealed interface NavCommand {
 
     data object OpenVersion : NavCommand
 
-    /** Open the read-only viewer for the remote qBittorrent server's main log. */
-    data object OpenLogs : NavCommand
+    data object OpenServerOverview : NavCommand
 
     /** The server speed-limit settings: global, alternate, and the schedule. */
     data object OpenSpeedLimits : NavCommand
 
     /** Settings sub-pages linked from the main settings screen. */
-    data object OpenServerSettings : NavCommand
-
     data object OpenPrivacySettings : NavCommand
 
     data object OpenNotificationSettings : NavCommand

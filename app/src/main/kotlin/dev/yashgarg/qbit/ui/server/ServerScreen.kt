@@ -9,42 +9,54 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.DensitySmall
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.TravelExplore
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -54,13 +66,12 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -75,14 +86,21 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -91,7 +109,10 @@ import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.common.R as CommonR
+import dev.yashgarg.qbit.ui.compose.ActionSheet
+import dev.yashgarg.qbit.ui.compose.ActionSheetItem
 import dev.yashgarg.qbit.ui.compose.AlertDialog
+import dev.yashgarg.qbit.ui.compose.CheckboxRow
 import dev.yashgarg.qbit.ui.dialogs.AddTorrentScreen
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
@@ -107,7 +128,6 @@ import dev.yashgarg.qbit.utils.toHumanReadable
 import dev.yashgarg.qbit.utils.validFromText
 import dev.yashgarg.qbit.utils.validUntilText
 import dev.yashgarg.qbit.validation.LinkValidator
-import java.security.cert.X509Certificate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -120,10 +140,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * The main torrent-list screen (native Compose port of `ServerFragment`). A [ModalNavigationDrawer]
- * (filter sidebar) wraps a [Scaffold] with a [TopAppBar] (menu / search / sort, or bulk-action
- * icons while selecting) and an add-torrent FAB. Bulk pickers and management dialogs are driven by
- * [ServerDialogHost]; add/import uses the [AddTorrentScreen] full-screen Compose dialog.
+ * The torrent list, with a dedicated filter sheet and an add-torrent FAB. Bulk pickers and
+ * assignment dialogs are driven by [ServerDialogHost]; add/import uses the [AddTorrentScreen]
+ * full-screen Compose dialog.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -136,47 +155,75 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val torrents by viewModel.sortedTorrents.collectAsStateWithLifecycle()
     val categoryColors by viewModel.categoryColors.collectAsStateWithLifecycle()
+    val compactTorrentList by viewModel.compactTorrentList.collectAsStateWithLifecycle()
+    val showServerOverview by viewModel.showServerOverview.collectAsStateWithLifecycle()
     // The server actually connected to, so "Review certificate" probes the one showing the error.
     val activeServerId by viewModel.activeServerId.collectAsStateWithLifecycle()
     val servers by viewModel.servers.collectAsStateWithLifecycle()
 
-    var pendingCertReview by remember { mutableStateOf<X509Certificate?>(null) }
-    var probingCertificate by remember { mutableStateOf(false) }
-    var serverDialog by remember { mutableStateOf<ServerDialog?>(null) }
+    val target = servers.find { it.configId == activeServerId }?.certificateTarget()
+    var pendingCertReview by remember(target) { mutableStateOf<CertificateReview?>(null) }
+    var probingCertificate by remember(target) { mutableStateOf(false) }
+    val fallback = stringResource(CommonR.string.error)
+    val friendlyMessageResolver = rememberFriendlyMessageResolver()
+    LaunchedEffect(target, probingCertificate) {
+        if (target != null && probingCertificate) {
+            viewModel
+                .probeCertificate(target)
+                .onOk { pendingCertReview = it }
+                .onErr {
+                    Toast.makeText(
+                            context,
+                            it.friendlyMessage(friendlyMessageResolver, fallback),
+                            Toast.LENGTH_LONG,
+                        )
+                        .show()
+                }
+            probingCertificate = false
+        }
+    }
+    var serverDialog by
+        remember(activeServerId, state.workspaceRevision) { mutableStateOf<ServerDialog?>(null) }
     val linkValidator = remember { LinkValidator() }
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
-    // Drawer state is saved, and the bottom-nav tabs deliberately save/restore each tab's state, so
-    // leaving this tab with the filters open and coming back would restore it open - unexpected,
-    // since returning to a tab should show the list, not a menu the user left behind. A
-    // configuration change tears this screen down the same way but should leave the drawer alone,
-    // so the two are told apart by isChangingConfigurations while unwinding.
+    var filtersOpen by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        if (viewModel.closeDrawerOnEntry) {
-            viewModel.closeDrawerOnEntry = false
-            drawerState.close()
+        if (viewModel.closeFiltersOnEntry) {
+            viewModel.closeFiltersOnEntry = false
+            filtersOpen = false
         }
     }
     val activity = context as? Activity
     DisposableEffect(Unit) {
         onDispose {
-            if (activity?.isChangingConfigurations != true) viewModel.closeDrawerOnEntry = true
+            if (activity?.isChangingConfigurations != true) viewModel.closeFiltersOnEntry = true
         }
     }
-    val selected = remember { mutableStateListOf<String>() }
-    // Switching any filter (drawer, active-filter chips, or "Clear all") drops the current
-    // selection, so bulk actions never apply to torrents scrolled out of the new filter.
-    LaunchedEffect(
-        state.selectedFilter,
-        state.selectedCategory,
-        state.selectedTracker,
-        state.selectedTags,
-        state.filterUntagged,
-    ) {
-        selected.clear()
+    val selected =
+        remember(
+            state.selectedFilter,
+            state.selectedCategory,
+            state.selectedTracker,
+            state.selectedTags,
+            state.filterUntagged,
+            state.searchQuery,
+            activeServerId,
+            state.workspaceRevision,
+        ) {
+            mutableStateListOf<String>()
+        }
+    val visibleSelected = state.visibleTargets(selected)
+    val hasSelection = visibleSelected.isNotEmpty()
+    if (visibleSelected.size != selected.size) {
+        LaunchedEffect(visibleSelected, selected) { selected.retainAll(visibleSelected.toSet()) }
     }
     val collapsedPaths = remember { mutableStateListOf<String>() }
-    var searchOpen by remember { mutableStateOf(false) }
-    var deleteTargets by remember { mutableStateOf<List<String>?>(null) }
+    var searchOpen by rememberSaveable { mutableStateOf(false) }
+    val searchVisible = searchOpen || state.searchQuery.isNotEmpty()
+    var moreMenuOpen by remember { mutableStateOf(false) }
+    var selectionMenuOpen by remember { mutableStateOf(false) }
+    var floatingActionsHeight by remember { mutableIntStateOf(0) }
+    var deleteTargets by
+        remember(activeServerId, state.workspaceRevision) { mutableStateOf<List<String>?>(null) }
     var refreshing by remember { mutableStateOf(false) }
     // Shared by pull-to-refresh (list and error states) and the error-screen Retry button. The sync
     // is continuous and its first emission is near-instant, so wait for the next data/error but
@@ -199,8 +246,19 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
         }
     }
     // Hash of the single torrent row whose swipe actions are revealed (only one open at a time).
-    var openHash by remember { mutableStateOf<String?>(null) }
+    var openHash by
+        remember(activeServerId, state.workspaceRevision) { mutableStateOf<String?>(null) }
+    val listState = rememberLazyListState()
+    var focusSearch by remember { mutableStateOf(false) }
     val searchFocus = remember { FocusRequester() }
+    LaunchedEffect(hasSelection) {
+        selectionMenuOpen = false
+        if (hasSelection) {
+            moreMenuOpen = false
+            openHash = null
+            keyboard?.hide()
+        }
+    }
 
     // Add-torrent screen state (full-screen Compose dialog). Prefills carry an incoming link/file.
     var showAddTorrent by rememberSaveable { mutableStateOf(false) }
@@ -259,15 +317,14 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
         viewModel.status.collect { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
     }
 
-    LaunchedEffect(searchOpen) {
-        if (searchOpen) searchFocus.requestFocus() else keyboard?.hide()
-    }
+    LaunchedEffect(searchVisible) { if (!searchVisible) keyboard?.hide() }
 
-    val drawerOpen = drawerState.isOpen
-    BackHandler(enabled = drawerOpen || searchOpen || selected.isNotEmpty() || openHash != null) {
+    BackHandler(
+        enabled = filtersOpen || searchVisible || selected.isNotEmpty() || openHash != null,
+    ) {
         when {
-            drawerOpen -> scope.launch { drawerState.close() }
-            searchOpen -> {
+            filtersOpen -> filtersOpen = false
+            searchVisible -> {
                 searchOpen = false
                 viewModel.setSearchQuery("")
             }
@@ -276,94 +333,72 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
         }
     }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ServerDrawer(
-                state = state,
-                collapsedPaths = collapsedPaths,
-                onServerPicker = { serverDialog = ServerDialog.ServerPicker },
-                onStats = { serverDialog = ServerDialog.Statistics },
-                onLogs = { appNavigator.navigate(NavCommand.OpenLogs) },
-                onFilter = viewModel::setFilter,
-                onCategory = viewModel::setCategory,
-                onCategoryLongPress = { serverDialog = ServerDialog.CategoryLongPress(it) },
-                onManageCategories = {
-                    scope.launch { drawerState.close() }
-                    serverDialog = ServerDialog.ManageCategories
-                },
-                onTracker = viewModel::setTracker,
-                onFilterUntagged = viewModel::setFilterUntagged,
-                onToggleTag = viewModel::toggleTag,
-                onTagLongPress = { serverDialog = ServerDialog.TagLongPress(it) },
-                onManageTags = {
-                    scope.launch { drawerState.close() }
-                    serverDialog = ServerDialog.ManageTags
-                },
-                onClearFilters = {
-                    viewModel.clearFilters()
-                    scope.launch { drawerState.close() }
-                },
-            )
-        },
-    ) {
-        val hasSelection = selected.isNotEmpty()
+    Box {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(stringResource(CommonR.string.torrents_title)) },
-                    navigationIcon = {
-                        TooltipIconButton(
-                            label = stringResource(CommonR.string.filters_label),
-                            icon = Icons.Filled.Menu,
-                            onClick = { scope.launch { drawerState.open() } },
-                        )
+                    title = {
+                        Column {
+                            Text(
+                                if (hasSelection)
+                                    pluralStringResource(
+                                        CommonR.plurals.selected_torrents_count,
+                                        visibleSelected.size,
+                                        visibleSelected.size,
+                                    )
+                                else stringResource(CommonR.string.torrents_title),
+                                style =
+                                    if (hasSelection) MaterialTheme.typography.titleLarge
+                                    else MaterialTheme.typography.headlineMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            if (hasSelection) {
+                                Text(
+                                    state.serverName.orEmpty(),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            } else {
+                                ServerPickerDropdown(
+                                    name = state.serverName,
+                                    servers = servers,
+                                    activeServerId = activeServerId,
+                                    onSelect = viewModel::switchServer,
+                                    appNavigator = appNavigator,
+                                    textStyle = MaterialTheme.typography.labelMedium,
+                                )
+                            }
+                        }
                     },
-                    actions = {
+                    navigationIcon = {
                         if (hasSelection) {
                             TooltipIconButton(
-                                label = stringResource(CommonR.string.pause_action),
-                                icon = Icons.Filled.Pause,
-                                onClick = {
-                                    viewModel.toggleTorrentsState(true, selected.toList())
-                                },
-                            )
-                            TooltipIconButton(
-                                label = stringResource(CommonR.string.resume),
-                                icon = Icons.Filled.PlayArrow,
-                                onClick = {
-                                    viewModel.toggleTorrentsState(false, selected.toList())
-                                },
-                            )
-                            TooltipIconButton(
-                                label = stringResource(CommonR.string.category),
-                                icon = Icons.Filled.Category,
-                                onClick = {
-                                    serverDialog = ServerDialog.BulkCategory(selected.toList())
-                                },
-                            )
-                            TooltipIconButton(
-                                label = stringResource(CommonR.string.tags_section_title),
-                                icon = Icons.AutoMirrored.Filled.Label,
-                                onClick = {
-                                    serverDialog = ServerDialog.BulkTags(selected.toList())
-                                },
-                            )
-                            TooltipIconButton(
-                                label = stringResource(CommonR.string.delete),
-                                icon = Icons.Filled.Delete,
-                                onClick = { deleteTargets = selected.toList() },
+                                label = stringResource(CommonR.string.clear_selection_action),
+                                icon = Icons.Filled.Close,
+                                onClick = { selected.clear() },
                             )
                         } else {
                             TooltipIconButton(
+                                label = stringResource(CommonR.string.filters_label),
+                                icon = Icons.Filled.FilterList,
+                                onClick = { filtersOpen = true },
+                            )
+                        }
+                    },
+                    actions = {
+                        if (!hasSelection) {
+                            TooltipIconButton(
                                 label = stringResource(CommonR.string.content_description_search),
                                 icon = Icons.Filled.Search,
-                                onClick = { searchOpen = !searchOpen },
-                            )
-                            TooltipIconButton(
-                                label = stringResource(CommonR.string.search_online_action),
-                                icon = Icons.Filled.TravelExplore,
-                                onClick = { appNavigator.navigate(NavCommand.OpenSearch) },
+                                onClick = {
+                                    searchOpen = !searchVisible
+                                    if (searchOpen) {
+                                        listState.requestScrollToItem(0)
+                                        focusSearch = true
+                                    } else viewModel.setSearchQuery("")
+                                },
                             )
                             val sortActive =
                                 state.sortOption != SortOption.NAME ||
@@ -375,108 +410,231 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                                 modifier =
                                     Modifier.graphicsLayer { alpha = if (sortActive) 1f else 0.5f },
                             )
+                            Box {
+                                TooltipIconButton(
+                                    label = stringResource(CommonR.string.content_description_more),
+                                    icon = Icons.Filled.MoreVert,
+                                    onClick = { moreMenuOpen = true },
+                                )
+                                DropdownMenu(
+                                    expanded = moreMenuOpen,
+                                    onDismissRequest = { moreMenuOpen = false },
+                                ) {
+                                    DropdownMenuItem(
+                                        modifier =
+                                            Modifier.semantics {
+                                                role = Role.Checkbox
+                                                toggleableState =
+                                                    ToggleableState(compactTorrentList)
+                                            },
+                                        text = {
+                                            Text(
+                                                stringResource(
+                                                    CommonR.string.compact_torrent_list_label,
+                                                ),
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Filled.DensitySmall,
+                                                contentDescription = null,
+                                            )
+                                        },
+                                        trailingIcon = {
+                                            Checkbox(
+                                                checked = compactTorrentList,
+                                                onCheckedChange = null,
+                                            )
+                                        },
+                                        onClick = {
+                                            viewModel.setCompactTorrentList(!compactTorrentList)
+                                            moreMenuOpen = false
+                                            openHash = null
+                                        },
+                                    )
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                stringResource(CommonR.string.search_online_action),
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Filled.TravelExplore,
+                                                contentDescription = null,
+                                            )
+                                        },
+                                        onClick = {
+                                            moreMenuOpen = false
+                                            appNavigator.navigate(NavCommand.OpenSearch)
+                                        },
+                                    )
+                                }
+                            }
                         }
                     },
                 )
             },
             floatingActionButton = {
-                FloatingActionButton(
-                    onClick = { openTorrentDialog() },
-                    modifier = Modifier.imePadding(),
-                ) {
-                    Icon(
-                        Icons.Filled.Add,
-                        contentDescription =
-                            stringResource(CommonR.string.content_description_add_torrent),
-                    )
+                if (!searchVisible || WindowInsets.ime.getBottom(LocalDensity.current) == 0) {
+                    Box(Modifier.onSizeChanged { floatingActionsHeight = it.height }) {
+                        if (hasSelection) {
+                            SelectionActionsToolbar(
+                                onResume = {
+                                    viewModel.toggleTorrentsState(false, visibleSelected)
+                                },
+                                onPause = {
+                                    viewModel.toggleTorrentsState(true, visibleSelected)
+                                },
+                                onMore = { selectionMenuOpen = true },
+                                modifier =
+                                    Modifier.padding(horizontal = 16.dp)
+                                        .widthIn(max = 560.dp)
+                                        .fillMaxWidth(),
+                            )
+                        } else {
+                            ExtendedFloatingActionButton(
+                                onClick = { openTorrentDialog() },
+                                icon = {
+                                    Icon(
+                                        Icons.Filled.Add,
+                                        contentDescription =
+                                            stringResource(
+                                                CommonR.string.content_description_add_torrent,
+                                            ),
+                                    )
+                                },
+                                text = {
+                                    Text(
+                                        stringResource(
+                                            CommonR.string.content_description_add_torrent,
+                                        ),
+                                    )
+                                },
+                            )
+                        }
+                    }
                 }
             },
+            floatingActionButtonPosition =
+                if (hasSelection) FabPosition.Center else FabPosition.End,
             // This Scaffold has no bottomBar of its own - see NoWindowInsets kdoc; without this
             // the FAB would sit an extra, unwanted amount above the outer NavigationBar.
             contentWindowInsets = NoWindowInsets,
         ) { padding ->
-            Column(Modifier.fillMaxSize().padding(padding)) {
-                val serverState = state.data?.serverState
-                if (!state.hasError && !state.dataLoading && serverState != null) {
-                    // Mixing RTL text with several independent LTR numeric/unit values makes the
-                    // Unicode bidi algorithm reorder things unpredictably depending on the actual
-                    // numbers involved. Force LTR here so this line's segments always render in
-                    // the fixed order the string template defines, regardless of locale.
-                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                        Text(
-                            stringResource(
-                                CommonR.string.status_speed_free_space,
-                                serverState.dlInfoSpeed.toHumanReadable(),
-                                serverState.upInfoSpeed.toHumanReadable(),
-                                serverState.freeSpace.toHumanReadable(),
-                            ),
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier =
-                                Modifier.fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 2.dp),
-                        )
-                    }
-                }
-
-                if (searchOpen) {
-                    TextField(
-                        value = state.searchQuery,
-                        onValueChange = viewModel::setSearchQuery,
-                        placeholder = {
-                            Text(stringResource(CommonR.string.search_torrents_placeholder))
-                        },
-                        singleLine = true,
-                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                        trailingIcon = {
-                            IconButton(
-                                onClick = {
-                                    searchOpen = false
-                                    viewModel.setSearchQuery("")
-                                },
+            val rowSpacing = if (compactTorrentList) 6.dp else 12.dp
+            val bottomPadding = with(LocalDensity.current) { floatingActionsHeight.toDp() } + 32.dp
+            PullToRefreshBox(
+                isRefreshing = refreshing,
+                onRefresh = doRefresh,
+                modifier = Modifier.fillMaxSize().padding(padding).imePadding(),
+            ) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = bottomPadding),
+                    verticalArrangement = Arrangement.spacedBy(rowSpacing),
+                ) {
+                    item(key = "list-controls") {
+                        Column {
+                            val serverState = state.data?.serverState
+                            if (
+                                showServerOverview &&
+                                    !state.hasError &&
+                                    !state.dataLoading &&
+                                    serverState != null
                             ) {
-                                Icon(
-                                    Icons.Filled.Close,
-                                    contentDescription =
-                                        stringResource(
-                                            CommonR.string.content_description_close_search,
-                                        ),
+                                ServerTransferSummary(
+                                    downloadSpeed = serverState.dlInfoSpeed,
+                                    uploadSpeed = serverState.upInfoSpeed,
+                                    freeSpace = serverState.freeSpace,
+                                    onOpenServer = {
+                                        appNavigator.navigate(NavCommand.OpenServerOverview)
+                                    },
                                 )
                             }
-                        },
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
-                        colors =
-                            TextFieldDefaults.colors(
-                                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                            ),
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 4.dp)
-                                .focusRequester(searchFocus),
-                    )
-                }
 
-                FilterChips(state, viewModel)
-
-                Box(Modifier.fillMaxSize()) {
-                    when {
-                        state.hasError -> {
-                            val fallback = stringResource(CommonR.string.error)
-                            val friendlyMessageResolver = rememberFriendlyMessageResolver()
-                            // Scrollable so pull-to-refresh works on the error screen too (a static
-                            // Column wouldn't feed the pull gesture); the Retry button stays as an
-                            // explicit affordance.
-                            PullToRefreshBox(
-                                isRefreshing = refreshing,
-                                onRefresh = doRefresh,
-                                modifier = Modifier.fillMaxSize(),
-                            ) {
-                                Column(
+                            if (searchVisible) {
+                                LaunchedEffect(focusSearch) {
+                                    if (focusSearch) {
+                                        searchFocus.requestFocus()
+                                        focusSearch = false
+                                    }
+                                }
+                                TextField(
+                                    value = state.searchQuery,
+                                    onValueChange = viewModel::setSearchQuery,
+                                    placeholder = {
+                                        Text(
+                                            stringResource(
+                                                CommonR.string.search_torrents_placeholder,
+                                            ),
+                                        )
+                                    },
+                                    singleLine = true,
+                                    leadingIcon = {
+                                        Icon(Icons.Filled.Search, contentDescription = null)
+                                    },
+                                    trailingIcon = {
+                                        IconButton(
+                                            onClick = {
+                                                searchOpen = false
+                                                viewModel.setSearchQuery("")
+                                            },
+                                        ) {
+                                            Icon(
+                                                Icons.Filled.Close,
+                                                contentDescription =
+                                                    stringResource(
+                                                        CommonR.string
+                                                            .content_description_close_search,
+                                                    ),
+                                            )
+                                        }
+                                    },
+                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                    keyboardActions =
+                                        KeyboardActions(onSearch = { keyboard?.hide() }),
+                                    colors =
+                                        TextFieldDefaults.colors(
+                                            focusedContainerColor =
+                                                MaterialTheme.colorScheme.surface,
+                                            unfocusedContainerColor =
+                                                MaterialTheme.colorScheme.surface,
+                                        ),
                                     modifier =
-                                        Modifier.fillMaxSize()
-                                            .verticalScroll(rememberScrollState())
-                                            .padding(20.dp),
+                                        Modifier.fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                                            .focusRequester(searchFocus),
+                                )
+                            }
+
+                            StatusFilters(
+                                selected = state.selectedFilter,
+                                queueingEnabled = state.queueingEnabled,
+                                onSelect = viewModel::setFilter,
+                            )
+                            FilterChips(state, viewModel)
+                            if (!state.hasError && !state.dataLoading && torrents != null) {
+                                Text(
+                                    pluralStringResource(
+                                        CommonR.plurals.visible_torrents_count,
+                                        torrents.orEmpty().size,
+                                        torrents.orEmpty().size,
+                                    ),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier =
+                                        Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                                )
+                            }
+                        }
+                    }
+                    when {
+                        state.hasError ->
+                            item {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth().padding(20.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center,
                                 ) {
@@ -495,34 +653,12 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                                         style = MaterialTheme.typography.titleLarge,
                                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                     )
-                                    if (state.error?.isUntrustedCertificateError() == true) {
+                                    if (
+                                        state.error?.isUntrustedCertificateError() == true &&
+                                            target != null
+                                    ) {
                                         FilledTonalButton(
-                                            onClick = {
-                                                val target =
-                                                    servers.find { it.configId == activeServerId }
-                                                        ?: return@FilledTonalButton
-                                                scope.launch {
-                                                    probingCertificate = true
-                                                    viewModel
-                                                        .probeCertificate(
-                                                            target.baseUrl,
-                                                            target.port ?: 443,
-                                                        )
-                                                        .onOk { cert -> pendingCertReview = cert }
-                                                        .onErr { error ->
-                                                            Toast.makeText(
-                                                                    context,
-                                                                    error.friendlyMessage(
-                                                                        friendlyMessageResolver,
-                                                                        fallback,
-                                                                    ),
-                                                                    Toast.LENGTH_LONG,
-                                                                )
-                                                                .show()
-                                                        }
-                                                    probingCertificate = false
-                                                }
-                                            },
+                                            onClick = { probingCertificate = true },
                                             enabled = !probingCertificate,
                                             modifier = Modifier.padding(top = 16.dp),
                                         ) {
@@ -546,69 +682,103 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                                     }
                                 }
                             }
-                        }
                         state.dataLoading || torrents == null ->
-                            CircularProgressIndicator(Modifier.align(Alignment.Center))
+                            item {
+                                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator()
+                                }
+                            }
                         torrents.isNullOrEmpty() ->
-                            Column(
-                                modifier = Modifier.align(Alignment.Center).padding(20.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                Icon(
-                                    androidx.compose.ui.res.painterResource(R.drawable.cloud_done),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(bottom = 8.dp).size(70.dp),
-                                )
-                                // An empty list means either the server really has no torrents or
-                                // the active filters hid them all - saying which one saves the
-                                // user wondering where their torrents went.
-                                val filtering =
-                                    state.selectedFilter != StateFilter.ALL ||
-                                        state.selectedCategory != null ||
-                                        state.selectedTracker != null ||
-                                        state.filterUntagged ||
-                                        state.selectedTags.isNotEmpty() ||
-                                        state.searchQuery.isNotEmpty()
-                                Text(
-                                    stringResource(
-                                        if (filtering) CommonR.string.no_torrents_match_filter
-                                        else CommonR.string.no_torrents,
-                                    ),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    textAlign = TextAlign.Center,
-                                )
+                            item {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth().padding(20.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                ) {
+                                    Icon(
+                                        androidx.compose.ui.res.painterResource(
+                                            R.drawable.cloud_done,
+                                        ),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(bottom = 8.dp).size(70.dp),
+                                    )
+                                    // An empty list means either the server really has no torrents
+                                    // or
+                                    // the active filters hid them all - saying which one saves the
+                                    // user wondering where their torrents went.
+                                    val filtering =
+                                        state.selectedFilter != StateFilter.ALL ||
+                                            state.selectedCategory != null ||
+                                            state.selectedTracker != null ||
+                                            state.filterUntagged ||
+                                            state.selectedTags.isNotEmpty() ||
+                                            state.searchQuery.isNotEmpty()
+                                    Text(
+                                        stringResource(
+                                            if (filtering) CommonR.string.no_torrents_match_filter
+                                            else CommonR.string.no_torrents,
+                                        ),
+                                        style = MaterialTheme.typography.titleLarge,
+                                        textAlign = TextAlign.Center,
+                                    )
+                                }
                             }
                         else ->
-                            PullToRefreshBox(
-                                isRefreshing = refreshing,
-                                onRefresh = doRefresh,
-                                modifier = Modifier.fillMaxSize(),
-                            ) {
-                                TorrentList(
-                                    torrents = torrents.orEmpty(),
-                                    categoryColors = categoryColors,
-                                    selected = selected,
-                                    openHash = openHash,
-                                    onOpenChange = { hash, open ->
-                                        openHash =
-                                            if (open) hash
-                                            else if (openHash == hash) null else openHash
-                                    },
-                                    onOpen = { appNavigator.navigate(NavCommand.OpenTorrent(it)) },
-                                    onPauseResume = { t ->
-                                        viewModel.toggleTorrentsState(!t.isPaused(), listOf(t.hash))
-                                    },
-                                    onDelete = { t -> deleteTargets = listOf(t.hash) },
-                                )
-                            }
+                            torrentRows(
+                                torrents = torrents.orEmpty(),
+                                compact = compactTorrentList,
+                                categoryColors = categoryColors,
+                                selected = selected,
+                                openHash = openHash,
+                                onOpenChange = { hash, open ->
+                                    openHash =
+                                        if (open) hash else if (openHash == hash) null else openHash
+                                },
+                                onOpen = { appNavigator.navigate(NavCommand.OpenTorrent(it)) },
+                                onPauseResume = { t ->
+                                    viewModel.toggleTorrentsState(!t.isPaused(), listOf(t.hash))
+                                },
+                                onDelete = { t -> deleteTargets = listOf(t.hash) },
+                            )
                     }
                 }
             }
         }
     }
 
-    deleteTargets?.let { targets ->
+    if (selectionMenuOpen && hasSelection) {
+        ActionSheet(
+            title =
+                pluralStringResource(
+                    CommonR.plurals.selected_torrents_count,
+                    visibleSelected.size,
+                    visibleSelected.size,
+                ),
+            onDismissRequest = { selectionMenuOpen = false },
+        ) {
+            ActionSheetItem(stringResource(CommonR.string.category), Icons.Filled.Category) {
+                selectionMenuOpen = false
+                serverDialog = ServerDialog.BulkCategory(visibleSelected)
+            }
+            ActionSheetItem(
+                stringResource(CommonR.string.tags_section_title),
+                Icons.AutoMirrored.Filled.Label,
+            ) {
+                selectionMenuOpen = false
+                serverDialog = ServerDialog.BulkTags(visibleSelected)
+            }
+            ActionSheetItem(stringResource(CommonR.string.delete), Icons.Filled.Delete) {
+                selectionMenuOpen = false
+                deleteTargets = visibleSelected
+            }
+        }
+    }
+
+    val visibleDeleteTargets = deleteTargets?.let(state::visibleTargets)?.takeIf { it.isNotEmpty() }
+    if (deleteTargets != visibleDeleteTargets) {
+        LaunchedEffect(deleteTargets, visibleDeleteTargets) { deleteTargets = visibleDeleteTargets }
+    }
+    visibleDeleteTargets?.let { targets ->
         var deleteFiles by remember { mutableStateOf(false) }
         AlertDialog(
             onDismissRequest = { deleteTargets = null },
@@ -620,10 +790,11 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
                 )
             },
             text = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = deleteFiles, onCheckedChange = { deleteFiles = it })
-                    Text(stringResource(CommonR.string.also_delete_the_files_on_disk))
-                }
+                CheckboxRow(
+                    label = stringResource(CommonR.string.also_delete_the_files_on_disk),
+                    checked = deleteFiles,
+                    onCheckedChange = { deleteFiles = it },
+                )
             },
             confirmButton = {
                 TextButton(
@@ -644,75 +815,97 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
         )
     }
 
+    if (filtersOpen) {
+        TorrentFilterSheet(
+            state = state,
+            collapsedPaths = collapsedPaths,
+            onDismissRequest = { filtersOpen = false },
+            onFilter = viewModel::setFilter,
+            onCategory = viewModel::setCategory,
+            onTracker = viewModel::setTracker,
+            onFilterUntagged = viewModel::setFilterUntagged,
+            onToggleTag = viewModel::toggleTag,
+            onClearFilters = {
+                viewModel.clearFilters()
+                filtersOpen = false
+            },
+        )
+    }
+
     ServerDialogHost(
         dialog = serverDialog,
         onDialogChange = { serverDialog = it },
         viewModel = viewModel,
-        appNavigator = appNavigator,
     )
 
-    pendingCertReview?.let { cert ->
-        val fingerprint = remember(cert) { cert.sha256Fingerprint() }
-        val expired = remember(cert) { cert.hasExpired() }
-        val notYetValid = remember(cert) { cert.isNotYetValid() }
-        AlertDialog(
-            onDismissRequest = { pendingCertReview = null },
-            title = { Text(stringResource(CommonR.string.untrusted_certificate_title)) },
-            text = {
-                Column {
-                    Text(stringResource(CommonR.string.untrusted_certificate_message))
-                    Spacer(Modifier.size(8.dp))
-                    Text(
-                        "${stringResource(CommonR.string.certificate_subject_label)}: " +
-                            cert.subjectX500Principal.name,
-                    )
-                    Text(
-                        "${stringResource(CommonR.string.certificate_issuer_label)}: " +
-                            cert.issuerX500Principal.name,
-                    )
-                    Text(
-                        "${stringResource(CommonR.string.certificate_fingerprint_label)}: " +
-                            fingerprint,
-                    )
-                    Text(
-                        "${stringResource(CommonR.string.certificate_validity_label)}: " +
-                            cert.validUntilText(),
-                    )
-                    if (expired || notYetValid) {
+    pendingCertReview
+        ?.takeIf { it.target == target }
+        ?.let { review ->
+            val cert = review.certificate
+            val fingerprint = remember(cert) { cert.sha256Fingerprint() }
+            val expired = remember(cert) { cert.hasExpired() }
+            val notYetValid = remember(cert) { cert.isNotYetValid() }
+            AlertDialog(
+                onDismissRequest = { pendingCertReview = null },
+                title = { Text(stringResource(CommonR.string.untrusted_certificate_title)) },
+                text = {
+                    Column {
+                        Text(stringResource(CommonR.string.untrusted_certificate_message))
                         Spacer(Modifier.size(8.dp))
                         Text(
-                            if (expired)
-                                stringResource(
-                                    CommonR.string.certificate_expired_warning,
-                                    cert.validUntilText(),
-                                )
-                            else
-                                stringResource(
-                                    CommonR.string.certificate_not_yet_valid_warning,
-                                    cert.validFromText(),
-                                ),
-                            color = MaterialTheme.colorScheme.error,
+                            "https://${review.target.host}:${review.target.port ?: 443}${review.target.path.orEmpty()}",
                         )
+                        Text(
+                            "${stringResource(CommonR.string.certificate_subject_label)}: " +
+                                cert.subjectX500Principal.name,
+                        )
+                        Text(
+                            "${stringResource(CommonR.string.certificate_issuer_label)}: " +
+                                cert.issuerX500Principal.name,
+                        )
+                        Text(
+                            "${stringResource(CommonR.string.certificate_fingerprint_label)}: " +
+                                fingerprint,
+                        )
+                        Text(
+                            "${stringResource(CommonR.string.certificate_validity_label)}: " +
+                                cert.validUntilText(),
+                        )
+                        if (expired || notYetValid) {
+                            Spacer(Modifier.size(8.dp))
+                            Text(
+                                if (expired)
+                                    stringResource(
+                                        CommonR.string.certificate_expired_warning,
+                                        cert.validUntilText(),
+                                    )
+                                else
+                                    stringResource(
+                                        CommonR.string.certificate_not_yet_valid_warning,
+                                        cert.validFromText(),
+                                    ),
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
                     }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        pendingCertReview = null
-                        scope.launch { viewModel.pinCertificate(activeServerId, cert.encoded) }
-                    },
-                ) {
-                    Text(stringResource(CommonR.string.trust_and_retry_action))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingCertReview = null }) {
-                    Text(stringResource(CommonR.string.cancel))
-                }
-            },
-        )
-    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            pendingCertReview = null
+                            scope.launch { viewModel.pinCertificate(review) }
+                        },
+                    ) {
+                        Text(stringResource(CommonR.string.trust_and_retry_action))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingCertReview = null }) {
+                        Text(stringResource(CommonR.string.cancel))
+                    }
+                },
+            )
+        }
 
     if (showAddTorrent) {
         val prefs by viewModel.addTorrentPrefs.collectAsStateWithLifecycle()
@@ -765,9 +958,9 @@ internal fun TooltipIconButton(
     }
 }
 
-@Composable
-private fun TorrentList(
+private fun LazyListScope.torrentRows(
     torrents: List<qbittorrent.models.Torrent>,
+    compact: Boolean,
     categoryColors: Map<String, Int>,
     selected: SnapshotStateList<String>,
     openHash: String?,
@@ -776,16 +969,11 @@ private fun TorrentList(
     onPauseResume: (qbittorrent.models.Torrent) -> Unit,
     onDelete: (qbittorrent.models.Torrent) -> Unit,
 ) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        // Extra bottom padding so the last row clears the floating add-torrent FAB, which - unlike
-        // the old BottomAppBar-docked FAB - no longer reserves its own space below the content.
-        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 88.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        items(torrents, key = { it.hash }) { torrent ->
+    items(torrents, key = { it.hash }) { torrent ->
+        Box(Modifier.padding(horizontal = 16.dp)) {
             SwipeableTorrentRow(
                 torrent = torrent,
+                compact = compact,
                 categoryColors = categoryColors,
                 selected = selected.contains(torrent.hash),
                 selectionActive = selected.isNotEmpty(),
@@ -811,13 +999,6 @@ private fun TorrentList(
 private fun FilterChips(state: ServerScreenState, viewModel: ServerViewModel) {
     val untaggedLabel = stringResource(CommonR.string.untagged_label)
     val chips = buildList {
-        if (state.selectedFilter != StateFilter.ALL)
-            add(
-                stringResource(state.selectedFilter.labelRes) to
-                    {
-                        viewModel.setFilter(StateFilter.ALL)
-                    },
-            )
         state.selectedCategory?.let { c -> add(c to { viewModel.setCategory(null) }) }
         state.selectedTracker?.let { t -> add(t to { viewModel.setTracker(null) }) }
         if (state.filterUntagged) add(untaggedLabel to { viewModel.setFilterUntagged(false) })
@@ -834,6 +1015,101 @@ private fun FilterChips(state: ServerScreenState, viewModel: ServerViewModel) {
                 onClick = onClear,
                 label = { Text(label) },
                 trailingIcon = { Icon(Icons.Filled.Close, contentDescription = null) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun ServerTransferSummary(
+    downloadSpeed: Long,
+    uploadSpeed: Long,
+    freeSpace: Long,
+    onOpenServer: () -> Unit,
+) {
+    Surface(
+        onClick = onOpenServer,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(CommonR.string.server_overview_action),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+            androidx.compose.foundation.layout.FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                TransferMetric(
+                    label = stringResource(CommonR.string.dl_speed),
+                    value =
+                        stringResource(
+                            CommonR.string.transfer_rate,
+                            downloadSpeed.toHumanReadable(),
+                        ),
+                    icon = Icons.Filled.ArrowDownward,
+                    modifier = Modifier.widthIn(min = 96.dp).weight(1f),
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                TransferMetric(
+                    label = stringResource(CommonR.string.up_speed),
+                    value =
+                        stringResource(CommonR.string.transfer_rate, uploadSpeed.toHumanReadable()),
+                    icon = Icons.Filled.ArrowUpward,
+                    modifier = Modifier.widthIn(min = 96.dp).weight(1f),
+                )
+                TransferMetric(
+                    label = stringResource(CommonR.string.free_space_label),
+                    value = freeSpace.toHumanReadable(),
+                    icon = Icons.Filled.Storage,
+                    modifier = Modifier.widthIn(min = 96.dp).weight(1f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatusFilters(
+    selected: StateFilter,
+    queueingEnabled: Boolean,
+    onSelect: (StateFilter) -> Unit,
+) {
+    val filters =
+        remember(queueingEnabled) {
+            StateFilter.entries.filter { it != StateFilter.QUEUED || queueingEnabled }
+        }
+    val listState = rememberLazyListState()
+    LaunchedEffect(selected, filters) {
+        val index = filters.indexOf(selected)
+        val visible = listState.layoutInfo.visibleItemsInfo.any { it.key == selected.name }
+        if (index >= 0 && !visible) listState.animateScrollToItem(index)
+    }
+    LazyRow(
+        state = listState,
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(filters, key = { it.name }) { filter ->
+            FilterChip(
+                selected = filter == selected,
+                onClick = { onSelect(filter) },
+                label = { Text(stringResource(filter.labelRes)) },
+                shape = RoundedCornerShape(50),
             )
         }
     }

@@ -145,5 +145,21 @@ class MainDataFullUpdateTest {
         } finally {
             c.close()
         }
+
+        @Test
+        fun `a tag delta keeps unrelated tags and applies removals`() = runTest {
+            val initial =
+                maindata(1, true, emptyList()).dropLast(1) + ""","tags":["linux","books"]}"""
+            val c =
+                client(initial, """{"rid":2,"tags":["music","linux"],"tags_removed":["books"]}""")
+            try {
+                assertEquals(
+                    listOf("linux", "music"),
+                    c.observeMainData().first { it.rid == 2L }.tags,
+                )
+            } finally {
+                c.close()
+            }
+        }
     }
 }

@@ -14,8 +14,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -36,14 +40,15 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.common.R as CommonR
+import dev.yashgarg.qbit.ui.compose.ActionSheet
 import dev.yashgarg.qbit.ui.compose.AlertDialog
 import dev.yashgarg.qbit.ui.compose.CenterLinearLoading
-import dev.yashgarg.qbit.ui.compose.theme.AppTypography
-import dev.yashgarg.qbit.ui.compose.theme.bodyMediumPrimary
 import dev.yashgarg.qbit.ui.torrent.TorrentDetailsState
 import dev.yashgarg.qbit.utils.toHumanReadable
 import java.text.NumberFormat
@@ -75,6 +80,7 @@ fun PiecesTab(state: TorrentDetailsState, modifier: Modifier = Modifier) {
     val grouped = remember(pieces) { groupPieces(pieces, MAX_BLOCKS) }
     val done = remember(pieces) { pieces.count { it == PieceState.DONE } }
     var selectedBlock by rememberSaveable { mutableStateOf<Int?>(null) }
+    var showPiecePicker by rememberSaveable { mutableStateOf(false) }
     val green = colorResource(R.color.green)
     val colors =
         mapOf(
@@ -84,42 +90,98 @@ fun PiecesTab(state: TorrentDetailsState, modifier: Modifier = Modifier) {
             BlockState.MISSING to MaterialTheme.colorScheme.outlineVariant,
         )
 
-    Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+    Column(
+        modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
         val pieceSize = state.torrentProperties?.pieceSize
-        Text(
-            if (pieceSize != null) {
-                stringResource(
-                    CommonR.string.pieces_summary,
-                    done,
-                    pieces.size,
-                    pieceSize.toHumanReadable(),
+        Surface(
+            color = MaterialTheme.colorScheme.primaryContainer,
+            shape = MaterialTheme.shapes.extraLarge,
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                horizontalArrangement = Arrangement.spacedBy(20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CircularProgressIndicator(
+                    progress = { done.toFloat() / pieces.size },
+                    modifier = Modifier.size(56.dp),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.12f),
                 )
-            } else {
-                stringResource(CommonR.string.pieces_map_description, done, pieces.size)
-            },
-            style = MaterialTheme.typography.titleSmall,
-        )
-        Legend(
-            colors = colors,
-            showPartial = grouped.piecesPerBlock > 1,
-            modifier = Modifier.padding(vertical = 12.dp),
-        )
-        if (grouped.piecesPerBlock > 1) {
-            Text(
-                stringResource(CommonR.string.pieces_grouped_note, grouped.piecesPerBlock),
-                style = MaterialTheme.typography.bodySmall,
-            )
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        stringResource(
+                            CommonR.string.torrent_progress_percent,
+                            done * 100 / pieces.size,
+                        ),
+                        style = MaterialTheme.typography.headlineMedium,
+                    )
+                    Text(
+                        if (pieceSize != null) {
+                            stringResource(
+                                CommonR.string.pieces_summary,
+                                done,
+                                pieces.size,
+                                // Keep the value and unit together when the summary wraps.
+                                pieceSize.toHumanReadable().replace(' ', '\u00a0'),
+                            )
+                        } else {
+                            stringResource(CommonR.string.pieces_map_description, done, pieces.size)
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
         }
-        Text(
-            stringResource(CommonR.string.pieces_tap_hint),
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(bottom = 12.dp),
-        )
-        PiecesGrid(
-            blocks = grouped.blocks,
-            colors = colors,
-            description = stringResource(CommonR.string.pieces_map_description, done, pieces.size),
-            onBlockTap = { selectedBlock = it },
+        Surface(
+            color = MaterialTheme.colorScheme.surface,
+            shape = MaterialTheme.shapes.large,
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Legend(
+                    colors = colors,
+                    showPartial = grouped.piecesPerBlock > 1,
+                )
+                if (grouped.piecesPerBlock > 1) {
+                    Text(
+                        stringResource(CommonR.string.pieces_grouped_note, grouped.piecesPerBlock),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Text(
+                    stringResource(CommonR.string.pieces_tap_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                TextButton(onClick = { showPiecePicker = true }) {
+                    Text(stringResource(CommonR.string.pieces_find_action))
+                }
+                PiecesGrid(
+                    blocks = grouped.blocks,
+                    colors = colors,
+                    description =
+                        stringResource(CommonR.string.pieces_map_description, done, pieces.size),
+                    openPickerLabel = stringResource(CommonR.string.pieces_find_action),
+                    onOpenPicker = { showPiecePicker = true },
+                    onBlockTap = { selectedBlock = it },
+                )
+            }
+        }
+    }
+
+    if (showPiecePicker) {
+        PiecePickerDialog(
+            totalPieces = pieces.size,
+            onDismiss = { showPiecePicker = false },
+            onSelect = { piece ->
+                showPiecePicker = false
+                selectedBlock = (piece - 1) / grouped.piecesPerBlock
+            },
         )
     }
 
@@ -127,7 +189,7 @@ fun PiecesTab(state: TorrentDetailsState, modifier: Modifier = Modifier) {
     selectedBlock
         ?.takeIf { it < grouped.blocks.size }
         ?.let { block ->
-            PieceDetailsDialog(
+            PieceDetailsSheet(
                 pieceRange = grouped.piecesIn(block, pieces.size),
                 state = state,
                 onDismiss = { selectedBlock = null },
@@ -136,7 +198,51 @@ fun PiecesTab(state: TorrentDetailsState, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun PieceDetailsDialog(
+private fun PiecePickerDialog(
+    totalPieces: Int,
+    onDismiss: () -> Unit,
+    onSelect: (Int) -> Unit,
+) {
+    var value by rememberSaveable { mutableStateOf("") }
+    val locale = LocalConfiguration.current.locales[0]
+    val total =
+        remember(locale, totalPieces) {
+            NumberFormat.getIntegerInstance(locale).format(totalPieces)
+        }
+    val piece =
+        value
+            .takeIf { it.isNotEmpty() && it.all(Char::isDigit) }
+            ?.toIntOrNull()
+            ?.takeIf { it in 1..totalPieces }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(CommonR.string.pieces_find_action)) },
+        text = {
+            OutlinedTextField(
+                value = value,
+                onValueChange = { value = it },
+                label = { Text(stringResource(CommonR.string.pieces_number_label)) },
+                supportingText = {
+                    Text(stringResource(CommonR.string.pieces_number_hint, total))
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { piece?.let(onSelect) }, enabled = piece != null) {
+                Text(stringResource(CommonR.string.pieces_show_block_action))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
+        },
+    )
+}
+
+@Composable
+private fun PieceDetailsSheet(
     pieceRange: IntRange,
     state: TorrentDetailsState,
     onDismiss: () -> Unit,
@@ -162,80 +268,73 @@ private fun PieceDetailsDialog(
             )
         }
 
-    AlertDialog(
-        tonalElevation = 5.dp,
+    ActionSheet(
         onDismissRequest = onDismiss,
-        title = { Text(title, style = AppTypography.titleLarge) },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                if (states.size == 1) {
-                    DetailRow(
-                        stringResource(CommonR.string.piece_details_status),
-                        stringResource(stateLabel(states.single())),
-                    )
-                } else {
-                    PieceState.entries.reversed().forEach { pieceState ->
-                        DetailRow(
-                            stringResource(stateLabel(pieceState)),
-                            number.format(states.count { it == pieceState }),
-                        )
-                    }
-                }
-                val props = state.torrentProperties
-                if (props != null && props.pieceSize > 0) {
-                    val bytes = byteRange(pieceRange, props.pieceSize, props.totalSize)
-                    if (!bytes.isEmpty()) {
-                        DetailRow(
-                            stringResource(CommonR.string.piece_details_size),
-                            (bytes.last - bytes.first + 1).toHumanReadable(),
-                        )
-                        DetailRow(
-                            stringResource(CommonR.string.piece_details_bytes),
-                            stringResource(
-                                CommonR.string.piece_details_bytes_value,
-                                number.format(bytes.first),
-                                number.format(bytes.last),
-                            ),
-                        )
-                    }
-                }
-                Text(
-                    stringResource(CommonR.string.tab_files),
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
+        title = title,
+    ) {
+        Column(Modifier.padding(horizontal = 24.dp)) {
+            if (states.size == 1) {
+                DetailRow(
+                    stringResource(CommonR.string.piece_details_status),
+                    stringResource(stateLabel(states.single())),
                 )
-                if (files.isEmpty()) {
-                    Text(
-                        stringResource(CommonR.string.piece_details_no_files),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                files.take(MAX_LISTED_FILES).forEach { file ->
-                    Text(
-                        file.name,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(vertical = 2.dp),
-                    )
-                }
-                if (files.size > MAX_LISTED_FILES) {
-                    val more = files.size - MAX_LISTED_FILES
-                    Text(
-                        pluralStringResource(CommonR.plurals.piece_details_more_files, more, more),
-                        style =
-                            MaterialTheme.typography.bodySmall.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            ),
-                        modifier = Modifier.padding(top = 2.dp),
+            } else {
+                PieceState.entries.reversed().forEach { pieceState ->
+                    DetailRow(
+                        stringResource(stateLabel(pieceState)),
+                        number.format(states.count { it == pieceState }),
                     )
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(CommonR.string.close_action), style = bodyMediumPrimary)
+            val props = state.torrentProperties
+            if (props != null && props.pieceSize > 0) {
+                val bytes = byteRange(pieceRange, props.pieceSize, props.totalSize)
+                if (!bytes.isEmpty()) {
+                    DetailRow(
+                        stringResource(CommonR.string.piece_details_size),
+                        (bytes.last - bytes.first + 1).toHumanReadable(),
+                    )
+                    DetailRow(
+                        stringResource(CommonR.string.piece_details_bytes),
+                        stringResource(
+                            CommonR.string.piece_details_bytes_value,
+                            number.format(bytes.first),
+                            number.format(bytes.last),
+                        ),
+                    )
+                }
             }
-        },
-    )
+            Text(
+                stringResource(CommonR.string.tab_files),
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
+            )
+            if (files.isEmpty()) {
+                Text(
+                    stringResource(CommonR.string.piece_details_no_files),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            files.take(MAX_LISTED_FILES).forEach { file ->
+                Text(
+                    file.name,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(vertical = 2.dp),
+                )
+            }
+            if (files.size > MAX_LISTED_FILES) {
+                val more = files.size - MAX_LISTED_FILES
+                Text(
+                    pluralStringResource(CommonR.plurals.piece_details_more_files, more, more),
+                    style =
+                        MaterialTheme.typography.bodySmall.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+        }
+    }
 }
 
 private fun stateLabel(state: PieceState): Int =
@@ -250,6 +349,8 @@ private fun PiecesGrid(
     blocks: List<BlockState>,
     colors: Map<BlockState, Color>,
     description: String,
+    openPickerLabel: String,
+    onOpenPicker: () -> Unit,
     onBlockTap: (Int) -> Unit,
 ) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
@@ -259,7 +360,13 @@ private fun PiecesGrid(
         Canvas(
             Modifier.fillMaxWidth()
                 .height(stride * rows - BLOCK_GAP)
-                .semantics { contentDescription = description }
+                .semantics {
+                    contentDescription = description
+                    onClick(label = openPickerLabel) {
+                        onOpenPicker()
+                        true
+                    }
+                }
                 .pointerInput(columns, blocks.size) {
                     detectTapGestures { offset ->
                         val step = stride.toPx()

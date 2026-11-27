@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.andThen
 import com.github.michaelbull.result.coroutines.runSuspendCatching
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
@@ -18,6 +19,8 @@ import dev.yashgarg.qbit.utils.friendlyMessage
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import javax.inject.Inject
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
@@ -25,6 +28,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import qbittorrent.models.RssRule
+import qbittorrent.models.applyEditsTo
 
 /**
  * Shared across the Feeds/Rules screen, the per-feed articles screen, and the rule editor - each
@@ -46,9 +50,11 @@ constructor(
     val itemPath: String? = savedStateHandle.get<String>(Routes.ARG_RSS_ITEM_PATH)
     val ruleName: String? =
         savedStateHandle.get<String>(Routes.ARG_RSS_RULE_NAME)?.takeIf { it.isNotBlank() }
+    private var itemsJob: Job? = null
+    private var rulesJob: Job? = null
 
     init {
-        load(refresh = false)
+        refresh()
         viewModelScope.launch {
             repository.getRssRefreshInterval().onOk { minutes ->
                 _uiState.update { it.copy(refreshIntervalMinutes = minutes) }
@@ -88,7 +94,10 @@ constructor(
         }
     }
 
-    fun refresh() = load(refresh = true)
+    fun refresh() {
+        refreshItems()
+        refreshRules()
+    }
 
     fun setRssProcessingEnabled(enabled: Boolean) {
         launchStatus(
@@ -124,24 +133,43 @@ constructor(
         }
     }
 
-    private fun load(refresh: Boolean) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(loading = !refresh, refreshing = refresh, error = null) }
-            repository
-                .getRssItems()
-                .onOk { items -> _uiState.update { it.copy(items = items) } }
-                .onErr { error ->
-                    _uiState.update {
-                        it.copy(
-                            error =
-                                error.friendlyMessage(
-                                    getString(CommonR.string.status_rss_load_failure),
-                                ),
-                        )
-                    }
+    private fun RssLoad.reloading() =
+        if (this == RssLoad.Ready || this == RssLoad.Refreshing) RssLoad.Refreshing
+        else RssLoad.Loading
+
+    fun refreshItems() {
+        itemsJob?.cancel()
+        _uiState.update { it.copy(itemsLoad = it.itemsLoad.reloading()) }
+        itemsJob = viewModelScope.launch {
+            val result = repository.getRssItems()
+            ensureActive()
+            result
+                .onOk { items ->
+                    _uiState.update { it.copy(items = items, itemsLoad = RssLoad.Ready) }
                 }
-            repository.getRssRules().onOk { rules -> _uiState.update { it.copy(rules = rules) } }
-            _uiState.update { it.copy(loading = false, refreshing = false) }
+                .onErr {
+                    val message =
+                        it.friendlyMessage(getString(CommonR.string.status_rss_load_failure))
+                    _uiState.update { state -> state.copy(itemsLoad = RssLoad.Failed(message)) }
+                }
+        }
+    }
+
+    fun refreshRules() {
+        rulesJob?.cancel()
+        _uiState.update { it.copy(rulesLoad = it.rulesLoad.reloading()) }
+        rulesJob = viewModelScope.launch {
+            val result = repository.getRssRules()
+            ensureActive()
+            result
+                .onOk { rules ->
+                    _uiState.update { it.copy(rules = rules, rulesLoad = RssLoad.Ready) }
+                }
+                .onErr {
+                    val message =
+                        it.friendlyMessage(getString(CommonR.string.status_rss_rules_load_failure))
+                    _uiState.update { state -> state.copy(rulesLoad = RssLoad.Failed(message)) }
+                }
         }
     }
 
@@ -149,7 +177,7 @@ constructor(
         launchStatus(
             successMessage = getString(CommonR.string.status_rss_folder_added),
             failureMessage = getString(CommonR.string.status_rss_add_folder_failure),
-            onSuccess = { refresh() },
+            onSuccess = { refreshItems() },
         ) {
             repository.addRssFolder(path)
         }
@@ -159,7 +187,7 @@ constructor(
         launchStatus(
             successMessage = getString(CommonR.string.status_rss_feed_added),
             failureMessage = getString(CommonR.string.status_rss_add_feed_failure),
-            onSuccess = { refresh() },
+            onSuccess = { refreshItems() },
         ) {
             repository.addRssFeed(url, path)
         }
@@ -169,7 +197,7 @@ constructor(
         launchStatus(
             successMessage = getString(CommonR.string.status_rss_item_removed),
             failureMessage = getString(CommonR.string.status_rss_remove_item_failure),
-            onSuccess = { refresh() },
+            onSuccess = { refreshItems() },
         ) {
             repository.removeRssItem(itemPath)
         }
@@ -180,7 +208,7 @@ constructor(
         viewModelScope.launch {
             repository
                 .moveRssItem(itemPath, destPath)
-                .onOk { refresh() }
+                .onOk { refreshItems() }
                 .onErr {
                     emitStatus(
                         it.friendlyMessage(getString(CommonR.string.status_rss_move_item_failure)),
@@ -194,7 +222,7 @@ constructor(
         launchStatus(
             successMessage = getString(CommonR.string.status_rss_marked_read),
             failureMessage = getString(CommonR.string.status_rss_mark_read_failure),
-            onSuccess = { refresh() },
+            onSuccess = { refreshItems() },
         ) {
             repository.markRssItemAsRead(itemPath, articleId)
         }
@@ -210,7 +238,7 @@ constructor(
         launchStatus(
             successMessage = getString(CommonR.string.status_rss_marked_read),
             failureMessage = getString(CommonR.string.status_rss_mark_read_failure),
-            onSuccess = { refresh() },
+            onSuccess = { refreshItems() },
         ) {
             var firstError: Throwable? = null
             _uiState.value.items.flattenFeeds().forEach { feed ->
@@ -224,23 +252,56 @@ constructor(
         launchStatus(
             successMessage = getString(CommonR.string.status_rss_refreshing_item),
             failureMessage = getString(CommonR.string.status_rss_refresh_item_failure),
-            onSuccess = { refresh() },
+            onSuccess = { refreshItems() },
         ) {
             repository.refreshRssItem(itemPath)
         }
     }
 
+    fun toggleRule(name: String, enabled: Boolean) {
+        val state = _uiState.value
+        if (state.rulesLoad != RssLoad.Ready) return
+        val original = state.rules[name] ?: return
+        setRule(name, original.copy(enabled = enabled))
+    }
+
+    fun saveEditorRule(name: String, draft: RssRule, onSaved: () -> Unit) {
+        val state = _uiState.value
+        if (!state.canSaveRule(ruleName, name)) return
+        setRule(ruleName ?: name.trim(), draft, creating = ruleName == null, onSaved = onSaved)
+    }
+
     /** [onSaved] fires only on success - the rule editor uses it to navigate back. */
-    fun setRule(ruleName: String, rule: RssRule, onSaved: () -> Unit = {}) {
+    private fun setRule(
+        ruleName: String,
+        draft: RssRule,
+        creating: Boolean = false,
+        onSaved: () -> Unit = {},
+    ) {
         launchStatus(
             successMessage = getString(CommonR.string.status_rss_rule_saved),
             failureMessage = getString(CommonR.string.status_rss_save_rule_failure),
             onSuccess = {
-                refresh()
+                refreshRules()
                 onSaved()
             },
         ) {
-            repository.setRssRule(ruleName, rule)
+            // History can advance while an editor is open. Re-read before the replacing POST so
+            // we only change the fields the user edited (or enabled for the list switch).
+            repository.getRssRules().andThen { rules ->
+                val latest = rules[ruleName]
+                val rule =
+                    when {
+                        creating && latest == null -> draft
+                        !creating && latest != null -> draft.applyEditsTo(latest)
+                        else -> null
+                    }
+                if (rule != null) repository.setRssRule(ruleName, rule)
+                else {
+                    _uiState.update { it.copy(rules = rules) }
+                    Err(IllegalStateException("Rule changed before save"))
+                }
+            }
         }
     }
 
@@ -248,7 +309,7 @@ constructor(
         launchStatus(
             successMessage = getString(CommonR.string.status_rss_rule_renamed),
             failureMessage = getString(CommonR.string.status_rss_rename_rule_failure),
-            onSuccess = { refresh() },
+            onSuccess = { refreshRules() },
         ) {
             repository.renameRssRule(ruleName, newRuleName)
         }
@@ -258,15 +319,16 @@ constructor(
         launchStatus(
             successMessage = getString(CommonR.string.status_rss_rule_removed),
             failureMessage = getString(CommonR.string.status_rss_remove_rule_failure),
-            onSuccess = { refresh() },
+            onSuccess = { refreshRules() },
         ) {
             repository.removeRssRule(ruleName)
         }
     }
 
-    fun loadMatchingArticles(ruleName: String, onResult: (Map<String, List<String>>) -> Unit) {
+    fun loadMatchingArticles(ruleName: String, onResult: (Map<String, List<String>>?) -> Unit) {
         viewModelScope.launch {
             repository.getRssMatchingArticles(ruleName).onOk(onResult).onErr {
+                onResult(null)
                 emitStatus(it.friendlyMessage())
             }
         }

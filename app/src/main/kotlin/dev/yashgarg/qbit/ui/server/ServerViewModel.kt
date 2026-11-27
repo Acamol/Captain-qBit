@@ -1,12 +1,15 @@
 package dev.yashgarg.qbit.ui.server
 
 import android.app.Application
-import android.util.Base64
-import androidx.core.net.toUri
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.viewModelScope
+import com.github.michaelbull.result.Err
+import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
+import com.github.michaelbull.result.andThen
 import com.github.michaelbull.result.get
+import com.github.michaelbull.result.getError
+import com.github.michaelbull.result.map
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,6 +20,7 @@ import dev.yashgarg.qbit.data.manager.CertificateProbe
 import dev.yashgarg.qbit.data.manager.ClientManager
 import dev.yashgarg.qbit.data.manager.PendingTorrentIntent
 import dev.yashgarg.qbit.data.models.AppPreferences
+import dev.yashgarg.qbit.data.models.ConfigStatus
 import dev.yashgarg.qbit.data.models.ContentTreeItem
 import dev.yashgarg.qbit.data.models.OwnAdds
 import dev.yashgarg.qbit.data.models.OwnAdds.registered
@@ -28,15 +32,15 @@ import dev.yashgarg.qbit.utils.TorrentDownloader
 import dev.yashgarg.qbit.utils.TorrentFileParser
 import dev.yashgarg.qbit.utils.TransformUtil
 import dev.yashgarg.qbit.utils.friendlyMessage
-import java.security.cert.X509Certificate
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import qbittorrent.models.Torrent
 import qbittorrent.models.TorrentFile
@@ -53,12 +57,8 @@ constructor(
     application: Application,
 ) : StatusViewModel(application) {
 
-    // Whether the filter drawer should be closed the next time this screen composes. Set when the
-    // screen is torn down by navigating away, cleared once acted on. Deliberately held here rather
-    // than in saved state: the ViewModel survives a configuration change, which is the one teardown
-    // that must not close the drawer, and a fresh ViewModel (first launch, or after process death)
-    // starts true so the screen always opens on the list.
-    var closeDrawerOnEntry = true
+    // Close filters on tab re-entry, but preserve an open sheet across configuration changes.
+    var closeFiltersOnEntry = true
     private val _uiState = MutableStateFlow(ServerScreenState())
     val uiState = _uiState.asStateFlow()
 
@@ -67,7 +67,7 @@ constructor(
 
     fun consumePendingTorrentUri() = pendingTorrentIntent.consume()
 
-    /** All saved servers, for the drawer switcher. */
+    /** All saved servers, for the server switcher. */
     val servers: StateFlow<List<ServerConfig>> =
         configDao.getConfigs().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
@@ -83,6 +83,20 @@ constructor(
         prefsStore.data
             .map { it.categoryColors }
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
+    val compactTorrentList: StateFlow<Boolean> =
+        prefsStore.data
+            .map { it.compactTorrentList }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, AppPreferences().compactTorrentList)
+
+    val showServerOverview: StateFlow<Boolean> =
+        prefsStore.data
+            .map { it.showServerOverview }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, AppPreferences().showServerOverview)
+
+    fun setCompactTorrentList(enabled: Boolean) {
+        viewModelScope.launch { prefsStore.updateData { it.copy(compactTorrentList = enabled) } }
+    }
 
     /** Sets (or clears, when [color] is null) the app-local color for a category. */
     fun setCategoryColor(category: String, color: Int?) {
@@ -111,21 +125,18 @@ constructor(
     }
 
     /** Fetches the certificate a server presents, for the user to review before trusting it. */
-    suspend fun probeCertificate(host: String, port: Int): Result<X509Certificate, Throwable> =
-        CertificateProbe.fetchPresentedCertificate(host, port)
+    internal suspend fun probeCertificate(
+        target: CertificateTarget,
+    ): Result<CertificateReview, Throwable> =
+        CertificateProbe.fetchPresentedCertificate(target.host, target.port ?: 443).map {
+            CertificateReview(target, it)
+        }
 
-    /**
-     * Approves a certificate for [id]. Persisting it here (rather than only from ConfigScreen) is
-     * what lets a connection that's failing right now on this screen recover without navigating
-     * away: ClientManagerImpl reactively rebuilds its client whenever this config row changes, so
-     * the next sync attempt picks up the pin automatically.
-     */
-    suspend fun pinCertificate(id: Int, der: ByteArray) {
+    internal suspend fun pinCertificate(review: CertificateReview) {
         withContext(Dispatchers.IO) {
-            val current = configDao.getConfigById(id) ?: return@withContext
-            configDao.addConfig(
-                current.copy(pinnedCertificate = Base64.encodeToString(der, Base64.NO_WRAP)),
-            )
+            val active =
+                configDao.getConfigs().first().activeServer(prefsStore.data.first().activeServerId)
+            review.pinIfCurrent(active, configDao)
         }
     }
 
@@ -155,13 +166,7 @@ constructor(
                 if (state.dataLoading || state.hasError || state.data == null) null
                 else
                     state.data.torrents.values
-                        .filter { torrent ->
-                            torrent.matchesSearch(state.searchQuery) &&
-                                torrent.matchesFilter(state.selectedFilter) &&
-                                torrent.matchesCategory(state.selectedCategory) &&
-                                torrent.matchesTracker(state.selectedTracker) &&
-                                torrent.matchesTags(state.selectedTags, state.filterUntagged)
-                        }
+                        .filter(state::includes)
                         .sortedWith(state.sortOption, state.sortDirection)
             }
             .flowOn(Dispatchers.Default)
@@ -170,13 +175,30 @@ constructor(
     private val _intent = MutableSharedFlow<Unit>()
     val intent = _intent.asSharedFlow()
 
-    private var syncJob: Job? = null
+    private val refreshRequests = MutableStateFlow(0L)
+    private var displayedRepository: QbitRepository? = null
 
     init {
-        syncJob = viewModelScope.launch {
-            val prefs = prefsStore.data.first()
-            applyViewPrefs(prefs, prefs.activeServerId)
-            syncWhileForeground { syncData() }
+        viewModelScope.launch {
+            clientManager.configStatus.collectLatest { status ->
+                _uiState.update {
+                    it.copy(
+                        workspaceRevision = it.workspaceRevision + 1,
+                        dataLoading = true,
+                        data = null,
+                        error = null,
+                        hasError = false,
+                        availableTags = emptyList(),
+                        availableCategories = emptyList(),
+                        availableTrackers = emptyList(),
+                        trackerCounts = emptyMap(),
+                        queueingEnabled = false,
+                    )
+                }
+                if (status == ConfigStatus.EXISTS) {
+                    syncWhileForeground { refreshRequests.collectLatest { syncData() } }
+                }
+            }
         }
 
         // Reflect the active server's name in the UI.
@@ -190,18 +212,14 @@ constructor(
                 .collect { active -> _uiState.update { it.copy(serverName = active?.serverName) } }
         }
 
-        // On a real server switch, drop the current sync and restore the target server's own
-        // saved filters + sort (each server remembers its own view).
+        // Restoring the view is separate from following client replacement: an interval or
+        // credential edit needs a new collector, but must not reset the user's search or filters.
         viewModelScope.launch {
             prefsStore.data
-                .map { it.activeServerId }
-                .distinctUntilChanged()
-                .drop(1)
-                .collect { newId ->
-                    syncJob?.cancel()
-                    _uiState.update { it.copy(dataLoading = true, data = null, searchQuery = "") }
-                    applyViewPrefs(prefsStore.data.first(), newId)
-                    syncJob = viewModelScope.launch { syncWhileForeground { syncData() } }
+                .distinctUntilChangedBy { it.activeServerId }
+                .collect { prefs ->
+                    _uiState.update { it.copy(searchQuery = "") }
+                    applyViewPrefs(prefs, prefs.activeServerId)
                 }
         }
     }
@@ -260,8 +278,7 @@ constructor(
     }
 
     fun refresh() {
-        syncJob?.cancel()
-        syncJob = viewModelScope.launch { syncWhileForeground { syncData() } }
+        refreshRequests.update { it + 1 }
     }
 
     fun addTorrentUrl(
@@ -342,14 +359,22 @@ constructor(
 
     // ---- Add-time file selection -------------------------------------------------------------
     // The add API can't take file selections up front. The add screen's Files tab "prepares" a
-    // source (parsing a .torrent locally, or adding a magnet stopped and polling for metadata),
+    // source (parsing a .torrent locally, or adding a magnet and polling for metadata),
     // and confirmAdd() then applies options + "do not download" priorities and starts the
     // torrent unless the user chose paused.
 
     private var pendingSource: PendingSource? = null
-    /** Set when a magnet was already added (stopped) to fetch its metadata. */
-    private var addedStoppedHash: String? = null
     private var metadataJob: Job? = null
+    // A confirm/cancel must wait for the in-flight add, not cancel it or assume it succeeded.
+    private val torrentAddMutex = Mutex()
+    private val _confirmingAdd = MutableStateFlow(false)
+    val confirmingAdd = _confirmingAdd.asStateFlow()
+    private val _addConfirmed = MutableStateFlow(false)
+    val addConfirmed = _addConfirmed.asStateFlow()
+
+    fun consumeAddConfirmation() {
+        _addConfirmed.value = false
+    }
 
     private val _fileSelection = MutableStateFlow<FileSelectionUiState?>(null)
     /** Non-null while a prepared source's tree (or its loading state) should be showing. */
@@ -364,6 +389,7 @@ constructor(
      * [confirmAdd]. Returns false when the file can't be parsed (v2-only or invalid).
      */
     fun prepareTorrentFileSelection(bytes: ByteArray): Boolean {
+        if (_confirmingAdd.value) return false
         val parsed = TorrentFileParser.parse(bytes) ?: return false
         cancelFileSelection()
         val synthetic =
@@ -385,52 +411,46 @@ constructor(
     }
 
     /**
-     * Adds the magnet stopped right away and polls for its file list (metadata must arrive from
-     * peers before a tree exists). Safe to call repeatedly with the same url. Returns false when
-     * the link carries no v1 infohash.
+     * Adds the magnet running for metadata, then stops it before showing its file list. Safe to
+     * call repeatedly with the same URL. Returns false for links without a v1 infohash.
      */
     fun prepareMagnetSelection(url: String): Boolean {
+        if (_confirmingAdd.value) return false
         (pendingSource as? PendingSource.Magnet)?.let { if (it.url == url) return true }
         val hash = TorrentFileParser.magnetHash(url) ?: return false
         cancelFileSelection()
-        pendingSource = PendingSource.Magnet(url, hash)
+        val source = PendingSource.Magnet(url, hash)
+        pendingSource = source
         _fileSelection.value = FileSelectionUiState(magnetDisplayName(url), null)
 
         metadataJob = viewModelScope.launch {
-            // Must be added RUNNING: libtorrent won't fetch metadata for a stopped magnet.
-            rememberOwnAdd(hash)
-            repository
-                .addTorrentUrl(url, paused = false)
-                .onOk {
-                    addedStoppedHash = hash
-                    var attempts = 0
-                    while (isActive) {
-                        val files = repository.getTorrentFiles(hash).get()
-                        if (!files.isNullOrEmpty()) {
-                            // Got the file list: stop it again so nothing downloads while the
-                            // user picks. Metadata stays cached; confirm/apply will resume it.
-                            repository.toggleTorrentsState(listOf(hash), pause = true)
-                            _fileSelection.update { current ->
-                                current?.copy(tree = TransformUtil.transformFilesToTree(files, 0))
+            val added = torrentAddMutex.withLock {
+                if (pendingSource !== source) return@launch
+                addPendingTorrent(source, AddTorrentOptions(), paused = false).also {
+                    source.previewResult = it
+                }
+            }
+            val session = added.get()
+            if (session == null) {
+                added.onErr { showMetadataError(source, addFailure(it, source)) }
+                return@launch
+            }
+            val files = awaitTorrentFiles(session, METADATA_MAX_ATTEMPTS, METADATA_POLL_MS)
+            torrentAddMutex.withLock {
+                if (pendingSource !== source || _confirmingAdd.value) return@withLock
+                session
+                    .stop()
+                    .onOk {
+                        if (files == null) {
+                            showMetadataError(source, getString(CommonR.string.metadata_timeout))
+                        } else {
+                            _fileSelection.update {
+                                it?.copy(tree = TransformUtil.transformFilesToTree(files, 0))
                             }
-                            break
                         }
-                        if (++attempts >= METADATA_MAX_ATTEMPTS) {
-                            repository.toggleTorrentsState(listOf(hash), pause = true)
-                            emitStatus(getString(CommonR.string.metadata_timeout))
-                            break
-                        }
-                        delay(METADATA_POLL_MS)
                     }
-                }
-                .onErr { error ->
-                    emitStatus(
-                        error.friendlyMessage(
-                            getString(CommonR.string.status_add_torrent_url_failure),
-                        ),
-                    )
-                    clearFileSelection()
-                }
+                    .onErr { showMetadataError(source, addFailure(it, source)) }
+            }
         }
         return true
     }
@@ -447,113 +467,219 @@ constructor(
         autoTmm: Boolean,
     ) {
         val source = pendingSource ?: return
-        metadataJob?.cancel()
-        clearFileSelection()
+        if (_confirmingAdd.value) return
+        val waitingForPreview = source is PendingSource.Magnet && source.previewResult == null
+        _confirmingAdd.value = true
+        _fileSelection.update { it?.copy(confirmationError = null) }
+        source.confirmed = true
 
         viewModelScope.launch {
-            when (source) {
-                is PendingSource.TorrentBytes -> {
-                    rememberOwnAdd(source.parsed.hash)
-                    val add =
-                        repository.addTorrentFile(
-                            source.bytes,
-                            category,
-                            savePath,
-                            paused = true,
-                            autoTmm = autoTmm.takeIf { it },
-                        )
-                    add.onErr { error ->
-                        emitStatus(
-                            error.friendlyMessage(
-                                getString(CommonR.string.status_add_torrent_file_failure),
-                            ),
-                        )
-                        return@launch
-                    }
-                    val hash = source.parsed.hash
-                    val server = awaitTorrentFiles(hash)
-                    if (server == null) {
-                        emitStatus(getString(CommonR.string.status_file_selection_failed))
-                        return@launch
-                    }
-                    applySelectionAndStart(
-                        hash,
-                        mapDeselectedToServer(source.parsed, deselected, server),
-                        paused,
-                    )
+            try {
+                val options = AddTorrentOptions(category, savePath, autoTmm)
+                val result = torrentAddMutex.withLock {
+                    metadataJob?.cancel()
+                    metadataJob = null
+                    val previewError =
+                        if (waitingForPreview && source is PendingSource.Magnet)
+                            source.previewResult?.getError()
+                        else null
+                    if (previewError != null) Err(previewError)
+                    else finishPendingAdd(source, deselected, options, paused)
                 }
-                is PendingSource.Magnet -> {
-                    // Already added (stopped) during prepare; apply the options after the fact.
-                    val hash = source.hash
-                    if (category != null) repository.setTorrentCategory(listOf(hash), category)
-                    if (autoTmm) {
-                        repository.setAutoTorrentManagement(hash, true)
-                    } else if (savePath != null) {
-                        repository.setTorrentLocation(hash, savePath)
+                result
+                    .onOk {
+                        clearFileSelection()
+                        _addConfirmed.value = true
+                        emitStatus(it)
                     }
-                    // Indices came from the server's own file list, so they map directly.
-                    applySelectionAndStart(hash, deselected.toList(), paused)
+                    .onErr {
+                        _fileSelection.update { selection ->
+                            selection?.copy(confirmationError = addFailure(it, source))
+                        }
+                    }
+            } finally {
+                _confirmingAdd.value = false
+            }
+        }
+    }
+
+    private suspend fun addPendingTorrent(
+        source: PendingSource,
+        options: AddTorrentOptions,
+        paused: Boolean,
+    ): Result<TorrentAddSession, Throwable> {
+        val session =
+            source.session
+                ?: run {
+                    val bound =
+                        repository.forCurrentClient()
+                            ?: return Err(IllegalStateException("No active qBittorrent client"))
+                    TorrentAddSession(bound, source.hash).also { source.session = it }
+                }
+        return session
+            .add { tag ->
+                val ownKey = rememberOwnAdd(source.hash)
+                val result =
+                    when (source) {
+                        is PendingSource.Magnet ->
+                            session.repository.addTorrentUrl(
+                                source.url,
+                                options.category,
+                                options.savePath,
+                                paused,
+                                options.autoTmm,
+                                tag,
+                            )
+                        is PendingSource.TorrentBytes ->
+                            session.repository.addTorrentFile(
+                                source.bytes,
+                                options.category,
+                                options.savePath,
+                                paused,
+                                options.autoTmm,
+                                tag,
+                            )
+                    }
+                result.onOk { source.ownAddKey = ownKey }.onErr { forgetOwnAdd(ownKey) }
+            }
+            .map { session }
+    }
+
+    private suspend fun finishPendingAdd(
+        source: PendingSource,
+        deselected: Set<Int>,
+        options: AddTorrentOptions,
+        paused: Boolean,
+    ): Result<String, Throwable> {
+        val addedBeforeConfirm = source.session?.ownsTorrent == true
+        return addPendingTorrent(source, options, paused = true).andThen { session ->
+            session.stop().onErr {
+                return Err(it)
+            }
+            if (addedBeforeConfirm) {
+                applyAddOptions(session, options).onErr {
+                    return Err(it)
+                }
+            }
+            val ids =
+                if (deselected.isEmpty()) emptyList()
+                else
+                    when (source) {
+                        is PendingSource.Magnet -> deselected.toList()
+                        is PendingSource.TorrentBytes -> {
+                            val files =
+                                awaitTorrentFiles(session, FILE_POLL_ATTEMPTS, FILE_POLL_MS)
+                                    ?: return Err(FileSelectionNotApplied())
+                            mapDeselectedToServer(source.parsed, deselected, files).takeIf {
+                                it.distinct().size == deselected.size
+                            } ?: return Err(FileSelectionNotApplied())
+                        }
+                    }
+            session.applySelectionAndStart(ids, paused).onErr {
+                return Err(it)
+            }
+            session.releaseMarker().onErr {
+                return Ok(
+                    getString(
+                        CommonR.string.status_torrent_added_tag_cleanup_failed,
+                        session.marker,
+                    ),
+                )
+            }
+            Ok(getString(CommonR.string.status_add_torrent_file_success))
+        }
+    }
+
+    private suspend fun applyAddOptions(
+        session: TorrentAddSession,
+        options: AddTorrentOptions,
+    ): Result<Unit, Throwable> {
+        val client = session.repository
+        val hash = session.hash
+        options.category?.let {
+            client.setTorrentCategory(listOf(hash), it).onErr { error ->
+                return Err(error)
+            }
+        }
+        if (options.autoTmm == true) return client.setAutoTorrentManagement(hash, true)
+        options.savePath?.let {
+            client.setAutoTorrentManagement(hash, false).onErr { error ->
+                return Err(error)
+            }
+            return client.setTorrentLocation(hash, it)
+        }
+        return Ok(Unit)
+    }
+
+    /** Cleans up a preview only if the session proved it created the torrent. */
+    fun cancelFileSelection() {
+        if (_confirmingAdd.value) return
+        val source = pendingSource
+        val job = metadataJob
+        metadataJob = null
+        clearFileSelection()
+        if (source == null) return
+        viewModelScope.launch {
+            torrentAddMutex.withLock {
+                job?.cancel()
+                source.session?.let {
+                    val result =
+                        if (source.confirmed) it.releaseMarker()
+                        else it.discard { forgetOwnAdd(source.ownAddKey) }
+                    result.onErr { error -> emitStatus(addFailure(error, source)) }
                 }
             }
         }
     }
 
-    /** Cancels the flow; a magnet torrent that was already added (stopped) is removed again. */
-    fun cancelFileSelection() {
-        metadataJob?.cancel()
-        metadataJob = null
-        val addedHash = addedStoppedHash
-        clearFileSelection()
-        if (addedHash != null) {
-            viewModelScope.launch { repository.removeTorrents(listOf(addedHash)) }
-        }
-    }
-
     private fun clearFileSelection() {
         pendingSource = null
-        addedStoppedHash = null
         _fileSelection.value = null
     }
 
-    private suspend fun awaitTorrentFiles(hash: String): List<TorrentFile>? {
-        repeat(FILE_POLL_ATTEMPTS) {
-            val files = repository.getTorrentFiles(hash).get()
+    private fun showMetadataError(source: PendingSource, message: String) {
+        if (pendingSource === source) _fileSelection.update { it?.copy(error = message) }
+    }
+
+    private fun addFailure(error: Throwable, source: PendingSource): String =
+        when (error) {
+            is TorrentAlreadyPresent -> getString(CommonR.string.error_torrent_already_exists)
+            is FileSelectionNotApplied -> getString(CommonR.string.status_file_selection_failed)
+            else ->
+                error.friendlyMessage(
+                    getString(
+                        if (source is PendingSource.Magnet)
+                            CommonR.string.status_add_torrent_url_failure
+                        else CommonR.string.status_add_torrent_file_failure,
+                    ),
+                )
+        }
+
+    private suspend fun awaitTorrentFiles(
+        session: TorrentAddSession,
+        attempts: Int,
+        interval: Long,
+    ): List<TorrentFile>? {
+        repeat(attempts) {
+            val files = session.repository.getTorrentFiles(session.hash).get()
             if (!files.isNullOrEmpty()) return files
-            delay(FILE_POLL_MS)
+            delay(interval)
         }
         return null
     }
 
-    // Match by path (the server's file names mirror the .torrent's), falling back to position.
+    // Prefer exact names, but allow a server content layout to add or remove a root folder.
     private fun mapDeselectedToServer(
         parsed: TorrentFileParser.ParsedTorrent,
         deselected: Set<Int>,
         server: List<TorrentFile>,
     ): List<Int> = deselected.mapNotNull { i ->
         val path = parsed.files.getOrNull(i)?.path ?: return@mapNotNull null
-        server.firstOrNull { it.name == path || it.name.endsWith("/$path") }?.index
-            ?: server.getOrNull(i)?.index
-    }
-
-    private suspend fun applySelectionAndStart(
-        hash: String,
-        deselectedIds: List<Int>,
-        paused: Boolean,
-    ) {
-        if (deselectedIds.isNotEmpty()) {
-            // Right after an add the torrent may briefly be checking, which rejects priority
-            // changes - retry a few times before giving up.
-            var applied = false
-            repeat(PRIORITY_RETRY_ATTEMPTS) {
-                if (!applied && repository.setFilePriority(hash, deselectedIds, 0).isOk) {
-                    applied = true
-                }
-                if (!applied) delay(PRIORITY_RETRY_MS)
-            }
-            if (!applied) emitStatus(getString(CommonR.string.status_file_selection_failed))
-        }
-        if (!paused) repository.toggleTorrentsState(listOf(hash), pause = false)
-        emitStatus(getString(CommonR.string.status_add_torrent_file_success))
+        val withoutRoot = path.removePrefix("${parsed.name}/")
+        val file =
+            server.singleOrNull { it.name == path }
+                ?: server.singleOrNull { it.name == withoutRoot || it.name.endsWith("/$path") }
+        file?.index
     }
 
     private fun magnetDisplayName(url: String): String {
@@ -565,7 +691,10 @@ constructor(
         }
     }
 
-    fun bulkSetCategory(hashes: List<String>, category: String) {
+    fun bulkSetCategory(requested: List<String>, category: String) {
+        val repository = displayedRepository ?: return
+        val hashes = uiState.value.visibleTargets(requested)
+        if (hashes.isEmpty()) return
         launchStatus(
             successMessage =
                 getQuantityString(
@@ -579,7 +708,10 @@ constructor(
         }
     }
 
-    fun bulkAddTags(hashes: List<String>, tags: List<String>) {
+    fun bulkAddTags(requested: List<String>, tags: List<String>) {
+        val repository = displayedRepository ?: return
+        val hashes = uiState.value.visibleTargets(requested)
+        if (hashes.isEmpty() || tags.isEmpty()) return
         launchStatus(
             successMessage =
                 getQuantityString(
@@ -593,7 +725,10 @@ constructor(
         }
     }
 
-    fun bulkRemoveTags(hashes: List<String>, tags: List<String>) {
+    fun bulkRemoveTags(requested: List<String>, tags: List<String>) {
+        val repository = displayedRepository ?: return
+        val hashes = uiState.value.visibleTargets(requested)
+        if (hashes.isEmpty() || tags.isEmpty()) return
         launchStatus(
             successMessage =
                 getQuantityString(
@@ -662,7 +797,10 @@ constructor(
         }
     }
 
-    fun removeTorrents(hashes: List<String>, deleteFiles: Boolean = false) {
+    fun removeTorrents(requested: List<String>, deleteFiles: Boolean = false) {
+        val repository = displayedRepository ?: return
+        val hashes = uiState.value.visibleTargets(requested)
+        if (hashes.isEmpty()) return
         launchStatus(
             successMessage =
                 getQuantityString(
@@ -676,7 +814,10 @@ constructor(
         }
     }
 
-    fun toggleTorrentsState(pause: Boolean, hashes: List<String>) {
+    fun toggleTorrentsState(pause: Boolean, requested: List<String>) {
+        val repository = displayedRepository ?: return
+        val hashes = uiState.value.visibleTargets(requested)
+        if (hashes.isEmpty()) return
         launchStatus(
             successMessage =
                 if (pause)
@@ -709,28 +850,8 @@ constructor(
         }
     }
 
-    fun setSort(option: SortOption) {
-        _uiState.update { state ->
-            val newDirection =
-                if (state.sortOption == option) {
-                    if (state.sortDirection == SortDirection.ASC) SortDirection.DESC
-                    else SortDirection.ASC
-                } else {
-                    SortDirection.ASC
-                }
-            state.copy(sortOption = option, sortDirection = newDirection)
-        }
-        persistViewPrefs()
-    }
-
-    fun toggleSortDirection() {
-        _uiState.update { state ->
-            state.copy(
-                sortDirection =
-                    if (state.sortDirection == SortDirection.ASC) SortDirection.DESC
-                    else SortDirection.ASC,
-            )
-        }
+    fun setSort(option: SortOption, direction: SortDirection) {
+        _uiState.update { it.copy(sortOption = option, sortDirection = direction) }
         persistViewPrefs()
     }
 
@@ -780,27 +901,38 @@ constructor(
         persistViewPrefs()
     }
 
-    private fun getQueueingState() {
-        viewModelScope.launch {
-            repository.isQueueingEnabled().onOk { enabled ->
-                // Don't leave the list stuck on the Queued filter if the server has queueing off
-                // (e.g. a filter persisted from a prior session, or queueing toggled off
-                // elsewhere).
-                val clearFilter = !enabled && _uiState.value.selectedFilter == StateFilter.QUEUED
-                _uiState.update {
-                    it.copy(
-                        queueingEnabled = enabled,
-                        selectedFilter = if (clearFilter) StateFilter.ALL else it.selectedFilter,
-                    )
-                }
-                if (clearFilter) persistViewPrefs()
+    private suspend fun getQueueingState(repository: QbitRepository) {
+        repository.isQueueingEnabled().onOk { enabled ->
+            // Don't leave the list stuck on the Queued filter if the server has queueing off
+            // (e.g. a filter persisted from a prior session, or queueing toggled off
+            // elsewhere).
+            val clearFilter = !enabled && _uiState.value.selectedFilter == StateFilter.QUEUED
+            _uiState.update {
+                it.copy(
+                    queueingEnabled = enabled,
+                    selectedFilter = if (clearFilter) StateFilter.ALL else it.selectedFilter,
+                )
             }
+            if (clearFilter) persistViewPrefs()
         }
     }
 
     private suspend fun syncData() {
-        getQueueingState()
+        val session = repository.forCurrentClient()
+        if (session == null) {
+            _uiState.update { it.copy(dataLoading = false, hasError = true) }
+            return
+        }
+        try {
+            syncData(session)
+        } finally {
+            displayedRepository = null
+        }
+    }
+
+    private suspend fun syncData(repository: QbitRepository) {
         coroutineScope {
+            launch { getQueueingState(repository) }
             // Data: keep the last-known list on screen; retry quietly on error. The offline state
             // is
             // driven by the durable error signal below, not by this flow throwing.
@@ -813,19 +945,16 @@ constructor(
                     }
                     .collectLatest { mainData ->
                         val categories = mainData.categories.keys.sorted()
-                        val trackers =
-                            mainData.torrents.values
-                                .mapNotNull { t -> t.tracker.takeIf { it.isNotBlank() } }
-                                .mapNotNull { url ->
-                                    url.toUri().host?.takeIf { it.isNotBlank() }
-                                }
-                                .distinct()
-                                .sorted()
+                        val trackerCounts =
+                            withContext(Dispatchers.Default) {
+                                trackerFilterCounts(mainData.torrents.values.map { it.tracker })
+                            }
                         val tags =
                             (mainData.tags + mainData.torrents.values.flatMap { it.tags })
                                 .filter { it.isNotBlank() }
                                 .distinct()
                                 .sorted()
+                        displayedRepository = repository
                         _uiState.update { state ->
                             state.copy(
                                 dataLoading = false,
@@ -833,7 +962,8 @@ constructor(
                                 hasError = false,
                                 error = null,
                                 availableCategories = categories,
-                                availableTrackers = trackers,
+                                availableTrackers = trackerCounts.keys.toList(),
+                                trackerCounts = trackerCounts,
                                 availableTags = tags,
                             )
                         }
@@ -844,33 +974,24 @@ constructor(
             // toast on the transition; only show the full error screen when nothing has loaded yet.
             launch {
                 var lastError: Throwable? = null
-                repository
-                    .observeMainDataError()
-                    // Survive the transient "no active client" throw during a server switch;
-                    // otherwise this collector dies and a dead server's error never surfaces,
-                    // leaving the list stuck on the loading spinner forever.
-                    .retry {
-                        delay(SYNC_RETRY_MS)
-                        true
-                    }
-                    .collect { error ->
-                        _uiState.update { state ->
-                            when {
-                                error == null -> state.copy(hasError = false, error = null)
-                                state.data == null ->
-                                    state.copy(hasError = true, error = error, dataLoading = false)
-                                else -> state
-                            }
+                repository.observeMainDataError().collect { error ->
+                    _uiState.update { state ->
+                        when {
+                            error == null -> state.copy(hasError = false, error = null)
+                            state.data == null ->
+                                state.copy(hasError = true, error = error, dataLoading = false)
+                            else -> state
                         }
-                        if (error != null && lastError == null && _uiState.value.data != null) {
-                            emitStatus(
-                                error.friendlyMessage(
-                                    getString(CommonR.string.status_sync_data_failure),
-                                ),
-                            )
-                        }
-                        lastError = error
                     }
+                    if (error != null && lastError == null && _uiState.value.data != null) {
+                        emitStatus(
+                            error.friendlyMessage(
+                                getString(CommonR.string.status_sync_data_failure),
+                            ),
+                        )
+                    }
+                    lastError = error
+                }
             }
         }
     }
@@ -880,21 +1001,33 @@ constructor(
 data class FileSelectionUiState(
     val torrentName: String,
     val tree: List<ContentTreeItem>?,
+    val error: String? = null,
+    val confirmationError: String? = null,
 )
 
-private sealed interface PendingSource {
-    data class TorrentBytes(
+private sealed class PendingSource(val hash: String) {
+    var ownAddKey: String? = null
+    var session: TorrentAddSession? = null
+    var confirmed = false
+
+    class TorrentBytes(
         val bytes: ByteArray,
         val parsed: TorrentFileParser.ParsedTorrent,
-    ) : PendingSource
+    ) : PendingSource(parsed.hash)
 
-    data class Magnet(val url: String, val hash: String) : PendingSource
+    class Magnet(val url: String, hash: String) : PendingSource(hash) {
+        var previewResult: Result<TorrentAddSession, Throwable>? = null
+    }
 }
+
+private data class AddTorrentOptions(
+    val category: String? = null,
+    val savePath: String? = null,
+    val autoTmm: Boolean? = null,
+)
 
 private const val SYNC_RETRY_MS = 5000L
 private const val METADATA_POLL_MS = 1500L
 private const val METADATA_MAX_ATTEMPTS = 80
 private const val FILE_POLL_ATTEMPTS = 20
 private const val FILE_POLL_MS = 500L
-private const val PRIORITY_RETRY_ATTEMPTS = 4
-private const val PRIORITY_RETRY_MS = 750L

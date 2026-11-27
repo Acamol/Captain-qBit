@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -14,27 +15,30 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenu
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -57,6 +61,8 @@ import com.github.michaelbull.result.onOk
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.manager.CryptoManager
 import dev.yashgarg.qbit.ui.compose.AlertDialog
+import dev.yashgarg.qbit.ui.compose.FormSection
+import dev.yashgarg.qbit.ui.compose.FormSwitch
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
 import dev.yashgarg.qbit.utils.friendlyMessage
@@ -68,7 +74,6 @@ import dev.yashgarg.qbit.utils.rememberFriendlyMessageResolver
 import dev.yashgarg.qbit.utils.sha256Fingerprint
 import dev.yashgarg.qbit.utils.validFromText
 import dev.yashgarg.qbit.utils.validUntilText
-import java.security.cert.X509Certificate
 import kotlinx.coroutines.launch
 
 private val CONNECTION_TYPES = listOf("HTTP", "HTTPS")
@@ -85,6 +90,7 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
     val checkingConnectionMessage = stringResource(CommonR.string.status_checking_connection)
     val clientVersionTemplate = stringResource(CommonR.string.status_client_version)
     val testFailedTemplate = stringResource(CommonR.string.status_test_failed)
+    val saveFailedMessage = stringResource(CommonR.string.status_config_save_failure)
     val friendlyMessageResolver = rememberFriendlyMessageResolver()
 
     var name by remember { mutableStateOf("") }
@@ -105,10 +111,12 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
     var checking by remember { mutableStateOf(false) }
     var prefilled by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
-    var pendingCertReview by remember { mutableStateOf<X509Certificate?>(null) }
-    var approvedPinDer by remember { mutableStateOf<ByteArray?>(null) }
+    var pendingCertReview by remember { mutableStateOf<ConfigCertificateReview?>(null) }
+    var approvedCertificate by remember { mutableStateOf<ConfigCertificateReview?>(null) }
     var pinCleared by remember { mutableStateOf(false) }
     var showClearPinConfirm by remember { mutableStateOf(false) }
+
+    fun certificateEndpoint() = ConfigCertificateEndpoint.from(host, port, connectionType)
 
     fun buildBaseUrl(): String {
         val portPart = if (port.isNotEmpty()) ":$port" else ""
@@ -154,6 +162,7 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                 ConfigViewModel.FormAction.TEST -> {
                     checking = true
                     snackbarHostState.showSnackbar(checkingConnectionMessage)
+                    val endpoint = certificateEndpoint()
                     viewModel
                         .testConfig(
                             buildBaseUrl(),
@@ -162,7 +171,7 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                             key,
                             basicUser,
                             basicPass,
-                            approvedPinDer,
+                            approvedCertificate?.approvedDerFor(endpoint),
                         )
                         .onOk { version ->
                             Toast.makeText(
@@ -173,10 +182,10 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                                 .show()
                         }
                         .onErr { error ->
-                            if (error.isUntrustedCertificateError()) {
+                            if (endpoint != null && error.isUntrustedCertificateError()) {
                                 viewModel
-                                    .probeCertificate(host, port.toIntOrNull() ?: 443)
-                                    .onOk { cert -> pendingCertReview = cert }
+                                    .probeCertificate(endpoint)
+                                    .onOk { review -> pendingCertReview = review }
                                     .onErr {
                                         snackbarHostState.showSnackbar(
                                             testFailedTemplate.format(connectionFailure(error)),
@@ -191,21 +200,26 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                     checking = false
                 }
                 ConfigViewModel.FormAction.SAVE -> {
-                    viewModel.insert(
-                        name,
-                        host,
-                        port,
-                        path,
-                        type,
-                        username,
-                        password,
-                        key,
-                        basicUser,
-                        basicPass,
-                        approvedPinDer,
-                        pinCleared,
-                    )
-                    appNavigator.navigate(NavCommand.OpenServerAsRoot)
+                    checking = true
+                    val saved =
+                        viewModel.insert(
+                            name,
+                            host,
+                            port,
+                            path,
+                            type,
+                            username,
+                            password,
+                            key,
+                            basicUser,
+                            basicPass,
+                            approvedCertificate,
+                            pinCleared,
+                        )
+                    checking = false
+                    saved
+                        .onOk { appNavigator.navigate(NavCommand.OpenServerAsRoot) }
+                        .onErr { snackbarHostState.showSnackbar(saveFailedMessage) }
                 }
             }
         }
@@ -215,9 +229,24 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
         if (viewModel.editing) stringResource(CommonR.string.server_settings)
         else stringResource(CommonR.string.add_server)
 
+    fun validate(action: ConfigViewModel.FormAction) {
+        viewModel.validateForm(
+            name,
+            host,
+            port,
+            connectionType,
+            username,
+            password,
+            useBasicAuth,
+            basicAuthUser,
+            basicAuthPass,
+            action,
+        )
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(
+            MediumTopAppBar(
                 title = { Text(title) },
                 navigationIcon = {
                     IconButton(onClick = { appNavigator.navigate(NavCommand.Back) }) {
@@ -231,6 +260,33 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        bottomBar = {
+            Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = { validate(ConfigViewModel.FormAction.TEST) },
+                        enabled = !checking,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        if (checking) {
+                            CircularProgressIndicator(Modifier.size(20.dp))
+                        } else {
+                            Text(stringResource(CommonR.string.test_cfg))
+                        }
+                    }
+                    Button(
+                        onClick = { validate(ConfigViewModel.FormAction.SAVE) },
+                        enabled = !checking,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(stringResource(CommonR.string.save_cfg))
+                    }
+                }
+            }
+        },
     ) { padding ->
         Column(
             modifier =
@@ -238,155 +294,168 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Field(
-                value = name,
-                onChange = {
-                    name = it
-                    viewModel.validateName(it)
-                },
-                label = stringResource(CommonR.string.server_name),
-                placeholder = "e.g. homeserver 01",
-                isError = state.showServerNameError,
-                errorText = stringResource(CommonR.string.invalid_name),
-                enabled = !checking,
-            )
-
-            // Type + Host on one row (dropdown left, host right), matching the original layout.
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.Top,
+            FormSection(
+                title = stringResource(CommonR.string.connection_section_title),
+                icon = Icons.Filled.Dns,
             ) {
-                ExposedDropdownMenuBox(
-                    expanded = typeExpanded,
-                    onExpandedChange = { if (!checking) typeExpanded = it },
-                    modifier = Modifier.weight(0.42f),
+                Field(
+                    value = name,
+                    onChange = {
+                        name = it
+                        viewModel.validateName(it)
+                    },
+                    label = stringResource(CommonR.string.server_name),
+                    placeholder = "e.g. homeserver 01",
+                    isError = state.showServerNameError,
+                    errorText = stringResource(CommonR.string.invalid_name),
+                    enabled = !checking,
+                )
+
+                // Type + Host on one row (dropdown left, host right), matching the original layout.
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.Top,
                 ) {
-                    OutlinedTextField(
-                        value = connectionType,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text(stringResource(CommonR.string.type)) },
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded)
-                        },
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                    )
-                    ExposedDropdownMenu(
+                    ExposedDropdownMenuBox(
                         expanded = typeExpanded,
-                        onDismissRequest = { typeExpanded = false },
+                        onExpandedChange = { if (!checking) typeExpanded = it },
+                        modifier = Modifier.weight(0.42f),
                     ) {
-                        CONNECTION_TYPES.forEach { option ->
-                            DropdownMenuItem(
-                                text = { Text(option) },
-                                onClick = {
-                                    connectionType = option
-                                    viewModel.validateConnectionType(option)
-                                    typeExpanded = false
-                                },
-                            )
+                        OutlinedTextField(
+                            value = connectionType,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text(stringResource(CommonR.string.type)) },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded)
+                            },
+                            modifier =
+                                Modifier.fillMaxWidth()
+                                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                        )
+                        ExposedDropdownMenu(
+                            expanded = typeExpanded,
+                            onDismissRequest = { typeExpanded = false },
+                        ) {
+                            CONNECTION_TYPES.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option) },
+                                    onClick = {
+                                        connectionType = option
+                                        viewModel.validateConnectionType(option)
+                                        typeExpanded = false
+                                    },
+                                )
+                            }
                         }
                     }
+                    Field(
+                        value = host,
+                        onChange = {
+                            host = it
+                            viewModel.validateHostUrl(it)
+                        },
+                        label = stringResource(CommonR.string.host_or_ip),
+                        placeholder = "example.com",
+                        isError = state.showUrlError,
+                        errorText = stringResource(CommonR.string.invalid_url),
+                        enabled = !checking,
+                        modifier = Modifier.weight(0.58f),
+                    )
                 }
+
                 Field(
-                    value = host,
+                    value = port,
                     onChange = {
-                        host = it
-                        viewModel.validateHostUrl(it)
+                        port = it
+                        viewModel.validatePort(it)
                     },
-                    label = stringResource(CommonR.string.host_or_ip),
-                    placeholder = "example.com",
-                    isError = state.showUrlError,
-                    errorText = stringResource(CommonR.string.invalid_url),
+                    label = stringResource(CommonR.string.port),
+                    placeholder = "0 - 65535",
+                    prefix = ":",
+                    isError = state.showPortError,
+                    errorText = stringResource(CommonR.string.invalid_port),
+                    keyboardType = KeyboardType.Number,
                     enabled = !checking,
-                    modifier = Modifier.weight(0.58f),
+                )
+                Field(
+                    value = path,
+                    onChange = { path = it },
+                    label = stringResource(CommonR.string.path),
+                    placeholder = "your/path",
+                    prefix = "/",
+                    enabled = !checking,
                 )
             }
+            FormSection(
+                title = stringResource(CommonR.string.authentication_section_title),
+                icon = Icons.Filled.Lock,
+            ) {
+                // An API key replaces a username and password rather than supplementing them, so
+                // only
+                // one of the two can be filled in at a time.
+                val usingApiKey = apiKey.isNotBlank()
+                val usingCredentials = username.isNotEmpty() || password.isNotEmpty()
 
-            Field(
-                value = port,
-                onChange = {
-                    port = it
-                    viewModel.validatePort(it)
-                },
-                label = stringResource(CommonR.string.port),
-                placeholder = "0 - 65535",
-                prefix = ":",
-                isError = state.showPortError,
-                errorText = stringResource(CommonR.string.invalid_port),
-                keyboardType = KeyboardType.Number,
-                enabled = !checking,
-            )
-            Field(
-                value = path,
-                onChange = { path = it },
-                label = stringResource(CommonR.string.path),
-                placeholder = "your/path",
-                prefix = "/",
-                enabled = !checking,
-            )
-            // An API key replaces a username and password rather than supplementing them, so only
-            // one of the two can be filled in at a time.
-            val usingApiKey = apiKey.isNotBlank()
-            val usingCredentials = username.isNotEmpty() || password.isNotEmpty()
-
-            Field(
-                value = username,
-                onChange = {
-                    username = it
-                    viewModel.validateUsername(it)
-                },
-                label = stringResource(CommonR.string.username),
-                placeholder = "e.g. admin",
-                isError = state.showUsernameError,
-                errorText = stringResource(CommonR.string.invalid_username),
-                enabled = !checking && !usingApiKey,
-            )
-            PasswordField(
-                value = password,
-                onChange = {
-                    password = it
-                    viewModel.validatePassword(it)
-                },
-                label = stringResource(CommonR.string.password),
-                isError = state.showPasswordError,
-                errorText = stringResource(CommonR.string.invalid_password),
-                visible = passwordVisible,
-                onToggleVisible = { passwordVisible = !passwordVisible },
-                enabled = !checking && !usingApiKey,
-            )
-            if (usingApiKey) {
+                Field(
+                    value = username,
+                    onChange = {
+                        username = it
+                        viewModel.validateUsername(it)
+                    },
+                    label = stringResource(CommonR.string.username),
+                    placeholder = "e.g. admin",
+                    isError = state.showUsernameError,
+                    errorText = stringResource(CommonR.string.invalid_username),
+                    enabled = !checking && !usingApiKey,
+                )
+                PasswordField(
+                    value = password,
+                    onChange = {
+                        password = it
+                        viewModel.validatePassword(it)
+                    },
+                    label = stringResource(CommonR.string.password),
+                    isError = state.showPasswordError,
+                    errorText = stringResource(CommonR.string.invalid_password),
+                    visible = passwordVisible,
+                    onToggleVisible = { passwordVisible = !passwordVisible },
+                    enabled = !checking && !usingApiKey,
+                )
+                if (usingApiKey) {
+                    Text(
+                        stringResource(CommonR.string.api_key_replaces_credentials),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                PasswordField(
+                    value = apiKey,
+                    onChange = { apiKey = it },
+                    label = stringResource(CommonR.string.api_key),
+                    visible = apiKeyVisible,
+                    onToggleVisible = { apiKeyVisible = !apiKeyVisible },
+                    enabled = !checking && !usingCredentials && !useBasicAuth,
+                )
                 Text(
-                    stringResource(CommonR.string.api_key_replaces_credentials),
+                    // Servers saved before API keys existed always have credentials, so say how to
+                    // free the field rather than leaving it greyed out with no explanation.
+                    stringResource(
+                        if (usingCredentials) CommonR.string.api_key_needs_empty_credentials
+                        else CommonR.string.api_key_hint,
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
-            PasswordField(
-                value = apiKey,
-                onChange = { apiKey = it },
-                label = stringResource(CommonR.string.api_key),
-                visible = apiKeyVisible,
-                onToggleVisible = { apiKeyVisible = !apiKeyVisible },
-                enabled = !checking && !usingCredentials && !useBasicAuth,
-            )
-            Text(
-                // Servers saved before API keys existed always have credentials, so say how to
-                // free the field rather than leaving it greyed out with no explanation.
-                stringResource(
-                    if (usingCredentials) CommonR.string.api_key_needs_empty_credentials
-                    else CommonR.string.api_key_hint,
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Switch(
+                FormSwitch(
+                    label = stringResource(CommonR.string.use_basic_auth),
+                    subtitle =
+                        if (usingApiKey) stringResource(CommonR.string.api_key_blocks_basic_auth)
+                        else null,
                     checked = useBasicAuth,
                     onCheckedChange = {
                         useBasicAuth = it
@@ -406,115 +475,55 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                     },
                     enabled = !checking && !usingApiKey,
                 )
-                Spacer(Modifier.size(12.dp))
-                Column {
-                    Text(stringResource(CommonR.string.use_basic_auth))
-                    if (usingApiKey) {
-                        Text(
-                            stringResource(CommonR.string.api_key_blocks_basic_auth),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
 
-            if (useBasicAuth) {
-                Field(
-                    value = basicAuthUser,
-                    onChange = {
-                        basicAuthUser = it
-                        viewModel.validateBasicAuthUsername(it)
-                    },
-                    label = stringResource(CommonR.string.basic_auth_username),
-                    isError = state.showBasicAuthUsernameError,
-                    errorText = stringResource(CommonR.string.invalid_username),
-                    enabled = !checking,
-                )
-                PasswordField(
-                    value = basicAuthPass,
-                    onChange = {
-                        basicAuthPass = it
-                        viewModel.validateBasicAuthPassword(it)
-                    },
-                    label = stringResource(CommonR.string.basic_auth_password),
-                    isError = state.showBasicAuthPasswordError,
-                    errorText = stringResource(CommonR.string.invalid_password),
-                    visible = basicPassVisible,
-                    onToggleVisible = { basicPassVisible = !basicPassVisible },
-                    enabled = !checking,
-                )
-            }
-
-            if (viewModel.editing && existing?.pinnedCertificate != null && !pinCleared) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        stringResource(CommonR.string.pinned_certificate_active_label),
-                        style = MaterialTheme.typography.bodyMedium,
+                if (useBasicAuth) {
+                    Field(
+                        value = basicAuthUser,
+                        onChange = {
+                            basicAuthUser = it
+                            viewModel.validateBasicAuthUsername(it)
+                        },
+                        label = stringResource(CommonR.string.basic_auth_username),
+                        isError = state.showBasicAuthUsernameError,
+                        errorText = stringResource(CommonR.string.invalid_username),
+                        enabled = !checking,
                     )
-                    TextButton(onClick = { showClearPinConfirm = true }, enabled = !checking) {
-                        Text(stringResource(CommonR.string.clear_pinned_certificate_action))
-                    }
+                    PasswordField(
+                        value = basicAuthPass,
+                        onChange = {
+                            basicAuthPass = it
+                            viewModel.validateBasicAuthPassword(it)
+                        },
+                        label = stringResource(CommonR.string.basic_auth_password),
+                        isError = state.showBasicAuthPasswordError,
+                        errorText = stringResource(CommonR.string.invalid_password),
+                        visible = basicPassVisible,
+                        onToggleVisible = { basicPassVisible = !basicPassVisible },
+                        enabled = !checking,
+                    )
                 }
-            }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                OutlinedButton(
-                    onClick = {
-                        viewModel.validateForm(
-                            name,
-                            host,
-                            port,
-                            connectionType,
-                            username,
-                            password,
-                            useBasicAuth,
-                            basicAuthUser,
-                            basicAuthPass,
-                            ConfigViewModel.FormAction.TEST,
+                if (viewModel.editing && existing?.pinnedCertificate != null && !pinCleared) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            stringResource(CommonR.string.pinned_certificate_active_label),
+                            style = MaterialTheme.typography.bodyMedium,
                         )
-                    },
-                    enabled = !checking,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    if (checking) {
-                        CircularProgressIndicator(Modifier.size(20.dp))
-                    } else {
-                        Text(stringResource(CommonR.string.test_cfg))
+                        TextButton(onClick = { showClearPinConfirm = true }, enabled = !checking) {
+                            Text(stringResource(CommonR.string.clear_pinned_certificate_action))
+                        }
                     }
-                }
-                Button(
-                    onClick = {
-                        viewModel.validateForm(
-                            name,
-                            host,
-                            port,
-                            connectionType,
-                            username,
-                            password,
-                            useBasicAuth,
-                            basicAuthUser,
-                            basicAuthPass,
-                            ConfigViewModel.FormAction.SAVE,
-                        )
-                    },
-                    enabled = !checking,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text(stringResource(CommonR.string.save_cfg))
                 }
             }
         }
     }
 
-    pendingCertReview?.let { cert ->
+    pendingCertReview?.let { review ->
+        val cert = review.certificate
         val fingerprint = remember(cert) { cert.sha256Fingerprint() }
         val expired = remember(cert) { cert.hasExpired() }
         val notYetValid = remember(cert) { cert.isNotYetValid() }
@@ -562,15 +571,10 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
             confirmButton = {
                 TextButton(
                     onClick = {
-                        val der = cert.encoded
-                        // Held in memory and persisted by Save, not written straight to the saved
-                        // row: the probe used whatever host is in the form right now, which may no
-                        // longer be the one the row points at. Writing here would pin the wrong
-                        // certificate to the saved server and make it unreachable, even if the edit
-                        // is then abandoned. The test below takes the certificate directly.
-                        approvedPinDer = der
-                        pinCleared = false
                         pendingCertReview = null
+                        val der = review.approvedDerFor(certificateEndpoint()) ?: return@TextButton
+                        approvedCertificate = review
+                        pinCleared = false
                         coroutineScope.launch {
                             checking = true
                             val basicUser =
@@ -625,7 +629,7 @@ fun ConfigScreen(appNavigator: AppNavigator, viewModel: ConfigViewModel = hiltVi
                     onClick = {
                         showClearPinConfirm = false
                         pinCleared = true
-                        approvedPinDer = null
+                        approvedCertificate = null
                     },
                 ) {
                     Text(stringResource(CommonR.string.clear_pinned_certificate_action))

@@ -95,6 +95,8 @@ fun AppPreferences.overlayGroup(group: PrefGroup, src: AppPreferences): AppPrefe
             copy(
                 themeMode = src.themeMode,
                 dynamicColors = src.dynamicColors,
+                compactTorrentList = src.compactTorrentList,
+                showServerOverview = src.showServerOverview,
                 languageTag = src.languageTag,
             )
         PrefGroup.NOTIFICATIONS ->

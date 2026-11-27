@@ -170,6 +170,18 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".notifications.EventNotificationOpenActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.NoDisplay" />
+
+        <receiver
+            android:name=".notifications.EventNotificationDismissReceiver"
+            android:exported="false" />
+
         <!-- WorkManager's foreground service needs a type declared on Android 14+. specialUse
              (Android 14+) because the user-enabled status/event monitoring runs indefinitely,
              which dataSync no longer allows (Android 15 kills dataSync services after 6h). -->

@@ -12,6 +12,7 @@ data class ContentTreeItem(
     val item: TorrentFile? = null,
     val children: List<ContentTreeItem>? = null,
     val size: Long,
+    /** Downloaded bytes, summed over all descendants for a folder. */
     val progress: Long,
     /**
      * On a folder the file search trimmed to its matches: the complete folder, which checkbox state

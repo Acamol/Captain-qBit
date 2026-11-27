@@ -5,25 +5,26 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -31,7 +32,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -83,7 +83,7 @@ fun ServerListScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            LargeTopAppBar(
                 title = { Text(stringResource(CommonR.string.servers_title)) },
                 navigationIcon = {
                     IconButton(onClick = { appNavigator.navigate(NavCommand.Back) }) {
@@ -99,13 +99,21 @@ fun ServerListScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 text = { Text(stringResource(CommonR.string.add_server)) },
-                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                icon = {
+                    Icon(
+                        Icons.Filled.Add,
+                        contentDescription = stringResource(CommonR.string.add_server),
+                    )
+                },
                 onClick = { appNavigator.navigate(NavCommand.OpenConfig(serverId = -1)) },
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp),
+        ) {
             items(displayServers, key = { it.configId }) { server ->
                 val isDragged = server.configId == dragState.draggedId
                 ServerRow(
@@ -125,7 +133,6 @@ fun ServerListScreen(
                     },
                     onDragCancel = { dragState.cancel() },
                 )
-                HorizontalDivider()
             }
         }
     }
@@ -229,15 +236,31 @@ private fun ServerRow(
             Modifier.fillMaxWidth()
                 .zIndex(if (dragged) 1f else 0f)
                 .graphicsLayer { translationY = offsetY }
-                .let {
-                    if (dragged) it.background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                    else it
-                }
                 .onSizeChanged { onRowHeightMeasured(it.height.toFloat()) }
+                .padding(vertical = 6.dp)
+                .clip(MaterialTheme.shapes.extraLarge)
+                .background(
+                    when {
+                        dragged -> MaterialTheme.colorScheme.surfaceContainerHighest
+                        active -> MaterialTheme.colorScheme.secondaryContainer
+                        else -> MaterialTheme.colorScheme.surfaceContainerLow
+                    },
+                )
                 .clickable(onClick = onClick)
                 .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.primaryContainer,
+            modifier = Modifier.padding(end = 12.dp),
+        ) {
+            Icon(
+                Icons.Outlined.Dns,
+                contentDescription = null,
+                modifier = Modifier.padding(12.dp).size(24.dp),
+            )
+        }
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 server.serverName,
@@ -254,11 +277,12 @@ private fun ServerRow(
             )
         }
         if (active) {
-            Surface(
-                modifier = Modifier.size(10.dp).clip(CircleShape),
-                color = MaterialTheme.colorScheme.primary,
-            ) {}
-            Spacer(Modifier.size(8.dp))
+            Icon(
+                Icons.Filled.CheckCircle,
+                contentDescription = stringResource(CommonR.string.active_server_label),
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 8.dp).size(20.dp),
+            )
         }
         IconButton(onClick = onDelete) {
             Icon(
@@ -272,17 +296,19 @@ private fun ServerRow(
             contentDescription = stringResource(CommonR.string.content_description_drag_to_reorder),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier =
-                Modifier.pointerInput(server.configId) {
-                    detectDragGestures(
-                        onDragStart = { onDragStart() },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            onDrag(dragAmount.y)
-                        },
-                        onDragEnd = { onDragEnd() },
-                        onDragCancel = { onDragCancel() },
-                    )
-                },
+                Modifier.size(48.dp)
+                    .pointerInput(server.configId) {
+                        detectDragGestures(
+                            onDragStart = { onDragStart() },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                onDrag(dragAmount.y)
+                            },
+                            onDragEnd = { onDragEnd() },
+                            onDragCancel = { onDragCancel() },
+                        )
+                    }
+                    .padding(12.dp),
         )
     }
 }

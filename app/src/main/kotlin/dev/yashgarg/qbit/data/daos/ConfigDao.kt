@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import dev.yashgarg.qbit.data.models.ServerConfig
 import kotlinx.coroutines.flow.Flow
 
@@ -24,9 +25,32 @@ interface ConfigDao {
     @Query("UPDATE configs SET position = :position WHERE config_id = :id")
     fun updatePosition(id: Int, position: Int)
 
+    @Query(
+        """UPDATE configs SET pinnedCertificate = :pin WHERE config_id = :id
+           AND connectionType = 'HTTPS' AND baseUrl = :host AND port IS :port AND path IS :path
+           AND pinnedCertificate IS :previousPin""",
+    )
+    fun pinIfEndpointUnchanged(
+        id: Int,
+        host: String,
+        port: Int?,
+        path: String?,
+        previousPin: String?,
+        pin: String,
+    ): Int
+
     @Query("DELETE FROM configs WHERE config_id = :id") fun deleteConfig(id: Int)
 
     @Query("DELETE FROM configs") fun clearConfigs()
 
     @Insert(onConflict = OnConflictStrategy.REPLACE) fun addConfig(config: ServerConfig)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE) fun addConfigs(configs: List<ServerConfig>)
+
+    @Transaction
+    fun replaceConfigs(configs: List<ServerConfig>) {
+        require(configs.isNotEmpty())
+        clearConfigs()
+        addConfigs(configs)
+    }
 }

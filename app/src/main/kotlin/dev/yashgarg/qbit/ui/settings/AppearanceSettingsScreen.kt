@@ -2,14 +2,8 @@ package dev.yashgarg.qbit.ui.settings
 
 import android.os.Build
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.RadioButton
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -17,17 +11,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.notifications.AppNotificationManager
 import dev.yashgarg.qbit.ui.compose.AlertDialog
+import dev.yashgarg.qbit.ui.compose.SelectableRow
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.utils.LocalizedContext
 
@@ -70,6 +63,8 @@ fun AppearanceSettingsScreen(
     val context = LocalContext.current
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val dynamicColors by viewModel.dynamicColors.collectAsStateWithLifecycle()
+    val compactTorrentList by viewModel.compactTorrentList.collectAsStateWithLifecycle()
+    val showServerOverview by viewModel.showServerOverview.collectAsStateWithLifecycle()
 
     var showThemeDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
@@ -80,6 +75,18 @@ fun AppearanceSettingsScreen(
     }
 
     SettingsSubScreen(stringResource(CommonR.string.appearance_section_title), appNavigator) {
+        SwitchRow(
+            title = stringResource(CommonR.string.compact_torrent_list_label),
+            checked = compactTorrentList,
+            subtitle = stringResource(CommonR.string.compact_torrent_list_subtitle),
+            onChange = viewModel::setCompactTorrentList,
+        )
+        SwitchRow(
+            title = stringResource(CommonR.string.show_server_overview_label),
+            checked = showServerOverview,
+            subtitle = stringResource(CommonR.string.show_server_overview_subtitle),
+            onChange = viewModel::setShowServerOverview,
+        )
         ClickableRow(
             title = stringResource(CommonR.string.theme_label),
             subtitle = themeLabel(themeMode),
@@ -106,28 +113,16 @@ fun AppearanceSettingsScreen(
             onDismissRequest = { showThemeDialog = false },
             title = { Text(stringResource(CommonR.string.theme_label)) },
             text = {
-                Column {
+                Column(Modifier.selectableGroup()) {
                     THEME_OPTIONS.forEach { (mode, labelRes) ->
-                        Row(
-                            modifier =
-                                Modifier.fillMaxWidth()
-                                    .clickable {
-                                        viewModel.setThemeMode(mode)
-                                        showThemeDialog = false
-                                    }
-                                    .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = themeMode == mode,
-                                onClick = {
-                                    viewModel.setThemeMode(mode)
-                                    showThemeDialog = false
-                                },
-                            )
-                            Spacer(Modifier.size(12.dp))
-                            Text(stringResource(labelRes))
-                        }
+                        SelectableRow(
+                            label = stringResource(labelRes),
+                            selected = themeMode == mode,
+                            onClick = {
+                                viewModel.setThemeMode(mode)
+                                showThemeDialog = false
+                            },
+                        )
                     }
                 }
             },
@@ -160,22 +155,13 @@ fun AppearanceSettingsScreen(
             onDismissRequest = { showLanguageDialog = false },
             title = { Text(stringResource(CommonR.string.language_label)) },
             text = {
-                Column {
+                Column(Modifier.selectableGroup()) {
                     LANGUAGE_OPTIONS.forEach { (tag, labelRes) ->
-                        Row(
-                            modifier =
-                                Modifier.fillMaxWidth()
-                                    .clickable { selectLanguage(tag) }
-                                    .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = currentLanguageTag == tag,
-                                onClick = { selectLanguage(tag) },
-                            )
-                            Spacer(Modifier.size(12.dp))
-                            Text(stringResource(labelRes))
-                        }
+                        SelectableRow(
+                            label = stringResource(labelRes),
+                            selected = currentLanguageTag == tag,
+                            onClick = { selectLanguage(tag) },
+                        )
                     }
                 }
             },

@@ -6,6 +6,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.coroutines.runSuspendCatching
 import com.github.michaelbull.result.get
+import com.github.michaelbull.result.getError
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,11 +17,17 @@ import dev.yashgarg.qbit.ui.common.StatusViewModel
 import dev.yashgarg.qbit.utils.TransformUtil
 import dev.yashgarg.qbit.utils.friendlyMessage
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import qbittorrent.models.LogEntry
 import qbittorrent.models.Torrent
 import qbittorrent.models.TorrentPeer
@@ -51,15 +58,16 @@ constructor(
     private val hash by lazy { state.get<String>("torrentHash") }
 
     private val piecesVisible = MutableStateFlow(false)
+    private val detailsRefresh = MutableStateFlow(0)
+    private val contentMutex = Mutex()
 
     init {
         Log.d("TorrentDetailsViewModel", "TorrentHash: $hash")
         viewModelScope.launch {
-            launch { syncWhileForeground { syncTorrentFlow() } }
+            launch { syncWhileForeground { detailsRefresh.collectLatest { syncTorrentFlow() } } }
             launch { syncWhileForeground { syncPeers() } }
             launch { syncWhileForeground { syncPieces() } }
             launch { syncWhileForeground { syncAvailableFilters() } }
-            launch { getContent() }
             launch {
                 // Gates the queue-priority actions: qBittorrent rejects them (409) unless queueing
                 // is enabled, and a torrent's priority isn't a reliable signal for that on 5.x.
@@ -68,6 +76,11 @@ constructor(
                 }
             }
         }
+    }
+
+    fun retryDetails() {
+        _uiState.update { it.copy(loading = true, error = null) }
+        detailsRefresh.update { it + 1 }
     }
 
     fun toggleTorrent(pause: Boolean, hash: String) {
@@ -420,7 +433,16 @@ constructor(
                         state.copy(
                             loading = false,
                             torrent = info,
-                            error = null,
+                            error =
+                                props.getError()?.let {
+                                    Exception(
+                                        it.friendlyMessage(
+                                            getString(
+                                                CommonR.string.status_load_torrent_details_failure,
+                                            ),
+                                        ),
+                                    )
+                                },
                             errorReason = errorReason,
                             trackers = trackers.get() ?: emptyList(),
                             torrentProperties = props.get(),
@@ -430,6 +452,7 @@ constructor(
             }
         }
 
+        currentCoroutineContext().ensureActive()
         result.onErr {
             _uiState.update { state ->
                 state.copy(loading = false, error = Exception(it.friendlyMessage()))
@@ -459,20 +482,39 @@ constructor(
         }
     }
 
-    private suspend fun getContent() {
-        hash
-            ?.let { repository.getTorrentFiles(it) }
-            ?.onOk { files ->
-                val tree = TransformUtil.transformFilesToTree(files, 0)
-                _uiState.update { state -> state.copy(contentTree = tree, files = files) }
-            }
-            ?.onErr {
-                _uiState.update { state ->
-                    state.copy(contentTree = emptyList(), files = emptyList())
+    suspend fun loadContentWhileVisible(poll: Boolean) {
+        do {
+            getContent()
+            if (!poll) return
+            delay(FILES_POLL_INTERVAL_MS)
+        } while (true)
+    }
+
+    private suspend fun getContent() = contentMutex.withLock {
+        repository
+            .getTorrentFiles(requireNotNull(hash))
+            .onOk { files ->
+                val tree =
+                    withContext(Dispatchers.Default) {
+                        TransformUtil.transformFilesToTree(files, 0)
+                    }
+                _uiState.update {
+                    it.copy(
+                        contentTree = tree,
+                        files = files,
+                        contentLoading = false,
+                        contentError = null,
+                    )
                 }
             }
-
-        _uiState.update { state -> state.copy(contentLoading = false) }
+            .onErr { error ->
+                val message =
+                    error.friendlyMessage(
+                        getString(CommonR.string.status_load_torrent_details_failure),
+                    )
+                _uiState.update { it.copy(contentLoading = false, contentError = message) }
+            }
+        Unit
     }
 
     /** Priorities: 0 = do not download, 1 = normal, 6 = high, 7 = maximal. */
@@ -569,5 +611,6 @@ constructor(
     private companion object {
         const val TORRENT_LOOKUP_TIMEOUT_MS = 20_000L
         const val PIECES_POLL_INTERVAL_MS = 3_000L
+        const val FILES_POLL_INTERVAL_MS = 5_000L
     }
 }

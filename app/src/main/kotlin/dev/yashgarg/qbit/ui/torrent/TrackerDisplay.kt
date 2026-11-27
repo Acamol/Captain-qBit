@@ -21,6 +21,23 @@ fun TorrentTracker.displayName(): String =
  */
 fun Int.reportedOrNull(): Int? = takeIf { it >= 0 }
 
+/** Retain diagnostics, but don't repeat the status as a second message line. */
+fun TorrentTracker.additionalMessage(statusLabel: String): String? {
+    val message = msg.trim().takeIf { it.isNotEmpty() } ?: return null
+    // The server can return an English status even when the app is in another language.
+    val englishStatus =
+        when (TrackerStatus.statusOf(status)) {
+            TrackerStatus.DISABLED -> "Disabled"
+            TrackerStatus.UPDATING -> "Updating"
+            TrackerStatus.NOT_CONTACTED -> "Not contacted yet"
+            TrackerStatus.CONTACTED_WORKING -> "Working"
+            TrackerStatus.CONTACTED_NOT_WORKING -> "Not working"
+        }
+    return message.takeUnless {
+        it.equals(statusLabel, ignoreCase = true) || it.equals(englishStatus, ignoreCase = true)
+    }
+}
+
 data class TrackerSummary(val total: Int, val working: Int, val notWorking: Int)
 
 /** Health of the real trackers only; DHT/PeX/LSD aren't counted. */

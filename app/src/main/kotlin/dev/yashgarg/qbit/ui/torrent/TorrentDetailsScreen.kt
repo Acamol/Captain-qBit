@@ -8,12 +8,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -38,18 +40,19 @@ import androidx.compose.material.icons.filled.LowPriority
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.VerticalAlignBottom
 import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.RadioButton
@@ -59,15 +62,12 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,14 +75,22 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import dev.yashgarg.qbit.common.R
+import dev.yashgarg.qbit.ui.compose.ActionSheet
+import dev.yashgarg.qbit.ui.compose.ActionSheetItem
 import dev.yashgarg.qbit.ui.compose.AlertDialog
-import dev.yashgarg.qbit.ui.compose.ContentSearchField
+import dev.yashgarg.qbit.ui.compose.FullScreenEditor
+import dev.yashgarg.qbit.ui.compose.MultipleChoiceSheet
+import dev.yashgarg.qbit.ui.compose.SingleChoiceSheet
 import dev.yashgarg.qbit.ui.compose.TextInputDialog
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
@@ -95,8 +103,8 @@ import dev.yashgarg.qbit.ui.torrent.tabs.TrackersTab
 import dev.yashgarg.qbit.utils.rememberCopyToClipboard
 import kotlinx.coroutines.launch
 
-private const val FILES_TAB_INDEX = 1
 private const val PIECES_TAB_INDEX = 4
+private const val FILES_TAB_INDEX = 1
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -120,8 +128,6 @@ fun TorrentDetailsScreen(
     val scope = rememberCoroutineScope()
 
     var menuOpen by remember { mutableStateOf(false) }
-    var filesSearchOpen by rememberSaveable { mutableStateOf(false) }
-    var filesQuery by rememberSaveable { mutableStateOf("") }
     var dialog by remember { mutableStateOf<DetailDialog?>(null) }
     val copiedNameMessage = stringResource(R.string.status_copied_name)
     val copiedToClipboardMessage = stringResource(R.string.clipboard_copied)
@@ -131,10 +137,20 @@ fun TorrentDetailsScreen(
     LaunchedEffect(pagerState.currentPage) {
         viewModel.setPiecesVisible(pagerState.currentPage == PIECES_TAB_INDEX)
     }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val page = pagerState.currentPage
+    LaunchedEffect(viewModel, lifecycle, page) {
+        if (page == FILES_TAB_INDEX || page == PIECES_TAB_INDEX) {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                viewModel.loadContentWhileVisible(poll = page == FILES_TAB_INDEX)
+            }
+        }
+    }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         topBar = {
-            TopAppBar(
+            MediumTopAppBar(
                 title = {
                     // basicMarquee() overflows its bounds and swallows the navigationIcon's touches
                     // when the ambient layout direction is RTL, so only scroll in LTR and just
@@ -169,16 +185,22 @@ fun TorrentDetailsScreen(
                     }
                 },
                 actions = {
-                    if (pagerState.currentPage == FILES_TAB_INDEX && !filesSearchOpen) {
-                        IconButton(onClick = { filesSearchOpen = true }) {
+                    if (torrent != null) {
+                        FilledTonalIconButton(
+                            onClick = {
+                                viewModel.toggleTorrent(!torrent.isPaused(), torrent.hash)
+                            },
+                        ) {
                             Icon(
-                                Icons.Filled.Search,
+                                if (torrent.isPaused()) Icons.Filled.PlayArrow
+                                else Icons.Filled.Pause,
                                 contentDescription =
-                                    stringResource(R.string.content_description_search),
+                                    stringResource(
+                                        if (torrent.isPaused()) R.string.resume
+                                        else R.string.pause_action,
+                                    ),
                             )
                         }
-                    }
-                    if (torrent != null) {
                         IconButton(onClick = { menuOpen = true }) {
                             Icon(
                                 Icons.Filled.MoreVert,
@@ -186,160 +208,181 @@ fun TorrentDetailsScreen(
                                     stringResource(R.string.content_description_more),
                             )
                         }
-                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                            fun act(block: () -> Unit) {
-                                menuOpen = false
-                                block()
-                            }
-                            // Pause and resume are mutually exclusive — show only the one that
-                            // applies to the torrent's current state.
-                            if (torrent.isPaused()) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.resume)) },
-                                    leadingIcon = { Icon(Icons.Filled.PlayArrow, null) },
-                                    onClick = {
-                                        act { viewModel.toggleTorrent(false, torrent.hash) }
-                                    },
-                                )
-                            } else {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.pause_action)) },
-                                    leadingIcon = { Icon(Icons.Filled.Pause, null) },
-                                    onClick = {
-                                        act { viewModel.toggleTorrent(true, torrent.hash) }
-                                    },
-                                )
-                            }
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.delete)) },
-                                leadingIcon = { Icon(Icons.Filled.Delete, null) },
-                                onClick = { act { dialog = DetailDialog.Delete } },
-                            )
-                            // qBittorrent derives a magnet URI for every torrent; only guard the
-                            // rare case where one isn't available yet (e.g. metadata not fetched).
-                            if (torrent.magnetUri.isNotBlank()) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.copy_magnet_link)) },
-                                    leadingIcon = { Icon(Icons.Filled.Link, null) },
-                                    onClick = {
-                                        act {
-                                            copy(
-                                                "magnet",
-                                                torrent.magnetUri,
-                                                copiedToClipboardMessage,
-                                            )
-                                        }
-                                    },
-                                )
-                            }
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.force_recheck)) },
-                                leadingIcon = { Icon(Icons.Filled.FindInPage, null) },
-                                onClick = { act { viewModel.forceRecheck(torrent.hash) } },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.force_reannounce)) },
-                                leadingIcon = { Icon(Icons.Filled.Campaign, null) },
-                                onClick = { act { viewModel.forceReannounce(torrent.hash) } },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.rename)) },
-                                leadingIcon = { Icon(Icons.Filled.DriveFileRenameOutline, null) },
-                                onClick = { act { dialog = DetailDialog.Rename } },
-                            )
-                            // Only when the server has torrent queueing enabled — qBittorrent
-                            // rejects the priority moves (409) otherwise.
-                            if (state.queueingEnabled) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.queue_priority)) },
-                                    leadingIcon = { Icon(Icons.Filled.LowPriority, null) },
-                                    onClick = { act { dialog = DetailDialog.QueuePriority } },
-                                )
-                            }
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.set_category)) },
-                                leadingIcon = { Icon(Icons.Filled.Category, null) },
-                                onClick = { act { dialog = DetailDialog.Category } },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.set_tags)) },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.Label, null) },
-                                onClick = { act { dialog = DetailDialog.Tags } },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.automatic_management)) },
-                                leadingIcon = { Icon(Icons.Filled.Autorenew, null) },
-                                trailingIcon = {
-                                    Checkbox(checked = torrent.autoTmm, onCheckedChange = null)
-                                },
-                                onClick = {
-                                    act { viewModel.setAutoManagement(!torrent.autoTmm) }
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_set_save_path)) },
-                                leadingIcon = { Icon(Icons.Filled.Folder, null) },
-                                onClick = { act { dialog = DetailDialog.SavePath } },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_download_limit)) },
-                                leadingIcon = { Icon(Icons.Filled.Download, null) },
-                                onClick = { act { dialog = DetailDialog.DownloadLimit } },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_upload_limit)) },
-                                leadingIcon = { Icon(Icons.Filled.Upload, null) },
-                                onClick = { act { dialog = DetailDialog.UploadLimit } },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_share_limits)) },
-                                leadingIcon = { Icon(Icons.Filled.Share, null) },
-                                onClick = { act { dialog = DetailDialog.ShareLimits } },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.force_start)) },
-                                leadingIcon = { Icon(Icons.Filled.Bolt, null) },
-                                trailingIcon = {
-                                    Checkbox(checked = torrent.forceStart, onCheckedChange = null)
-                                },
-                                onClick = {
-                                    act { viewModel.setForceStart(!torrent.forceStart) }
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.sequential_download)) },
-                                leadingIcon = { Icon(Icons.Filled.FormatListNumbered, null) },
-                                trailingIcon = {
-                                    Checkbox(
-                                        checked = torrent.sequentialDownload,
-                                        onCheckedChange = null,
+                        if (menuOpen) {
+                            ActionSheet(
+                                title = torrent.name,
+                                onDismissRequest = { menuOpen = false },
+                            ) {
+                                fun act(block: () -> Unit) {
+                                    menuOpen = false
+                                    block()
+                                }
+                                // Pause and resume are mutually exclusive — show only the one that
+                                // applies to the torrent's current state.
+                                if (torrent.isPaused()) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.resume)) },
+                                        leadingIcon = { Icon(Icons.Filled.PlayArrow, null) },
+                                        onClick = {
+                                            act { viewModel.toggleTorrent(false, torrent.hash) }
+                                        },
                                     )
-                                },
-                                onClick = { act { viewModel.toggleSequentialDownload() } },
-                            )
-                            DropdownMenuItem(
-                                text = {
-                                    Text(stringResource(R.string.download_first_last_pieces))
-                                },
-                                leadingIcon = { Icon(Icons.Filled.Flag, null) },
-                                trailingIcon = {
-                                    Checkbox(
-                                        checked = torrent.firstLastPiecePriority,
-                                        onCheckedChange = null,
+                                } else {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.pause_action)) },
+                                        leadingIcon = { Icon(Icons.Filled.Pause, null) },
+                                        onClick = {
+                                            act { viewModel.toggleTorrent(true, torrent.hash) }
+                                        },
                                     )
-                                },
-                                onClick = { act { viewModel.toggleFirstLastPriority() } },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.super_seeding)) },
-                                leadingIcon = { Icon(Icons.Filled.CloudUpload, null) },
-                                trailingIcon = {
-                                    Checkbox(checked = torrent.superSeeding, onCheckedChange = null)
-                                },
-                                onClick = {
-                                    act { viewModel.setSuperSeeding(!torrent.superSeeding) }
-                                },
-                            )
+                                }
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.delete)) },
+                                    leadingIcon = { Icon(Icons.Filled.Delete, null) },
+                                    onClick = { act { dialog = DetailDialog.Delete } },
+                                )
+                                // qBittorrent derives a magnet URI for every torrent; only guard
+                                // the
+                                // rare case where one isn't available yet (e.g. metadata not
+                                // fetched).
+                                if (torrent.magnetUri.isNotBlank()) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.copy_magnet_link)) },
+                                        leadingIcon = { Icon(Icons.Filled.Link, null) },
+                                        onClick = {
+                                            act {
+                                                copy(
+                                                    "magnet",
+                                                    torrent.magnetUri,
+                                                    copiedToClipboardMessage,
+                                                )
+                                            }
+                                        },
+                                    )
+                                }
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.force_recheck)) },
+                                    leadingIcon = { Icon(Icons.Filled.FindInPage, null) },
+                                    onClick = { act { viewModel.forceRecheck(torrent.hash) } },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.force_reannounce)) },
+                                    leadingIcon = { Icon(Icons.Filled.Campaign, null) },
+                                    onClick = { act { viewModel.forceReannounce(torrent.hash) } },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.rename)) },
+                                    leadingIcon = {
+                                        Icon(Icons.Filled.DriveFileRenameOutline, null)
+                                    },
+                                    onClick = { act { dialog = DetailDialog.Rename } },
+                                )
+                                HorizontalDivider(
+                                    Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                                )
+                                // Only when the server has torrent queueing enabled — qBittorrent
+                                // rejects the priority moves (409) otherwise.
+                                if (state.queueingEnabled) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.queue_priority)) },
+                                        leadingIcon = { Icon(Icons.Filled.LowPriority, null) },
+                                        onClick = { act { dialog = DetailDialog.QueuePriority } },
+                                    )
+                                }
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.set_category)) },
+                                    leadingIcon = { Icon(Icons.Filled.Category, null) },
+                                    onClick = { act { dialog = DetailDialog.Category } },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.set_tags)) },
+                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.Label, null) },
+                                    onClick = { act { dialog = DetailDialog.Tags } },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.automatic_management)) },
+                                    leadingIcon = { Icon(Icons.Filled.Autorenew, null) },
+                                    trailingIcon = {
+                                        Checkbox(checked = torrent.autoTmm, onCheckedChange = null)
+                                    },
+                                    onClick = {
+                                        act { viewModel.setAutoManagement(!torrent.autoTmm) }
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.menu_set_save_path)) },
+                                    leadingIcon = { Icon(Icons.Filled.Folder, null) },
+                                    onClick = { act { dialog = DetailDialog.SavePath } },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.menu_download_limit)) },
+                                    leadingIcon = { Icon(Icons.Filled.Download, null) },
+                                    onClick = { act { dialog = DetailDialog.DownloadLimit } },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.menu_upload_limit)) },
+                                    leadingIcon = { Icon(Icons.Filled.Upload, null) },
+                                    onClick = { act { dialog = DetailDialog.UploadLimit } },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.menu_share_limits)) },
+                                    leadingIcon = { Icon(Icons.Filled.Share, null) },
+                                    onClick = { act { dialog = DetailDialog.ShareLimits } },
+                                )
+                                HorizontalDivider(
+                                    Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.force_start)) },
+                                    leadingIcon = { Icon(Icons.Filled.Bolt, null) },
+                                    trailingIcon = {
+                                        Checkbox(
+                                            checked = torrent.forceStart,
+                                            onCheckedChange = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        act { viewModel.setForceStart(!torrent.forceStart) }
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.sequential_download)) },
+                                    leadingIcon = { Icon(Icons.Filled.FormatListNumbered, null) },
+                                    trailingIcon = {
+                                        Checkbox(
+                                            checked = torrent.sequentialDownload,
+                                            onCheckedChange = null,
+                                        )
+                                    },
+                                    onClick = { act { viewModel.toggleSequentialDownload() } },
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(stringResource(R.string.download_first_last_pieces))
+                                    },
+                                    leadingIcon = { Icon(Icons.Filled.Flag, null) },
+                                    trailingIcon = {
+                                        Checkbox(
+                                            checked = torrent.firstLastPiecePriority,
+                                            onCheckedChange = null,
+                                        )
+                                    },
+                                    onClick = { act { viewModel.toggleFirstLastPriority() } },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.super_seeding)) },
+                                    leadingIcon = { Icon(Icons.Filled.CloudUpload, null) },
+                                    trailingIcon = {
+                                        Checkbox(
+                                            checked = torrent.superSeeding,
+                                            onCheckedChange = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        act { viewModel.setSuperSeeding(!torrent.superSeeding) }
+                                    },
+                                )
+                            }
                         }
                     }
                 },
@@ -355,16 +398,6 @@ fun TorrentDetailsScreen(
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                 )
             }
-            if (filesSearchOpen && pagerState.currentPage == FILES_TAB_INDEX) {
-                ContentSearchField(
-                    query = filesQuery,
-                    onQueryChange = { filesQuery = it },
-                    onClose = {
-                        filesSearchOpen = false
-                        filesQuery = ""
-                    },
-                )
-            }
             PrimaryScrollableTabRow(selectedTabIndex = pagerState.currentPage, edgePadding = 0.dp) {
                 tabTitles.forEachIndexed { index, title ->
                     Tab(
@@ -376,14 +409,13 @@ fun TorrentDetailsScreen(
             }
             HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                 when (page) {
-                    0 -> InfoTab(state, Modifier.fillMaxSize())
+                    0 -> InfoTab(state, viewModel::retryDetails, Modifier.fillMaxSize())
                     1 ->
                         FilesTab(
                             state,
                             viewModel::setFilePriority,
                             viewModel::renameContent,
                             Modifier.fillMaxSize(),
-                            query = filesQuery,
                         )
                     2 ->
                         TrackersTab(
@@ -427,7 +459,7 @@ fun TorrentDetailsScreen(
             }
         DetailDialog.QueuePriority ->
             if (torrent != null) {
-                QueuePriorityDialog(
+                QueuePrioritySheet(
                     onSelect = { action ->
                         viewModel.setQueuePriority(action, torrent.hash)
                         dialog = null
@@ -475,7 +507,7 @@ fun TorrentDetailsScreen(
             }
         DetailDialog.ShareLimits ->
             if (torrent != null) {
-                ShareLimitDialog(
+                ShareLimitEditor(
                     currentRatioLimit = torrent.ratioLimit,
                     currentSeedingTimeLimit = torrent.seedingTimeLimit,
                     currentInactiveSeedingTimeLimit = torrent.inactiveSeedingTimeLimit,
@@ -634,47 +666,32 @@ private fun DeleteDialog(onConfirm: (Boolean) -> Unit, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun QueuePriorityDialog(onSelect: (QueueAction) -> Unit, onDismiss: () -> Unit) {
+private fun QueuePrioritySheet(onSelect: (QueueAction) -> Unit, onDismiss: () -> Unit) {
     @Composable
     fun Option(icon: ImageVector, label: String, action: QueueAction) {
-        Row(
-            modifier =
-                Modifier.fillMaxWidth().clickable { onSelect(action) }.padding(vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(icon, contentDescription = null)
-            Spacer(Modifier.size(16.dp))
-            Text(label)
-        }
+        ActionSheetItem(label, icon) { onSelect(action) }
     }
-    AlertDialog(
+    ActionSheet(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.queue_priority)) },
-        text = {
-            Column {
-                Option(
-                    Icons.Filled.VerticalAlignTop,
-                    stringResource(R.string.move_to_top),
-                    QueueAction.TOP,
-                )
-                Option(Icons.Filled.ArrowUpward, stringResource(R.string.move_up), QueueAction.UP)
-                Option(
-                    Icons.Filled.ArrowDownward,
-                    stringResource(R.string.move_down),
-                    QueueAction.DOWN,
-                )
-                Option(
-                    Icons.Filled.VerticalAlignBottom,
-                    stringResource(R.string.move_to_bottom),
-                    QueueAction.BOTTOM,
-                )
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
-        },
-    )
+        title = stringResource(R.string.queue_priority),
+    ) {
+        Option(
+            Icons.Filled.VerticalAlignTop,
+            stringResource(R.string.move_to_top),
+            QueueAction.TOP,
+        )
+        Option(Icons.Filled.ArrowUpward, stringResource(R.string.move_up), QueueAction.UP)
+        Option(
+            Icons.Filled.ArrowDownward,
+            stringResource(R.string.move_down),
+            QueueAction.DOWN,
+        )
+        Option(
+            Icons.Filled.VerticalAlignBottom,
+            stringResource(R.string.move_to_bottom),
+            QueueAction.BOTTOM,
+        )
+    }
 }
 
 private enum class LimitMode {
@@ -689,7 +706,7 @@ private enum class LimitMode {
  * [currentSeedingTimeLimit] is in minutes.
  */
 @Composable
-private fun ShareLimitDialog(
+private fun ShareLimitEditor(
     currentRatioLimit: Float,
     currentSeedingTimeLimit: Long,
     currentInactiveSeedingTimeLimit: Long,
@@ -721,112 +738,137 @@ private fun ShareLimitDialog(
         )
     }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.share_limits_title)) },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                Text(
-                    stringResource(R.string.ratio_limit_label),
-                    style = MaterialTheme.typography.titleSmall,
-                )
+    val ratioNumber = ratioValue.toFloatOrNull()?.takeIf { it.isFinite() && it >= 0f }
+    val seedNumber = seedValue.toLongOrNull()?.takeIf { it >= 0L }
+    val inactiveNumber = inactiveValue.toLongOrNull()?.takeIf { it >= 0L }
+    val valid =
+        (ratioMode != LimitMode.CUSTOM || ratioNumber != null) &&
+            (seedMode != LimitMode.CUSTOM || seedNumber != null) &&
+            (inactiveMode != LimitMode.CUSTOM || inactiveNumber != null)
+    FullScreenEditor(
+        title = stringResource(R.string.share_limits_title),
+        onDismiss = onDismiss,
+        confirmEnabled = valid,
+        onConfirm = {
+            fun timeOf(mode: LimitMode, value: Long?): Long =
+                when (mode) {
+                    LimitMode.GLOBAL -> -2L
+                    LimitMode.UNLIMITED -> -1L
+                    LimitMode.CUSTOM -> requireNotNull(value)
+                }
+            onConfirm(
+                when (ratioMode) {
+                    LimitMode.GLOBAL -> -2f
+                    LimitMode.UNLIMITED -> -1f
+                    LimitMode.CUSTOM -> requireNotNull(ratioNumber)
+                },
+                timeOf(seedMode, seedNumber),
+                timeOf(inactiveMode, inactiveNumber),
+            )
+        },
+    ) { padding ->
+        Column(
+            Modifier.fillMaxSize()
+                .padding(padding)
+                .imePadding()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
+        ) {
+            Text(
+                stringResource(R.string.ratio_limit_label),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Column(Modifier.selectableGroup()) {
                 LimitMode.entries.forEach { mode ->
                     LimitModeOption(mode, ratioMode == mode) { ratioMode = mode }
                 }
-                if (ratioMode == LimitMode.CUSTOM) {
-                    OutlinedTextField(
-                        value = ratioValue,
-                        onValueChange = { new ->
-                            ratioValue = new.filter { it.isDigit() || it == '.' }
-                        },
-                        singleLine = true,
-                        label = { Text(stringResource(R.string.ratio)) },
-                        keyboardOptions =
-                            KeyboardOptions(
-                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
-                            ),
-                    )
-                }
-                Spacer(Modifier.size(16.dp))
-                Text(
-                    stringResource(R.string.seeding_time_limit_label),
-                    style = MaterialTheme.typography.titleSmall,
+            }
+            if (ratioMode == LimitMode.CUSTOM) {
+                OutlinedTextField(
+                    value = ratioValue,
+                    onValueChange = { new ->
+                        ratioValue = new.filter { it.isDigit() || it == '.' }
+                    },
+                    singleLine = true,
+                    isError = ratioNumber == null,
+                    supportingText = {
+                        if (ratioNumber == null)
+                            Text(stringResource(R.string.invalid_non_negative_number))
+                    },
+                    label = { Text(stringResource(R.string.ratio)) },
+                    keyboardOptions =
+                        KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
+                        ),
                 )
+            }
+            Spacer(Modifier.size(16.dp))
+            Text(
+                stringResource(R.string.seeding_time_limit_label),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Column(Modifier.selectableGroup()) {
                 LimitMode.entries.forEach { mode ->
                     LimitModeOption(mode, seedMode == mode) { seedMode = mode }
                 }
-                if (seedMode == LimitMode.CUSTOM) {
-                    OutlinedTextField(
-                        value = seedValue,
-                        onValueChange = { new -> seedValue = new.filter { it.isDigit() } },
-                        singleLine = true,
-                        label = { Text(stringResource(R.string.minutes_label)) },
-                        keyboardOptions =
-                            KeyboardOptions(
-                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
-                            ),
-                    )
-                }
-                Spacer(Modifier.size(16.dp))
-                Text(
-                    stringResource(R.string.inactive_seeding_time_limit_label),
-                    style = MaterialTheme.typography.titleSmall,
+            }
+            if (seedMode == LimitMode.CUSTOM) {
+                OutlinedTextField(
+                    value = seedValue,
+                    onValueChange = { new -> seedValue = new.filter { it.isDigit() } },
+                    singleLine = true,
+                    isError = seedNumber == null,
+                    supportingText = {
+                        if (seedNumber == null)
+                            Text(stringResource(R.string.invalid_non_negative_number))
+                    },
+                    label = { Text(stringResource(R.string.minutes_label)) },
+                    keyboardOptions =
+                        KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                        ),
                 )
+            }
+            Spacer(Modifier.size(16.dp))
+            Text(
+                stringResource(R.string.inactive_seeding_time_limit_label),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Column(Modifier.selectableGroup()) {
                 LimitMode.entries.forEach { mode ->
                     LimitModeOption(mode, inactiveMode == mode) { inactiveMode = mode }
                 }
-                if (inactiveMode == LimitMode.CUSTOM) {
-                    OutlinedTextField(
-                        value = inactiveValue,
-                        onValueChange = { new -> inactiveValue = new.filter { it.isDigit() } },
-                        singleLine = true,
-                        label = { Text(stringResource(R.string.minutes_label)) },
-                        keyboardOptions =
-                            KeyboardOptions(
-                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
-                            ),
-                    )
-                }
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    fun timeOf(mode: LimitMode, value: String): Long =
-                        when (mode) {
-                            LimitMode.GLOBAL -> -2L
-                            LimitMode.UNLIMITED -> -1L
-                            LimitMode.CUSTOM -> value.toLongOrNull() ?: 0L
-                        }
-                    val ratio =
-                        when (ratioMode) {
-                            LimitMode.GLOBAL -> -2f
-                            LimitMode.UNLIMITED -> -1f
-                            LimitMode.CUSTOM -> ratioValue.toFloatOrNull() ?: 0f
-                        }
-                    onConfirm(
-                        ratio,
-                        timeOf(seedMode, seedValue),
-                        timeOf(inactiveMode, inactiveValue),
-                    )
-                },
-            ) {
-                Text(stringResource(R.string.ok))
+            if (inactiveMode == LimitMode.CUSTOM) {
+                OutlinedTextField(
+                    value = inactiveValue,
+                    onValueChange = { new -> inactiveValue = new.filter { it.isDigit() } },
+                    singleLine = true,
+                    isError = inactiveNumber == null,
+                    supportingText = {
+                        if (inactiveNumber == null)
+                            Text(stringResource(R.string.invalid_non_negative_number))
+                    },
+                    label = { Text(stringResource(R.string.minutes_label)) },
+                    keyboardOptions =
+                        KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                        ),
+                )
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
-        },
-    )
+        }
+    }
 }
 
 @Composable
 private fun LimitModeOption(mode: LimitMode, selected: Boolean, onSelect: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().selectable(selected = selected, onClick = onSelect),
+        modifier =
+            Modifier.fillMaxWidth()
+                .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        RadioButton(selected = selected, onClick = onSelect)
+        RadioButton(selected = selected, onClick = null)
         Text(
             stringResource(
                 when (mode) {
@@ -849,35 +891,14 @@ private fun CategoryDialog(
 ) {
     val options = listOf("") + categories
     val noneLabel = stringResource(R.string.none_option)
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.set_category)) },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                options.forEach { option ->
-                    Row(
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .selectable(
-                                    selected = option == current,
-                                    onClick = { onSelect(option) },
-                                )
-                                .padding(vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioButton(selected = option == current, onClick = { onSelect(option) })
-                        Spacer(Modifier.size(12.dp))
-                        Text(option.ifBlank { noneLabel })
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onNew) { Text(stringResource(R.string.new_ellipsis)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
-        },
+    SingleChoiceSheet(
+        title = stringResource(R.string.set_category),
+        labels = options.map { it.ifBlank { noneLabel } },
+        selectedIndex = options.indexOf(current),
+        onSelect = { onSelect(options[it]) },
+        onDismiss = onDismiss,
+        newLabel = stringResource(R.string.new_ellipsis),
+        onNew = onNew,
     )
 }
 
@@ -894,44 +915,18 @@ private fun TagsDialog(
         LaunchedEffect(Unit) { onNew() }
         return
     }
-    val checked = remember { mutableStateMapOf<String, Boolean>() }
-    LaunchedEffect(tags, current) {
-        tags.forEach { checked[it] = current.contains(it) }
-    }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.set_tags)) },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                tags.forEach { tag ->
-                    val isChecked = checked[tag] == true
-                    Row(
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .clickable { checked[tag] = !isChecked }
-                                .padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Checkbox(checked = isChecked, onCheckedChange = { checked[tag] = it })
-                        Spacer(Modifier.size(8.dp))
-                        Text(tag)
-                    }
-                }
-            }
+    MultipleChoiceSheet(
+        title = stringResource(R.string.set_tags),
+        labels = tags,
+        initialSelected = tags.indices.filter { tags[it] in current }.toSet(),
+        onApply = { checked ->
+            onApply(
+                tags.filterIndexed { index, tag -> index in checked && tag !in current },
+                tags.filterIndexed { index, tag -> index !in checked && tag in current },
+            )
         },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val toAdd = tags.filter { checked[it] == true && !current.contains(it) }
-                    val toRemove = tags.filter { checked[it] != true && current.contains(it) }
-                    onApply(toAdd, toRemove)
-                },
-            ) {
-                Text(stringResource(R.string.ok))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onNew) { Text(stringResource(R.string.new_tag_ellipsis)) }
-        },
+        onDismiss = onDismiss,
+        newLabel = stringResource(R.string.new_tag_ellipsis),
+        onNew = onNew,
     )
 }

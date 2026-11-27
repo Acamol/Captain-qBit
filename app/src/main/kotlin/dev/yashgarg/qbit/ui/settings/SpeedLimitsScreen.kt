@@ -13,6 +13,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,14 +24,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLocale
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import com.github.michaelbull.result.Result
+import com.github.michaelbull.result.get
+import com.github.michaelbull.result.getError
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.ui.compose.SingleChoiceDialog
 import dev.yashgarg.qbit.ui.navigation.AppNavigator
 import dev.yashgarg.qbit.ui.navigation.NavCommand
+import dev.yashgarg.qbit.ui.server.SpeedLimits
 import dev.yashgarg.qbit.ui.server.SpeedLimitsDialog
+import dev.yashgarg.qbit.utils.friendlyMessage
 import java.time.DayOfWeek
 import java.time.format.TextStyle
 import qbittorrent.models.SchedulerDays
@@ -43,17 +54,18 @@ import qbittorrent.models.SchedulerDays
 @Composable
 fun SpeedLimitsScreen(appNavigator: AppNavigator, viewModel: SettingsViewModel = hiltViewModel()) {
     val context = LocalContext.current
-    LaunchedEffect(Unit) { viewModel.loadSpeedLimits() }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(viewModel, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { viewModel.loadSpeedLimits() }
+    }
     val speedLimitMode by viewModel.speedLimitMode.collectAsStateWithLifecycle()
-    val globalDownloadLimit by viewModel.globalDownloadLimit.collectAsStateWithLifecycle()
-    val globalUploadLimit by viewModel.globalUploadLimit.collectAsStateWithLifecycle()
-    val altDownloadLimit by viewModel.altDownloadLimit.collectAsStateWithLifecycle()
-    val altUploadLimit by viewModel.altUploadLimit.collectAsStateWithLifecycle()
+    val globalLimits by viewModel.globalLimits.collectAsStateWithLifecycle()
+    val altLimits by viewModel.altLimits.collectAsStateWithLifecycle()
     // A plain value rather than a delegate, so the null checks below smart-cast it.
     val schedule = viewModel.altSpeedSchedule.collectAsStateWithLifecycle().value
 
-    var showGlobalLimitsDialog by remember { mutableStateOf(false) }
-    var showAltLimitsDialog by remember { mutableStateOf(false) }
+    var globalBaseline by remember { mutableStateOf<SpeedLimits?>(null) }
+    var altBaseline by remember { mutableStateOf<SpeedLimits?>(null) }
     var showDaysDialog by remember { mutableStateOf(false) }
     var editingEdge by remember { mutableStateOf<ScheduleEdge?>(null) }
 
@@ -75,10 +87,12 @@ fun SpeedLimitsScreen(appNavigator: AppNavigator, viewModel: SettingsViewModel =
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
             SectionHeader(stringResource(CommonR.string.global_speed_limits_section_title))
-            ClickableRow(
+            SpeedLimitsRow(
                 title = stringResource(CommonR.string.global_speed_limits_label),
                 subtitle = stringResource(CommonR.string.global_speed_limits_subtitle),
-                onClick = { showGlobalLimitsDialog = true },
+                result = globalLimits,
+                onEdit = { globalBaseline = it },
+                onRetry = { viewModel.retrySpeedLimits(alternate = false) },
             )
             HorizontalDivider()
             SectionHeader(stringResource(CommonR.string.alternate_speed_limits_section_title))
@@ -89,10 +103,12 @@ fun SpeedLimitsScreen(appNavigator: AppNavigator, viewModel: SettingsViewModel =
             ) {
                 viewModel.toggleSpeedLimits()
             }
-            ClickableRow(
+            SpeedLimitsRow(
                 title = stringResource(CommonR.string.alternate_speed_limits_label),
                 subtitle = stringResource(CommonR.string.alternate_speed_limits_subtitle),
-                onClick = { showAltLimitsDialog = true },
+                result = altLimits,
+                onEdit = { altBaseline = it },
+                onRetry = { viewModel.retrySpeedLimits(alternate = true) },
             )
             SwitchRow(
                 stringResource(CommonR.string.alt_speed_schedule_label),
@@ -130,22 +146,20 @@ fun SpeedLimitsScreen(appNavigator: AppNavigator, viewModel: SettingsViewModel =
         }
     }
 
-    if (showGlobalLimitsDialog) {
+    globalBaseline?.let {
         SpeedLimitsDialog(
             title = stringResource(CommonR.string.global_speed_limits_label),
-            initialDownloadBytes = globalDownloadLimit,
-            initialUploadBytes = globalUploadLimit,
-            onConfirm = { dl, ul -> viewModel.setGlobalLimits(dl, ul) },
-            onDismiss = { showGlobalLimitsDialog = false },
+            baseline = it,
+            onConfirm = viewModel::setGlobalLimits,
+            onDismiss = { globalBaseline = null },
         )
     }
-    if (showAltLimitsDialog) {
+    altBaseline?.let {
         SpeedLimitsDialog(
             title = stringResource(CommonR.string.alternate_speed_limits_label),
-            initialDownloadBytes = altDownloadLimit,
-            initialUploadBytes = altUploadLimit,
-            onConfirm = { dl, ul -> viewModel.setAltLimits(dl, ul) },
-            onDismiss = { showAltLimitsDialog = false },
+            baseline = it,
+            onConfirm = viewModel::setAltLimits,
+            onDismiss = { altBaseline = null },
         )
     }
     val edge = editingEdge
@@ -181,6 +195,40 @@ fun SpeedLimitsScreen(appNavigator: AppNavigator, viewModel: SettingsViewModel =
             },
             onDismiss = { showDaysDialog = false },
         )
+    }
+}
+
+@Composable
+private fun SpeedLimitsRow(
+    title: String,
+    subtitle: String,
+    result: Result<SpeedLimits, Throwable>?,
+    onEdit: (SpeedLimits) -> Unit,
+    onRetry: () -> Unit,
+) {
+    val resources = LocalResources.current
+    val limits = result?.get()
+    val error = result?.getError()
+    ClickableRow(
+        title = title,
+        subtitle =
+            when {
+                limits != null -> subtitle
+                error != null ->
+                    error.friendlyMessage(
+                        resources::getString,
+                        stringResource(CommonR.string.status_sync_data_failure),
+                    )
+                else -> stringResource(CommonR.string.loading_ellipsis)
+            },
+        subtitleIsError = error != null,
+        enabled = limits != null,
+        onClick = { limits?.let(onEdit) },
+    )
+    if (error != null) {
+        TextButton(onClick = onRetry, modifier = Modifier.padding(horizontal = 16.dp)) {
+            Text(stringResource(CommonR.string.retry_action))
+        }
     }
 }
 

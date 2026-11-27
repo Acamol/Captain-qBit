@@ -27,13 +27,16 @@ import qbittorrent.models.TorrentPeers
 import qbittorrent.models.TorrentProperties
 import qbittorrent.models.TorrentTracker
 
-class QbitRepository @Inject constructor(private val clientManager: ClientManager) {
-    // Fetch the CURRENT client each call (rather than caching one) so switching the active server
-    // propagates: after a switch the client is rebuilt and the next call gets the new one. The
-    // long-lived observe* flows are restarted at the ViewModel level on switch.
+class QbitRepository
+private constructor(private val resolveClient: suspend () -> QBittorrentClient?) {
+    @Inject constructor(clientManager: ClientManager) : this(clientManager::checkAndGetClient)
+
+    /** List actions and observers must use the same client that supplied the displayed hashes. */
+    internal suspend fun forCurrentClient(): QbitRepository? =
+        resolveClient()?.let { current -> QbitRepository { current } }
+
     private suspend fun client(): QBittorrentClient =
-        clientManager.checkAndGetClient()
-            ?: throw IllegalStateException("No active qBittorrent client")
+        resolveClient() ?: throw IllegalStateException("No active qBittorrent client")
 
     fun observeMainData(): Flow<MainData> {
         return flow { emitAll(client().observeMainData()) }
@@ -60,16 +63,28 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
         return runSuspendCatching { client().getVersion() }
     }
 
+    internal suspend fun getTorrentTags(hash: String): Result<List<String>?, Throwable> =
+        runSuspendCatching {
+            client()
+                .getTorrents(hashes = listOf(hash))
+                .firstOrNull {
+                    it.hash.equals(hash, ignoreCase = true)
+                }
+                ?.tags
+        }
+
     suspend fun addTorrentUrl(
         url: String,
         category: String? = null,
         savePath: String? = null,
         paused: Boolean? = null,
         autoTmm: Boolean? = null,
+        tag: String? = null,
     ): Result<Unit, Throwable> {
         return runSuspendCatching {
             client().addTorrent {
                 urls.add(url)
+                tag?.let(tags::add)
                 this.category = category
                 this.savepath = savePath
                 this.paused = paused
@@ -84,10 +99,12 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
         savePath: String? = null,
         paused: Boolean? = null,
         autoTmm: Boolean? = null,
+        tag: String? = null,
     ): Result<Unit, Throwable> {
         return runSuspendCatching {
             client().addTorrent {
                 rawTorrents["torrent_file"] = bytes
+                tag?.let(tags::add)
                 this.category = category
                 this.savepath = savePath
                 this.paused = paused
@@ -228,22 +245,22 @@ class QbitRepository @Inject constructor(private val clientManager: ClientManage
     suspend fun getAltSpeedLimits(): Result<Pair<Int, Int>, Throwable> {
         return runSuspendCatching {
             val prefs = client().getPreferences()
-            val dl = prefs["alt_dl_limit"]?.jsonPrimitive?.content?.toIntOrNull() ?: -1
-            val ul = prefs["alt_up_limit"]?.jsonPrimitive?.content?.toIntOrNull() ?: -1
+            val dl = prefs.getValue("alt_dl_limit").jsonPrimitive.content.toInt()
+            val ul = prefs.getValue("alt_up_limit").jsonPrimitive.content.toInt()
             prefLimitToBytes(dl) to prefLimitToBytes(ul)
         }
     }
 
     suspend fun setAltSpeedLimits(
-        downloadBytesPerSec: Int,
-        uploadBytesPerSec: Int,
+        downloadBytesPerSec: Int?,
+        uploadBytesPerSec: Int?,
     ): Result<Unit, Throwable> {
         return runSuspendCatching {
             client()
                 .setPreferences(
                     buildJsonObject {
-                        put("alt_dl_limit", bytesToPrefLimit(downloadBytesPerSec))
-                        put("alt_up_limit", bytesToPrefLimit(uploadBytesPerSec))
+                        downloadBytesPerSec?.let { put("alt_dl_limit", bytesToPrefLimit(it)) }
+                        uploadBytesPerSec?.let { put("alt_up_limit", bytesToPrefLimit(it)) }
                     },
                 )
         }

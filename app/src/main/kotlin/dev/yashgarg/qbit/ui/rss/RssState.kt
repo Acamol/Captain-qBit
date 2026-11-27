@@ -6,10 +6,19 @@ import qbittorrent.models.RssFolder
 import qbittorrent.models.RssItem
 import qbittorrent.models.RssRule
 
+sealed interface RssLoad {
+    data object Loading : RssLoad
+
+    data object Refreshing : RssLoad
+
+    data object Ready : RssLoad
+
+    data class Failed(val message: String) : RssLoad
+}
+
 data class RssState(
-    val loading: Boolean = true,
-    val refreshing: Boolean = false,
-    val error: String? = null,
+    val itemsLoad: RssLoad = RssLoad.Loading,
+    val rulesLoad: RssLoad = RssLoad.Loading,
     val items: List<RssItem> = emptyList(),
     val sortDescending: Boolean = false,
     val rules: Map<String, RssRule> = emptyMap(),
@@ -28,7 +37,12 @@ data class RssState(
      * [RssArticle.magnetHash].
      */
     val existingTorrentHashes: Set<String> = emptySet(),
-)
+) {
+    fun canSaveRule(editingName: String?, name: String): Boolean =
+        rulesLoad == RssLoad.Ready &&
+            if (editingName != null) name == editingName && editingName in rules
+            else name.isNotBlank() && name.trim() !in rules
+}
 
 private val MAGNET_HASH_REGEX = Regex("urn:btih:([A-Fa-f0-9]{40})")
 
@@ -53,6 +67,17 @@ fun List<RssItem>.flattenFeeds(): List<RssFeed> = flatMap { item ->
         is RssFeed -> listOf(item)
         is RssFolder -> item.children.flattenFeeds()
     }
+}
+
+/** Only the listed URLs are editable. A deleted or unavailable feed can still be assigned. */
+internal fun RssState.applyFeedSelection(
+    assigned: List<String>,
+    listed: List<String>,
+    checked: Set<String>,
+): List<String>? {
+    if (itemsLoad != RssLoad.Ready) return null
+    val retained = assigned.filter { it !in listed || it in checked }
+    return retained + listed.filter { it in checked && it !in retained }.distinct()
 }
 
 /** Every folder path in the tree, depth-first - used by the "move to folder" picker. */

@@ -1,31 +1,39 @@
 package dev.yashgarg.qbit.ui.torrent.tabs
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.material3.RadioButton
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.DriveFileRenameOutline
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.models.ContentTreeItem
-import dev.yashgarg.qbit.ui.compose.AlertDialog
+import dev.yashgarg.qbit.ui.compose.ActionSheet
+import dev.yashgarg.qbit.ui.compose.ActionSheetItem
 import dev.yashgarg.qbit.ui.compose.Center
 import dev.yashgarg.qbit.ui.compose.CenterLinearLoading
+import dev.yashgarg.qbit.ui.compose.ContentSearchField
 import dev.yashgarg.qbit.ui.compose.FILE_PRIORITY_HIGH
 import dev.yashgarg.qbit.ui.compose.FILE_PRIORITY_MAXIMAL
 import dev.yashgarg.qbit.ui.compose.FILE_PRIORITY_NORMAL
@@ -44,53 +52,44 @@ fun FilesTab(
     onSetPriority: (List<Int>, Int) -> Unit,
     onRename: (ContentTreeItem, String) -> Unit,
     modifier: Modifier = Modifier,
-    query: String = "",
 ) {
-    // Long-press target: first a small action menu, then a priority / path / rename dialog.
+    var query by rememberSaveable { mutableStateOf("") }
     var menuItem by remember { mutableStateOf<ContentTreeItem?>(null) }
-    var priorityItem by remember { mutableStateOf<ContentTreeItem?>(null) }
-    var pathItem by remember { mutableStateOf<ContentTreeItem?>(null) }
     var renameItem by remember { mutableStateOf<ContentTreeItem?>(null) }
 
-    FilesListView(
-        state = state,
-        query = query,
-        modifier = modifier,
-        onNodeLongClick = { menuItem = it },
-        // Checkbox / file tap = download on/off; finer priorities live in the long-press menu.
-        onToggleDownload = { item ->
-            onSetPriority(
-                fileIndices(item),
-                if (item.isSkipped()) FILE_PRIORITY_NORMAL else FILE_PRIORITY_SKIP,
-            )
-        },
-    )
-
-    menuItem?.let { item ->
-        AlertDialog(
-            onDismissRequest = { menuItem = null },
-            title = { Text(item.name) },
-            text = {
-                Column {
-                    MenuRow(stringResource(CommonR.string.file_menu_priority)) {
-                        menuItem = null
-                        priorityItem = item
-                    }
-                    MenuRow(stringResource(CommonR.string.file_menu_path)) {
-                        menuItem = null
-                        pathItem = item
-                    }
-                    MenuRow(stringResource(CommonR.string.rename)) {
-                        menuItem = null
-                        renameItem = item
-                    }
-                }
+    Column(modifier) {
+        ContentSearchField(
+            query = query,
+            onQueryChange = { query = it },
+            onClose = { query = "" },
+            modifier = Modifier.padding(top = 12.dp),
+            autoFocus = false,
+            persistent = true,
+        )
+        state.contentError?.let { message ->
+            Text(message, Modifier.padding(16.dp), color = MaterialTheme.colorScheme.error)
+        }
+        FilesListView(
+            state = state,
+            query = query,
+            modifier = Modifier.weight(1f),
+            onNodeLongClick = { menuItem = it },
+            onFileClick = { menuItem = it },
+            onToggleDownload = { item ->
+                onSetPriority(
+                    fileIndices(item),
+                    if (item.isSkipped()) FILE_PRIORITY_NORMAL else FILE_PRIORITY_SKIP,
+                )
             },
-            confirmButton = {},
         )
     }
 
-    priorityItem?.let { item ->
+    menuItem?.let { item ->
+        val copy = rememberCopyToClipboard()
+        val fullPath =
+            state.torrentProperties?.savePath?.let { joinPath(it, item.path) } ?: item.path
+        val copied = stringResource(CommonR.string.clipboard_copied)
+        val current = commonPriority(item)
         val options =
             listOf(
                 FILE_PRIORITY_SKIP to stringResource(CommonR.string.file_priority_skip),
@@ -98,79 +97,72 @@ fun FilesTab(
                 FILE_PRIORITY_HIGH to stringResource(CommonR.string.file_priority_high),
                 FILE_PRIORITY_MAXIMAL to stringResource(CommonR.string.file_priority_maximal),
             )
-        val current = commonPriority(item)
-        AlertDialog(
-            onDismissRequest = { priorityItem = null },
-            title = { Text(stringResource(CommonR.string.file_priority_title)) },
-            text = {
-                Column {
-                    options.forEach { (priority, label) ->
-                        Row(
-                            modifier =
-                                Modifier.fillMaxWidth()
-                                    .selectable(
-                                        selected = current == priority,
-                                        onClick = {
-                                            onSetPriority(fileIndices(item), priority)
-                                            priorityItem = null
-                                        },
-                                    )
-                                    .padding(vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = current == priority,
-                                onClick = {
-                                    onSetPriority(fileIndices(item), priority)
-                                    priorityItem = null
-                                },
+        ActionSheet(
+            onDismissRequest = { menuItem = null },
+            title = item.name,
+        ) {
+            Column(
+                Modifier.padding(horizontal = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            stringResource(
+                                if (item.item == null) CommonR.string.folder_path_title
+                                else CommonR.string.file_path_title,
+                            ),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        SelectionContainer {
+                            Text(
+                                fullPath,
+                                style =
+                                    MaterialTheme.typography.bodyMedium.copy(
+                                        textDirection = TextDirection.Ltr,
+                                    ),
                             )
-                            Spacer(Modifier.size(12.dp))
-                            Text(label)
                         }
                     }
+                    IconButton(onClick = { copy("content-path", fullPath, copied) }) {
+                        Icon(
+                            Icons.Filled.ContentCopy,
+                            contentDescription = stringResource(CommonR.string.copy_action),
+                        )
+                    }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { priorityItem = null }) {
-                    Text(stringResource(CommonR.string.cancel))
-                }
-            },
-        )
-    }
-
-    pathItem?.let { item ->
-        val copy = rememberCopyToClipboard()
-        val fullPath =
-            state.torrentProperties?.savePath?.let { joinPath(it, item.path) } ?: item.path
-        val copiedToClipboardMessage = stringResource(CommonR.string.clipboard_copied)
-        AlertDialog(
-            onDismissRequest = { pathItem = null },
-            title = {
                 Text(
-                    stringResource(
-                        if (item.item == null) CommonR.string.folder_path_title
-                        else CommonR.string.file_path_title,
-                    ),
+                    stringResource(CommonR.string.file_priority_title),
+                    style = MaterialTheme.typography.titleSmall,
                 )
-            },
-            text = { Text(fullPath) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        copy("content-path", fullPath, copiedToClipboardMessage)
-                        pathItem = null
-                    },
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text(stringResource(CommonR.string.copy_action))
+                    options.forEach { (priority, label) ->
+                        FilterChip(
+                            selected = current == priority,
+                            onClick = {
+                                onSetPriority(fileIndices(item), priority)
+                                menuItem = null
+                            },
+                            label = { Text(label) },
+                            leadingIcon =
+                                if (current == priority) {
+                                    { Icon(Icons.Filled.Check, contentDescription = null) }
+                                } else null,
+                        )
+                    }
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { pathItem = null }) {
-                    Text(stringResource(CommonR.string.close_action))
-                }
-            },
-        )
+            }
+            ActionSheetItem(
+                stringResource(CommonR.string.rename),
+                Icons.Filled.DriveFileRenameOutline,
+            ) {
+                menuItem = null
+                renameItem = item
+            }
+        }
     }
 
     renameItem?.let { item ->
@@ -193,26 +185,21 @@ fun FilesTab(
 }
 
 @Composable
-internal fun MenuRow(text: String, onClick: () -> Unit) {
-    Text(
-        text,
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 14.dp),
-    )
-}
-
-@Composable
 fun FilesListView(
     state: TorrentDetailsState,
     query: String,
     modifier: Modifier = Modifier,
     onNodeLongClick: (ContentTreeItem) -> Unit = {},
     onToggleDownload: ((ContentTreeItem) -> Unit)? = null,
+    onFileClick: ((ContentTreeItem) -> Unit)? = null,
 ) {
     val visible = remember(state.contentTree, query) { filterContentTree(state.contentTree, query) }
     if (state.contentLoading) {
         CenterLinearLoading(modifier, R.color.md_theme_dark_seed)
     } else if (state.contentTree.isEmpty()) {
-        Center(modifier) { Text(stringResource(CommonR.string.no_content_found)) }
+        if (state.contentError == null) {
+            Center(modifier) { Text(stringResource(CommonR.string.no_content_found)) }
+        }
     } else if (visible.isEmpty()) {
         Center(modifier) { Text(stringResource(CommonR.string.no_files_match)) }
     } else {
@@ -222,6 +209,7 @@ fun FilesListView(
             onNodeLongClick,
             onToggleDownload,
             filterKey = query.trim(),
+            onFileClick = onFileClick,
         )
     }
 }

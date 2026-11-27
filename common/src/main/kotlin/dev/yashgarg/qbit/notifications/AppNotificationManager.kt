@@ -94,18 +94,34 @@ object AppNotificationManager {
         contentIntent: PendingIntent? = null,
         channelId: String = context.getString(R.string.status_channel_id),
         priority: Int = NotificationCompat.PRIORITY_LOW,
+        subText: String? = null,
+        groupKey: String? = null,
+        deleteIntent: PendingIntent? = null,
     ): Notification {
         val builder =
             NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(smallIcon)
                 .setContentTitle(title)
                 .setContentText(content)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(content))
+                .setSubText(subText)
+                .setShowWhen(!persistent)
+                .setCategory(
+                    if (persistent) NotificationCompat.CATEGORY_SERVICE
+                    else NotificationCompat.CATEGORY_EVENT,
+                )
                 .setPriority(priority)
                 .setContentIntent(contentIntent)
+                .setDeleteIntent(deleteIntent)
                 .setAutoCancel(!persistent)
                 .setOngoing(persistent)
                 .setOnlyAlertOnce(persistent)
 
+        if (groupKey != null) {
+            builder
+                .setGroup(groupKey)
+                .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
+        }
         actions.forEach { builder.addAction(it) }
         return builder.build()
     }
@@ -121,6 +137,8 @@ object AppNotificationManager {
         @DrawableRes smallIcon: Int,
         contentIntent: PendingIntent? = null,
         quiet: Boolean = false,
+        groupKey: String? = null,
+        deleteIntent: PendingIntent? = null,
     ): Notification =
         createNotification(
             context = context,
@@ -135,11 +153,18 @@ object AppNotificationManager {
                 ),
             priority =
                 if (quiet) NotificationCompat.PRIORITY_LOW else NotificationCompat.PRIORITY_DEFAULT,
+            groupKey = groupKey,
+            deleteIntent = deleteIntent,
         )
 
     // We already check for permissions later in the process, so we can suppress this lint
     @SuppressLint("MissingPermission")
-    fun sendNotification(context: Context, notificationId: Int, notification: Notification) {
+    fun sendNotification(
+        context: Context,
+        notificationId: Int,
+        notification: Notification,
+        tag: String? = null,
+    ) {
         val sendNotif =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 checkPermission(context)
@@ -148,12 +173,17 @@ object AppNotificationManager {
             }
 
         if (sendNotif) {
-            updateNotification(context, notificationId, notification)
+            updateNotification(context, notificationId, notification, tag)
         }
     }
 
     @SuppressLint("MissingPermission")
-    fun updateNotification(context: Context, notificationId: Int, notification: Notification) {
-        with(NotificationManagerCompat.from(context)) { notify(notificationId, notification) }
+    fun updateNotification(
+        context: Context,
+        notificationId: Int,
+        notification: Notification,
+        tag: String? = null,
+    ) {
+        with(NotificationManagerCompat.from(context)) { notify(tag, notificationId, notification) }
     }
 }

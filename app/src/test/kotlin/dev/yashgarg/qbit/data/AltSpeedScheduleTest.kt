@@ -106,6 +106,17 @@ class AltSpeedScheduleTest {
     }
 
     @Test
+    fun `a missing alternate cap is not an unlimited cap`() = runTest {
+        assertTrue(repository("""{"alt_dl_limit":8192}""").getAltSpeedLimits().isErr)
+    }
+
+    @Test
+    fun `editing one alternate cap does not send the other`() = runTest {
+        assertTrue(repository("{}").setAltSpeedLimits(null, 2048).isOk)
+        assertEquals("""{"alt_up_limit":2048}""", lastSetBody)
+    }
+
+    @Test
     fun `writes each time as an hour and minute pair`() = runTest {
         val repo = repository("{}")
         repo.setAltSpeedSchedule(

@@ -81,7 +81,9 @@ abstract class SyncChangelogAssets : DefaultTask() {
 
 android {
     namespace = "dev.yashgarg.qbit"
-    compileSdk = 37
+    compileSdk {
+        version = release(37) { minorApiLevel = 1 }
+    }
 
     defaultConfig {
         // Distinct from upstream (namespace stays dev.yashgarg.qbit) so this fork can be
@@ -120,6 +122,7 @@ android {
         create("preview") {
             initWith(getByName("debug"))
             applicationIdSuffix = ".preview"
+            versionNameSuffix = "-preview-$commitHash"
             matchingFallbacks += listOf("debug")
         }
 

@@ -9,6 +9,8 @@ import dev.yashgarg.qbit.common.R as CommonR
 import dev.yashgarg.qbit.data.QbitRepository
 import dev.yashgarg.qbit.ui.common.StatusViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -22,17 +24,25 @@ constructor(private val repository: QbitRepository, application: Application) :
     private val _uiState = MutableStateFlow(LogsState())
     val uiState = _uiState.asStateFlow()
 
-    init {
-        load(refresh = false)
+    private var serverId: Int? = null
+    private var loadJob: Job? = null
+
+    fun loadServer(id: Int) {
+        val switching = serverId != id
+        serverId = id
+        if (switching) _uiState.value = LogsState()
+        load(refresh = !switching)
     }
 
     fun refresh() = load(refresh = true)
 
     private fun load(refresh: Boolean) {
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             _uiState.update { it.copy(loading = !refresh, refreshing = refresh, error = null) }
-            repository
-                .getLogs()
+            val result = repository.getLogs()
+            ensureActive()
+            result
                 .onOk { entries ->
                     _uiState.update {
                         it.copy(

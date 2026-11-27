@@ -1,8 +1,12 @@
 package dev.yashgarg.qbit.ui.server
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.mockito.kotlin.mock
+import qbittorrent.models.MainData
 import qbittorrent.models.Torrent
 
 class StateFilterTest {
@@ -86,5 +90,34 @@ class StateFilterTest {
     @Test
     fun `is case-insensitive`() {
         assertTrue(torrent("Rick and Morty S01").matchesSearch("RICK MORTY"))
+    }
+
+    @Test
+    fun `actions and open dialogs lose deleted and newly filtered torrents without changing the filter`() {
+        val a = torrent("one").copy(hash = "a", category = "linux")
+        val b = a.copy(hash = "b")
+        val c = a.copy(hash = "c")
+        val requested = listOf(a.hash, b.hash, c.hash)
+        val data =
+            MainData(1L, torrents = listOf(a, b, c).associateBy { it.hash }, serverState = mock())
+        val initial =
+            ServerScreenState(dataLoading = false, data = data, selectedCategory = "linux")
+        assertEquals(requested, initial.visibleTargets(requested))
+
+        val live =
+            initial.copy(
+                data = data.copy(torrents = mapOf("a" to a, "b" to b.copy(category = "other"))),
+            )
+        assertEquals(listOf("a"), live.visibleTargets(requested))
+        assertEquals(
+            ServerDialog.BulkTags(listOf("a")),
+            ServerDialog.BulkTags(requested).reconcileTargets(live),
+        )
+        assertEquals(
+            ServerDialog.CreateTag(listOf("a")),
+            ServerDialog.CreateTag(requested).reconcileTargets(live),
+        )
+        assertNull(ServerDialog.BulkCategory(listOf("b", "c")).reconcileTargets(live))
+        assertTrue(live.copy(dataLoading = true).visibleTargets(requested).isEmpty())
     }
 }
