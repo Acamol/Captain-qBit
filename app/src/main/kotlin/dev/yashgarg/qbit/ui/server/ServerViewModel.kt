@@ -126,7 +126,12 @@ constructor(
     fun setCategoryAutoColor(category: String, another: Boolean = false) {
         viewModelScope.launch {
             prefsStore.updateData { prefs ->
-                val others = (prefs.categoryColors - category).values
+                // Only this server's categories: colors are kept per name across servers, and
+                // ones left over from deleted categories shouldn't crowd out good picks.
+                val others =
+                    _uiState.value.availableCategories
+                        .filter { it != category }
+                        .mapNotNull { prefs.categoryColors[it] }
                 val current = if (another) prefs.categoryColors[category] else null
                 prefs.copy(
                     categoryColors =
@@ -818,12 +823,35 @@ constructor(
         }
     }
 
-    fun createCategory(name: String) {
+    /**
+     * Creates [name] (with an optional [savePath]) on the server and, once that succeeds, stores
+     * its app-local [color].
+     */
+    fun createCategory(
+        name: String,
+        savePath: String = "",
+        color: Int? = null,
+        auto: Boolean = false,
+    ) {
         launchStatus(
             successMessage = getString(CommonR.string.status_category_created, name),
             failureMessage = getString(CommonR.string.status_create_category_failure),
+            onSuccess = {
+                // No color leaves any existing entry alone: colors are kept per name across
+                // servers, so another server's category of the same name may own it.
+                if (color != null) {
+                    prefsStore.updateData { prefs ->
+                        prefs.copy(
+                            categoryColors = prefs.categoryColors + (name to color),
+                            autoCategoryColors =
+                                if (auto) prefs.autoCategoryColors + name
+                                else prefs.autoCategoryColors - name,
+                        )
+                    }
+                }
+            },
         ) {
-            repository.createCategory(name)
+            repository.createCategory(name, savePath)
         }
     }
 

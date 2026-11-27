@@ -52,6 +52,7 @@ fun TextInputDialog(
     initial: String = "",
     singleLine: Boolean = true,
     extraContent: @Composable (() -> Unit)? = null,
+    onValueChange: (String) -> Unit = {},
 ) {
     var value by remember { mutableStateOf(initial) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -59,13 +60,14 @@ fun TextInputDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 val hint = error ?: supportingText
                 OutlinedTextField(
                     value = value,
                     onValueChange = {
                         value = it
                         error = null
+                        onValueChange(it)
                     },
                     label = label?.let { { Text(it) } },
                     isError = error != null,

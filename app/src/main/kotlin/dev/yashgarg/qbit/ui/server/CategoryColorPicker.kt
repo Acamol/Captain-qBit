@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -89,27 +90,29 @@ fun CategoryColorPicker(
     onNone: () -> Unit,
     onAuto: (another: Boolean) -> Unit,
     onColor: (Int) -> Unit,
+    contentPadding: PaddingValues = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
+    stateKey: Any = name,
 ) {
     val custom = !auto && color != null && color !in CategoryColors.presets
-    var editing by remember(name) { mutableStateOf(custom) }
-    val start = remember(name) { CategoryColors.toLch(color ?: CategoryColors.presets[7]) }
-    var hue by remember(name) { mutableFloatStateOf(start.h.toFloat()) }
+    var editing by remember(stateKey) { mutableStateOf(custom) }
+    val start = remember(stateKey) { CategoryColors.toLch(color ?: CategoryColors.presets[7]) }
+    var hue by remember(stateKey) { mutableFloatStateOf(start.h.toFloat()) }
     var chroma by
-        remember(name) {
+        remember(stateKey) {
             mutableFloatStateOf(start.c.coerceAtMost(CategoryColors.MAX_CHROMA).toFloat())
         }
     var lightness by
-        remember(name) {
+        remember(stateKey) {
             mutableFloatStateOf(
                 start.l
                     .coerceIn(CategoryColors.MIN_LIGHTNESS, CategoryColors.MAX_LIGHTNESS)
                     .toFloat(),
             )
         }
-    var draft by remember(name) { mutableIntStateOf(color ?: CategoryColors.presets[7]) }
-    var hex by remember(name) { mutableStateOf(CategoryColors.toHex(draft)) }
+    var draft by remember(stateKey) { mutableIntStateOf(color ?: CategoryColors.presets[7]) }
+    var hex by remember(stateKey) { mutableStateOf(CategoryColors.toHex(draft)) }
 
-    Column(Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
+    Column(Modifier.padding(contentPadding)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 stringResource(CommonR.string.category_color_title),

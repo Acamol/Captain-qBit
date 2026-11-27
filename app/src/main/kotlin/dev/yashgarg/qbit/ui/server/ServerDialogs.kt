@@ -3,6 +3,7 @@ package dev.yashgarg.qbit.ui.server
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -185,6 +187,11 @@ fun ServerDialogHost(
         ServerDialog.CreateCategory -> {
             val nameEmptyError = stringResource(CommonR.string.invalid_name)
             val categoryExistsError = stringResource(CommonR.string.category_already_exists)
+            val colors by viewModel.categoryColors.collectAsStateWithLifecycle()
+            var name by remember { mutableStateOf("") }
+            var color by remember { mutableStateOf<Int?>(null) }
+            var auto by remember { mutableStateOf(false) }
+            var savePath by remember { mutableStateOf("") }
             TextInputDialog(
                 title = stringResource(CommonR.string.new_category_title),
                 label = stringResource(CommonR.string.category_name_label),
@@ -197,10 +204,46 @@ fun ServerDialogHost(
                     }
                 },
                 onConfirm = { name ->
-                    viewModel.createCategory(name)
+                    viewModel.createCategory(name.trim(), savePath.trim(), color, auto)
                     dismiss()
                 },
                 onDismiss = dismiss,
+                onValueChange = { name = it.trim() },
+                extraContent = {
+                    OutlinedTextField(
+                        value = savePath,
+                        onValueChange = { savePath = it },
+                        label = { Text(stringResource(CommonR.string.save_path_optional_label)) },
+                        singleLine = true,
+                        textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr),
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                    CategoryColorPicker(
+                        name = name.ifEmpty { stringResource(CommonR.string.category_name_label) },
+                        color = color,
+                        auto = auto,
+                        onNone = {
+                            color = null
+                            auto = false
+                        },
+                        onAuto = { another ->
+                            val others = state.availableCategories.mapNotNull { colors[it] }
+                            color =
+                                CategoryColors.autoPick(
+                                    name,
+                                    others,
+                                    if (another) color else null,
+                                )
+                            auto = true
+                        },
+                        onColor = {
+                            color = it
+                            auto = false
+                        },
+                        contentPadding = PaddingValues(top = 8.dp),
+                        stateKey = Unit,
+                    )
+                },
             )
         }
         is ServerDialog.EditCategorySavePath -> {
