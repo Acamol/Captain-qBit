@@ -828,6 +828,9 @@
     <string name="clipboard_empty">Clipboard is empty</string>
     <string name="files_placeholder">Enter a magnet link or choose a .torrent file to see its contents</string>
     <string name="files_unavailable">File selection isn\'t available for this torrent</string>
+    <string name="preview_metadata_unsupported">Magnet file selection requires qBittorrent 4.5 or newer. You can still add the torrent without selecting files.</string>
+    <string name="preview_metadata_pending">Metadata is not available yet. Retry later or cancel the preview.</string>
+    <string name="preview_cleanup_failed">Could not discard the preview. Close again to retry. %1$s</string>
     <string name="status_file_selection_failed">Torrent added, but the file selection couldn\'t be applied</string>
     <plurals name="status_bulk_tags_updated">
         <item quantity="one">Tags updated on %1$d torrent</item>

@@ -45,7 +45,7 @@ private const val PARAM_UP_LIMIT = "upLimit"
 private const val PARAM_DL_LIMIT = "dlLimit"
 private const val PARAM_RATIO_LIMIT = "ratioLimit"
 private const val PARAM_SEEDING_TIME_LIMIT = "seedingTimeLimit"
-private const val PARAM_AUTO_TTM = "autoTTM"
+private const val PARAM_AUTO_TMM = "autoTMM"
 private const val PARAM_SEQUENTIAL_DOWNLOAD = "sequentialDownload"
 private const val PARAM_FIRST_LAST_PIECE = "firstLastPiecePrio"
 
@@ -278,6 +278,7 @@ class QBittorrentClient(
                     // the torrent starts paused on 4.x and 5.x alike (unknown fields are ignored).
                     appendUnlessNull(PARAM_PAUSED, body.paused)
                     appendUnlessNull(PARAM_STOPPED, body.paused)
+                    if (body.stopAfterMetadata) append("stopCondition", "MetadataReceived")
                     appendUnlessNull(PARAM_ROOT_FOLDER, body.rootFolder)
                     appendUnlessNull(PARAM_RENAME, body.rename)
                     appendUnlessNull(PARAM_UP_LIMIT, body.upLimit)
@@ -287,7 +288,7 @@ class QBittorrentClient(
                         PARAM_SEEDING_TIME_LIMIT,
                         body.seedingTimeLimit?.inWholeSeconds,
                     )
-                    appendUnlessNull(PARAM_AUTO_TTM, body.autoTMM)
+                    appendUnlessNull(PARAM_AUTO_TMM, body.autoTMM)
                     appendUnlessNull(PARAM_SEQUENTIAL_DOWNLOAD, body.sequentialDownload)
                     appendUnlessNull(PARAM_FIRST_LAST_PIECE, body.firstLastPiecePriority)
                     val torrentFiles =

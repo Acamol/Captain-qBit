@@ -19,6 +19,10 @@ internal class TorrentAddSession(
     var ownsTorrent: Boolean = false
         private set
 
+    private var attempted = false
+    private var accepted = false
+    private val skipped = mutableSetOf<Int>()
+
     suspend fun add(submit: suspend (String) -> Result<Unit, Throwable>): Result<Unit, Throwable> {
         if (ownsTorrent) return verifyOwnership()
         repository
@@ -27,12 +31,24 @@ internal class TorrentAddSession(
                 return Err(it)
             }
             .onOk {
-                if (it != null) return Err(TorrentAlreadyPresent())
+                if (it != null) {
+                    if (!attempted || marker !in it) return Err(TorrentAlreadyPresent())
+                    ownsTorrent = true
+                    return Ok(Unit)
+                }
             }
-        submit(marker).onErr {
-            return Err(it)
+        if (!accepted) {
+            attempted = true
+            submit(marker).onErr {
+                return Err(it)
+            }
+            accepted = true
         }
 
+        return awaitOwnership()
+    }
+
+    private suspend fun awaitOwnership(): Result<Unit, Throwable> {
         // A successful POST need not create anything (e.g. another client won a duplicate add).
         // Only a new torrent carrying the tag from this request is ours to modify or remove.
         repeat(READY_ATTEMPTS) {
@@ -63,30 +79,52 @@ internal class TorrentAddSession(
         verifyOwnership().onErr {
             return Err(it)
         }
+        val reselected = skipped - deselectedIds.toSet()
+        if (reselected.isNotEmpty()) {
+            setPriority(reselected.toList(), 1).onErr {
+                return Err(FileSelectionNotApplied(it))
+            }
+            skipped.removeAll(reselected)
+        }
         if (deselectedIds.isNotEmpty()) {
-            setSkippedFiles(deselectedIds).onErr {
+            // Track attempted writes too: a lost response need not mean a rejected change.
+            skipped.addAll(deselectedIds)
+            setPriority(deselectedIds, 0).onErr {
                 return Err(FileSelectionNotApplied(it))
             }
         }
         return if (paused) Ok(Unit) else repository.toggleTorrentsState(hashes, pause = false)
     }
 
-    private suspend fun setSkippedFiles(ids: List<Int>): Result<Unit, Throwable> {
+    private suspend fun setPriority(ids: List<Int>, priority: Int): Result<Unit, Throwable> {
         repeat(PRIORITY_ATTEMPTS - 1) {
-            repository.setFilePriority(hash, ids, 0).onOk {
+            repository.setFilePriority(hash, ids, priority).onOk {
                 return Ok(Unit)
             }
             delay(PRIORITY_RETRY_MS)
         }
-        return repository.setFilePriority(hash, ids, 0)
+        return repository.setFilePriority(hash, ids, priority)
     }
 
     suspend fun discard(onDiscarded: suspend () -> Unit = {}): Result<Unit, Throwable> {
-        if (!ownsTorrent) return Ok(Unit)
+        if (!attempted) return Ok(Unit)
+        if (accepted && !ownsTorrent) {
+            // An accepted add can take time to appear; don't forget it on a transient empty read.
+            awaitOwnership().onErr {
+                if (it is TorrentAlreadyPresent) {
+                    onDiscarded()
+                    return Ok(Unit)
+                }
+                return Err(it)
+            }
+        }
         return repository
             .getTorrentTags(hash)
             .andThen { tags ->
-                if (tags != null && marker in tags) repository.removeTorrents(hashes) else Ok(Unit)
+                if (tags != null && marker in tags) {
+                    ownsTorrent = true
+                    repository.removeTorrents(hashes)
+                } else Ok(Unit)
             }
             .onOk { onDiscarded() }
             .andThen { releaseMarker() }

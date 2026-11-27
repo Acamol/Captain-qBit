@@ -145,14 +145,15 @@ fun AddTorrentScreen(
     // A file was chosen (either picked or prefilled): prepare its tree when possible.
     fun setPickedFile(uri: Uri) {
         if (viewModel.confirmingAdd.value) return
-        pickedUri = uri.toString()
-        deselected = emptySet()
-        preparedMagnet = null
-        filesUnavailableReason = null
-        val bytes = readUriBytes(context, uri)
-        if (bytes == null || !viewModel.prepareTorrentFileSelection(bytes)) {
-            viewModel.cancelFileSelection()
-            filesUnavailableReason = CommonR.string.files_unavailable
+        viewModel.cancelFileSelection {
+            pickedUri = uri.toString()
+            deselected = emptySet()
+            preparedMagnet = null
+            filesUnavailableReason = null
+            val bytes = readUriBytes(context, uri)
+            if (bytes == null || !viewModel.prepareTorrentFileSelection(bytes)) {
+                filesUnavailableReason = CommonR.string.files_unavailable
+            }
         }
     }
 
@@ -185,18 +186,21 @@ fun AddTorrentScreen(
 
     fun dismiss() {
         if (viewModel.confirmingAdd.value) return
-        viewModel.cancelFileSelection()
-        onDismiss()
+        viewModel.cancelFileSelection(onDismiss)
     }
 
     fun changeSource(text: String) {
-        magnetText = text
-        magnetError = false
         if (preparedMagnet != null && preparedMagnet != text) {
-            viewModel.cancelFileSelection()
-            preparedMagnet = null
-            deselected = emptySet()
-            filesUnavailableReason = null
+            viewModel.cancelFileSelection {
+                magnetText = text
+                magnetError = false
+                preparedMagnet = null
+                deselected = emptySet()
+                filesUnavailableReason = null
+            }
+        } else {
+            magnetText = text
+            magnetError = false
         }
     }
 
@@ -209,6 +213,7 @@ fun AddTorrentScreen(
 
         when {
             viewModel.hasPendingSelection -> {
+                if (preparedMagnet != null && fileSelection?.tree == null) selectedTab = 1
                 viewModel.confirmAdd(deselected, cat, sp, paused, autoTmm)
                 return
             }
@@ -220,7 +225,7 @@ fun AddTorrentScreen(
                         cat,
                         sp,
                         paused.takeIf { it },
-                        autoTmm.takeIf { it },
+                        autoTmm,
                     )
                 } else {
                     Toast.makeText(context, noFileSelectedMessage, Toast.LENGTH_SHORT).show()
@@ -237,7 +242,7 @@ fun AddTorrentScreen(
                     cat,
                     sp,
                     paused.takeIf { it },
-                    autoTmm.takeIf { it },
+                    autoTmm,
                 )
             }
         }
@@ -274,14 +279,24 @@ fun AddTorrentScreen(
                         }
                         FilledTonalButton(
                             onClick = { onAdd() },
-                            enabled = !confirming,
+                            enabled =
+                                !confirming &&
+                                    !(preparedMagnet != null &&
+                                        fileSelection?.let {
+                                            it.tree == null && it.error == null
+                                        } == true),
                             modifier = Modifier.padding(end = 16.dp),
                         ) {
                             Icon(Icons.Filled.Check, contentDescription = null)
                             Text(
                                 stringResource(
-                                    if (confirmationError == null) CommonR.string.add
-                                    else CommonR.string.retry_action,
+                                    if (
+                                        confirmationError != null ||
+                                            (viewModel.hasPendingSelection &&
+                                                fileSelection?.error != null)
+                                    )
+                                        CommonR.string.retry_action
+                                    else CommonR.string.add,
                                 ),
                                 modifier = Modifier.padding(start = 4.dp),
                             )

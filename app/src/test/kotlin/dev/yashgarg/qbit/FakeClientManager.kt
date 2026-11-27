@@ -5,6 +5,7 @@ import dev.yashgarg.qbit.data.models.ConfigStatus
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
+import io.ktor.client.engine.mock.toByteArray
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.OutgoingContent
@@ -27,7 +28,10 @@ import qbittorrent.models.Torrent
  * hashes is shared across the (freshly built per call) clients so `torrents/add` and
  * `torrents/delete` are reflected by the next `sync/maindata` response.
  */
-class FakeClientManager : ClientManager {
+class FakeClientManager(private val version: String = "v4.6.0") : ClientManager {
+    var lastAddBody: String? = null
+        private set
+
     private val torrents = mutableSetOf<String>()
     private var rssItems = "{}"
     private var rssRules = "{}"
@@ -134,9 +138,10 @@ class FakeClientManager : ClientManager {
         when {
             path.endsWith("/auth/login") ->
                 respond("Ok.", HttpStatusCode.OK, headersOf(HttpHeaders.SetCookie, "SID=mock"))
-            path.endsWith("/app/version") -> respond("v4.6.0")
+            path.endsWith("/app/version") -> respond(version)
             path.endsWith("/app/webapiVersion") -> respond("2.9.3")
             path.endsWith("/torrents/add") -> {
+                lastAddBody = request.body.toByteArray().decodeToString()
                 torrents.add(Constants.magnetHash)
                 respond("Ok.")
             }

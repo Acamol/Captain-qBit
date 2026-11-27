@@ -28,6 +28,31 @@ class QbitRepositoryTest {
     }
 
     @Test
+    fun `magnet preview requests a server-side stop at metadata`() = runTest {
+        assertTrue(
+            repository
+                .addTorrentUrl(Constants.magnetUrl, autoTmm = false, stopAfterMetadata = true)
+                .isOk,
+        )
+        val form = clientManager.lastAddBody.orEmpty()
+        assertTrue(form.contains("name=stopCondition") || form.contains("name=\"stopCondition\""))
+        assertTrue(form.contains("MetadataReceived"))
+        assertTrue(
+            Regex("name=\"?autoTMM\"?\\r\\n(?:[^\\r\\n]+\\r\\n)*\\r\\nfalse\\r\\n")
+                .containsMatchIn(form),
+        )
+    }
+
+    @Test
+    fun `old servers never receive a preview add`() = runTest {
+        val old = FakeClientManager("v4.4.5")
+        assertTrue(
+            QbitRepository(old).addTorrentUrl(Constants.magnetUrl, stopAfterMetadata = true).isErr,
+        )
+        assertTrue(old.lastAddBody == null)
+    }
+
+    @Test
     fun checkClientConnected() = runTest {
         assertTrue(repository.getVersion().isOk)
         assertTrue(repository.getApiVersion().isOk)

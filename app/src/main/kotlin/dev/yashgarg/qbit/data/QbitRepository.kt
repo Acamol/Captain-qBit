@@ -27,6 +27,8 @@ import qbittorrent.models.TorrentPeers
 import qbittorrent.models.TorrentProperties
 import qbittorrent.models.TorrentTracker
 
+internal class MetadataStopUnsupported : IllegalStateException()
+
 class QbitRepository
 private constructor(private val resolveClient: suspend () -> QBittorrentClient?) {
     @Inject constructor(clientManager: ClientManager) : this(clientManager::checkAndGetClient)
@@ -80,9 +82,19 @@ private constructor(private val resolveClient: suspend () -> QBittorrentClient?)
         paused: Boolean? = null,
         autoTmm: Boolean? = null,
         tag: String? = null,
+        stopAfterMetadata: Boolean = false,
     ): Result<Unit, Throwable> {
         return runSuspendCatching {
-            client().addTorrent {
+            val client = client()
+            if (stopAfterMetadata) {
+                // Older servers silently ignore unknown add parameters and would download payload.
+                val parts = client.getVersion().trim().removePrefix("v").split('.')
+                val major = parts.getOrNull(0)?.toIntOrNull() ?: 0
+                val minor = parts.getOrNull(1)?.toIntOrNull() ?: 0
+                if (!(major > 4 || major == 4 && minor >= 5)) throw MetadataStopUnsupported()
+            }
+            client.addTorrent {
+                this.stopAfterMetadata = stopAfterMetadata
                 urls.add(url)
                 tag?.let(tags::add)
                 this.category = category

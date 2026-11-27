@@ -39,6 +39,7 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.stub
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import qbittorrent.models.TorrentFile
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ServerTorrentAddTest {
@@ -56,18 +57,21 @@ class ServerTorrentAddTest {
             ): AppPreferences = transform(data.value).also { data.value = it }
         }
     private lateinit var marker: String
+    private val files =
+        listOf(TorrentFile(0, "test", 1, 0f, 1, pieceRange = listOf(0, 0), availability = 1f))
     private val client =
         mock<QbitRepository> {
             onBlocking { getTorrentTags(hash) } doReturn Ok(null)
             onBlocking {
-                addTorrentUrl(eq(url), isNull(), isNull(), eq(false), isNull(), any())
+                addTorrentUrl(eq(url), isNull(), isNull(), eq(false), isNull(), any(), eq(true))
             } doSuspendableAnswer
                 {
                     marker = it.getArgument(5)
                     addResult.await()
                 }
 
-            onBlocking { getTorrentFiles(hash) } doReturn Ok(emptyList())
+            onBlocking { getTorrentFiles(hash) } doReturn Ok(files)
+            onBlocking { setAutoTorrentManagement(hash, false) } doReturn Ok(Unit)
             onBlocking { toggleTorrentsState(eq(listOf(hash)), any()) } doReturn Ok(Unit)
             onBlocking { removeTorrents(listOf(hash), false) } doReturn Ok(Unit)
             onBlocking { deleteTags(any()) } doReturn Ok(Unit)
@@ -91,6 +95,11 @@ class ServerTorrentAddTest {
                     getString(CommonR.string.status_add_torrent_file_success, *emptyArray<Any>())
                 } doReturn "Added"
                 on {
+                    getString(CommonR.string.preview_metadata_pending, *emptyArray<Any>())
+                } doReturn "Metadata pending"
+                on { getString(eq(CommonR.string.preview_cleanup_failed), any<String>()) } doReturn
+                    "Retry cleanup"
+                on {
                     getString(
                         eq(CommonR.string.status_torrent_added_tag_cleanup_failed),
                         any<String>(),
@@ -107,21 +116,80 @@ class ServerTorrentAddTest {
     }
 
     @Test
-    fun `confirm waits for a successful magnet add before stopping and resuming it`() = runTest {
+    fun `retry after metadata timeout displays files instead of resuming`() = runTest {
+        val model = viewModel()
+        client.stub { onBlocking { getTorrentFiles(hash) } doReturn Ok(emptyList()) }
+        model.prepareMagnetSelection(url)
+        completeAdd()
+        advanceUntilIdle()
+        assertEquals("Metadata pending", model.fileSelection.value?.error)
+        client.stub { onBlocking { getTorrentFiles(hash) } doReturn Ok(files) }
+        model.confirmAdd(emptySet(), null, null, paused = false, autoTmm = false)
+        runCurrent()
+        assertTrue(model.fileSelection.value?.tree?.isNotEmpty() == true)
+        verify(client, never()).toggleTorrentsState(any(), any())
+    }
+
+    @Test
+    fun `offline discard retains the session until removal succeeds`() = runTest {
+        val model = viewModel()
+        model.prepareMagnetSelection(url)
+        completeAdd()
+        runCurrent()
+        client.stub {
+            onBlocking { removeTorrents(listOf(hash), false) }
+                .doReturn(Err(IllegalStateException()), Ok(Unit))
+        }
+        var closed = false
+        model.cancelFileSelection { closed = true }
+        runCurrent()
+        assertFalse(closed)
+        assertTrue(model.hasPendingSelection)
+        model.cancelFileSelection { closed = true }
+        runCurrent()
+        assertTrue(closed)
+        assertFalse(model.hasPendingSelection)
+    }
+
+    @Test
+    fun `early confirm cannot start a magnet before the file list is presented`() = runTest {
         val model = viewModel()
         assertTrue(model.prepareMagnetSelection(url))
         model.confirmAdd(emptySet(), null, null, paused = false, autoTmm = false)
         assertFalse(model.addConfirmed.value)
-        assertTrue(model.confirmingAdd.value)
         verify(client, never()).toggleTorrentsState(any(), any())
 
         completeAdd()
         runCurrent()
-
+        assertFalse(model.addConfirmed.value)
+        assertTrue(model.fileSelection.value?.tree?.isNotEmpty() == true)
+        model.confirmAdd(emptySet(), null, null, paused = false, autoTmm = false)
+        runCurrent()
         assertTrue(model.addConfirmed.value)
         assertFalse(model.confirmingAdd.value)
         verify(client).toggleTorrentsState(listOf(hash), pause = true)
         verify(client).toggleTorrentsState(listOf(hash), pause = false)
+        verify(client).setAutoTorrentManagement(hash, false)
+    }
+
+    @Test
+    fun `closing after confirmation fails discards the owned preview`() = runTest {
+        val model = viewModel()
+        client.stub {
+            onBlocking { setAutoTorrentManagement(hash, false) } doReturn
+                Err(IllegalStateException())
+        }
+        model.prepareMagnetSelection(url)
+        completeAdd()
+        runCurrent()
+        model.confirmAdd(emptySet(), null, null, paused = false, autoTmm = false)
+        runCurrent()
+        assertEquals("Add failed", model.fileSelection.value?.confirmationError)
+        assertFalse(model.addConfirmed.value)
+        model.cancelFileSelection()
+        runCurrent()
+        verify(client).removeTorrents(listOf(hash), false)
+        verify(client, never()).toggleTorrentsState(listOf(hash), pause = false)
     }
 
     @Test
@@ -134,7 +202,7 @@ class ServerTorrentAddTest {
 
         assertFalse(model.addConfirmed.value)
         assertFalse(model.confirmingAdd.value)
-        assertEquals("Add failed", model.fileSelection.value?.confirmationError)
+        assertEquals("Add failed", model.fileSelection.value?.error)
         verify(client, never()).toggleTorrentsState(any(), any())
     }
 
@@ -160,8 +228,9 @@ class ServerTorrentAddTest {
         client.stub { onBlocking { deleteTags(any()) } doReturn Err(IllegalStateException()) }
         val status = async { model.status.first() }
         model.prepareMagnetSelection(url)
-        model.confirmAdd(emptySet(), null, null, paused = false, autoTmm = false)
         completeAdd()
+        runCurrent()
+        model.confirmAdd(emptySet(), null, null, paused = false, autoTmm = false)
         advanceUntilIdle()
 
         assertTrue(model.addConfirmed.value)

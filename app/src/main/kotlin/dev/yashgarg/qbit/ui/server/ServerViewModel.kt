@@ -8,12 +8,12 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.andThen
 import com.github.michaelbull.result.get
-import com.github.michaelbull.result.getError
 import com.github.michaelbull.result.map
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.yashgarg.qbit.common.R as CommonR
+import dev.yashgarg.qbit.data.MetadataStopUnsupported
 import dev.yashgarg.qbit.data.QbitRepository
 import dev.yashgarg.qbit.data.daos.ConfigDao
 import dev.yashgarg.qbit.data.manager.CertificateProbe
@@ -391,7 +391,7 @@ constructor(
     fun prepareTorrentFileSelection(bytes: ByteArray): Boolean {
         if (_confirmingAdd.value) return false
         val parsed = TorrentFileParser.parse(bytes) ?: return false
-        cancelFileSelection()
+        if (pendingSource != null) return false
         val synthetic =
             parsed.files.mapIndexed { i, file ->
                 TorrentFile(
@@ -411,45 +411,48 @@ constructor(
     }
 
     /**
-     * Adds the magnet running for metadata, then stops it before showing its file list. Safe to
-     * call repeatedly with the same URL. Returns false for links without a v1 infohash.
+     * Asks the server to stop at metadata before showing the magnet's file list. Safe to call
+     * repeatedly with the same URL. Returns false for links without a v1 infohash.
      */
     fun prepareMagnetSelection(url: String): Boolean {
         if (_confirmingAdd.value) return false
-        (pendingSource as? PendingSource.Magnet)?.let { if (it.url == url) return true }
         val hash = TorrentFileParser.magnetHash(url) ?: return false
-        cancelFileSelection()
-        val source = PendingSource.Magnet(url, hash)
+        val source =
+            when (val previous = pendingSource) {
+                null -> PendingSource.Magnet(url, hash)
+                is PendingSource.Magnet -> {
+                    if (previous.url != url) return false
+                    if (_fileSelection.value?.error == null) return true
+                    previous
+                }
+                else -> return false
+            }
         pendingSource = source
         _fileSelection.value = FileSelectionUiState(magnetDisplayName(url), null)
 
         metadataJob = viewModelScope.launch {
             val added = torrentAddMutex.withLock {
                 if (pendingSource !== source) return@launch
-                addPendingTorrent(source, AddTorrentOptions(), paused = false).also {
-                    source.previewResult = it
-                }
+                addPendingTorrent(source, AddTorrentOptions(), paused = false)
             }
             val session = added.get()
             if (session == null) {
-                added.onErr { showMetadataError(source, addFailure(it, source)) }
+                added.onErr {
+                    showMetadataError(source, addFailure(it, source))
+                    // No POST was made; ordinary Add remains available on older servers.
+                    if (it is MetadataStopUnsupported && pendingSource === source)
+                        pendingSource = null
+                }
                 return@launch
             }
             val files = awaitTorrentFiles(session, METADATA_MAX_ATTEMPTS, METADATA_POLL_MS)
-            torrentAddMutex.withLock {
-                if (pendingSource !== source || _confirmingAdd.value) return@withLock
-                session
-                    .stop()
-                    .onOk {
-                        if (files == null) {
-                            showMetadataError(source, getString(CommonR.string.metadata_timeout))
-                        } else {
-                            _fileSelection.update {
-                                it?.copy(tree = TransformUtil.transformFilesToTree(files, 0))
-                            }
-                        }
-                    }
-                    .onErr { showMetadataError(source, addFailure(it, source)) }
+            if (pendingSource !== source || _confirmingAdd.value) return@launch
+            if (files == null) {
+                showMetadataError(source, getString(CommonR.string.preview_metadata_pending))
+            } else {
+                _fileSelection.update {
+                    it?.copy(tree = TransformUtil.transformFilesToTree(files, 0))
+                }
             }
         }
         return true
@@ -468,10 +471,12 @@ constructor(
     ) {
         val source = pendingSource ?: return
         if (_confirmingAdd.value) return
-        val waitingForPreview = source is PendingSource.Magnet && source.previewResult == null
+        if (source is PendingSource.Magnet && _fileSelection.value?.tree == null) {
+            prepareMagnetSelection(source.url)
+            return
+        }
         _confirmingAdd.value = true
         _fileSelection.update { it?.copy(confirmationError = null) }
-        source.confirmed = true
 
         viewModelScope.launch {
             try {
@@ -479,12 +484,7 @@ constructor(
                 val result = torrentAddMutex.withLock {
                     metadataJob?.cancel()
                     metadataJob = null
-                    val previewError =
-                        if (waitingForPreview && source is PendingSource.Magnet)
-                            source.previewResult?.getError()
-                        else null
-                    if (previewError != null) Err(previewError)
-                    else finishPendingAdd(source, deselected, options, paused)
+                    finishPendingAdd(source, deselected, options, paused)
                 }
                 result
                     .onOk {
@@ -521,7 +521,7 @@ constructor(
                 val ownKey = rememberOwnAdd(source.hash)
                 val result =
                     when (source) {
-                        is PendingSource.Magnet ->
+                        is PendingSource.Magnet -> {
                             session.repository.addTorrentUrl(
                                 source.url,
                                 options.category,
@@ -529,7 +529,9 @@ constructor(
                                 paused,
                                 options.autoTmm,
                                 tag,
+                                stopAfterMetadata = !paused,
                             )
+                        }
                         is PendingSource.TorrentBytes ->
                             session.repository.addTorrentFile(
                                 source.bytes,
@@ -551,12 +553,13 @@ constructor(
         options: AddTorrentOptions,
         paused: Boolean,
     ): Result<String, Throwable> {
-        val addedBeforeConfirm = source.session?.ownsTorrent == true
+        // The POST may have succeeded even if the first ownership lookup failed.
+        val hadSession = source.session != null
         return addPendingTorrent(source, options, paused = true).andThen { session ->
             session.stop().onErr {
                 return Err(it)
             }
-            if (addedBeforeConfirm) {
+            if (hadSession) {
                 applyAddOptions(session, options).onErr {
                     return Err(it)
                 }
@@ -596,6 +599,11 @@ constructor(
     ): Result<Unit, Throwable> {
         val client = session.repository
         val hash = session.hash
+        if (options.autoTmm == false) {
+            client.setAutoTorrentManagement(hash, false).onErr {
+                return Err(it)
+            }
+        }
         options.category?.let {
             client.setTorrentCategory(listOf(hash), it).onErr { error ->
                 return Err(error)
@@ -603,32 +611,49 @@ constructor(
         }
         if (options.autoTmm == true) return client.setAutoTorrentManagement(hash, true)
         options.savePath?.let {
-            client.setAutoTorrentManagement(hash, false).onErr { error ->
-                return Err(error)
-            }
             return client.setTorrentLocation(hash, it)
         }
         return Ok(Unit)
     }
 
     /** Cleans up a preview only if the session proved it created the torrent. */
-    fun cancelFileSelection() {
+    fun cancelFileSelection(onDiscarded: () -> Unit = {}) {
         if (_confirmingAdd.value) return
         val source = pendingSource
+        if (source == null) {
+            clearFileSelection()
+            onDiscarded()
+            return
+        }
         val job = metadataJob
         metadataJob = null
-        clearFileSelection()
-        if (source == null) return
+        _confirmingAdd.value = true
         viewModelScope.launch {
-            torrentAddMutex.withLock {
-                job?.cancel()
-                source.session?.let {
-                    val result =
-                        if (source.confirmed) it.releaseMarker()
-                        else it.discard { forgetOwnAdd(source.ownAddKey) }
-                    result.onErr { error -> emitStatus(addFailure(error, source)) }
+            val result =
+                try {
+                    torrentAddMutex.withLock {
+                        job?.cancel()
+                        source.session?.discard { forgetOwnAdd(source.ownAddKey) } ?: Ok(Unit)
+                    }
+                } finally {
+                    _confirmingAdd.value = false
                 }
-            }
+            result
+                .onOk {
+                    clearFileSelection()
+                    onDiscarded()
+                }
+                .onErr { error ->
+                    _fileSelection.update {
+                        it?.copy(
+                            confirmationError =
+                                getString(
+                                    CommonR.string.preview_cleanup_failed,
+                                    addFailure(error, source),
+                                ),
+                        )
+                    }
+                }
         }
     }
 
@@ -643,6 +668,7 @@ constructor(
 
     private fun addFailure(error: Throwable, source: PendingSource): String =
         when (error) {
+            is MetadataStopUnsupported -> getString(CommonR.string.preview_metadata_unsupported)
             is TorrentAlreadyPresent -> getString(CommonR.string.error_torrent_already_exists)
             is FileSelectionNotApplied -> getString(CommonR.string.status_file_selection_failed)
             else ->
@@ -1008,16 +1034,13 @@ data class FileSelectionUiState(
 private sealed class PendingSource(val hash: String) {
     var ownAddKey: String? = null
     var session: TorrentAddSession? = null
-    var confirmed = false
 
     class TorrentBytes(
         val bytes: ByteArray,
         val parsed: TorrentFileParser.ParsedTorrent,
     ) : PendingSource(parsed.hash)
 
-    class Magnet(val url: String, hash: String) : PendingSource(hash) {
-        var previewResult: Result<TorrentAddSession, Throwable>? = null
-    }
+    class Magnet(val url: String, hash: String) : PendingSource(hash)
 }
 
 private data class AddTorrentOptions(

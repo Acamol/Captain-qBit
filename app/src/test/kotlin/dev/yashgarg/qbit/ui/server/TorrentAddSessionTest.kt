@@ -10,6 +10,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.stub
@@ -19,6 +20,49 @@ import org.mockito.kotlin.verify
 class TorrentAddSessionTest {
     private val hash = "a".repeat(40)
     private val marker = "preview"
+
+    @Test
+    fun `reselecting a skipped file restores its priority before a retry`() = runTest {
+        val client =
+            mock<QbitRepository> {
+                onBlocking { getTorrentTags(hash) }.doReturn(Ok(null), Ok(listOf(marker)))
+                onBlocking { setFilePriority(eq(hash), eq(listOf(1)), any()) } doReturn Ok(Unit)
+                onBlocking { toggleTorrentsState(listOf(hash), false) }
+                    .doReturn(Err(IllegalStateException()), Ok(Unit))
+            }
+        val session = TorrentAddSession(client, hash, marker)
+        assertTrue(session.add { Ok(Unit) }.isOk)
+        assertTrue(session.applySelectionAndStart(listOf(1), false).isErr)
+        assertTrue(session.applySelectionAndStart(emptyList(), false).isOk)
+        verify(client).setFilePriority(hash, listOf(1), 1)
+    }
+
+    @Test
+    fun `retry recovers the tagged torrent after a lost ownership response`() = runTest {
+        val client =
+            mock<QbitRepository> {
+                onBlocking { getTorrentTags(hash) }
+                    .doReturn(Ok(null), Err(IllegalStateException()), Ok(listOf(marker)))
+            }
+        val session = TorrentAddSession(client, hash, marker)
+        assertTrue(session.add { Ok(Unit) }.isErr)
+        assertTrue(session.add { error("must not submit twice") }.isOk)
+    }
+
+    @Test
+    fun `discard checks the marker even if ownership response was lost`() = runTest {
+        val client =
+            mock<QbitRepository> {
+                onBlocking { getTorrentTags(hash) }
+                    .doReturn(Ok(null), Err(IllegalStateException()), Ok(listOf(marker)))
+                onBlocking { removeTorrents(listOf(hash), false) } doReturn Ok(Unit)
+                onBlocking { deleteTags(listOf(marker)) } doReturn Ok(Unit)
+            }
+        val session = TorrentAddSession(client, hash, marker)
+        assertTrue(session.add { Ok(Unit) }.isErr)
+        assertTrue(session.discard().isOk)
+        verify(client).removeTorrents(listOf(hash), false)
+    }
 
     @Test
     fun `existing torrents are rejected before posting an add`() = runTest {

@@ -39,4 +39,5 @@ data class AddTorrentBody(
     var sequentialDownload: Boolean? = null,
     /** Prioritize download first last piece. Possible values are true, false (default) */
     var firstLastPiecePriority: Boolean? = null,
+    var stopAfterMetadata: Boolean = false,
 )
