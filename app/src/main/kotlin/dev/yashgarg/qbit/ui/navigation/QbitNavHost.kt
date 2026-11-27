@@ -358,6 +358,7 @@ private fun NavController.execute(command: NavCommand) {
         NavCommand.OpenBackupSettings -> navigate(Routes.BACKUP_SETTINGS)
         NavCommand.OpenSearch -> navigate(Routes.SEARCH)
         NavCommand.OpenSearchPlugins -> navigate(Routes.SEARCH_PLUGINS)
+        NavCommand.OpenRss -> openTopLevel(Routes.RSS)
         is NavCommand.OpenRssArticles -> navigate(Routes.rssArticles(command.itemPath))
         is NavCommand.OpenRssRuleEditor -> navigate(Routes.rssRuleEditor(command.ruleName))
         NavCommand.Back -> {

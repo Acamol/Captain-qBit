@@ -314,6 +314,15 @@ fun ServerScreen(appNavigator: AppNavigator, viewModel: ServerViewModel = hiltVi
     }
 
     LaunchedEffect(Unit) {
+        viewModel.addTorrentRequested.collect { requested ->
+            if (requested) {
+                openTorrentDialog()
+                viewModel.consumeAddTorrentRequest()
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
         viewModel.status.collect { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
     }
 

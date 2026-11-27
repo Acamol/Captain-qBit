@@ -67,6 +67,10 @@ constructor(
 
     fun consumePendingTorrentUri() = pendingTorrentIntent.consume()
 
+    val addTorrentRequested: StateFlow<Boolean> = pendingTorrentIntent.addRequested
+
+    fun consumeAddTorrentRequest() = pendingTorrentIntent.consumeAddRequest()
+
     /** All saved servers, for the server switcher. */
     val servers: StateFlow<List<ServerConfig>> =
         configDao.getConfigs().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())

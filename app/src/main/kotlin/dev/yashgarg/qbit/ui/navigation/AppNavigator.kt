@@ -74,6 +74,8 @@ sealed interface NavCommand {
     /** Manage the server's search plugins. */
     data object OpenSearchPlugins : NavCommand
 
+    data object OpenRss : NavCommand
+
     /** Open the article list for one feed. [itemPath] is the feed's `\`-joined tree path. */
     data class OpenRssArticles(val itemPath: String) : NavCommand
 

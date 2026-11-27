@@ -24,4 +24,17 @@ class PendingTorrentIntent @Inject constructor() {
     fun consume() {
         _uri.value = null
     }
+
+    // An empty add-torrent screen, asked for by the launcher shortcut. Held the same way as [uri]
+    // so it waits for the torrent list to be on screen.
+    private val _addRequested = MutableStateFlow(false)
+    val addRequested: StateFlow<Boolean> = _addRequested
+
+    fun requestAdd() {
+        _addRequested.value = true
+    }
+
+    fun consumeAddRequest() {
+        _addRequested.value = false
+    }
 }

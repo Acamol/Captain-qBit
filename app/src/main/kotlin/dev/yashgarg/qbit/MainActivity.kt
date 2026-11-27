@@ -31,6 +31,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.core.content.ContextCompat
+import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.net.toUri
 import androidx.core.os.BundleCompat
 import androidx.core.os.LocaleListCompat
@@ -49,6 +50,7 @@ import dev.yashgarg.qbit.data.manager.PendingTorrentIntent
 import dev.yashgarg.qbit.data.models.AppPreferences
 import dev.yashgarg.qbit.data.models.ConfigStatus
 import dev.yashgarg.qbit.notifications.AppNotificationManager
+import dev.yashgarg.qbit.shortcuts.AppShortcuts
 import dev.yashgarg.qbit.ui.backup.BackupDialogHost
 import dev.yashgarg.qbit.ui.backup.BackupViewModel
 import dev.yashgarg.qbit.ui.common.LockScreen
@@ -101,6 +103,9 @@ class MainActivity : AppCompatActivity() {
     private var pendingNotificationHash: String? = null
     // Same idea, for a "new RSS articles" notification tap.
     private var pendingNotificationRssPath: String? = null
+
+    // A launcher shortcut's action, held until the torrent list is up (see LeaveHome below).
+    private var pendingShortcut: String? = null
     private var pendingView: Intent? = null
     private var pendingViewBroughtForward = false
 
@@ -446,6 +451,10 @@ class MainActivity : AppCompatActivity() {
                                         pendingNotificationRssPath = null
                                         appNavigator.navigate(NavCommand.OpenRssArticles(path))
                                     }
+                                    pendingShortcut?.let { action ->
+                                        pendingShortcut = null
+                                        openShortcut(action)
+                                    }
                                 }
                             }
                             ConfigStatus.DOES_NOT_EXIST ->
@@ -501,10 +510,14 @@ class MainActivity : AppCompatActivity() {
         if (savedInstanceState == null) {
             pendingNotificationHash = launchIntent.getStringExtra(EXTRA_TORRENT_HASH)
             pendingNotificationRssPath = launchIntent.getStringExtra(EXTRA_RSS_ITEM_PATH)
+            pendingShortcut = launchIntent.action?.takeIf(AppShortcuts::isShortcut)
         } else {
             pendingNotificationHash = savedInstanceState.getString(STATE_PENDING_TORRENT_HASH)
             pendingNotificationRssPath = savedInstanceState.getString(STATE_PENDING_RSS_PATH)
+            pendingShortcut = savedInstanceState.getString(STATE_PENDING_SHORTCUT)
         }
+        // Republished each launch so the labels follow a change of the in-app language.
+        AppShortcuts.publish(this)
     }
 
     override fun onStart() {
@@ -531,6 +544,7 @@ class MainActivity : AppCompatActivity() {
         outState.putBoolean(STATE_PENDING_VIEW_BROUGHT_FORWARD, pendingViewBroughtForward)
         outState.putString(STATE_PENDING_TORRENT_HASH, pendingNotificationHash)
         outState.putString(STATE_PENDING_RSS_PATH, pendingNotificationRssPath)
+        outState.putString(STATE_PENDING_SHORTCUT, pendingShortcut)
     }
 
     /**
@@ -588,9 +602,30 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         openWhenUnlocked(intent, broughtForward = true)
+        intent.action?.takeIf(AppShortcuts::isShortcut)?.let {
+            if (navigatedToServer) openShortcut(it) else pendingShortcut = it
+        }
         // Notification taps never reach here: notifyEvent()'s PendingIntent sets
         // FLAG_ACTIVITY_CLEAR_TASK, which always destroys and recreates this singleInstance
         // activity — so EXTRA_TORRENT_HASH/EXTRA_RSS_ITEM_PATH are only ever read in onCreate.
+    }
+
+    private fun openShortcut(action: String) {
+        // Lets the launcher rank the shortcuts by how often each is used.
+        ShortcutManagerCompat.reportShortcutUsed(this, action)
+        when (action) {
+            AppShortcuts.ACTION_ADD_TORRENT -> {
+                appNavigator.navigate(NavCommand.PopToServer)
+                pendingTorrentIntent.requestAdd()
+            }
+            AppShortcuts.ACTION_SEARCH -> {
+                // From the list, so back from search lands there rather than on whatever screen
+                // the app was last left on.
+                appNavigator.navigate(NavCommand.PopToServer)
+                appNavigator.navigate(NavCommand.OpenSearch)
+            }
+            AppShortcuts.ACTION_RSS -> appNavigator.navigate(NavCommand.OpenRss)
+        }
     }
 
     /** Offers a non-backup VIEW intent's URI to [pendingTorrentIntent]. Returns true if it did. */
@@ -667,5 +702,6 @@ class MainActivity : AppCompatActivity() {
         private const val STATE_PENDING_VIEW_BROUGHT_FORWARD = "pending_view_brought_forward"
         private const val STATE_PENDING_TORRENT_HASH = "pending_torrent_hash"
         private const val STATE_PENDING_RSS_PATH = "pending_rss_path"
+        private const val STATE_PENDING_SHORTCUT = "pending_shortcut"
     }
 }
