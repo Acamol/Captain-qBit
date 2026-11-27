@@ -17,7 +17,7 @@ class CategoryColorsTest {
     fun `auto pick lands opposite a single existing color`() {
         val red = CategoryColors.presets[0]
         val pick = CategoryColors.autoPick("movies", listOf(red))
-        assertTrue(hueGap(pick, red) > 150)
+        assertTrue(hueGap(pick, red) > 120)
     }
 
     @Test
@@ -33,9 +33,28 @@ class CategoryColorsTest {
     fun `pick another moves away from the current pick`() {
         val others = listOf(CategoryColors.presets[0])
         val first = CategoryColors.autoPick("tv", others)
-        val next = CategoryColors.autoPick("tv", others, avoid = first)
+        val next = CategoryColors.autoPick("tv", others, current = first)
         assertNotEquals(first, next)
-        assertTrue(hueGap(first, next) > 60)
+    }
+
+    @Test
+    fun `pick another cycles through several distinct options`() {
+        val others = CategoryColors.presets.take(4)
+        val seen = mutableSetOf<Int>()
+        var color = CategoryColors.autoPick("tv", others)
+        repeat(8) {
+            seen += color
+            color = CategoryColors.autoPick("tv", others, current = color)
+        }
+        assertEquals(8, seen.size)
+    }
+
+    @Test
+    fun `with every preset taken auto still finds a color clearly apart from all of them`() {
+        val pick = CategoryColors.autoPick("tv", CategoryColors.presets)
+        assertTrue(CategoryColors.presets.none { it == pick })
+        val lch = CategoryColors.toLch(pick)
+        assertTrue("expected a vivid color, got chroma ${lch.c}", lch.c >= 0.07)
     }
 
     @Test

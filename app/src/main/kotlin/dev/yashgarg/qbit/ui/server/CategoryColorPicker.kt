@@ -98,6 +98,14 @@ fun CategoryColorPicker(
         remember(name) {
             mutableFloatStateOf(start.c.coerceAtMost(CategoryColors.MAX_CHROMA).toFloat())
         }
+    var lightness by
+        remember(name) {
+            mutableFloatStateOf(
+                start.l
+                    .coerceIn(CategoryColors.MIN_LIGHTNESS, CategoryColors.MAX_LIGHTNESS)
+                    .toFloat(),
+            )
+        }
     var draft by remember(name) { mutableIntStateOf(color ?: CategoryColors.presets[7]) }
     var hex by remember(name) { mutableStateOf(CategoryColors.toHex(draft)) }
 
@@ -164,7 +172,7 @@ fun CategoryColorPicker(
             fun fromSliders() {
                 draft =
                     CategoryColors.fromLch(
-                        CategoryColors.SWATCH_LIGHTNESS,
+                        lightness.toDouble(),
                         chroma.toDouble(),
                         hue.toDouble(),
                     )
@@ -196,6 +204,19 @@ fun CategoryColorPicker(
                 },
                 valueRange = 0f..CategoryColors.MAX_CHROMA.toFloat(),
             )
+            Text(
+                stringResource(CommonR.string.category_color_brightness),
+                style = MaterialTheme.typography.labelMedium,
+            )
+            Slider(
+                value = lightness,
+                onValueChange = {
+                    lightness = it
+                    fromSliders()
+                },
+                valueRange =
+                    CategoryColors.MIN_LIGHTNESS.toFloat()..CategoryColors.MAX_LIGHTNESS.toFloat(),
+            )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = hex,
@@ -206,6 +227,13 @@ fun CategoryColorPicker(
                             val lch = CategoryColors.toLch(it)
                             hue = lch.h.toFloat()
                             chroma = lch.c.coerceAtMost(CategoryColors.MAX_CHROMA).toFloat()
+                            lightness =
+                                lch.l
+                                    .coerceIn(
+                                        CategoryColors.MIN_LIGHTNESS,
+                                        CategoryColors.MAX_LIGHTNESS,
+                                    )
+                                    .toFloat()
                         }
                     },
                     label = { Text(stringResource(CommonR.string.category_color_hex)) },

@@ -120,18 +120,18 @@ constructor(
 
     /**
      * Gives [category] an app-picked color, as distinct as possible from the other categories'
-     * colors. With [another], the current color is avoided as well ("Pick another"). The pick is
-     * stored, so it stays put when other categories change.
+     * colors. With [another], the next distinct option after the current one ("Pick another"). The
+     * pick is stored, so it stays put when other categories change.
      */
     fun setCategoryAutoColor(category: String, another: Boolean = false) {
         viewModelScope.launch {
             prefsStore.updateData { prefs ->
                 val others = (prefs.categoryColors - category).values
-                val avoid = if (another) prefs.categoryColors[category] else null
+                val current = if (another) prefs.categoryColors[category] else null
                 prefs.copy(
                     categoryColors =
                         prefs.categoryColors +
-                            (category to CategoryColors.autoPick(category, others, avoid)),
+                            (category to CategoryColors.autoPick(category, others, current)),
                     autoCategoryColors = prefs.autoCategoryColors + category,
                 )
             }

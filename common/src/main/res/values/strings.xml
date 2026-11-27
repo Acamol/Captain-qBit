@@ -259,6 +259,7 @@
     <string name="category_color_custom">Custom</string>
     <string name="category_color_hue">Hue</string>
     <string name="category_color_intensity">Intensity</string>
+    <string name="category_color_brightness">Brightness</string>
     <string name="category_color_hex">Hex color</string>
     <string name="servers_title">Servers</string>
     <string name="sort_by_title">Sort by</string>
