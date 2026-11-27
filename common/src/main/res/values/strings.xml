@@ -507,9 +507,6 @@
         App lock, recent apps preview and screenshots
     </string>
     <string name="notification_settings_subtitle">Transfer status, alerts and quiet hours</string>
-    <string name="server_section_description">
-        Settings on the connected qBittorrent server, not this app
-    </string>
     <string name="auto_tmm_default_label">Automatic torrent management by default</string>
     <string name="auto_tmm_default_subtitle">
         Applies to torrents added outside this app, e.g. via RSS rules
