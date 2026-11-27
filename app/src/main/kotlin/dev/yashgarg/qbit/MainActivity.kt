@@ -69,6 +69,9 @@ import dev.yashgarg.qbit.utils.GitHubIssueLink
 import dev.yashgarg.qbit.utils.LocalizedContext
 import dev.yashgarg.qbit.utils.WindowPrivacy
 import dev.yashgarg.qbit.utils.rememberCopyToClipboard
+import dev.yashgarg.qbit.widget.StatusWidget
+import dev.yashgarg.qbit.widget.StatusWidgetUpdater
+import dev.yashgarg.qbit.widget.StatusWidgetWorker
 import dev.yashgarg.qbit.worker.StatusWorker
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -518,6 +521,10 @@ class MainActivity : AppCompatActivity() {
         }
         // Republished each launch so the labels follow a change of the in-app language.
         AppShortcuts.publish(this)
+        // The widget picker previews too, which an app update clears.
+        lifecycleScope.launch(Dispatchers.Default) {
+            StatusWidget.publishPreviews(applicationContext)
+        }
     }
 
     override fun onStart() {
@@ -526,6 +533,13 @@ class MainActivity : AppCompatActivity() {
         // start, or an opened file or link bringing it forward. Started here, as early as the app
         // can, to keep the moment before it covers the app short.
         if (appLockManager.locked.value) showLockScreen()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Whatever changed in the app (a paused torrent, another active server) shows on the
+        // home-screen widget as soon as the user is back on the home screen.
+        if (StatusWidgetUpdater.hasWidgets(this)) StatusWidgetWorker.runNow(this)
     }
 
     private fun showLockScreen() {

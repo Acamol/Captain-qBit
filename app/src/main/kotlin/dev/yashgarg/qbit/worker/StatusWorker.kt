@@ -37,12 +37,15 @@ import dev.yashgarg.qbit.utils.TorrentFileParser
 import dev.yashgarg.qbit.utils.nowMinutesOfDay
 import dev.yashgarg.qbit.utils.shouldSilenceEventAlert
 import dev.yashgarg.qbit.utils.toHumanReadable
+import dev.yashgarg.qbit.widget.StatusWidgetState
+import dev.yashgarg.qbit.widget.StatusWidgetUpdater
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import qbittorrent.getGlobalTransferInfo
 import qbittorrent.getRssItems
 import qbittorrent.getRssRefreshIntervalMinutes
+import qbittorrent.getSpeedLimitsMode
 import qbittorrent.getTorrents
 import qbittorrent.models.RssItem
 import qbittorrent.models.Torrent
@@ -109,6 +112,7 @@ constructor(
         var lastStatusFetch = 0L
         var lastEventFetch = 0L
         var lastRssFetch = 0L
+        var lastWidgetCountsFetch = 0L
         // Refetched from the server each time the RSS branch actually runs (see below) - there's no
         // separate app-side setting for this on purpose, since checking faster than qBittorrent's
         // own rss_refresh_interval just re-reads the same cached articles. Falls back to a sane
@@ -139,6 +143,22 @@ constructor(
                 if (now - lastStatusFetch >= prefs.statusRefreshIntervalMs) {
                     try {
                         val info = client.getGlobalTransferInfo()
+                        if (StatusWidgetUpdater.hasWidgets(applicationContext)) {
+                            // Speeds ride along with every status tick for free; the torrent list
+                            // behind the counts (and the alt-speed mode) is fetched far less often.
+                            val slow = now - lastWidgetCountsFetch >= WIDGET_COUNTS_INTERVAL_MS
+                            if (slow) lastWidgetCountsFetch = now
+                            StatusWidgetUpdater.showTransfer(
+                                applicationContext,
+                                serverName(prefs),
+                                info,
+                                counts =
+                                    if (slow) StatusWidgetState.countsOf(client.getTorrents())
+                                    else null,
+                                altSpeedLimits =
+                                    if (slow) client.getSpeedLimitsMode() == 1 else null,
+                            )
+                        }
                         setForeground(
                             createForegroundInfo(
                                 localized.getString(CommonR.string.status_server_connected),
@@ -155,6 +175,13 @@ constructor(
                     } catch (e: Exception) {
                         // Show the server is unreachable rather than freezing the last live
                         // readout.
+                        if (StatusWidgetUpdater.hasWidgets(applicationContext)) {
+                            StatusWidgetUpdater.showStatus(
+                                applicationContext,
+                                StatusWidgetState.Status.OFFLINE,
+                                serverName(prefs),
+                            )
+                        }
                         setForeground(
                             createForegroundInfo(
                                 localized.getString(CommonR.string.status_server_offline),
@@ -581,6 +608,7 @@ constructor(
         // statusRefreshIntervalMs / eventPollIntervalMs, which only apply once a client exists.
         private const val RECONNECT_RETRY_MS = 5_000L
         private const val MIN_TICK_MS = 1_000L
+        private const val WIDGET_COUNTS_INTERVAL_MS = 60_000L
         private const val WORK_TAG = "status_update"
 
         // No network constraint on purpose: the poll loop already tolerates being offline (it

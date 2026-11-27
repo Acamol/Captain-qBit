@@ -1056,4 +1056,14 @@
         <item quantity="one">%1$d selected</item>
         <item quantity="other">%1$d selected</item>
     </plurals>
+    <!-- Home-screen widget -->
+    <string name="widget_label">Server status</string>
+    <string name="widget_description">Transfer speeds, torrent counts and quick controls for the active server</string>
+    <string name="widget_description_speeds">Transfer speeds for the active server</string>
+    <string name="widget_description_square">Transfer speeds and quick controls for the active server</string>
+    <string name="widget_loading">Loading…</string>
+    <string name="widget_no_server">Add a server in the app</string>
+    <string name="widget_updating">Updating widget</string>
+    <string name="widget_pause_all">Pause all</string>
+    <string name="widget_resume_all">Resume all</string>
 </resources>

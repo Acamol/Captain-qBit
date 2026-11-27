@@ -229,6 +229,8 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.work.ktx)
     implementation(libs.androidx.hilt.work)
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
     ksp(libs.androidx.hilt.compiler)
 
     implementation(libs.bundles.compose)

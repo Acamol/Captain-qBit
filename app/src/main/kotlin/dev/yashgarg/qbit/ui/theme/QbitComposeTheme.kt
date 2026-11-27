@@ -13,8 +13,9 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.TextStyle
 import dev.yashgarg.qbit.R
 import dev.yashgarg.qbit.ui.compose.theme.SpaceGrotesk
@@ -56,30 +57,39 @@ fun QbitComposeTheme(dynamicColors: Boolean = false, content: @Composable () -> 
  */
 @Composable
 private fun appColorScheme(darkTheme: Boolean): ColorScheme {
+    val resources = LocalResources.current
+    return brandColorScheme(darkTheme) { Color(resources.getColor(it, null)) }
+}
+
+/**
+ * The brand scheme with each `theme_*` color resolved by [color], so callers outside composition
+ * (the home-screen widget) can resolve it against an explicit light or dark configuration.
+ */
+fun brandColorScheme(darkTheme: Boolean, color: (Int) -> Color): ColorScheme {
     val base = if (darkTheme) darkColorScheme() else lightColorScheme()
     return base.copy(
-        primary = colorResource(R.color.theme_primary),
-        onPrimary = colorResource(R.color.theme_on_primary),
-        primaryContainer = colorResource(R.color.theme_primary_container),
-        onPrimaryContainer = colorResource(R.color.theme_on_primary_container),
-        inversePrimary = colorResource(R.color.theme_inverse_primary),
-        secondary = colorResource(R.color.theme_secondary),
-        onSecondary = colorResource(R.color.theme_on_secondary),
-        secondaryContainer = colorResource(R.color.theme_secondary_container),
-        onSecondaryContainer = colorResource(R.color.theme_on_secondary_container),
-        background = colorResource(R.color.theme_background),
-        onBackground = colorResource(R.color.theme_on_background),
-        surface = colorResource(R.color.theme_surface),
-        onSurface = colorResource(R.color.theme_on_surface),
-        surfaceVariant = colorResource(R.color.theme_surface_variant),
-        onSurfaceVariant = colorResource(R.color.theme_on_surface_variant),
-        inverseSurface = colorResource(R.color.theme_inverse_surface),
-        inverseOnSurface = colorResource(R.color.theme_inverse_on_surface),
-        error = colorResource(R.color.theme_error),
-        onError = colorResource(R.color.theme_on_error),
-        errorContainer = colorResource(R.color.theme_error_container),
-        onErrorContainer = colorResource(R.color.theme_on_error_container),
-        outline = colorResource(R.color.theme_outline),
+        primary = color(R.color.theme_primary),
+        onPrimary = color(R.color.theme_on_primary),
+        primaryContainer = color(R.color.theme_primary_container),
+        onPrimaryContainer = color(R.color.theme_on_primary_container),
+        inversePrimary = color(R.color.theme_inverse_primary),
+        secondary = color(R.color.theme_secondary),
+        onSecondary = color(R.color.theme_on_secondary),
+        secondaryContainer = color(R.color.theme_secondary_container),
+        onSecondaryContainer = color(R.color.theme_on_secondary_container),
+        background = color(R.color.theme_background),
+        onBackground = color(R.color.theme_on_background),
+        surface = color(R.color.theme_surface),
+        onSurface = color(R.color.theme_on_surface),
+        surfaceVariant = color(R.color.theme_surface_variant),
+        onSurfaceVariant = color(R.color.theme_on_surface_variant),
+        inverseSurface = color(R.color.theme_inverse_surface),
+        inverseOnSurface = color(R.color.theme_inverse_on_surface),
+        error = color(R.color.theme_error),
+        onError = color(R.color.theme_on_error),
+        errorContainer = color(R.color.theme_error_container),
+        onErrorContainer = color(R.color.theme_on_error_container),
+        outline = color(R.color.theme_outline),
     )
 }
 
