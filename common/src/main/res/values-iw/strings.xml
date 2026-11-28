@@ -880,4 +880,25 @@
     <string name="notify_skip_own_adds_subtitle">אל תתריע על טורנטים שנוספו מהאפליקציה הזו</string>
     <string name="notify_ignore_rss_adds_label">דלג על הורדות RSS</string>
     <string name="notify_ignore_rss_adds_subtitle">אל תתריע על טורנטים הנוספים על ידי חוקי RSS</string>
+    <string name="category_color_auto">אוטומטי</string>
+    <string name="category_color_pick_another">בחירת צבע אחר</string>
+    <string name="category_color_custom">התאמה אישית</string>
+    <string name="category_color_hue">גוון</string>
+    <string name="category_color_intensity">עוצמת הצבע</string>
+    <string name="category_color_brightness">בהירות</string>
+    <string name="category_color_hex">קוד צבע (HEX)</string>
+    <string name="show_server_overview_label">הצגת נתוני השרת</string>
+    <string name="show_server_overview_subtitle">הצג מהירויות העברה ושטח פנוי מעל רשימת הטורנטים</string>
+    <string name="preview_metadata_unsupported">בחירת קבצים דרך קישור מגנט דורשת qBittorrent בגרסה 4.5 ומעלה. אפשר להוסיף את הטורנט גם בלי לבחור קבצים.</string>
+    <string name="preview_metadata_pending">המטא־נתונים עדיין לא זמינים. אפשר לנסות שוב מאוחר יותר או לבטל את התצוגה המקדימה.</string>
+    <string name="preview_cleanup_failed">לא ניתן לבטל את התצוגה המקדימה. אפשר לסגור שוב כדי לנסות מחדש. %1$s</string>
+    <string name="widget_label">מצב השרת</string>
+    <string name="widget_description">מהירויות העברה, ספירת טורנטים ופעולות מהירות עבור השרת הפעיל</string>
+    <string name="widget_description_speeds">מהירויות ההעברה בשרת הפעיל</string>
+    <string name="widget_description_square">מהירויות העברה ופעולות מהירות בשרת הפעיל</string>
+    <string name="widget_loading">בטעינה…</string>
+    <string name="widget_no_server">אפשר להוסיף שרת באפליקציה</string>
+    <string name="widget_updating">הווידג\'ט מתעדכן</string>
+    <string name="widget_pause_all">השהה הכול</string>
+    <string name="widget_resume_all">המשך הכול</string>
 </resources>
